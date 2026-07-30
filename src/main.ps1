@@ -215,12 +215,12 @@ if ($env:WZ_SELFTEST) {
 
             # Laufende Hintergrundarbeit abwarten, damit das Abbild den
             # fertigen Zustand zeigt und nicht den Ladezustand
-            $deadline = (Get-Date).AddSeconds(60)
-            while (($syncHash.Busy) -and ((Get-Date) -lt $deadline)) {
-                [Windows.Threading.Dispatcher]::CurrentDispatcher.Invoke(
-                    [Windows.Threading.DispatcherPriority]::Background, [Action]{ })
-                Start-Sleep -Milliseconds 150
+            $deadline = (Get-Date).AddSeconds(90)
+            while ($syncHash.Busy -and (Get-Date) -lt $deadline) {
+                Invoke-WzDoEvents
+                Start-Sleep -Milliseconds 100
             }
+            Invoke-WzDoEvents
             $syncHash.Window.UpdateLayout()
 
             $target = New-Object Windows.Media.Imaging.RenderTargetBitmap(

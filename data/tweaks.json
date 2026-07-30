@@ -20,6 +20,16 @@
       "id": "security",
       "name": "Sicherheit",
       "description": "Veraltete Protokolle abschalten, Angriffsflächen verkleinern."
+    },
+    {
+      "id": "ai-policy",
+      "name": "KI abschalten",
+      "description": "Sperrt Copilot, Recall und die KI-Funktionen in Windows-Programmen per Richtlinie. Umkehrbar und auch dann sinnvoll, wenn noch nichts installiert ist."
+    },
+    {
+      "id": "ai-remove",
+      "name": "KI entfernen",
+      "description": "Löscht die KI-Bestandteile wirklich vom System. Nicht per Knopfdruck umkehrbar."
     }
   ],
   "tweaks": [
@@ -879,6 +889,358 @@
           "name": "UseLogonCredential",
           "valueType": "DWord",
           "value": 0
+        }
+      ]
+    },
+
+    {
+      "id": "ai-copilot-policy",
+      "category": "ai-policy",
+      "level": "soft",
+      "risk": "low",
+      "name": "Copilot sperren",
+      "description": "Schaltet Windows Copilot per Richtlinie ab und entfernt den Taskleisten-Knopf. Wirkt auch vorbeugend: Copilot bleibt aus, wenn ein Funktionsupdate ihn nachinstalliert.",
+      "defaultChecked": true,
+      "appliesTo": "all",
+      "requiresReboot": true,
+      "sourceRef": "zoicware/RemoveWindowsAI",
+      "actions": [
+        {
+          "type": "registry",
+          "path": "HKLM:\\SOFTWARE\\Policies\\Microsoft\\Windows\\WindowsCopilot",
+          "name": "TurnOffWindowsCopilot",
+          "valueType": "DWord",
+          "value": 1
+        },
+        {
+          "type": "registry",
+          "path": "HKCU:\\Software\\Policies\\Microsoft\\Windows\\WindowsCopilot",
+          "name": "TurnOffWindowsCopilot",
+          "valueType": "DWord",
+          "value": 1
+        },
+        {
+          "type": "registry",
+          "path": "HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\Advanced",
+          "name": "ShowCopilotButton",
+          "valueType": "DWord",
+          "value": 0
+        },
+        {
+          "type": "registry",
+          "path": "HKCU:\\Software\\Microsoft\\Windows\\Shell\\Copilot\\BingChat",
+          "name": "IsUserEligible",
+          "valueType": "DWord",
+          "value": 0
+        },
+        {
+          "type": "registry",
+          "path": "HKCU:\\Software\\Microsoft\\Windows\\Shell\\Copilot",
+          "name": "IsCopilotAvailable",
+          "valueType": "DWord",
+          "value": 0
+        },
+        {
+          "type": "registry",
+          "path": "HKCU:\\Software\\Microsoft\\Windows\\Shell\\Copilot",
+          "name": "CopilotDisabledReason",
+          "valueType": "String",
+          "value": "IsEnabledForGeographicRegionFailed"
+        }
+      ]
+    },
+    {
+      "id": "ai-recall-policy",
+      "category": "ai-policy",
+      "level": "soft",
+      "risk": "low",
+      "name": "Recall sperren",
+      "description": "Verhindert, dass Windows laufend Bildschirmfotos aufnimmt und durchsuchbar ablegt. Recall wird per Richtlinie gesperrt und die Speicherung von Momentaufnahmen unterbunden.",
+      "defaultChecked": true,
+      "appliesTo": "win11",
+      "requiresReboot": true,
+      "sourceRef": "zoicware/RemoveWindowsAI",
+      "actions": [
+        {
+          "type": "registry",
+          "path": "HKLM:\\SOFTWARE\\Policies\\Microsoft\\Windows\\WindowsAI",
+          "name": "DisableAIDataAnalysis",
+          "valueType": "DWord",
+          "value": 1
+        },
+        {
+          "type": "registry",
+          "path": "HKCU:\\Software\\Policies\\Microsoft\\Windows\\WindowsAI",
+          "name": "DisableAIDataAnalysis",
+          "valueType": "DWord",
+          "value": 1
+        },
+        {
+          "type": "registry",
+          "path": "HKLM:\\SOFTWARE\\Policies\\Microsoft\\Windows\\WindowsAI",
+          "name": "AllowRecallEnablement",
+          "valueType": "DWord",
+          "value": 0
+        }
+      ]
+    },
+    {
+      "id": "ai-clicktodo-policy",
+      "category": "ai-policy",
+      "level": "soft",
+      "risk": "low",
+      "name": "Click to Do sperren",
+      "description": "Click to Do analysiert den Bildschirminhalt, um Aktionen vorzuschlagen. Diese Auswertung wird abgeschaltet.",
+      "defaultChecked": true,
+      "appliesTo": "win11",
+      "requiresReboot": true,
+      "actions": [
+        {
+          "type": "registry",
+          "path": "HKLM:\\SOFTWARE\\Policies\\Microsoft\\Windows\\WindowsAI",
+          "name": "DisableClickToDo",
+          "valueType": "DWord",
+          "value": 1
+        },
+        {
+          "type": "registry",
+          "path": "HKCU:\\Software\\Policies\\Microsoft\\Windows\\WindowsAI",
+          "name": "DisableClickToDo",
+          "valueType": "DWord",
+          "value": 1
+        }
+      ]
+    },
+    {
+      "id": "ai-apps-policy",
+      "category": "ai-policy",
+      "level": "soft",
+      "risk": "low",
+      "name": "KI in Windows-Programmen abschalten",
+      "description": "Entfernt die KI-Funktionen aus Editor (Umschreiben), Paint (Bildgenerator, Cocreator) und dem Snipping Tool.",
+      "defaultChecked": true,
+      "appliesTo": "all",
+      "requiresReboot": false,
+      "actions": [
+        {
+          "type": "registry",
+          "path": "HKLM:\\SOFTWARE\\Policies\\Microsoft\\WindowsNotepad",
+          "name": "DisableAIFeatures",
+          "valueType": "DWord",
+          "value": 1
+        },
+        {
+          "type": "registry",
+          "path": "HKLM:\\SOFTWARE\\Policies\\Microsoft\\WindowsPaint",
+          "name": "DisableImageCreator",
+          "valueType": "DWord",
+          "value": 1
+        },
+        {
+          "type": "registry",
+          "path": "HKLM:\\SOFTWARE\\Policies\\Microsoft\\WindowsPaint",
+          "name": "DisableCocreator",
+          "valueType": "DWord",
+          "value": 1
+        },
+        {
+          "type": "registry",
+          "path": "HKLM:\\SOFTWARE\\Policies\\Microsoft\\WindowsPaint",
+          "name": "DisableGenerativeFill",
+          "valueType": "DWord",
+          "value": 1
+        }
+      ]
+    },
+    {
+      "id": "ai-edge-copilot",
+      "category": "ai-policy",
+      "level": "soft",
+      "risk": "low",
+      "name": "Copilot in Edge abschalten",
+      "description": "Entfernt die Copilot-Seitenleiste aus Microsoft Edge und verhindert, dass Seiteninhalte zur Auswertung übertragen werden.",
+      "defaultChecked": true,
+      "appliesTo": "all",
+      "requiresReboot": false,
+      "actions": [
+        {
+          "type": "registry",
+          "path": "HKLM:\\SOFTWARE\\Policies\\Microsoft\\Edge",
+          "name": "HubsSidebarEnabled",
+          "valueType": "DWord",
+          "value": 0
+        },
+        {
+          "type": "registry",
+          "path": "HKLM:\\SOFTWARE\\Policies\\Microsoft\\Edge",
+          "name": "CopilotPageContext",
+          "valueType": "DWord",
+          "value": 0
+        },
+        {
+          "type": "registry",
+          "path": "HKLM:\\SOFTWARE\\Policies\\Microsoft\\Edge",
+          "name": "ComposeInlineEnabled",
+          "valueType": "DWord",
+          "value": 0
+        },
+        {
+          "type": "registry",
+          "path": "HKLM:\\SOFTWARE\\Policies\\Microsoft\\Edge",
+          "name": "EdgeHistoryAISearchEnabled",
+          "valueType": "DWord",
+          "value": 0
+        }
+      ]
+    },
+    {
+      "id": "ai-cloud-search",
+      "category": "ai-policy",
+      "level": "soft",
+      "risk": "low",
+      "name": "KI-Suche und Cloud-Inhalte abschalten",
+      "description": "Verhindert, dass die Windows-Suche Inhalte zur Auswertung in die Cloud schickt, und schaltet die KI-gestützten Suchvorschläge ab.",
+      "defaultChecked": true,
+      "appliesTo": "all",
+      "requiresReboot": true,
+      "actions": [
+        {
+          "type": "registry",
+          "path": "HKLM:\\SOFTWARE\\Policies\\Microsoft\\Windows\\Windows Search",
+          "name": "AllowCloudSearch",
+          "valueType": "DWord",
+          "value": 0
+        },
+        {
+          "type": "registry",
+          "path": "HKLM:\\SOFTWARE\\Policies\\Microsoft\\Windows\\Windows Search",
+          "name": "EnableDynamicContentInWSB",
+          "valueType": "DWord",
+          "value": 0
+        },
+        {
+          "type": "registry",
+          "path": "HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\SearchSettings",
+          "name": "IsAADCloudSearchEnabled",
+          "valueType": "DWord",
+          "value": 0
+        },
+        {
+          "type": "registry",
+          "path": "HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\SearchSettings",
+          "name": "IsMSACloudSearchEnabled",
+          "valueType": "DWord",
+          "value": 0
+        }
+      ]
+    },
+    {
+      "id": "ai-tasks-off",
+      "category": "ai-policy",
+      "level": "soft",
+      "risk": "low",
+      "name": "Geplante KI-Aufgaben deaktivieren",
+      "description": "Schaltet die Hintergrundaufgaben ab, mit denen Windows KI-Bestandteile einrichtet und aktualisiert.",
+      "defaultChecked": true,
+      "appliesTo": "win11",
+      "requiresReboot": false,
+      "actions": [
+        {
+          "type": "scheduledTask",
+          "taskPath": "\\Microsoft\\Windows\\WindowsAI\\",
+          "taskName": "Recall.MaintenanceTask",
+          "state": "Disabled"
+        },
+        {
+          "type": "scheduledTask",
+          "taskPath": "\\Microsoft\\Windows\\WindowsAI\\",
+          "taskName": "Recall.SetupTask",
+          "state": "Disabled"
+        }
+      ]
+    },
+
+    {
+      "id": "ai-appx-remove",
+      "category": "ai-remove",
+      "level": "hard",
+      "risk": "medium",
+      "name": "Copilot-Apps entfernen",
+      "description": "Löscht die Copilot-App-Pakete für alle Benutzer und entfernt sie aus der Bereitstellung für neue Konten. Nach großen Funktionsupdates können sie zurückkehren — dann erneut ausführen.",
+      "defaultChecked": true,
+      "appliesTo": "all",
+      "requiresReboot": false,
+      "sourceRef": "zoicware/RemoveWindowsAI",
+      "actions": [
+        {
+          "type": "appx",
+          "patterns": [
+            "Microsoft.Copilot*",
+            "Microsoft.Windows.Copilot*",
+            "MicrosoftWindows.Client.AIX*",
+            "MicrosoftWindows.Client.CoPilot*",
+            "*Ai.Copilot*"
+          ],
+          "removeProvisioned": true,
+          "allUsers": true,
+          "undo": {
+            "hint": "Copilot lässt sich bei Bedarf über den Microsoft Store neu installieren"
+          }
+        }
+      ]
+    },
+    {
+      "id": "ai-recall-remove",
+      "category": "ai-remove",
+      "level": "hard",
+      "risk": "medium",
+      "name": "Recall entfernen",
+      "description": "Entfernt Recall als optionale Systemfunktion. Danach ist die Momentaufnahme-Funktion nicht mehr vorhanden und nicht nur abgeschaltet.",
+      "defaultChecked": true,
+      "appliesTo": "win11",
+      "requiresReboot": true,
+      "sourceRef": "zoicware/RemoveWindowsAI",
+      "actions": [
+        {
+          "type": "feature",
+          "featureName": "Recall",
+          "state": "Disabled"
+        },
+        {
+          "type": "capability",
+          "patterns": ["*Recall*"],
+          "undo": {
+            "hint": "Über Einstellungen > System > Optionale Features wieder installierbar"
+          }
+        }
+      ]
+    },
+    {
+      "id": "ai-appx-force",
+      "category": "ai-remove",
+      "level": "hard",
+      "risk": "high",
+      "name": "Gesperrte KI-Pakete erzwungen entfernen",
+      "description": "Manche KI-Pakete sind als nicht entfernbar markiert. Dieser Eintrag hebt die Sperre auf und löscht sie trotzdem. Nur verwenden, wenn der vorherige Eintrag nichts ausgerichtet hat — ein Zurück gibt es nur über ein Funktionsupdate.",
+      "defaultChecked": false,
+      "appliesTo": "win11",
+      "requiresReboot": true,
+      "sourceRef": "zoicware/RemoveWindowsAI",
+      "actions": [
+        {
+          "type": "appx",
+          "patterns": [
+            "MicrosoftWindows.Client.AIX*",
+            "MicrosoftWindows.Client.CoPilot*",
+            "Microsoft.Windows.Ai*",
+            "*Recall*"
+          ],
+          "removeProvisioned": true,
+          "allUsers": true,
+          "forceNonRemovable": true,
+          "undo": {
+            "hint": "Nur über ein Funktionsupdate oder eine Neuinstallation wiederherstellbar"
+          }
         }
       ]
     }

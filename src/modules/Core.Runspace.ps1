@@ -171,6 +171,20 @@ function Set-WzBusy {
     }
 }
 
+function Invoke-WzDoEvents {
+    <#
+    .SYNOPSIS
+        Lässt anstehende UI-Ereignisse verarbeiten, ohne den Dispatcher zu
+        blockieren. Nötig, wenn im UI-Thread auf eine Hintergrundarbeit
+        gewartet wird (Start-Sleep würde auch die Timer anhalten).
+    #>
+    $frame = New-Object Windows.Threading.DispatcherFrame
+    [void][Windows.Threading.Dispatcher]::CurrentDispatcher.BeginInvoke(
+        [Windows.Threading.DispatcherPriority]::Background,
+        [Action]{ $frame.Continue = $false }.GetNewClosure())
+    [Windows.Threading.Dispatcher]::PushFrame($frame)
+}
+
 function Invoke-WzDispatcher {
     <#
     .SYNOPSIS

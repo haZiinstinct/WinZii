@@ -150,6 +150,7 @@ function Invoke-WzTweaks {
                     'scheduledTask' { 'Invoke-WzScheduledTaskAction' }
                     'appx'          { 'Invoke-WzAppxAction' }
                     'cbsPackage'    { 'Invoke-WzCbsAction' }
+                    'capability'    { 'Invoke-WzCapabilityAction' }
                     'feature'       { 'Invoke-WzFeatureAction' }
                     'command'       { 'Invoke-WzCommandAction' }
                     default         { $null }
@@ -525,6 +526,7 @@ function Get-WzTweakActionSummary {
             'scheduledTask' { "Aufgabe $($action.taskName) -> $($action.state)" }
             'appx'          { "App entfernen: $($action.patterns -join ', ')" }
             'cbsPackage'    { "Systempaket entfernen: $($action.patterns -join ', ')" }
+            'capability'    { "Systemfunktion entfernen: $($action.patterns -join ', ')" }
             'feature'       { "Windows-Funktion $($action.featureName) -> $($action.state)" }
             'command'       { "Befehl: $($action.exec) $($action.args)" }
             default         { $action.type }
