@@ -409,6 +409,165 @@ function New-WzCheckRow {
     return [pscustomobject]@{ Row = $grid; CheckBox = $checkBox }
 }
 
+function New-WzInfoRow {
+    <#
+    .SYNOPSIS
+        Zeile mit Bezeichnung links und Wert rechts (Karteninhalt).
+    .PARAMETER Kind
+        normal | ok | warn | error — färbt den Wert ein.
+    #>
+    param(
+        [Parameter(Mandatory = $true, Position = 0)][string]$Label,
+        [Parameter(Position = 1)][string]$Value,
+        [ValidateSet('normal', 'ok', 'warn', 'error')][string]$Kind = 'normal'
+    )
+
+    $grid = New-Object Windows.Controls.Grid
+    $grid.Margin = New-Object Windows.Thickness(0, 3, 0, 3)
+    $labelColumn = New-Object Windows.Controls.ColumnDefinition
+    $labelColumn.Width = New-Object Windows.GridLength(112)
+    $valueColumn = New-Object Windows.Controls.ColumnDefinition
+    $valueColumn.Width = '*'
+    [void]$grid.ColumnDefinitions.Add($labelColumn)
+    [void]$grid.ColumnDefinitions.Add($valueColumn)
+
+    $labelBlock = New-Object Windows.Controls.TextBlock
+    $labelBlock.Text = $Label
+    $labelBlock.Style = $syncHash.Window.FindResource('WzLabel')
+    $labelBlock.VerticalAlignment = 'Top'
+    $labelBlock.Margin = New-Object Windows.Thickness(0, 1, 8, 0)
+    $labelBlock.TextWrapping = 'Wrap'
+    [Windows.Controls.Grid]::SetColumn($labelBlock, 0)
+    [void]$grid.Children.Add($labelBlock)
+
+    $valueBlock = New-Object Windows.Controls.TextBlock
+    $valueBlock.Text = if ($Value) { $Value } else { 'n/v' }
+    $valueBlock.FontFamily = $syncHash.Window.FindResource('WzFontMono')
+    $valueBlock.FontSize = 12
+    $valueBlock.TextWrapping = 'Wrap'
+    $valueBlock.Foreground = switch ($Kind) {
+        'ok'    { $syncHash.Window.FindResource('WzGreen') }
+        'warn'  { $syncHash.Window.FindResource('WzAmber') }
+        'error' { $syncHash.Window.FindResource('WzRed') }
+        default { $syncHash.Window.FindResource('WzText') }
+    }
+    [Windows.Controls.Grid]::SetColumn($valueBlock, 1)
+    [void]$grid.Children.Add($valueBlock)
+
+    return $grid
+}
+
+function New-WzMeter {
+    <#
+    .SYNOPSIS
+        Schmaler Auslastungsbalken mit Beschriftung.
+        Färbt sich ab 75 % gelb und ab 90 % rot.
+    #>
+    param(
+        [Parameter(Mandatory = $true)][int]$Percent,
+        [string]$Caption
+    )
+
+    $stack = New-Object Windows.Controls.StackPanel
+    $stack.Margin = New-Object Windows.Thickness(0, 2, 0, 8)
+
+    $track = New-Object Windows.Controls.Border
+    $track.Height = 5
+    $track.CornerRadius = New-Object Windows.CornerRadius(999)
+    $track.Background = $syncHash.Window.FindResource('WzBgDarker')
+    $track.BorderBrush = $syncHash.Window.FindResource('WzBorder')
+    $track.BorderThickness = New-Object Windows.Thickness(1)
+    $track.HorizontalAlignment = 'Stretch'
+
+    $fillHost = New-Object Windows.Controls.Grid
+    $fillHost.HorizontalAlignment = 'Stretch'
+
+    $fill = New-Object Windows.Controls.Border
+    $fill.CornerRadius = New-Object Windows.CornerRadius(999)
+    $fill.HorizontalAlignment = 'Left'
+    $fill.Background = if ($Percent -ge 90) {
+        $syncHash.Window.FindResource('WzRed')
+    } elseif ($Percent -ge 75) {
+        $syncHash.Window.FindResource('WzAmber')
+    } else {
+        $syncHash.Window.FindResource('WzCyan')
+    }
+    # Breite erst berechnen, wenn die Zeile ihre echte Breite kennt
+    $fill.Tag = $Percent
+    $fillHost.Add_SizeChanged({
+        $ratio = [math]::Max(0, [math]::Min(100, [int]$fill.Tag)) / 100
+        $fill.Width = [math]::Max(2, $fillHost.ActualWidth * $ratio)
+    }.GetNewClosure())
+
+    [void]$fillHost.Children.Add($fill)
+    $track.Child = $fillHost
+    [void]$stack.Children.Add($track)
+
+    if ($Caption) {
+        $captionBlock = New-Object Windows.Controls.TextBlock
+        $captionBlock.Text = $Caption
+        $captionBlock.FontFamily = $syncHash.Window.FindResource('WzFontMono')
+        $captionBlock.FontSize = 10
+        $captionBlock.Foreground = $syncHash.Window.FindResource('WzTextFaint')
+        $captionBlock.Margin = New-Object Windows.Thickness(0, 3, 0, 0)
+        [void]$stack.Children.Add($captionBlock)
+    }
+
+    return $stack
+}
+
+function New-WzNotice {
+    <#
+    .SYNOPSIS
+        Hinweisleiste über dem Seiteninhalt (Neustart nötig, FAT32, Testmodus).
+    #>
+    param(
+        [Parameter(Mandatory = $true)][string]$Text,
+        [ValidateSet('info', 'warn', 'error', 'ok')][string]$Kind = 'info'
+    )
+
+    $colors = switch ($Kind) {
+        'warn'  { @{ Brush = 'WzAmber'; Background = '#14F59E0B'; Border = '#4DF59E0B'; Glyph = [char]0xE7BA } }
+        'error' { @{ Brush = 'WzRed';   Background = '#14EF4444'; Border = '#4DEF4444'; Glyph = [char]0xEA39 } }
+        'ok'    { @{ Brush = 'WzGreen'; Background = '#1422C55E'; Border = '#4D22C55E'; Glyph = [char]0xE73E } }
+        default { @{ Brush = 'WzCyan';  Background = '#1400D4FF'; Border = '#3300D4FF'; Glyph = [char]0xE946 } }
+    }
+
+    $border = New-Object Windows.Controls.Border
+    $border.Background = New-Object Windows.Media.SolidColorBrush(
+        [Windows.Media.ColorConverter]::ConvertFromString($colors.Background))
+    $border.BorderBrush = New-Object Windows.Media.SolidColorBrush(
+        [Windows.Media.ColorConverter]::ConvertFromString($colors.Border))
+    $border.BorderThickness = New-Object Windows.Thickness(1)
+    $border.CornerRadius = New-Object Windows.CornerRadius(10)
+    $border.Padding = New-Object Windows.Thickness(14, 9, 14, 9)
+    $border.Margin = New-Object Windows.Thickness(0, 0, 0, 8)
+
+    $row = New-Object Windows.Controls.StackPanel
+    $row.Orientation = 'Horizontal'
+
+    $icon = New-Object Windows.Controls.TextBlock
+    $icon.Text = $colors.Glyph
+    $icon.FontFamily = New-Object Windows.Media.FontFamily('Segoe Fluent Icons, Segoe MDL2 Assets')
+    $icon.FontSize = 13
+    $icon.Foreground = $syncHash.Window.FindResource($colors.Brush)
+    $icon.VerticalAlignment = 'Center'
+    $icon.Margin = New-Object Windows.Thickness(0, 0, 10, 0)
+    [void]$row.Children.Add($icon)
+
+    $textBlock = New-Object Windows.Controls.TextBlock
+    $textBlock.Text = $Text
+    $textBlock.FontFamily = $syncHash.Window.FindResource('WzFontSans')
+    $textBlock.FontSize = 12.5
+    $textBlock.Foreground = $syncHash.Window.FindResource($colors.Brush)
+    $textBlock.TextWrapping = 'Wrap'
+    $textBlock.VerticalAlignment = 'Center'
+    [void]$row.Children.Add($textBlock)
+
+    $border.Child = $row
+    return $border
+}
+
 function New-WzBadge {
     <#
     .SYNOPSIS

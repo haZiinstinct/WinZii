@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{{TITLE}} — WinZii</title>
+<style>
+  :root {
+    --bg: #0a0a0f;
+    --bg-darker: #06060a;
+    --card: #12121a;
+    --card-hover: #1a1a25;
+    --cyan: #00d4ff;
+    --cyan-dim: #00a8cc;
+    --border: rgba(255, 255, 255, .08);
+    --border-hover: rgba(0, 212, 255, .3);
+    --text: #e2e8f0;
+    --text-dim: #94a3b8;
+    --text-bright: #f8fafc;
+    --text-faint: #64748b;
+    --red: #ef4444;
+    --amber: #f59e0b;
+    --green: #22c55e;
+    --mono: 'JetBrains Mono', 'Fira Code', Consolas, monospace;
+    --sans: 'Inter', system-ui, 'Segoe UI', sans-serif;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    padding: 0 0 64px;
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--sans);
+    font-size: 15px;
+    line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+  }
+  .wrap { max-width: 1080px; margin: 0 auto; padding: 0 24px; }
+
+  header {
+    border-bottom: 1px solid var(--border);
+    background: var(--bg-darker);
+    padding: 40px 0 32px;
+    margin-bottom: 40px;
+  }
+  .eyebrow {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--cyan);
+    letter-spacing: .04em;
+    margin: 0 0 10px;
+  }
+  h1 {
+    font-size: clamp(1.75rem, 1.2rem + 2vw, 2.5rem);
+    line-height: 1.1;
+    letter-spacing: -.02em;
+    color: var(--text-bright);
+    margin: 0 0 12px;
+  }
+  .lead { color: var(--text-dim); margin: 0 0 22px; max-width: 62ch; }
+  .meta { display: flex; flex-wrap: wrap; gap: 8px; }
+  .pill {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--text-dim);
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 999px;
+    padding: 4px 12px;
+    white-space: nowrap;
+  }
+  .pill strong { color: var(--text-bright); font-weight: 600; }
+
+  h2 {
+    font-size: 1.35rem;
+    color: var(--text-bright);
+    letter-spacing: -.01em;
+    margin: 44px 0 4px;
+  }
+  h2:first-of-type { margin-top: 0; }
+  h2 + .section-lead { color: var(--text-dim); font-size: 13.5px; margin: 0 0 18px; }
+
+  .card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 22px 24px;
+    margin-bottom: 16px;
+  }
+  .card h3 {
+    font-size: 1rem;
+    color: var(--text-bright);
+    margin: 0 0 14px;
+  }
+  .grid { display: grid; gap: 16px; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); }
+
+  dl { display: grid; grid-template-columns: minmax(120px, auto) 1fr; gap: 6px 18px; margin: 0; }
+  dt { color: var(--text-dim); font-size: 13px; }
+  dd { margin: 0; font-family: var(--mono); font-size: 13px; color: var(--text); word-break: break-word; }
+
+  table { width: 100%; border-collapse: collapse; font-size: 13.5px; }
+  .table-scroll { overflow-x: auto; }
+  th {
+    text-align: left;
+    font-family: var(--mono);
+    font-size: 11px;
+    font-weight: 500;
+    color: var(--cyan);
+    letter-spacing: .03em;
+    padding: 10px 12px;
+    border-bottom: 1px solid var(--border);
+    background: var(--bg-darker);
+    white-space: nowrap;
+  }
+  td { padding: 10px 12px; border-bottom: 1px solid rgba(255, 255, 255, .04); vertical-align: top; }
+  tr:last-child td { border-bottom: 0; }
+  tbody tr:hover { background: var(--card-hover); }
+  td.mono, .mono { font-family: var(--mono); font-size: 12.5px; }
+  td.num { text-align: right; font-family: var(--mono); white-space: nowrap; }
+
+  .tag {
+    display: inline-block;
+    font-family: var(--mono);
+    font-size: 10px;
+    line-height: 1.5;
+    padding: 2px 8px;
+    border-radius: 999px;
+    border: 1px solid currentColor;
+    white-space: nowrap;
+  }
+  .tag-ok { color: var(--green); }
+  .tag-warn { color: var(--amber); }
+  .tag-err { color: var(--red); }
+  .tag-info { color: var(--cyan); }
+
+  .note {
+    border-radius: 12px;
+    padding: 14px 18px;
+    margin-bottom: 14px;
+    border: 1px solid;
+    font-size: 13.5px;
+  }
+  .note-warn { color: var(--amber); border-color: rgba(245, 158, 11, .3); background: rgba(245, 158, 11, .08); }
+  .note-err { color: var(--red); border-color: rgba(239, 68, 68, .3); background: rgba(239, 68, 68, .08); }
+  .note-info { color: var(--cyan); border-color: var(--border-hover); background: rgba(0, 212, 255, .07); }
+  .note-ok { color: var(--green); border-color: rgba(34, 197, 94, .3); background: rgba(34, 197, 94, .08); }
+
+  .explain { color: var(--text-dim); font-size: 13px; margin: 6px 0 0; }
+  .explain strong { color: var(--text); font-weight: 600; }
+
+  .log { font-family: var(--mono); font-size: 12px; line-height: 1.75; }
+  .log div { white-space: pre-wrap; word-break: break-word; }
+  .log .lvl-ok { color: var(--green); }
+  .log .lvl-warn { color: var(--amber); }
+  .log .lvl-error { color: var(--red); }
+  .log .lvl-action { color: var(--cyan); }
+  .log .lvl-test { color: #7dd3fc; }
+  .log .lvl-info { color: var(--text-dim); }
+
+  footer {
+    border-top: 1px solid var(--border);
+    margin-top: 56px;
+    padding-top: 22px;
+    color: var(--text-faint);
+    font-family: var(--mono);
+    font-size: 11.5px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px 24px;
+    justify-content: space-between;
+  }
+  footer a { text-decoration: none; }
+  .wordmark { font-weight: 700; letter-spacing: -.02em; }
+
+  @media print {
+    body { background: #fff; color: #111; }
+    .card, th { background: #fff; }
+    header { background: #fff; }
+    h1, .card h3, h2 { color: #000; }
+    dd, td, .lead, dt { color: #222; }
+    .log .lvl-info, .log div { color: #333; }
+  }
+</style>
+</head>
+<body>
+<header>
+  <div class="wrap">
+    <p class="eyebrow">// {{EYEBROW}}</p>
+    <h1>{{TITLE}}</h1>
+    <p class="lead">{{SUBTITLE}}</p>
+    <div class="meta">{{META}}</div>
+  </div>
+</header>
+
+<main class="wrap">
+{{CONTENT}}
+</main>
+
+<footer class="wrap">
+  <span>WinZii {{VERSION}} · Bericht erstellt am {{CREATED}}</span>
+  <a href="https://hazii.org" target="_blank" rel="noopener noreferrer" aria-label="Webdesign von haZii.org"><span style="opacity:.65;color:#64748b">// webdesign:</span> <span class="wordmark" style="color:#00d4ff">ha<span style="color:#f8fafc">Z</span>ii<span style="color:#00a8cc">.org</span></span></a>
+</footer>
+</body>
+</html>

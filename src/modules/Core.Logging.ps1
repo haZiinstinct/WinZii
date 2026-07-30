@@ -55,7 +55,9 @@ function Write-WzLog {
     }
     $line = "$timestamp $prefix $Message"
 
-    if ($syncHash -and $syncHash.LogEntries -ne $null) {
+    # $null links: bei einer leeren Collection würde "$collection -ne $null"
+    # als Filter ausgewertet und ergäbe false.
+    if ($syncHash -and $null -ne $syncHash.LogEntries) {
         [void]$syncHash.LogEntries.Add([pscustomobject]@{
             Time    = $timestamp
             Level   = $Level

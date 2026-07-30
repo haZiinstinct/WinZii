@@ -38,6 +38,14 @@ foreach ($moduleName in $moduleOrder) {
     if (Test-Path -LiteralPath $modulePath) { . $modulePath }
 }
 
+# Seitenlogik (je Seite eine Datei, Reihenfolge egal)
+$pageDir = Join-Path $PSScriptRoot 'pages'
+if (Test-Path -LiteralPath $pageDir) {
+    foreach ($pageFile in Get-ChildItem -LiteralPath $pageDir -Filter '*.ps1' -File) {
+        . $pageFile.FullName
+    }
+}
+
 # --- Sitzung starten ------------------------------------------------------
 [void](Start-WzSession)
 

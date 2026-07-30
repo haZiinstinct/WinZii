@@ -122,7 +122,7 @@ function Invoke-WzTask {
         if ($state.OnComplete) {
             try {
                 $payload = $null
-                if ($result -ne $null) {
+                if ($null -ne $result -and $result.Count -gt 0) {
                     # EndInvoke liefert eine Collection; bei einem Element dieses direkt reichen
                     $payload = if ($result.Count -eq 1) { $result[0] } else { @($result) }
                 }
