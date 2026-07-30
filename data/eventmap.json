@@ -1,0 +1,285 @@
+{
+  "schemaVersion": 1,
+  "entries": [
+    {
+      "provider": "Microsoft-Windows-Kernel-Power",
+      "id": 41,
+      "severity": "critical",
+      "title": "PC wurde nicht sauber heruntergefahren",
+      "explanation": "Der Rechner ging aus, ohne sich ordentlich zu verabschieden — Stromausfall, harter Absturz oder ein Druck auf den Ausschalter.",
+      "recommendation": "Häufen sich diese Einträge, kommen Netzteil, Arbeitsspeicher oder Überhitzung in Frage. Die Absturzabbilder weiter unten geben oft den entscheidenden Hinweis."
+    },
+    {
+      "provider": "Microsoft-Windows-WHEA-Logger",
+      "id": 1,
+      "severity": "critical",
+      "title": "Hardwarefehler gemeldet",
+      "explanation": "Die Fehlerkorrektur der Hardware hat einen Defekt gemeldet. Betroffen sind meist Prozessor, Arbeitsspeicher oder PCIe-Geräte.",
+      "recommendation": "Arbeitsspeicher prüfen (MemTest86), Übertaktung zurücknehmen, Temperaturen kontrollieren."
+    },
+    {
+      "provider": "Microsoft-Windows-WHEA-Logger",
+      "id": 17,
+      "severity": "warning",
+      "title": "Korrigierter Hardwarefehler",
+      "explanation": "Ein Fehler trat auf, wurde aber automatisch korrigiert. Meist PCIe-Übertragungsfehler.",
+      "recommendation": "Einzelne Einträge sind unkritisch. Bei Häufung Steckkarten neu einsetzen und Treiber aktualisieren."
+    },
+    {
+      "provider": "Microsoft-Windows-WHEA-Logger",
+      "id": 18,
+      "severity": "critical",
+      "title": "Nicht korrigierbarer Hardwarefehler",
+      "explanation": "Ein Hardwarefehler ließ sich nicht beheben. Solche Fehler führen fast immer zum Bluescreen.",
+      "recommendation": "Arbeitsspeicher und Prozessor prüfen. Bei wiederholtem Auftreten liegt ein echter Defekt vor."
+    },
+    {
+      "provider": "Microsoft-Windows-WHEA-Logger",
+      "id": 47,
+      "severity": "warning",
+      "title": "Speicherfehler korrigiert",
+      "explanation": "Im Arbeitsspeicher trat ein Fehler auf, der korrigiert werden konnte.",
+      "recommendation": "Bei Wiederholung Speichertest durchführen und die Riegel einzeln testen."
+    },
+    {
+      "provider": "disk",
+      "id": 7,
+      "severity": "critical",
+      "title": "Fehlerhafter Block auf dem Datenträger",
+      "explanation": "Windows konnte einen Bereich der Festplatte nicht lesen oder schreiben.",
+      "recommendation": "SMART-Werte prüfen und zügig sichern. Das ist oft das erste Anzeichen für einen bevorstehenden Ausfall."
+    },
+    {
+      "provider": "disk",
+      "id": 51,
+      "severity": "warning",
+      "title": "Fehler beim Zugriff auf den Datenträger",
+      "explanation": "Ein Lese- oder Schreibvorgang musste wiederholt werden.",
+      "recommendation": "Kabel und Anschluss prüfen. Bei Häufung SMART-Werte kontrollieren."
+    },
+    {
+      "provider": "disk",
+      "id": 153,
+      "severity": "warning",
+      "title": "Befehl an den Datenträger wurde wiederholt",
+      "explanation": "Der Datenträger hat nicht rechtzeitig geantwortet, Windows hat es erneut versucht.",
+      "recommendation": "Häufig bei USB-Platten mit zu schwacher Stromversorgung oder bei alternden SSDs."
+    },
+    {
+      "provider": "Ntfs",
+      "id": 55,
+      "severity": "critical",
+      "title": "Dateisystem beschädigt",
+      "explanation": "Die NTFS-Struktur hat einen Schaden. Ursache sind meist unsaubere Abschaltungen oder Hardwarefehler.",
+      "recommendation": "Datenträgerprüfung ausführen (chkdsk). Vorher sichern."
+    },
+    {
+      "provider": "storahci",
+      "id": 129,
+      "severity": "warning",
+      "title": "Datenträger reagierte nicht (Zurücksetzen)",
+      "explanation": "Der Controller musste zurückgesetzt werden, weil ein Laufwerk nicht antwortete.",
+      "recommendation": "SATA-Kabel tauschen, Firmware der SSD aktualisieren, Energieoptionen für Festplatten prüfen."
+    },
+    {
+      "provider": "stornvme",
+      "id": 129,
+      "severity": "warning",
+      "title": "NVMe-Laufwerk reagierte nicht",
+      "explanation": "Die NVMe-SSD hat einen Befehl nicht rechtzeitig beantwortet.",
+      "recommendation": "Firmware aktualisieren und die Energieverwaltung für PCIe prüfen."
+    },
+    {
+      "provider": "Service Control Manager",
+      "id": 7000,
+      "severity": "error",
+      "title": "Dienst konnte nicht gestartet werden",
+      "explanation": "Ein Windows-Dienst ließ sich beim Systemstart nicht starten.",
+      "recommendation": "Dienstnamen im Detail ansehen. Oft gehört er zu einer deinstallierten Software und kann deaktiviert werden."
+    },
+    {
+      "provider": "Service Control Manager",
+      "id": 7001,
+      "severity": "error",
+      "title": "Dienst hängt von einem anderen ab",
+      "explanation": "Ein Dienst startete nicht, weil ein anderer Dienst fehlte oder ebenfalls scheiterte.",
+      "recommendation": "Zuerst den ursächlichen Dienst reparieren."
+    },
+    {
+      "provider": "Service Control Manager",
+      "id": 7009,
+      "severity": "error",
+      "title": "Zeitüberschreitung beim Start eines Dienstes",
+      "explanation": "Ein Dienst hat nicht innerhalb der vorgegebenen Zeit geantwortet.",
+      "recommendation": "Bei langsamen Festplatten normal. Bei Häufung Datenträgerzustand prüfen."
+    },
+    {
+      "provider": "Service Control Manager",
+      "id": 7031,
+      "severity": "warning",
+      "title": "Dienst unerwartet beendet",
+      "explanation": "Ein Dienst ist abgestürzt und wurde neu gestartet.",
+      "recommendation": "Betroffenen Dienst prüfen. Wiederholt sich das, hilft eine Neuinstallation der zugehörigen Software."
+    },
+    {
+      "provider": "Service Control Manager",
+      "id": 7034,
+      "severity": "warning",
+      "title": "Dienst unerwartet beendet (ohne Neustart)",
+      "explanation": "Ein Dienst ist abgestürzt und wurde nicht wieder gestartet.",
+      "recommendation": "Zugehörige Software prüfen oder neu installieren."
+    },
+    {
+      "provider": "DCOM",
+      "id": 10016,
+      "severity": "warning",
+      "title": "DCOM-Berechtigung fehlt (meist harmlos)",
+      "explanation": "Eine Komponente wollte auf eine andere zugreifen und hatte keine Berechtigung. Windows fängt das intern ab.",
+      "recommendation": "Kann ignoriert werden. Microsoft stuft diese Meldung selbst als unkritisch ein — sie ist der häufigste Fehlalarm in der Ereignisanzeige."
+    },
+    {
+      "provider": "DistributedCOM",
+      "id": 10010,
+      "severity": "warning",
+      "title": "COM-Server antwortete nicht rechtzeitig (meist harmlos)",
+      "explanation": "Eine Komponente hat sich nicht schnell genug registriert. Windows arbeitet danach normal weiter.",
+      "recommendation": "Kann ignoriert werden. Tritt auf fast jedem Windows in großer Zahl auf und ist kein Hinweis auf einen Defekt."
+    },
+    {
+      "provider": "DistributedCOM",
+      "id": 10001,
+      "severity": "warning",
+      "title": "Anwendung konnte nicht gestartet werden",
+      "explanation": "Eine COM-Anwendung ließ sich nicht starten, meist wegen fehlender Berechtigung.",
+      "recommendation": "Nur nachgehen, wenn ein Programm tatsächlich nicht funktioniert."
+    },
+    {
+      "provider": "Service Control Manager",
+      "id": 7023,
+      "severity": "warning",
+      "title": "Dienst mit Fehler beendet",
+      "explanation": "Ein Dienst wurde beendet und meldet dabei einen Fehlercode.",
+      "recommendation": "Betrifft oft Dienste zu deinstallierter Software. Wird der Dienst nicht gebraucht, kann er auf »Deaktiviert« gesetzt werden."
+    },
+    {
+      "provider": "Microsoft-Windows-Security-SPP",
+      "id": 8198,
+      "severity": "warning",
+      "title": "Lizenzaktivierung fehlgeschlagen",
+      "explanation": "Windows konnte die Aktivierung nicht bestätigen — häufig fehlende Verbindung zum Aktivierungsserver.",
+      "recommendation": "Aktivierungsstatus im Dashboard prüfen. Bei Volumenlizenzen ist die Erreichbarkeit des KMS-Servers zu kontrollieren."
+    },
+    {
+      "provider": "VSS",
+      "id": 8193,
+      "severity": "warning",
+      "title": "Schattenkopie-Dienst meldet einen Fehler",
+      "explanation": "Der Dienst für Schattenkopien konnte eine Aufgabe nicht ausführen. Betrifft Sicherungen und Wiederherstellungspunkte.",
+      "recommendation": "Nur wichtig, wenn Sicherungen oder Wiederherstellungspunkte scheitern. Sonst ohne Bedeutung."
+    },
+    {
+      "provider": "VSS",
+      "id": 13,
+      "severity": "warning",
+      "title": "Schattenkopie-Dienst konnte nicht starten",
+      "explanation": "Ein beteiligter Dienst war beim Herunterfahren bereits beendet.",
+      "recommendation": "Tritt typischerweise beim Ausschalten auf und ist dann bedeutungslos."
+    },
+    {
+      "provider": "Microsoft-Windows-DeviceAssociationService",
+      "id": 3502,
+      "severity": "warning",
+      "title": "Gerätetrennung fehlgeschlagen",
+      "explanation": "Ein per Bluetooth oder USB gekoppeltes Gerät ließ sich nicht sauber trennen.",
+      "recommendation": "Ohne Bedeutung, solange die Geräte funktionieren."
+    },
+    {
+      "provider": "CertificateServicesClient-CertEnroll",
+      "id": 87,
+      "severity": "warning",
+      "title": "Zertifikatanforderung fehlgeschlagen",
+      "explanation": "Windows wollte ein Zertifikat anfordern und hat keine Antwort erhalten.",
+      "recommendation": "In Heimnetzen ohne Bedeutung. In Firmennetzen die Zertifizierungsstelle prüfen."
+    },
+    {
+      "provider": "Microsoft-Windows-Kernel-EventTracing",
+      "id": 2,
+      "severity": "warning",
+      "title": "Ablaufverfolgung konnte nicht gestartet werden",
+      "explanation": "Eine interne Protokollierungssitzung ließ sich nicht starten, meist weil sie bereits läuft.",
+      "recommendation": "Ohne Bedeutung für den Betrieb."
+    },
+    {
+      "provider": "Application Error",
+      "id": 1000,
+      "severity": "error",
+      "title": "Programm abgestürzt",
+      "explanation": "Ein Programm wurde durch einen Fehler beendet.",
+      "recommendation": "Name des Programms und des fehlerhaften Moduls beachten. Bei Systemdateien auf Treiber prüfen, sonst das Programm neu installieren."
+    },
+    {
+      "provider": "Application Hang",
+      "id": 1002,
+      "severity": "warning",
+      "title": "Programm reagierte nicht mehr",
+      "explanation": "Ein Programm hat aufgehört zu antworten und musste beendet werden.",
+      "recommendation": "Bei Häufung Arbeitsspeicherauslastung und Datenträgerzustand prüfen."
+    },
+    {
+      "provider": "Microsoft-Windows-WER-SystemErrorReporting",
+      "id": 1001,
+      "severity": "critical",
+      "title": "Bluescreen aufgetreten",
+      "explanation": "Windows wurde durch einen schweren Fehler zum Neustart gezwungen. Der Stoppcode steht im Eintrag.",
+      "recommendation": "Der Abschnitt Absturzabbilder weiter unten übersetzt den Stoppcode in Klartext."
+    },
+    {
+      "provider": "EventLog",
+      "id": 6008,
+      "severity": "critical",
+      "title": "Unerwartetes Herunterfahren",
+      "explanation": "Das vorherige Herunterfahren war nicht ordnungsgemäß.",
+      "recommendation": "Zusammen mit Kernel-Power 41 auswerten — beide beschreiben denselben Vorfall."
+    },
+    {
+      "provider": "Microsoft-Windows-DNS-Client",
+      "id": 1014,
+      "severity": "warning",
+      "title": "Namensauflösung fehlgeschlagen",
+      "explanation": "Der DNS-Server hat auf eine Anfrage nicht geantwortet.",
+      "recommendation": "Vereinzelt normal. Bei Häufung einen anderen DNS-Server eintragen — im Bereich Reparatur möglich."
+    },
+    {
+      "provider": "Microsoft-Windows-GroupPolicy",
+      "id": 1085,
+      "severity": "warning",
+      "title": "Gruppenrichtlinie konnte nicht angewendet werden",
+      "explanation": "Eine Richtlinienerweiterung ist gescheitert.",
+      "recommendation": "In Heimnetzen meist ohne Bedeutung. In Firmennetzen die Verbindung zum Domänencontroller prüfen."
+    },
+    {
+      "provider": "ESENT",
+      "id": 455,
+      "severity": "warning",
+      "title": "Datenbankfehler einer Windows-Komponente",
+      "explanation": "Eine interne Datenbank (etwa der Suchindex) konnte eine Datei nicht öffnen.",
+      "recommendation": "Meist behebt sich das von selbst. Bei anhaltenden Suchproblemen den Suchindex neu aufbauen."
+    },
+    {
+      "provider": "Microsoft-Windows-Kernel-PnP",
+      "id": 219,
+      "severity": "warning",
+      "title": "Treiber konnte nicht geladen werden",
+      "explanation": "Ein Gerätetreiber ließ sich nicht laden.",
+      "recommendation": "Im Geräte-Manager nach Geräten mit Ausrufezeichen sehen und den Treiber neu installieren."
+    },
+    {
+      "provider": "Microsoft-Windows-Winlogon",
+      "id": 6006,
+      "severity": "warning",
+      "title": "Anmeldung dauerte ungewöhnlich lange",
+      "explanation": "Der Anmeldevorgang wurde durch einen Dienst oder ein Autostart-Programm verzögert.",
+      "recommendation": "Autostart-Einträge prüfen — der Bereich Autostart zeigt sie samt Herkunft."
+    }
+  ]
+}

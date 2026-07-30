@@ -1,0 +1,107 @@
+{
+  "schemaVersion": 1,
+  "entries": [
+    {
+      "code": "0x0000000A",
+      "name": "IRQL_NOT_LESS_OR_EQUAL",
+      "cause": "Ein Treiber hat auf einen ungültigen Speicherbereich zugegriffen.",
+      "recommendation": "Zuletzt installierte oder aktualisierte Treiber rückgängig machen. Bei älteren PCs auch Arbeitsspeicher testen."
+    },
+    {
+      "code": "0x0000001A",
+      "name": "MEMORY_MANAGEMENT",
+      "cause": "Die Speicherverwaltung hat einen schweren Fehler festgestellt.",
+      "recommendation": "Arbeitsspeicher mit MemTest86 prüfen (mehrere Durchläufe). Häufigster Bluescreen bei defekten RAM-Riegeln."
+    },
+    {
+      "code": "0x0000003B",
+      "name": "SYSTEM_SERVICE_EXCEPTION",
+      "cause": "Ein Systemaufruf ist fehlgeschlagen, meist ausgelöst durch einen Treiber.",
+      "recommendation": "Grafiktreiber neu installieren, danach Chipsatztreiber."
+    },
+    {
+      "code": "0x00000050",
+      "name": "PAGE_FAULT_IN_NONPAGED_AREA",
+      "cause": "Ein Zugriff auf nicht vorhandenen Speicher.",
+      "recommendation": "Arbeitsspeicher testen. Tritt der Fehler nur bei bestimmten Programmen auf, liegt es oft am Virenschutz eines Drittanbieters."
+    },
+    {
+      "code": "0x0000007E",
+      "name": "SYSTEM_THREAD_EXCEPTION_NOT_HANDLED",
+      "cause": "Ein Systemprozess hat einen Fehler nicht abgefangen — fast immer ein Treiberproblem.",
+      "recommendation": "Der Dateiname im Bluescreen nennt oft den schuldigen Treiber. Diesen aktualisieren oder entfernen."
+    },
+    {
+      "code": "0x0000009F",
+      "name": "DRIVER_POWER_STATE_FAILURE",
+      "cause": "Ein Treiber hat den Wechsel in den Energiesparmodus blockiert.",
+      "recommendation": "Tritt typischerweise beim Zuklappen oder Aufwachen auf. Netzwerk- und Grafiktreiber aktualisieren, Schnellstart abschalten."
+    },
+    {
+      "code": "0x00000116",
+      "name": "VIDEO_TDR_ERROR",
+      "cause": "Die Grafikkarte hat nicht rechtzeitig geantwortet und wurde zurückgesetzt.",
+      "recommendation": "Grafiktreiber sauber neu installieren, Temperatur der Grafikkarte prüfen, Übertaktung zurücknehmen."
+    },
+    {
+      "code": "0x00000124",
+      "name": "WHEA_UNCORRECTABLE_ERROR",
+      "cause": "Die Hardware selbst meldet einen nicht behebbaren Fehler.",
+      "recommendation": "Meist Prozessor, Netzteil oder Übertaktung. Alle Übertaktungen zurücksetzen und Temperaturen prüfen."
+    },
+    {
+      "code": "0x00000133",
+      "name": "DPC_WATCHDOG_VIOLATION",
+      "cause": "Ein Treiber hat das System zu lange blockiert.",
+      "recommendation": "Häufig veraltete SSD-Firmware oder alte SATA-Treiber. Firmware und Chipsatztreiber aktualisieren."
+    },
+    {
+      "code": "0x00000139",
+      "name": "KERNEL_SECURITY_CHECK_FAILURE",
+      "cause": "Eine interne Sicherheitsprüfung ist fehlgeschlagen, oft durch beschädigten Speicher oder Treiber.",
+      "recommendation": "Systemdateien prüfen (sfc und DISM) und den Arbeitsspeicher testen."
+    },
+    {
+      "code": "0x000000D1",
+      "name": "DRIVER_IRQL_NOT_LESS_OR_EQUAL",
+      "cause": "Ein Treiber hat auf ungültigen Speicher zugegriffen.",
+      "recommendation": "Netzwerktreiber sind hier die häufigste Ursache — als Erstes aktualisieren."
+    },
+    {
+      "code": "0x000000EF",
+      "name": "CRITICAL_PROCESS_DIED",
+      "cause": "Ein für Windows unverzichtbarer Prozess wurde beendet.",
+      "recommendation": "Systemdateien prüfen (sfc und DISM). Bei Wiederholung Datenträgerzustand kontrollieren."
+    },
+    {
+      "code": "0x000000C4",
+      "name": "DRIVER_VERIFIER_DETECTED_VIOLATION",
+      "cause": "Die Treiberüberprüfung hat einen Fehler festgestellt.",
+      "recommendation": "Läuft die Treiberüberprüfung noch, sollte sie abgeschaltet werden (verifier /reset)."
+    },
+    {
+      "code": "0x000000F4",
+      "name": "CRITICAL_OBJECT_TERMINATION",
+      "cause": "Ein wichtiger Systemprozess ist unerwartet beendet worden.",
+      "recommendation": "Häufig bei defekten Datenträgern. SMART-Werte prüfen und sichern."
+    },
+    {
+      "code": "0x000000C2",
+      "name": "BAD_POOL_CALLER",
+      "cause": "Ein Treiber hat den Speicher falsch angefordert oder freigegeben.",
+      "recommendation": "Zuletzt installierte Treiber und Software entfernen."
+    },
+    {
+      "code": "0x0000007B",
+      "name": "INACCESSIBLE_BOOT_DEVICE",
+      "cause": "Windows findet beim Start den Datenträger nicht.",
+      "recommendation": "SATA-Modus im BIOS prüfen (AHCI gegen RAID), Datenträger und Kabel kontrollieren."
+    },
+    {
+      "code": "0x000000C5",
+      "name": "DRIVER_CORRUPTED_EXPOOL",
+      "cause": "Ein Treiber hat den Systemspeicher beschädigt.",
+      "recommendation": "Arbeitsspeicher testen und Treiber aktualisieren."
+    }
+  ]
+}

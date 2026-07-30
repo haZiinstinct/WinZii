@@ -178,6 +178,159 @@ function New-WzHtmlSection {
     return "<h2>$(ConvertTo-WzHtmlText $Title)</h2>$leadHtml$Body"
 }
 
+function New-WzDiagReport {
+    <#
+    .SYNOPSIS
+        Erstellt den Diagnosebericht aus dem Ergebnis der Analyse.
+    .OUTPUTS
+        Pfad der Datei.
+    #>
+    param([Parameter(Mandatory = $true)]$Result)
+
+    $info = $syncHash.SystemInfo
+    $security = $syncHash.SecurityInfo
+    $events = @($Result.Events)
+    $dumps = @($Result.Dumps)
+    $disks = @($Result.Disks)
+
+    $critical = @($events | Where-Object { $_.Severity -eq 'critical' })
+    $diskProblems = @($disks | Where-Object { $_.Assessment -ne 'unauffällig' })
+
+    # --- Gesamteinschätzung -----------------------------------------------
+    $verdict = if ($dumps.Count -gt 0 -or $diskProblems.Count -gt 0) {
+        @{ Kind = 'err'; Text = 'Es gibt ernsthafte Auffälligkeiten, die geprüft werden sollten. Die Einzelheiten stehen weiter unten.' }
+    } elseif ($critical.Count -gt 0) {
+        @{ Kind = 'warn'; Text = 'Es wurden kritische Ereignisse gefunden. Sie deuten nicht zwingend auf einen Defekt hin, sollten aber angesehen werden.' }
+    } elseif ($events.Count -gt 0) {
+        @{ Kind = 'info'; Text = 'Es gibt einzelne Fehlermeldungen, aber keine kritischen Vorfälle. Für ein laufendes System ist das normal.' }
+    } else {
+        @{ Kind = 'ok'; Text = 'Im geprüften Zeitraum wurden keine Fehler aufgezeichnet.' }
+    }
+
+    $content = New-WzHtmlSection -Title 'Einschätzung' `
+        -Body ((New-WzHtmlNote -Text $verdict.Text -Kind $verdict.Kind) + (New-WzHtmlCard -Title 'Auf einen Blick' -Rows @(
+            "Ereignisse|$($events.Count) Auffälligkeit(en), davon $($critical.Count) kritisch"
+            "Abstürze|$($dumps.Count) Bluescreen-Abbild(er) in den letzten 90 Tagen"
+            "Datenträger|$($disks.Count) geprüft, $($diskProblems.Count) auffällig"
+            "Zeitraum|letzte $($Result.Days) Tage"
+        )))
+
+    # --- System -----------------------------------------------------------
+    if ($info) {
+        $systemRows = @(
+            "Computer|$($info.ComputerName)"
+            "Windows|$($info.OsCaption) $($info.OsVersion) (Build $($info.OsBuild))"
+            "Gerät|$($info.Manufacturer) $($info.Model)"
+            "Prozessor|$($info.CpuName)"
+            "Arbeitsspeicher|$(Format-WzBytes $info.RamTotalBytes) ($($info.RamUsedPercent) % belegt)"
+            "Laufzeit|$(Format-WzUptime $info.Uptime)"
+        )
+        if ($security) {
+            $activationKind = if ($security.Activation -like 'aktiviert*') { 'ok' } else { 'warn' }
+            $systemRows += "Aktivierung|$($security.Activation)|$activationKind"
+            $systemRows += "Virenschutz|$($security.Defender)|$(if ($security.DefenderOk) { 'ok' } else { 'warn' })"
+        }
+        if ($info.PendingReboot) {
+            $systemRows += "Neustart|steht aus ($($info.PendingReboot))|warn"
+        }
+        $content += New-WzHtmlSection -Title 'System' -Body (New-WzHtmlCard -Title 'Eckdaten' -Rows $systemRows)
+    }
+
+    # --- Ereignisse -------------------------------------------------------
+    $eventBody = if ($events.Count -eq 0) {
+        New-WzHtmlNote -Text 'Keine Fehler oder kritischen Ereignisse im geprüften Zeitraum.' -Kind 'ok'
+    } else {
+        $rows = foreach ($event in $events) {
+            $tagClass = switch ($event.Severity) {
+                'critical' { 'tag-err' }
+                'error'    { 'tag-warn' }
+                default    { 'tag-info' }
+            }
+            $label = switch ($event.Severity) {
+                'critical' { 'kritisch' }
+                'error'    { 'Fehler' }
+                default    { 'Hinweis' }
+            }
+            [pscustomobject]@{
+                Stufe    = "<span class=`"tag $tagClass`">$label</span>"
+                Titel    = $event.Title
+                Anzahl   = $event.Count
+                Zuletzt  = $event.Last.ToString('dd.MM.yy HH:mm')
+                Deutung  = if ($event.Explanation) { "$($event.Explanation) $($event.Recommendation)" } else { $event.Sample }
+                Quelle   = "$($event.Provider) / $($event.Id)"
+            }
+        }
+        New-WzHtmlTable -Data $rows -Columns @(
+            'Stufe|Stufe', 'Titel|Ereignis', 'Anzahl|Anzahl|num', 'Zuletzt|Zuletzt|num',
+            'Deutung|Bedeutung und Empfehlung', 'Quelle|Quelle|mono'
+        )
+    }
+    $content += New-WzHtmlSection -Title 'Ereignisse' `
+        -Lead "Fehler und kritische Meldungen der letzten $($Result.Days) Tage, nach Häufigkeit zusammengefasst." `
+        -Body $eventBody
+
+    # --- Abstürze ---------------------------------------------------------
+    $dumpBody = if ($dumps.Count -eq 0) {
+        New-WzHtmlNote -Text 'Keine Bluescreen-Abbilder vorhanden — in den letzten 90 Tagen gab es keine Systemabstürze.' -Kind 'ok'
+    } else {
+        $rows = foreach ($dump in $dumps) {
+            [pscustomobject]@{
+                Zeit    = $dump.Time.ToString('dd.MM.yy HH:mm')
+                Code    = $dump.Code
+                Name    = $dump.Name
+                Ursache = "$($dump.Cause) $($dump.Recommendation)"
+                Datei   = $dump.File
+            }
+        }
+        New-WzHtmlTable -Data $rows -Columns @(
+            'Zeit|Zeitpunkt|num', 'Code|Stoppcode|mono', 'Name|Bezeichnung|mono',
+            'Ursache|Ursache und Empfehlung', 'Datei|Abbild|mono'
+        )
+    }
+    $content += New-WzHtmlSection -Title 'Systemabstürze' `
+        -Lead 'Bluescreens der letzten 90 Tage mit übersetztem Stoppcode.' -Body $dumpBody
+
+    # --- Datenträger ------------------------------------------------------
+    $diskBody = if ($disks.Count -eq 0) {
+        New-WzHtmlNote -Text 'Keine Datenträgerdaten verfügbar.' -Kind 'info'
+    } else {
+        $rows = foreach ($disk in $disks) {
+            $tag = if ($disk.Assessment -eq 'unauffällig') { 'tag-ok' } else { 'tag-warn' }
+            [pscustomobject]@{
+                Modell      = $disk.Model
+                Art         = $disk.MediaType
+                Groesse     = Format-WzBytes $disk.SizeBytes
+                Betrieb     = $disk.PowerOnHours
+                Temperatur  = $disk.Temperature
+                Abnutzung   = $disk.Wear
+                Zustand     = "<span class=`"tag $tag`">$($disk.Assessment)</span>"
+            }
+        }
+        New-WzHtmlTable -Data $rows -Columns @(
+            'Modell|Modell', 'Art|Art', 'Groesse|Größe|num', 'Betrieb|Betriebszeit',
+            'Temperatur|Temperatur|num', 'Abnutzung|Abnutzung|num', 'Zustand|Zustand'
+        )
+    }
+    $content += New-WzHtmlSection -Title 'Datenträger' `
+        -Lead 'Zustandswerte aus der Selbstüberwachung der Laufwerke. USB-Gehäuse geben diese Werte oft nicht weiter.' `
+        -Body $diskBody
+
+    $meta = @(
+        "Computer|$env:COMPUTERNAME"
+        "Datum|$(Get-Date -Format 'dd.MM.yyyy HH:mm')"
+        "Zeitraum|$($Result.Days) Tage"
+        "Befunde|$($events.Count)"
+    )
+
+    $file = New-WzHtmlReport -Title 'Diagnosebericht' -Eyebrow 'DIAGNOSE' `
+        -Subtitle "Auswertung der Ereignisprotokolle, Abstürze und Datenträger von $env:COMPUTERNAME." `
+        -Meta $meta -Content $content `
+        -FileName "diagnose-$(Get-Date -Format 'yyyy-MM-dd_HHmm').html"
+
+    Write-WzLog "Diagnosebericht gespeichert: $file" -Level Ok
+    return $file
+}
+
 function Export-WzProtocol {
     <#
     .SYNOPSIS
