@@ -1,0 +1,214 @@
+﻿# Seite "Reparatur" — Netzwerk, Windows Update, Drucker, Sicherung,
+# vorinstallierte Apps.
+
+function Initialize-WzToolboxPage {
+    $syncHash.ToolBtnRenew.Add_Click({ Start-WzNetworkRenew })
+    $syncHash.ToolBtnNetReset.Add_Click({ Start-WzNetworkReset })
+    $syncHash.ToolBtnWuReset.Add_Click({ Start-WzUpdateReset })
+    $syncHash.ToolBtnSpooler.Add_Click({ Start-WzSpoolerRepair })
+    $syncHash.ToolBtnRestorePoint.Add_Click({ Start-WzRestorePoint })
+    $syncHash.ToolBtnBloatScan.Add_Click({ Start-WzBloatwareScan })
+    $syncHash.ToolBtnBloatRemove.Add_Click({ Start-WzBloatwareRemove })
+
+    foreach ($pair in @(
+        @('ToolBtnDnsCloudflare', 'Cloudflare'),
+        @('ToolBtnDnsQuad9', 'Quad9'),
+        @('ToolBtnDnsGoogle', 'Google'),
+        @('ToolBtnDnsAuto', 'Auto')
+    )) {
+        $button = $syncHash[$pair[0]]
+        $provider = $pair[1]
+        $button.Add_Click({ Start-WzDnsChange -Provider $provider }.GetNewClosure())
+    }
+
+    [void]$syncHash.ToolNotices.Items.Add((New-WzNotice -Kind 'info' `
+        -Text 'Alle Eingriffe hier fragen vorher nach und schreiben mit, was sie tun. Im Testmodus wird nur protokolliert.'))
+}
+
+function Update-WzToolboxPage {
+    if ($syncHash.ToolLoaded) { return }
+    $syncHash.ToolLoaded = $true
+    Start-WzBloatwareScan
+}
+
+# --- Netzwerk --------------------------------------------------------------
+
+function Start-WzNetworkRenew {
+    Invoke-WzTask -Name 'IP-Adresse auffrischen' -ScriptBlock {
+        Repair-WzNetworkAdapter
+    } -OnComplete {
+        param($result)
+        if (-not $result) { return }
+        Show-WzInfo -Title 'Netzwerk aufgefrischt' `
+            -Message "$($result.Done) Schritt(e) ausgeführt. Prüfe, ob die Verbindung jetzt steht — sonst hilft der vollständige Reset."
+    }
+}
+
+function Start-WzNetworkReset {
+    $answer = Show-WzConfirm -Title 'Netzwerk zurücksetzen' `
+        -Message 'Winsock und der IP-Stapel werden auf die Werkseinstellung zurückgesetzt, der DNS-Zwischenspeicher geleert und der Proxy entfernt. Danach ist ein Neustart nötig. VPN-Programme müssen ihre Treiber danach eventuell neu einrichten.' `
+        -Items @('Winsock zurücksetzen', 'IPv4 und IPv6 zurücksetzen', 'DNS-Zwischenspeicher leeren', 'Proxy zurücksetzen') `
+        -ConfirmText 'Zurücksetzen' -Danger
+    if (-not $answer.Confirmed) { return }
+
+    Invoke-WzTask -Name 'Netzwerk zurücksetzen' -ScriptBlock {
+        Invoke-WzNetworkReset -Winsock -IpStack -FlushDns -ResetProxy
+    } -OnComplete {
+        param($result)
+        if (-not $result) { return }
+        Show-WzInfo -Title 'Netzwerk zurückgesetzt' `
+            -Message "$($result.Done) Schritt(e) erledigt. Der PC muss neu gestartet werden, damit die Änderungen greifen."
+    }
+}
+
+function Start-WzDnsChange {
+    param([string]$Provider)
+
+    $description = switch ($Provider) {
+        'Cloudflare' { '1.1.1.1 — schnell, keine Protokollierung der Anfragen' }
+        'Quad9'      { '9.9.9.9 — blockiert bekannte Schadseiten, Betrieb in der Schweiz' }
+        'Google'     { '8.8.8.8 — sehr zuverlässig erreichbar' }
+        default      { 'Die Einstellungen kommen wieder vom Router' }
+    }
+
+    $answer = Show-WzConfirm -Title "DNS auf $Provider umstellen" `
+        -Message "$description`n`nDie Änderung gilt für alle aktiven Netzwerkkarten und lässt sich jederzeit auf »Router« zurückstellen." `
+        -ConfirmText 'Umstellen'
+    if (-not $answer.Confirmed) { return }
+
+    Invoke-WzTask -Name "DNS auf $Provider" -ArgumentList @($Provider) -ScriptBlock {
+        param($provider)
+        Set-WzDnsServers -Provider $provider
+    } -OnComplete {
+        param($result)
+        if (-not $result) { return }
+        Show-WzInfo -Title 'DNS umgestellt' `
+            -Message "$($result.Changed) Netzwerkkarte(n) geändert." -Items @($result.Adapters)
+    }
+}
+
+# --- Windows Update und Drucker -------------------------------------------
+
+function Start-WzUpdateReset {
+    $answer = Show-WzConfirm -Title 'Update-Zwischenspeicher zurücksetzen' `
+        -Message 'Die Update-Dienste werden angehalten, die Ordner SoftwareDistribution und catroot2 umbenannt und die Dienste wieder gestartet. Windows legt beide Ordner beim nächsten Update neu an. Bereits geladene Updates werden erneut heruntergeladen.' `
+        -ConfirmText 'Zurücksetzen' -Danger
+    if (-not $answer.Confirmed) { return }
+
+    Invoke-WzTask -Name 'Windows Update zurücksetzen' -ScriptBlock {
+        Repair-WzWindowsUpdate
+    } -OnComplete {
+        param($result)
+        if (-not $result) { return }
+        $message = if ($result.Success) {
+            'Der Zwischenspeicher wurde zurückgesetzt. Jetzt in den Einstellungen erneut nach Updates suchen.'
+        } else {
+            'Es konnte nichts umbenannt werden — die Ordner waren gesperrt. Nach einem Neustart erneut versuchen.'
+        }
+        Show-WzInfo -Title 'Windows Update' -Message $message -Items @($result.Messages)
+    }
+}
+
+function Start-WzSpoolerRepair {
+    $answer = Show-WzConfirm -Title 'Druckwarteschlange leeren' `
+        -Message 'Alle wartenden Druckaufträge werden verworfen und der Druckdienst neu gestartet. Installierte Drucker bleiben erhalten.' `
+        -ConfirmText 'Leeren'
+    if (-not $answer.Confirmed) { return }
+
+    Invoke-WzTask -Name 'Druckwarteschlange leeren' -ScriptBlock {
+        Repair-WzSpooler
+    } -OnComplete {
+        param($result)
+        if (-not $result) { return }
+        Show-WzInfo -Title 'Druckwarteschlange' `
+            -Message "$($result.Removed) Auftrag/Aufträge entfernt, Dienst neu gestartet."
+    }
+}
+
+function Start-WzRestorePoint {
+    $answer = Show-WzConfirm -Title 'Wiederherstellungspunkt anlegen' `
+        -Message 'Windows legt einen Systemwiederherstellungspunkt an. Das dauert bis zu einer Minute und braucht etwas Speicherplatz.' `
+        -ConfirmText 'Anlegen'
+    if (-not $answer.Confirmed) { return }
+
+    Invoke-WzTask -Name 'Wiederherstellungspunkt anlegen' -ScriptBlock {
+        New-WzRestorePoint -Description 'WinZii — manuell angelegt'
+    } -OnComplete {
+        param($ok)
+        $message = if ($ok) {
+            'Der Wiederherstellungspunkt wurde angelegt.'
+        } else {
+            'Der Punkt konnte nicht angelegt werden. Häufigste Ursache: Der Systemschutz ist für das Laufwerk C: abgeschaltet.'
+        }
+        Show-WzInfo -Title 'Wiederherstellungspunkt' -Message $message
+    }
+}
+
+# --- Vorinstallierte Apps --------------------------------------------------
+
+function Start-WzBloatwareScan {
+    $syncHash.ToolBloatTitle.Text = 'wird geprüft...'
+    $syncHash.ToolBloatList.Children.Clear()
+
+    Invoke-WzTask -Name 'Vorinstallierte Apps suchen' -Silent -ScriptBlock {
+        Get-WzBloatwareList -Level 'extended'
+    } -OnComplete {
+        param($packages)
+        $packages = @($packages)
+        $syncHash.ToolBloatPackages = $packages
+
+        $syncHash.ToolBloatTitle.Text = if ($packages.Count -eq 0) {
+            'Nichts gefunden — der PC ist bereits aufgeräumt'
+        } else {
+            "$($packages.Count) App(s) gefunden"
+        }
+
+        $container = $syncHash.ToolBloatList
+        $container.Children.Clear()
+        $syncHash.ToolBloatBoxes = @()
+
+        foreach ($package in $packages) {
+            $item = [pscustomobject]@{
+                name        = $package.DisplayName
+                description = $package.Description
+            }
+            $row = New-WzCheckRow -Item $item -IsChecked $false
+            $row.CheckBox.Tag = $package
+            $row.CheckBox.Add_Click({ Update-WzBloatwareSelection })
+            [void]$container.Children.Add($row.Row)
+            $syncHash.ToolBloatBoxes += $row.CheckBox
+        }
+
+        Update-WzBloatwareSelection
+        if ($packages.Count -gt 0) {
+            Write-WzLog "$($packages.Count) vorinstallierte App(s) gefunden, die entfernt werden können." -Level Info
+        }
+    }
+}
+
+function Update-WzBloatwareSelection {
+    $count = @($syncHash.ToolBloatBoxes | Where-Object { $_.IsChecked }).Count
+    $syncHash.ToolBtnBloatRemove.IsEnabled = ($count -gt 0)
+}
+
+function Start-WzBloatwareRemove {
+    $selected = @($syncHash.ToolBloatBoxes | Where-Object { $_.IsChecked } | ForEach-Object { $_.Tag })
+    if ($selected.Count -eq 0) { return }
+
+    $answer = Show-WzConfirm -Title 'Apps entfernen' `
+        -Message "$($selected.Count) App(s) werden für alle Benutzer entfernt und auch für neu angelegte Konten nicht mehr bereitgestellt. Über den Microsoft Store lassen sie sich bei Bedarf wieder installieren." `
+        -Items @($selected | ForEach-Object { $_.DisplayName }) `
+        -ConfirmText 'Entfernen' -Danger
+    if (-not $answer.Confirmed) { return }
+
+    Invoke-WzTask -Name 'Apps entfernen' -ArgumentList (, $selected) -ScriptBlock {
+        param($packages)
+        Remove-WzBloatware -Packages $packages
+    } -OnComplete {
+        param($result)
+        if (-not $result) { return }
+        Show-WzInfo -Title 'Fertig' `
+            -Message "$($result.Removed) App(s) entfernt, $($result.Failed) fehlgeschlagen."
+        Start-WzBloatwareScan
+    }
+}

@@ -1,0 +1,89 @@
+﻿<StackPanel xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+            xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+
+    <TextBlock Text="// WERKZEUGE" Style="{DynamicResource WzEyebrow}" />
+    <TextBlock Text="Reparatur" Style="{DynamicResource WzPageTitle}" />
+    <TextBlock Style="{DynamicResource WzPageLead}"
+               Text="Die Handgriffe, die im Alltag am häufigsten gebraucht werden — jeweils mit Erklärung, was dabei passiert." />
+
+    <ItemsControl Name="ToolNotices" Margin="0,0,0,14" />
+
+    <Grid>
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="*" />
+            <ColumnDefinition Width="14" />
+            <ColumnDefinition Width="*" />
+        </Grid.ColumnDefinitions>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+        </Grid.RowDefinitions>
+
+        <!-- Netzwerk -->
+        <Border Grid.Row="0" Grid.Column="0" Style="{DynamicResource WzCardStatic}" Margin="0,0,0,14">
+            <StackPanel>
+                <TextBlock Text="// NETZWERK" Style="{DynamicResource WzEyebrow}" />
+                <TextBlock Text="Verbindungsprobleme" Style="{DynamicResource WzCardTitle}" />
+                <TextBlock Style="{DynamicResource WzHint}" Margin="0,0,0,12"
+                           Text="Erst die schnelle Auffrischung versuchen. Der vollständige Reset hilft, wenn gar nichts mehr geht, und braucht einen Neustart." />
+                <Button Name="ToolBtnRenew" Style="{DynamicResource WzBtnPrimary}" Margin="0,0,0,8"
+                        HorizontalAlignment="Left" Content="IP-Adresse auffrischen" />
+                <Button Name="ToolBtnNetReset" Style="{DynamicResource WzBtnDanger}"
+                        HorizontalAlignment="Left" Content="Netzwerk vollständig zurücksetzen" />
+
+                <TextBlock Text="Namensauflösung (DNS)" Style="{DynamicResource WzLabel}" Margin="0,18,0,6" />
+                <WrapPanel>
+                    <Button Name="ToolBtnDnsCloudflare" Style="{DynamicResource WzBtnSecondary}" Margin="0,0,8,8" Content="Cloudflare" />
+                    <Button Name="ToolBtnDnsQuad9" Style="{DynamicResource WzBtnSecondary}" Margin="0,0,8,8" Content="Quad9" />
+                    <Button Name="ToolBtnDnsGoogle" Style="{DynamicResource WzBtnSecondary}" Margin="0,0,8,8" Content="Google" />
+                    <Button Name="ToolBtnDnsAuto" Style="{DynamicResource WzBtnGhost}" Margin="0,0,8,8" Content="zurück auf Router" />
+                </WrapPanel>
+            </StackPanel>
+        </Border>
+
+        <!-- Windows Update -->
+        <Border Grid.Row="0" Grid.Column="2" Style="{DynamicResource WzCardStatic}" Margin="0,0,0,14">
+            <StackPanel>
+                <TextBlock Text="// WINDOWS UPDATE" Style="{DynamicResource WzEyebrow}" />
+                <TextBlock Text="Updates hängen oder scheitern" Style="{DynamicResource WzCardTitle}" />
+                <TextBlock Style="{DynamicResource WzHint}" Margin="0,0,0,12"
+                           Text="Setzt den Update-Zwischenspeicher zurück. Die alten Ordner werden nur umbenannt, nicht gelöscht — Windows legt sie beim nächsten Update neu an." />
+                <Button Name="ToolBtnWuReset" Style="{DynamicResource WzBtnPrimary}" HorizontalAlignment="Left"
+                        Content="Update-Zwischenspeicher zurücksetzen" />
+
+                <TextBlock Text="Drucker" Style="{DynamicResource WzLabel}" Margin="0,18,0,6" />
+                <TextBlock Style="{DynamicResource WzHint}" Margin="0,0,0,10"
+                           Text="Wenn Druckaufträge in der Warteschlange festhängen und sich nicht löschen lassen." />
+                <Button Name="ToolBtnSpooler" Style="{DynamicResource WzBtnSecondary}" HorizontalAlignment="Left"
+                        Content="Druckwarteschlange leeren" />
+            </StackPanel>
+        </Border>
+
+        <!-- Wiederherstellungspunkt -->
+        <Border Grid.Row="1" Grid.Column="0" Style="{DynamicResource WzCardStatic}" Margin="0,0,0,14">
+            <StackPanel>
+                <TextBlock Text="// SICHERUNG" Style="{DynamicResource WzEyebrow}" />
+                <TextBlock Text="Wiederherstellungspunkt" Style="{DynamicResource WzCardTitle}" />
+                <TextBlock Style="{DynamicResource WzHint}" Margin="0,0,0,12"
+                           Text="Sinnvoll vor größeren Eingriffen. Windows erlaubt normalerweise nur einen Punkt pro Tag — WinZii hebt diese Sperre kurz auf." />
+                <Button Name="ToolBtnRestorePoint" Style="{DynamicResource WzBtnPrimary}" HorizontalAlignment="Left"
+                        Content="Wiederherstellungspunkt anlegen" />
+            </StackPanel>
+        </Border>
+
+        <!-- Vorinstallierte Apps -->
+        <Border Grid.Row="1" Grid.Column="2" Style="{DynamicResource WzCardStatic}" Margin="0,0,0,14">
+            <StackPanel>
+                <TextBlock Text="// VORINSTALLIERTE APPS" Style="{DynamicResource WzEyebrow}" />
+                <TextBlock Name="ToolBloatTitle" Text="wird geprüft..." Style="{DynamicResource WzCardTitle}" />
+                <TextBlock Style="{DynamicResource WzHint}" Margin="0,0,0,12"
+                           Text="Apps, die Windows mitbringt und die auf den meisten Kundenrechnern nur Platz belegen." />
+                <StackPanel Name="ToolBloatList" />
+                <WrapPanel Margin="0,10,0,0">
+                    <Button Name="ToolBtnBloatScan" Style="{DynamicResource WzBtnSecondary}" Margin="0,0,8,0" Content="Suchen" />
+                    <Button Name="ToolBtnBloatRemove" Style="{DynamicResource WzBtnDanger}" Content="Ausgewählte entfernen" IsEnabled="False" />
+                </WrapPanel>
+            </StackPanel>
+        </Border>
+    </Grid>
+</StackPanel>

@@ -1,0 +1,43 @@
+{
+  "schemaVersion": 1,
+  "safe": [
+    { "pattern": "Microsoft.BingNews*", "name": "Bing Nachrichten", "description": "Nachrichten-App von Microsoft." },
+    { "pattern": "Microsoft.BingWeather*", "name": "Wetter", "description": "Wetter-App, lädt im Hintergrund nach." },
+    { "pattern": "Microsoft.BingFinance*", "name": "Finanzen", "description": "Börsen- und Finanz-App." },
+    { "pattern": "Microsoft.BingSports*", "name": "Sport", "description": "Sport-App." },
+    { "pattern": "Microsoft.BingSearch*", "name": "Websuche im Startmenü", "description": "Liefert Bing-Ergebnisse in der Windows-Suche." },
+    { "pattern": "Microsoft.MicrosoftSolitaireCollection*", "name": "Solitaire Collection", "description": "Kartenspiele mit Werbung und Abo-Angeboten." },
+    { "pattern": "Microsoft.GetHelp*", "name": "Hilfe anfordern", "description": "Support-App von Microsoft." },
+    { "pattern": "Microsoft.Getstarted*", "name": "Tipps", "description": "Einführungs-App für Windows." },
+    { "pattern": "Microsoft.MicrosoftOfficeHub*", "name": "Office-Hub", "description": "Werbekachel für Microsoft 365, kein echtes Office." },
+    { "pattern": "Microsoft.People*", "name": "Kontakte", "description": "Kontakte-App, in der Praxis kaum genutzt." },
+    { "pattern": "Microsoft.WindowsFeedbackHub*", "name": "Feedback-Hub", "description": "Rückmeldungen an Microsoft." },
+    { "pattern": "Microsoft.Todos*", "name": "Microsoft To Do", "description": "Aufgabenlisten-App." },
+    { "pattern": "Clipchamp.Clipchamp*", "name": "Clipchamp", "description": "Videobearbeitung mit Abo-Modell." },
+    { "pattern": "MicrosoftTeams*", "name": "Teams (privat)", "description": "Die private Teams-Variante, nicht die geschäftliche." },
+    { "pattern": "Microsoft.MicrosoftStickyNotes*", "name": "Kurznotizen", "description": "Notizzettel-App." },
+    { "pattern": "Microsoft.WindowsMaps*", "name": "Karten", "description": "Karten-App von Microsoft." },
+    { "pattern": "Microsoft.YourPhone*", "name": "Smartphone-Link", "description": "Kopplung mit dem Mobiltelefon." },
+    { "pattern": "Microsoft.549981C3F5F10*", "name": "Cortana", "description": "Die alte Sprachassistentin." },
+    { "pattern": "Microsoft.MixedReality.Portal*", "name": "Mixed Reality Portal", "description": "Für VR-Brillen, die es kaum noch gibt." },
+    { "pattern": "Microsoft.OutlookForWindows*", "name": "Neues Outlook", "description": "Die Web-Variante von Outlook, oft unerwünscht." },
+    { "pattern": "MicrosoftCorporationII.QuickAssist*", "name": "Schnellhilfe", "description": "Fernwartung von Microsoft." }
+  ],
+  "extended": [
+    { "pattern": "Microsoft.XboxApp*", "name": "Xbox", "description": "Xbox-App. Für Spiele über den Store nicht nötig." },
+    { "pattern": "Microsoft.XboxGamingOverlay*", "name": "Xbox Game Bar", "description": "Overlay beim Spielen, kostet etwas Leistung." },
+    { "pattern": "Microsoft.XboxGameOverlay*", "name": "Xbox Game Overlay", "description": "Zusatzkomponente der Game Bar." },
+    { "pattern": "Microsoft.XboxSpeechToTextOverlay*", "name": "Xbox Sprachausgabe", "description": "Untertitel-Overlay für Xbox-Spiele." },
+    { "pattern": "Microsoft.XboxIdentityProvider*", "name": "Xbox-Anmeldung", "description": "Wird gebraucht, wenn Spiele aus dem Store laufen sollen." },
+    { "pattern": "Microsoft.ZuneMusic*", "name": "Media Player", "description": "Musik-App von Windows." },
+    { "pattern": "Microsoft.ZuneVideo*", "name": "Filme und TV", "description": "Video-App mit Kaufangeboten." },
+    { "pattern": "Microsoft.WindowsSoundRecorder*", "name": "Sprachrekorder", "description": "Einfache Aufnahme-App." },
+    { "pattern": "Microsoft.MicrosoftJournal*", "name": "Journal", "description": "Notiz-App für Stifteingabe." },
+    { "pattern": "Microsoft.Windows.DevHome*", "name": "Dev Home", "description": "Entwickler-Startseite, für normale Anwender ohne Nutzen." },
+    { "pattern": "Microsoft.PowerAutomateDesktop*", "name": "Power Automate", "description": "Automatisierung, für Privatkunden selten relevant." },
+    { "pattern": "MicrosoftWindows.CrossDevice*", "name": "Geräteübergreifend", "description": "Verknüpfung mit anderen Geräten." },
+    { "pattern": "Microsoft.Microsoft3DViewer*", "name": "3D-Viewer", "description": "Betrachter für 3D-Modelle." },
+    { "pattern": "Microsoft.Print3D*", "name": "3D-Druck", "description": "Druckvorbereitung für 3D-Drucker." },
+    { "pattern": "Microsoft.SkypeApp*", "name": "Skype", "description": "Vorinstallierte Skype-Fassung." }
+  ]
+}

@@ -1,0 +1,35 @@
+﻿<StackPanel xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+            xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+
+    <TextBlock Text="// AUTOSTART" Style="{DynamicResource WzEyebrow}" />
+    <TextBlock Text="Was beim Anmelden mitstartet" Style="{DynamicResource WzPageTitle}" />
+    <TextBlock Style="{DynamicResource WzPageLead}"
+               Text="Jeder Eintrag hier verlängert den Start und belegt Arbeitsspeicher. Abgeschaltete Einträge bleiben erhalten und lassen sich jederzeit wieder einschalten — nichts wird gelöscht." />
+
+    <ItemsControl Name="AutoNotices" Margin="0,0,0,14" />
+
+    <Border Style="{DynamicResource WzCardStatic}" Margin="0,0,0,16">
+        <Grid>
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="Auto" />
+            </Grid.ColumnDefinitions>
+            <StackPanel Grid.Column="0">
+                <TextBlock Text="// ÜBERSICHT" Style="{DynamicResource WzEyebrow}" />
+                <TextBlock Name="AutoCount" Text="—" Style="{DynamicResource WzValueBig}" />
+                <TextBlock Name="AutoCountHint" Text="wird geladen..." Style="{DynamicResource WzLabel}" Margin="0,4,0,0" />
+            </StackPanel>
+            <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                <Button Name="AutoBtnRefresh" Style="{DynamicResource WzBtnSecondary}" Content="Neu einlesen" MinWidth="160" />
+            </StackPanel>
+        </Grid>
+    </Border>
+
+    <Border Style="{DynamicResource WzCardStatic}">
+        <StackPanel>
+            <TextBlock Text="// EINTRÄGE" Style="{DynamicResource WzEyebrow}" />
+            <TextBlock Text="Klicken schaltet ein oder aus" Style="{DynamicResource WzCardTitle}" />
+            <StackPanel Name="AutoItems" />
+        </StackPanel>
+    </Border>
+</StackPanel>
