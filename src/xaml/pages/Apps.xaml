@@ -1,0 +1,37 @@
+﻿<StackPanel xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+            xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+
+    <TextBlock Text="// INSTALLIEREN" Style="{DynamicResource WzEyebrow}" />
+    <TextBlock Text="Programme" Style="{DynamicResource WzPageTitle}" />
+    <TextBlock Style="{DynamicResource WzPageLead}"
+               Text="Installation über winget, den Paketdienst von Microsoft. Programme lassen sich auch vorab auf den Datenträger laden, um sie später ohne Internet einzuspielen." />
+
+    <ItemsControl Name="AppsNotices" Margin="0,0,0,14" />
+
+    <Border Style="{DynamicResource WzCardStatic}" Margin="0,0,0,16">
+        <StackPanel>
+            <Grid>
+                <StackPanel Orientation="Horizontal">
+                    <TextBlock Name="AppsSelectionCount" Text="0 ausgewählt" Style="{DynamicResource WzValue}"
+                               VerticalAlignment="Center" Foreground="{DynamicResource WzCyan}" />
+                    <TextBlock Name="AppsOfflineHint" Text="" Style="{DynamicResource WzLabel}"
+                               VerticalAlignment="Center" Margin="14,0,0,0" />
+                </StackPanel>
+                <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                    <Button Name="AppsBtnRecommended" Style="{DynamicResource WzBtnGhost}" Content="empfohlene" Margin="0,0,4,0" />
+                    <Button Name="AppsBtnNone" Style="{DynamicResource WzBtnGhost}" Content="keine" />
+                </StackPanel>
+            </Grid>
+            <WrapPanel Margin="0,16,0,0">
+                <Button Name="AppsBtnInstall" Style="{DynamicResource WzBtnPrimary}" Margin="0,0,10,0"
+                        Content="Auswahl installieren" />
+                <Button Name="AppsBtnDownload" Style="{DynamicResource WzBtnSecondary}" Margin="0,0,10,0"
+                        Content="Auf Datenträger laden" />
+                <Button Name="AppsBtnWinget" Style="{DynamicResource WzBtnSecondary}"
+                        Content="winget nachinstallieren" Visibility="Collapsed" />
+            </WrapPanel>
+        </StackPanel>
+    </Border>
+
+    <StackPanel Name="AppsCategories" />
+</StackPanel>

@@ -1,0 +1,250 @@
+{
+  "schemaVersion": 1,
+  "wingetBootstrap": {
+    "note": "Wird nur gebraucht, wenn winget fehlt (LTSC, ältere Windows-10-Stände, frisch aufgesetzte Systeme).",
+    "msixbundleUrl": "https://aka.ms/getwinget",
+    "dependencies": [
+      { "name": "VCLibs", "url": "https://aka.ms/Microsoft.VCLibs.x64.14.00.Desktop.appx" },
+      { "name": "UI.Xaml", "url": "https://github.com/microsoft/microsoft-ui-xaml/releases/download/v2.8.6/Microsoft.UI.Xaml.2.8.x64.appx" }
+    ]
+  },
+  "categories": [
+    { "id": "basis", "name": "Grundausstattung", "description": "Gehört auf jeden frisch aufgesetzten PC." },
+    { "id": "browser", "name": "Browser", "description": "Nur installieren, was der Kunde auch nutzt." },
+    { "id": "technik", "name": "Techniker-Werkzeuge", "description": "Diagnose, Speicheranalyse, Hardware-Auslesen." },
+    { "id": "fernwartung", "name": "Fernwartung und Netzwerk", "description": "Zugriff auf entfernte Rechner." },
+    { "id": "medien", "name": "Medien und Grafik", "description": "Wiedergabe, Aufnahme, Bildbearbeitung." },
+    { "id": "entwicklung", "name": "Entwicklung", "description": "Editoren und Werkzeuge für die Entwicklung." }
+  ],
+  "apps": [
+    {
+      "id": "7zip",
+      "name": "7-Zip",
+      "category": "basis",
+      "wingetId": "7zip.7zip",
+      "description": "Packt und entpackt so gut wie jedes Archivformat.",
+      "defaultChecked": true
+    },
+    {
+      "id": "notepadpp",
+      "name": "Notepad++",
+      "category": "basis",
+      "wingetId": "Notepad++.Notepad++",
+      "description": "Texteditor mit Syntaxhervorhebung, ersetzt den Windows-Editor.",
+      "defaultChecked": true
+    },
+    {
+      "id": "sumatrapdf",
+      "name": "SumatraPDF",
+      "category": "basis",
+      "wingetId": "SumatraPDF.SumatraPDF",
+      "description": "Schlanker PDF-Betrachter. Startet sofort und schleppt keinen Hintergrunddienst mit.",
+      "defaultChecked": true
+    },
+    {
+      "id": "acrobat",
+      "name": "Adobe Acrobat Reader",
+      "category": "basis",
+      "wingetId": "Adobe.Acrobat.Reader.64-bit",
+      "description": "Wenn der Kunde Formulare oder Signaturen braucht.",
+      "defaultChecked": false
+    },
+    {
+      "id": "keepassxc",
+      "name": "KeePassXC",
+      "category": "basis",
+      "wingetId": "KeePassXCTeam.KeePassXC",
+      "description": "Passwortverwaltung, die ohne Cloud auskommt.",
+      "defaultChecked": false
+    },
+    {
+      "id": "powertoys",
+      "name": "Microsoft PowerToys",
+      "category": "basis",
+      "wingetId": "Microsoft.PowerToys",
+      "description": "Werkzeugsammlung von Microsoft: Fenstereinteilung, Umbenennen in Serie, Farbwähler.",
+      "defaultChecked": false
+    },
+
+    {
+      "id": "firefox",
+      "name": "Mozilla Firefox",
+      "category": "browser",
+      "wingetId": "Mozilla.Firefox.de",
+      "description": "Deutschsprachige Fassung.",
+      "defaultChecked": false
+    },
+    {
+      "id": "chrome",
+      "name": "Google Chrome",
+      "category": "browser",
+      "wingetId": "Google.Chrome",
+      "description": "Weit verbreitet, viele Kunden erwarten ihn.",
+      "defaultChecked": false
+    },
+    {
+      "id": "brave",
+      "name": "Brave",
+      "category": "browser",
+      "wingetId": "Brave.Brave",
+      "description": "Chromium-Basis mit eingebautem Werbeblocker.",
+      "defaultChecked": false
+    },
+
+    {
+      "id": "treesize",
+      "name": "TreeSize Free",
+      "category": "technik",
+      "wingetId": "JAMSoftware.TreeSize.Free",
+      "description": "Zeigt grafisch, was die Festplatte füllt.",
+      "defaultChecked": true
+    },
+    {
+      "id": "crystaldiskinfo",
+      "name": "CrystalDiskInfo",
+      "category": "technik",
+      "wingetId": "CrystalDewWorld.CrystalDiskInfo",
+      "description": "Liest die SMART-Werte von Festplatten und SSDs aus — zeigt Ausfälle, bevor sie passieren.",
+      "defaultChecked": true
+    },
+    {
+      "id": "hwinfo",
+      "name": "HWiNFO",
+      "category": "technik",
+      "wingetId": "REALiX.HWiNFO",
+      "description": "Liest alle Sensoren aus: Temperaturen, Spannungen, Taktraten.",
+      "defaultChecked": false
+    },
+    {
+      "id": "revo",
+      "name": "Revo Uninstaller",
+      "category": "technik",
+      "wingetId": "RevoUninstaller.RevoUninstaller",
+      "description": "Entfernt Programme samt Resten in Registry und Dateisystem.",
+      "defaultChecked": false
+    },
+    {
+      "id": "everything",
+      "name": "Everything",
+      "category": "technik",
+      "wingetId": "voidtools.Everything",
+      "description": "Findet Dateien in Sekundenbruchteilen über den Dateiindex von NTFS.",
+      "defaultChecked": false
+    },
+    {
+      "id": "bleachbit",
+      "name": "BleachBit",
+      "category": "technik",
+      "wingetId": "BleachBit.BleachBit",
+      "description": "Zusätzliche Bereinigung für Programme, die WinZii nicht abdeckt.",
+      "defaultChecked": false
+    },
+
+    {
+      "id": "anydesk",
+      "name": "AnyDesk",
+      "category": "fernwartung",
+      "wingetId": "AnyDeskSoftwareGmbH.AnyDesk",
+      "description": "Fernwartung, im deutschsprachigen Raum weit verbreitet.",
+      "defaultChecked": false
+    },
+    {
+      "id": "rustdesk",
+      "name": "RustDesk",
+      "category": "fernwartung",
+      "wingetId": "RustDesk.RustDesk",
+      "description": "Quelloffene Fernwartung, auch mit eigenem Server nutzbar.",
+      "defaultChecked": false
+    },
+    {
+      "id": "winscp",
+      "name": "WinSCP",
+      "category": "fernwartung",
+      "wingetId": "WinSCP.WinSCP",
+      "description": "Dateiübertragung über SFTP, FTP und SCP.",
+      "defaultChecked": false
+    },
+    {
+      "id": "putty",
+      "name": "PuTTY",
+      "category": "fernwartung",
+      "wingetId": "PuTTY.PuTTY",
+      "description": "SSH- und Telnet-Zugriff auf Router, Switches und Server.",
+      "defaultChecked": false
+    },
+    {
+      "id": "advancedipscanner",
+      "name": "Advanced IP Scanner",
+      "category": "fernwartung",
+      "wingetId": "Famatech.AdvancedIPScanner",
+      "description": "Findet alle Geräte im Netzwerk samt Namen und MAC-Adresse.",
+      "defaultChecked": false
+    },
+
+    {
+      "id": "vlc",
+      "name": "VLC media player",
+      "category": "medien",
+      "wingetId": "VideoLAN.VLC",
+      "description": "Spielt praktisch jedes Video- und Audioformat ab.",
+      "defaultChecked": true
+    },
+    {
+      "id": "sharex",
+      "name": "ShareX",
+      "category": "medien",
+      "wingetId": "ShareX.ShareX",
+      "description": "Bildschirmfotos und Bildschirmaufnahmen mit Nachbearbeitung.",
+      "defaultChecked": false
+    },
+    {
+      "id": "irfanview",
+      "name": "IrfanView",
+      "category": "medien",
+      "wingetId": "IrfanSkiljan.IrfanView",
+      "description": "Schneller Bildbetrachter mit Stapelverarbeitung.",
+      "defaultChecked": false
+    },
+    {
+      "id": "gimp",
+      "name": "GIMP",
+      "category": "medien",
+      "wingetId": "GIMP.GIMP.3",
+      "description": "Bildbearbeitung, kostenlose Alternative zu Photoshop.",
+      "defaultChecked": false
+    },
+
+    {
+      "id": "vscode",
+      "name": "Visual Studio Code",
+      "category": "entwicklung",
+      "wingetId": "Microsoft.VisualStudioCode",
+      "description": "Editor mit Erweiterungen für nahezu jede Sprache.",
+      "defaultChecked": false
+    },
+    {
+      "id": "git",
+      "name": "Git",
+      "category": "entwicklung",
+      "wingetId": "Git.Git",
+      "description": "Versionsverwaltung samt Git Bash.",
+      "defaultChecked": false
+    },
+    {
+      "id": "pwsh",
+      "name": "PowerShell 7",
+      "category": "entwicklung",
+      "wingetId": "Microsoft.PowerShell",
+      "description": "Aktuelle PowerShell-Version parallel zur eingebauten 5.1.",
+      "defaultChecked": false
+    },
+    {
+      "id": "windowsterminal",
+      "name": "Windows Terminal",
+      "category": "entwicklung",
+      "wingetId": "Microsoft.WindowsTerminal",
+      "description": "Terminal mit Registerkarten für PowerShell, Eingabeaufforderung und WSL.",
+      "defaultChecked": false
+    }
+  ]
+}
