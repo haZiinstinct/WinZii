@@ -1,0 +1,56 @@
+{
+  "schemaVersion": 1,
+  "odtSetupUrl": "https://officecdn.microsoft.com/pr/wsus/setup.exe",
+  "variants": [
+    {
+      "id": "m365",
+      "name": "Microsoft 365 Apps",
+      "productId": "O365ProPlusRetail",
+      "channel": "Current",
+      "description": "Abo-Version. Die Anmeldung mit dem Microsoft-365-Konto schaltet die Lizenz frei.",
+      "note": "Ohne gültiges Abo läuft Office nur im Lesemodus."
+    },
+    {
+      "id": "office2024",
+      "name": "Office LTSC 2024",
+      "productId": "ProPlus2024Volume",
+      "channel": "PerpetualVL2024",
+      "description": "Kaufversion ohne Abo, Volumenlizenz. Aktuelle Dauerlizenz-Ausgabe.",
+      "note": "Braucht einen Volumenlizenz-Schlüssel (KMS oder MAK)."
+    },
+    {
+      "id": "office2021",
+      "name": "Office LTSC 2021",
+      "productId": "ProPlus2021Volume",
+      "channel": "PerpetualVL2021",
+      "description": "Vorgängerversion der Kaufvariante — passend zu bestehenden 2021er-Lizenzen.",
+      "note": "Braucht einen Volumenlizenz-Schlüssel (KMS oder MAK)."
+    }
+  ],
+  "languages": [
+    { "id": "de-de", "name": "Deutsch" },
+    { "id": "en-us", "name": "Englisch (USA)" },
+    { "id": "tr-tr", "name": "Türkisch" },
+    { "id": "fr-fr", "name": "Französisch" },
+    { "id": "it-it", "name": "Italienisch" }
+  ],
+  "apps": [
+    { "id": "Word", "name": "Word", "defaultIncluded": true },
+    { "id": "Excel", "name": "Excel", "defaultIncluded": true },
+    { "id": "PowerPoint", "name": "PowerPoint", "defaultIncluded": true },
+    { "id": "Outlook", "name": "Outlook", "defaultIncluded": true },
+    { "id": "OneNote", "name": "OneNote", "defaultIncluded": false },
+    { "id": "Access", "name": "Access", "defaultIncluded": false },
+    { "id": "Publisher", "name": "Publisher", "defaultIncluded": false, "maxVariant": "office2021" },
+    { "id": "OneDrive", "name": "OneDrive", "defaultIncluded": false },
+    { "id": "Teams", "name": "Teams", "defaultIncluded": false },
+    { "id": "Groove", "name": "OneDrive für Unternehmen (alt)", "defaultIncluded": false },
+    { "id": "Lync", "name": "Skype for Business", "defaultIncluded": false },
+    { "id": "Bing", "name": "Bing-Erweiterung für Edge", "defaultIncluded": false }
+  ],
+  "libreOffice": {
+    "wingetId": "TheDocumentFoundation.LibreOffice",
+    "name": "LibreOffice",
+    "description": "Kostenfreie Alternative ohne Lizenzkosten. Öffnet und speichert auch die Office-Formate."
+  }
+}

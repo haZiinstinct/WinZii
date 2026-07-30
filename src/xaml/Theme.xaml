@@ -425,14 +425,97 @@
         </Setter>
     </Style>
 
+    <!-- Auswahlfeld: eigenes Template, weil die Windows-Vorlage im dunklen
+         Design unlesbar ist (heller Text auf hellem Auswahlbalken). -->
+    <Style x:Key="WzComboItem" TargetType="ComboBoxItem">
+        <Setter Property="Foreground" Value="{DynamicResource WzText}" />
+        <Setter Property="Background" Value="Transparent" />
+        <Setter Property="Padding" Value="10,7,10,7" />
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="ComboBoxItem">
+                    <Border x:Name="Shell" Background="{TemplateBinding Background}"
+                            Padding="{TemplateBinding Padding}" CornerRadius="7" Margin="3,1,3,1">
+                        <ContentPresenter />
+                    </Border>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsHighlighted" Value="True">
+                            <Setter TargetName="Shell" Property="Background" Value="{DynamicResource WzCyanSubtle}" />
+                            <Setter Property="Foreground" Value="{DynamicResource WzCyan}" />
+                        </Trigger>
+                        <Trigger Property="IsSelected" Value="True">
+                            <Setter TargetName="Shell" Property="Background" Value="{DynamicResource WzCyanSubtle}" />
+                            <Setter Property="Foreground" Value="{DynamicResource WzCyan}" />
+                        </Trigger>
+                        <Trigger Property="IsEnabled" Value="False">
+                            <Setter Property="Opacity" Value="0.4" />
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
     <Style x:Key="WzComboBox" TargetType="ComboBox">
         <Setter Property="FontFamily" Value="{DynamicResource WzFontSans}" />
         <Setter Property="FontSize" Value="13" />
         <Setter Property="Foreground" Value="{DynamicResource WzText}" />
         <Setter Property="Background" Value="{DynamicResource WzBgDarker}" />
         <Setter Property="BorderBrush" Value="{DynamicResource WzBorder}" />
-        <Setter Property="Padding" Value="10,7,10,7" />
-        <Setter Property="Height" Value="34" />
+        <Setter Property="Padding" Value="12,0,12,0" />
+        <Setter Property="Height" Value="36" />
+        <Setter Property="Cursor" Value="Hand" />
+        <Setter Property="ItemContainerStyle" Value="{DynamicResource WzComboItem}" />
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="ComboBox">
+                    <Grid>
+                        <ToggleButton x:Name="PART_Toggle" Focusable="False" ClickMode="Press"
+                                      IsChecked="{Binding IsDropDownOpen, Mode=TwoWay, RelativeSource={RelativeSource TemplatedParent}}">
+                            <ToggleButton.Template>
+                                <ControlTemplate TargetType="ToggleButton">
+                                    <Border x:Name="Shell" Background="{DynamicResource WzBgDarker}"
+                                            BorderBrush="{DynamicResource WzBorder}" BorderThickness="1"
+                                            CornerRadius="10">
+                                        <Path x:Name="Arrow" Data="M 0 0 L 4 4 L 8 0" Stroke="{DynamicResource WzTextDim}"
+                                              StrokeThickness="1.6" HorizontalAlignment="Right" VerticalAlignment="Center"
+                                              Margin="0,0,14,0" />
+                                    </Border>
+                                    <ControlTemplate.Triggers>
+                                        <Trigger Property="IsMouseOver" Value="True">
+                                            <Setter TargetName="Shell" Property="BorderBrush" Value="{DynamicResource WzBorderHover}" />
+                                            <Setter TargetName="Arrow" Property="Stroke" Value="{DynamicResource WzCyan}" />
+                                        </Trigger>
+                                    </ControlTemplate.Triggers>
+                                </ControlTemplate>
+                            </ToggleButton.Template>
+                        </ToggleButton>
+
+                        <ContentPresenter Content="{TemplateBinding SelectionBoxItem}"
+                                          Margin="{TemplateBinding Padding}"
+                                          HorizontalAlignment="Left" VerticalAlignment="Center"
+                                          IsHitTestVisible="False" TextElement.Foreground="{DynamicResource WzTextBright}" />
+
+                        <Popup x:Name="PART_Popup" AllowsTransparency="True" Placement="Bottom"
+                               IsOpen="{TemplateBinding IsDropDownOpen}" PopupAnimation="Fade">
+                            <Border Background="{DynamicResource WzBgCard}"
+                                    BorderBrush="{DynamicResource WzCyanBorder}" BorderThickness="1"
+                                    CornerRadius="10" Padding="0,4,0,4" Margin="0,4,0,0"
+                                    MinWidth="{Binding ActualWidth, RelativeSource={RelativeSource TemplatedParent}}">
+                                <ScrollViewer MaxHeight="280" VerticalScrollBarVisibility="Auto">
+                                    <ItemsPresenter />
+                                </ScrollViewer>
+                            </Border>
+                        </Popup>
+                    </Grid>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsEnabled" Value="False">
+                            <Setter Property="Opacity" Value="0.4" />
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
     </Style>
 
     <Style x:Key="WzTextBox" TargetType="TextBox">
