@@ -2,7 +2,7 @@
 # Vorablade-Funktion für den Einsatz ohne Internet.
 
 function Initialize-WzAppsPage {
-    $syncHash.AppsRows = Build-WzAppList
+    $syncHash.AppsRows = New-WzAppList
 
     $syncHash.AppsBtnInstall.Add_Click({ Start-WzAppInstall })
     $syncHash.AppsBtnDownload.Add_Click({ Start-WzAppDownload })
@@ -64,7 +64,7 @@ function Write-WzAppsStatus {
     }
 }
 
-function Build-WzAppList {
+function New-WzAppList {
     $container = $syncHash.AppsCategories
     $container.Children.Clear()
     $rows = New-Object Collections.ArrayList

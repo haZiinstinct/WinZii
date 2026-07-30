@@ -1,0 +1,40 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 320" role="img" aria-label="WinZii">
+  <defs>
+    <linearGradient id="cyan" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#00d4ff"/><stop offset="1" stop-color="#00a8cc"/>
+    </linearGradient>
+    <pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">
+      <path d="M40 0H0V40" fill="none" stroke="#ffffff" stroke-opacity="0.025" stroke-width="1"/>
+    </pattern>
+    <radialGradient id="vignette" cx="0.5" cy="0.42" r="0.75">
+      <stop offset="0.5" stop-color="#0a0a0f" stop-opacity="0"/><stop offset="1" stop-color="#06060a" stop-opacity="0.85"/>
+    </radialGradient>
+    <radialGradient id="cyanGlow" cx="0.5" cy="0.5" r="0.5">
+      <stop offset="0" stop-color="#00d4ff" stop-opacity="0.22"/><stop offset="1" stop-color="#00d4ff" stop-opacity="0"/>
+    </radialGradient>
+    <filter id="glow" x="-40%" y="-40%" width="180%" height="180%">
+      <feGaussianBlur stdDeviation="5" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+  </defs>
+  <rect width="1200" height="320" rx="24" fill="#0a0a0f"/>
+  <rect width="1200" height="320" rx="24" fill="url(#grid)"/>
+  <rect width="1200" height="320" rx="24" fill="url(#vignette)"/>
+  <rect x="1" y="1" width="1198" height="318" rx="23" fill="none" stroke="#ffffff" stroke-opacity="0.08"/>
+  <ellipse cx="600" cy="122" rx="340" ry="118" fill="url(#cyanGlow)"/>
+  <!-- MOTIF: USB-Stecker als Sinnbild fuer das portable Werkzeug -->
+  <g filter="url(#glow)" stroke="#00d4ff" fill="none" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+    <rect x="556" y="52" width="88" height="58" rx="8" stroke-opacity="0.55"/>
+    <rect x="574" y="70" width="22" height="22" rx="3" stroke-opacity="0.45"/>
+    <rect x="606" y="70" width="22" height="22" rx="3" stroke-opacity="0.45"/>
+    <line x1="600" y1="110" x2="600" y2="132" stroke-opacity="0.55"/>
+    <rect x="576" y="132" width="48" height="14" rx="4" stroke-opacity="0.6"/>
+    <line x1="600" y1="146" x2="600" y2="160" stroke-opacity="0.4"/>
+    <circle cx="600" cy="166" r="4" fill="#00d4ff" stroke="none" fill-opacity="0.9"/>
+  </g>
+  <g filter="url(#glow)">
+    <text x="600" y="232" text-anchor="middle" font-family="'JetBrains Mono','Consolas',monospace" font-weight="700" font-size="84" letter-spacing="-2" fill="#00d4ff">Win<tspan fill="#f8fafc">Z</tspan>ii</text>
+  </g>
+  <rect x="470" y="252" width="260" height="4" rx="2" fill="url(#cyan)" filter="url(#glow)"/>
+  <text x="600" y="286" text-anchor="middle" font-family="'Inter','Segoe UI',system-ui,sans-serif" font-size="21" fill="#e2e8f0">Portables Windows-Werkzeug fuer Technikerinnen und Techniker</text>
+  <text x="600" y="310" text-anchor="middle" font-family="'JetBrains Mono','Consolas',monospace" font-size="14" fill="#00d4ff" fill-opacity="0.85" letter-spacing="0.5">// PowerShell 5.1 · WPF · keine Installation · offline-first</text>
+</svg>

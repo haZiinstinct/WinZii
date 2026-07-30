@@ -2,7 +2,7 @@
 # (Optimierung und KI-Entfernung). Der Zustand jedes Eintrags wird im
 # Hintergrund ermittelt, damit die Liste sofort steht.
 
-function Build-WzTweakList {
+function New-WzTweakList {
     <#
     .SYNOPSIS
         Baut Kategoriekarten mit Checkbox-Zeilen in einen Container.

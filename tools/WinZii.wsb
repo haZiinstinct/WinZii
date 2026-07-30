@@ -1,0 +1,22 @@
+<Configuration>
+  <!--
+    Windows Sandbox zum gefahrlosen Ausprobieren.
+    Die Sandbox bringt kein winget mit — damit lässt sich die Nachinstallation
+    testen. Der Ordner wird schreibgeschützt eingebunden, damit Testläufe
+    das Arbeitsverzeichnis nicht verändern.
+
+    Aufruf: Doppelklick auf diese Datei (Windows Pro oder Enterprise).
+  -->
+  <VGpu>Disable</VGpu>
+  <Networking>Enable</Networking>
+  <MappedFolders>
+    <MappedFolder>
+      <HostFolder>C:\Users\haZii\Documents\GitHub\WinZii</HostFolder>
+      <SandboxFolder>C:\WinZii</SandboxFolder>
+      <ReadOnly>true</ReadOnly>
+    </MappedFolder>
+  </MappedFolders>
+  <LogonCommand>
+    <Command>cmd.exe /c echo WinZii liegt unter C:\WinZii - zum Start dort Start.bat ausfuehren.</Command>
+  </LogonCommand>
+</Configuration>

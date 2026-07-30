@@ -178,11 +178,20 @@ function Invoke-WzDoEvents {
         blockieren. Nötig, wenn im UI-Thread auf eine Hintergrundarbeit
         gewartet wird (Start-Sleep würde auch die Timer anhalten).
     #>
-    $frame = New-Object Windows.Threading.DispatcherFrame
-    [void][Windows.Threading.Dispatcher]::CurrentDispatcher.BeginInvoke(
-        [Windows.Threading.DispatcherPriority]::Background,
-        [Action]{ $frame.Continue = $false }.GetNewClosure())
-    [Windows.Threading.Dispatcher]::PushFrame($frame)
+    # Ein leerer Aufruf mit niedriger Priorität kehrt erst zurück, wenn alles
+    # Wichtigere abgearbeitet ist — das entspricht einem DoEvents.
+    # (DispatcherFrame und PushFrame scheitern hier, weil New-Object den Frame
+    # in ein PSObject verpackt und PushFrame damit nichts anfangen kann.)
+    $dispatcher = if ($syncHash -and $syncHash.Window) {
+        $syncHash.Window.Dispatcher
+    } else {
+        [Windows.Threading.Dispatcher]::CurrentDispatcher
+    }
+    try {
+        [void]$dispatcher.Invoke([Action]{ }, [Windows.Threading.DispatcherPriority]::Background)
+    } catch {
+        # Fenster bereits geschlossen
+    }
 }
 
 function Invoke-WzDispatcher {

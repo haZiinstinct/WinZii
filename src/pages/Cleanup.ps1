@@ -1,7 +1,7 @@
 ﻿# Seite "Bereinigung" — Analyse mit Größenangaben, dann gezieltes Löschen.
 
 function Initialize-WzCleanupPage {
-    $syncHash.CleanRows = Build-WzCleanupList
+    $syncHash.CleanRows = New-WzCleanupList
 
     $syncHash.CleanBtnAnalyze.Add_Click({ Start-WzCleanupScan })
     $syncHash.CleanBtnClean.Add_Click({ Start-WzCleanupRun })
@@ -18,7 +18,7 @@ function Initialize-WzCleanupPage {
     Update-WzCleanupSelection
 }
 
-function Build-WzCleanupList {
+function New-WzCleanupList {
     <#
     .SYNOPSIS
         Baut die Gruppenkarten mit je einer Zeile pro Kategorie.

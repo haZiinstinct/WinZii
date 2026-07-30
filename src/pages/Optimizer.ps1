@@ -4,7 +4,7 @@
 $script:WzOptimizerCategories = @('performance', 'telemetry', 'privacy', 'security')
 
 function Initialize-WzOptimizerPage {
-    $syncHash.OptRows = Build-WzTweakList -Container $syncHash.OptCategories `
+    $syncHash.OptRows = New-WzTweakList -Container $syncHash.OptCategories `
         -Categories $script:WzOptimizerCategories `
         -OnSelectionChanged { Update-WzOptimizerSelection }
 

@@ -2,7 +2,7 @@
 # ergänzt um eine Bestandsaufnahme der tatsächlich vorhandenen Komponenten.
 
 function Initialize-WzAiRemovalPage {
-    $syncHash.AiRows = Build-WzTweakList -Container $syncHash.AiCategories `
+    $syncHash.AiRows = New-WzTweakList -Container $syncHash.AiCategories `
         -Categories @('ai-policy', 'ai-remove') `
         -OnSelectionChanged { Update-WzAiSelection }
 

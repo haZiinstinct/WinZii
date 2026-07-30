@@ -97,6 +97,17 @@ function Set-WzFonts {
 }
 Set-WzFonts
 
+# --- Fenstersymbol --------------------------------------------------------
+try {
+    $iconPath = Join-Path (Get-WzAssetDir) 'winzii.ico'
+    if (Test-Path -LiteralPath $iconPath) {
+        $window.Icon = New-Object Windows.Media.Imaging.BitmapImage(
+            (New-Object Uri($iconPath)))
+    }
+} catch {
+    # Ohne Symbol läuft WinZii genauso
+}
+
 # --- Kopfzeile füllen -----------------------------------------------------
 $syncHash.HeaderHost.Text = $env:COMPUTERNAME.ToUpper()
 $syncHash.SidebarVersion.Text = "v$($syncHash.Version)"
