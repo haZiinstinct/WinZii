@@ -210,8 +210,25 @@ if ($env:WZ_SELFTEST) {
     $shotTimer.Add_Tick({
         $shotTimer.Stop()
         try {
+            $waitFor = {
+                $limit = (Get-Date).AddSeconds(90)
+                while ($syncHash.Busy -and (Get-Date) -lt $limit) {
+                    Invoke-WzDoEvents
+                    Start-Sleep -Milliseconds 100
+                }
+            }
+
+            # Erst den Start abwarten, dann wechseln — sonst greift die
+            # Seite auf Elemente zu, die noch nicht aufgebaut sind
+            & $waitFor
             $page = if ($env:WZ_SELFTEST_PAGE) { $env:WZ_SELFTEST_PAGE } else { 'Dashboard' }
             if ($syncHash.CurrentPage -ne $page) { Show-WzPage -Id $page }
+            & $waitFor
+
+            if ($env:WZ_SELFTEST_ACTION) {
+                Write-Host "  Testaktion: $env:WZ_SELFTEST_ACTION" -ForegroundColor DarkGray
+                & $env:WZ_SELFTEST_ACTION
+            }
 
             # Laufende Hintergrundarbeit abwarten, damit das Abbild den
             # fertigen Zustand zeigt und nicht den Ladezustand
@@ -236,6 +253,8 @@ if ($env:WZ_SELFTEST) {
             Write-Host "  Abbild gespeichert: $outFile" -ForegroundColor Cyan
         } catch {
             Write-Host "  Abbild fehlgeschlagen: $($_.Exception.Message)" -ForegroundColor Red
+            Write-Host "  Stelle: $($_.InvocationInfo.ScriptName):$($_.InvocationInfo.ScriptLineNumber)" -ForegroundColor DarkGray
+            Write-Host "  Zeile:  $($_.InvocationInfo.Line.Trim())" -ForegroundColor DarkGray
         }
         $syncHash.Window.Close()
     }.GetNewClosure())

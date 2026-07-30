@@ -1,0 +1,199 @@
+{
+  "schemaVersion": 1,
+  "groups": [
+    { "id": "system", "name": "Windows", "description": "Zwischenspeicher und Reste des Betriebssystems." },
+    { "id": "user", "name": "Benutzer", "description": "Temporäre Dateien und Papierkorb des angemeldeten Kontos." },
+    { "id": "browser", "name": "Browser", "description": "Zwischenspeicher der Browser. Anmeldungen und Lesezeichen bleiben erhalten." },
+    { "id": "deep", "name": "Tiefenreinigung", "description": "Große Brocken. Vorher lesen, was dabei verloren geht." }
+  ],
+  "categories": [
+    {
+      "id": "temp-user",
+      "group": "user",
+      "name": "Temporäre Dateien (Benutzer)",
+      "description": "Der Ordner %TEMP%. Programme legen hier Zwischendateien ab und räumen oft nicht auf.",
+      "method": "files",
+      "risk": "low",
+      "defaultChecked": true,
+      "paths": ["%TEMP%\\*"]
+    },
+    {
+      "id": "temp-system",
+      "group": "system",
+      "name": "Temporäre Dateien (Windows)",
+      "description": "Der Ordner C:\\Windows\\Temp. Wird von Diensten und Installern genutzt.",
+      "method": "files",
+      "risk": "low",
+      "defaultChecked": true,
+      "paths": ["%SystemRoot%\\Temp\\*"]
+    },
+    {
+      "id": "recycle-bin",
+      "group": "user",
+      "name": "Papierkorb",
+      "description": "Endgültiges Löschen aller Dateien im Papierkorb — auch der von anderen Benutzerkonten.",
+      "method": "recycleBin",
+      "risk": "medium",
+      "defaultChecked": false
+    },
+    {
+      "id": "wu-cache",
+      "group": "system",
+      "name": "Windows-Update-Zwischenspeicher",
+      "description": "Heruntergeladene Update-Pakete. Windows lädt sie bei Bedarf neu — oft mehrere Gigabyte.",
+      "method": "files",
+      "risk": "low",
+      "defaultChecked": true,
+      "requiresServiceStop": ["wuauserv", "bits"],
+      "paths": ["%SystemRoot%\\SoftwareDistribution\\Download\\*"]
+    },
+    {
+      "id": "delivery-optimization",
+      "group": "system",
+      "name": "Übermittlungsoptimierung",
+      "description": "Zwischenspeicher, aus dem Windows Updates an andere PCs im Netz weitergibt.",
+      "method": "doCache",
+      "risk": "low",
+      "defaultChecked": true
+    },
+    {
+      "id": "wer-reports",
+      "group": "system",
+      "name": "Fehlerberichte",
+      "description": "Abstürze, die Windows für den Versand an Microsoft gesammelt hat.",
+      "method": "files",
+      "risk": "low",
+      "defaultChecked": true,
+      "paths": [
+        "%ProgramData%\\Microsoft\\Windows\\WER\\ReportQueue\\*",
+        "%ProgramData%\\Microsoft\\Windows\\WER\\ReportArchive\\*",
+        "%LOCALAPPDATA%\\Microsoft\\Windows\\WER\\ReportQueue\\*",
+        "%LOCALAPPDATA%\\Microsoft\\Windows\\WER\\ReportArchive\\*"
+      ]
+    },
+    {
+      "id": "thumbnail-cache",
+      "group": "user",
+      "name": "Miniaturansichten",
+      "description": "Vorschaubilder des Explorers. Werden beim nächsten Öffnen eines Ordners neu erzeugt.",
+      "method": "files",
+      "risk": "low",
+      "defaultChecked": true,
+      "paths": [
+        "%LOCALAPPDATA%\\Microsoft\\Windows\\Explorer\\thumbcache_*.db",
+        "%LOCALAPPDATA%\\Microsoft\\Windows\\Explorer\\iconcache_*.db"
+      ]
+    },
+    {
+      "id": "windows-logs",
+      "group": "system",
+      "name": "Windows-Protokolle",
+      "description": "Protokolldateien der Komponentenwartung und von Installationen. Für die Fehlersuche gelegentlich nützlich.",
+      "method": "files",
+      "risk": "low",
+      "defaultChecked": false,
+      "paths": [
+        "%SystemRoot%\\Logs\\CBS\\*.log",
+        "%SystemRoot%\\Logs\\DISM\\*.log",
+        "%SystemRoot%\\Panther\\*.log"
+      ]
+    },
+    {
+      "id": "prefetch",
+      "group": "system",
+      "name": "Prefetch-Daten",
+      "description": "Startdaten von Programmen. Nach dem Löschen starten Programme die ersten Male etwas langsamer.",
+      "method": "files",
+      "risk": "medium",
+      "defaultChecked": false,
+      "paths": ["%SystemRoot%\\Prefetch\\*.pf"]
+    },
+    {
+      "id": "crash-dumps",
+      "group": "system",
+      "name": "Absturzabbilder",
+      "description": "Speicherabbilder von Bluescreens. Erst löschen, wenn die Diagnose abgeschlossen ist — sie sind oft mehrere Gigabyte groß.",
+      "method": "files",
+      "risk": "medium",
+      "defaultChecked": false,
+      "paths": [
+        "%SystemRoot%\\Minidump\\*.dmp",
+        "%SystemRoot%\\MEMORY.DMP",
+        "%LOCALAPPDATA%\\CrashDumps\\*"
+      ]
+    },
+    {
+      "id": "edge-cache",
+      "group": "browser",
+      "name": "Microsoft Edge",
+      "description": "Zwischenspeicher von Edge. Anmeldungen, Lesezeichen und Passwörter bleiben erhalten.",
+      "method": "files",
+      "risk": "low",
+      "defaultChecked": true,
+      "blockingProcesses": ["msedge"],
+      "paths": [
+        "%LOCALAPPDATA%\\Microsoft\\Edge\\User Data\\*\\Cache\\*",
+        "%LOCALAPPDATA%\\Microsoft\\Edge\\User Data\\*\\Code Cache\\*",
+        "%LOCALAPPDATA%\\Microsoft\\Edge\\User Data\\*\\GPUCache\\*"
+      ]
+    },
+    {
+      "id": "chrome-cache",
+      "group": "browser",
+      "name": "Google Chrome",
+      "description": "Zwischenspeicher von Chrome. Anmeldungen, Lesezeichen und Passwörter bleiben erhalten.",
+      "method": "files",
+      "risk": "low",
+      "defaultChecked": true,
+      "blockingProcesses": ["chrome"],
+      "paths": [
+        "%LOCALAPPDATA%\\Google\\Chrome\\User Data\\*\\Cache\\*",
+        "%LOCALAPPDATA%\\Google\\Chrome\\User Data\\*\\Code Cache\\*",
+        "%LOCALAPPDATA%\\Google\\Chrome\\User Data\\*\\GPUCache\\*"
+      ]
+    },
+    {
+      "id": "firefox-cache",
+      "group": "browser",
+      "name": "Mozilla Firefox",
+      "description": "Zwischenspeicher von Firefox. Anmeldungen, Lesezeichen und Passwörter bleiben erhalten.",
+      "method": "files",
+      "risk": "low",
+      "defaultChecked": true,
+      "blockingProcesses": ["firefox"],
+      "paths": [
+        "%LOCALAPPDATA%\\Mozilla\\Firefox\\Profiles\\*\\cache2\\*",
+        "%APPDATA%\\Mozilla\\Firefox\\Profiles\\*\\startupCache\\*"
+      ]
+    },
+    {
+      "id": "component-store",
+      "group": "deep",
+      "name": "Komponentenspeicher aufräumen",
+      "description": "Entfernt überholte Versionen von Windows-Bestandteilen (DISM). Läuft mehrere Minuten und braucht danach keinen Neustart.",
+      "method": "dism",
+      "risk": "low",
+      "defaultChecked": false
+    },
+    {
+      "id": "windows-old",
+      "group": "deep",
+      "name": "Vorherige Windows-Installation",
+      "description": "Der Ordner Windows.old aus dem letzten großen Update. Nach dem Löschen ist keine Rückkehr zur vorherigen Version mehr möglich.",
+      "method": "windowsOld",
+      "risk": "high",
+      "defaultChecked": false,
+      "paths": ["%SystemDrive%\\Windows.old"]
+    },
+    {
+      "id": "downloads-old",
+      "group": "deep",
+      "name": "Alte Downloads anzeigen",
+      "description": "Zeigt nur an, wie viel im Download-Ordner liegt und was älter als 90 Tage ist. WinZii löscht hier nichts von selbst.",
+      "method": "reportOnly",
+      "risk": "high",
+      "defaultChecked": false,
+      "paths": ["%USERPROFILE%\\Downloads\\*"]
+    }
+  ]
+}

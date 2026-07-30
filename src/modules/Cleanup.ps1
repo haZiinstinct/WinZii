@@ -1,0 +1,397 @@
+﻿# Cleanup — erst analysieren, dann gezielt löschen.
+#
+# Grundsätze:
+#   * Es wird nie automatisch gelöscht. Erst die Größen zeigen, dann auswählen.
+#   * Nur System- und Zwischenspeicherorte aus data\cleanup.json — niemals
+#     eigene Dateien des Anwenders.
+#   * Der Download-Ordner wird ausschließlich ausgewertet, nie geleert.
+
+function Get-WzCleanupCategories {
+    <#
+    .SYNOPSIS
+        Kategorien aus dem Katalog, passend zum vorhandenen System gefiltert.
+    #>
+    $catalog = Get-WzCatalog -Name 'cleanup'
+    $categories = foreach ($category in $catalog.categories) {
+        # Browser-Kategorien nur zeigen, wenn der Browser überhaupt Daten hat
+        if ($category.group -eq 'browser') {
+            $hasData = $false
+            foreach ($path in $category.paths) {
+                $base = Split-Path -Parent ([Environment]::ExpandEnvironmentVariables($path))
+                $base = $base -replace '\\\*.*$', ''
+                if (Test-Path -Path $base -ErrorAction SilentlyContinue) { $hasData = $true; break }
+            }
+            if (-not $hasData) { continue }
+        }
+        if ($category.method -eq 'windowsOld') {
+            $target = [Environment]::ExpandEnvironmentVariables($category.paths[0])
+            if (-not (Test-Path -LiteralPath $target)) { continue }
+        }
+        $category
+    }
+    return @($categories)
+}
+
+function Get-WzCleanupGroups {
+    $catalog = Get-WzCatalog -Name 'cleanup'
+    return @($catalog.groups)
+}
+
+function Measure-WzCleanupCategory {
+    <#
+    .SYNOPSIS
+        Ermittelt Umfang und Dateizahl einer Kategorie, ohne etwas zu ändern.
+    .OUTPUTS
+        PSCustomObject mit Id, Bytes, Items, Detail, Blocked
+    #>
+    param([Parameter(Mandatory = $true)]$Category)
+
+    $result = [pscustomobject]@{
+        Id      = $Category.id
+        Bytes   = [int64]0
+        Items   = 0
+        Detail  = ''
+        Blocked = $null
+    }
+
+    switch ($Category.method) {
+        'files' {
+            $measure = Measure-WzPathSet -Paths $Category.paths
+            $result.Bytes = $measure.Bytes
+            $result.Items = $measure.Items
+        }
+        'reportOnly' {
+            $measure = Measure-WzPathSet -Paths $Category.paths
+            $result.Bytes = $measure.Bytes
+            $result.Items = $measure.Items
+            $result.Detail = "$($measure.OldItems) Datei(en) älter als 90 Tage ($(Format-WzBytes $measure.OldBytes))"
+        }
+        'recycleBin' {
+            try {
+                $shell = New-Object -ComObject Shell.Application
+                $bin = $shell.NameSpace(0x0a)
+                foreach ($item in $bin.Items()) {
+                    $result.Items++
+                    try { $result.Bytes += [int64]$item.Size } catch { }
+                }
+                [void][Runtime.InteropServices.Marshal]::ReleaseComObject($shell)
+            } catch {
+                $result.Detail = 'nicht auslesbar'
+            }
+        }
+        'doCache' {
+            try {
+                $cache = Get-DeliveryOptimizationStatus -ErrorAction Stop
+                $result.Bytes = ($cache | Measure-Object -Property FileSizeInCache -Sum).Sum
+                $result.Items = @($cache).Count
+            } catch {
+                $result.Detail = 'Dienst nicht verfügbar'
+            }
+        }
+        'dism' {
+            $result.Detail = 'Umfang erst bei der Analyse durch DISM bekannt'
+        }
+        'windowsOld' {
+            $measure = Measure-WzPathSet -Paths $Category.paths -Recurse
+            $result.Bytes = $measure.Bytes
+            $result.Items = $measure.Items
+        }
+    }
+
+    if ($Category.PSObject.Properties['blockingProcesses']) {
+        $running = @($Category.blockingProcesses | Where-Object {
+            Get-Process -Name $_ -ErrorAction SilentlyContinue
+        })
+        if ($running.Count -gt 0) {
+            $result.Blocked = "$($running -join ', ') läuft — bitte schließen"
+        }
+    }
+
+    return $result
+}
+
+function Measure-WzPathSet {
+    <#
+    .SYNOPSIS
+        Summiert Größe und Anzahl der Dateien hinter einer Pfadliste mit Platzhaltern.
+    .NOTES
+        Bewusst über .NET statt Get-ChildItem -Recurse: Letzteres braucht auf
+        einer einzelnen großen Datei wie MEMORY.DMP über eine Minute, weil es
+        sie als Container zu durchsuchen versucht.
+    #>
+    param(
+        [Parameter(Mandatory = $true)][string[]]$Paths,
+        [switch]$Recurse
+    )
+
+    $bytes = [int64]0
+    $items = 0
+    $oldBytes = [int64]0
+    $oldItems = 0
+    $threshold = (Get-Date).AddDays(-90)
+
+    foreach ($rawPath in $Paths) {
+        $path = [Environment]::ExpandEnvironmentVariables($rawPath)
+
+        # Platzhalter auflösen; das liefert Dateien und Ordner der ersten Ebene
+        $targets = @()
+        try {
+            if ($path -match '[\*\?]') {
+                $targets = @(Resolve-Path -Path $path -ErrorAction SilentlyContinue |
+                    Select-Object -ExpandProperty ProviderPath)
+            } elseif (Test-Path -LiteralPath $path) {
+                $targets = @($path)
+            }
+        } catch { }
+
+        foreach ($target in $targets) {
+            try {
+                if ([IO.Directory]::Exists($target)) {
+                    foreach ($file in [IO.Directory]::EnumerateFiles($target, '*', [IO.SearchOption]::AllDirectories)) {
+                        try {
+                            $info = New-Object IO.FileInfo($file)
+                            $bytes += $info.Length
+                            $items++
+                            if ($info.LastWriteTime -lt $threshold) {
+                                $oldBytes += $info.Length
+                                $oldItems++
+                            }
+                        } catch { }
+                    }
+                } elseif ([IO.File]::Exists($target)) {
+                    $info = New-Object IO.FileInfo($target)
+                    $bytes += $info.Length
+                    $items++
+                    if ($info.LastWriteTime -lt $threshold) {
+                        $oldBytes += $info.Length
+                        $oldItems++
+                    }
+                }
+            } catch {
+                # Gesperrte oder geschützte Pfade überspringen
+            }
+        }
+    }
+
+    return [pscustomobject]@{
+        Bytes    = $bytes
+        Items    = $items
+        OldBytes = $oldBytes
+        OldItems = $oldItems
+    }
+}
+
+function Invoke-WzCleanup {
+    <#
+    .SYNOPSIS
+        Löscht die gewählten Kategorien.
+    .OUTPUTS
+        PSCustomObject mit FreedBytes, Removed, Failed, Messages
+    #>
+    param([Parameter(Mandatory = $true)]$Categories)
+
+    $summary = [pscustomobject]@{
+        FreedBytes = [int64]0
+        Removed    = 0
+        Failed     = 0
+        Messages   = @()
+    }
+
+    foreach ($category in $Categories) {
+        Write-WzLog "$($category.name)" -Level Action
+
+        if ($category.method -eq 'reportOnly') {
+            Write-WzLog '  nur Auswertung — hier wird nichts gelöscht' -Level Info
+            continue
+        }
+
+        $before = Measure-WzCleanupCategory -Category $category
+        $stoppedServices = @()
+
+        try {
+            if ($category.PSObject.Properties['requiresServiceStop']) {
+                foreach ($serviceName in $category.requiresServiceStop) {
+                    $service = Get-Service -Name $serviceName -ErrorAction SilentlyContinue
+                    if ($service -and $service.Status -eq 'Running') {
+                        if ($syncHash.DryRun) {
+                            Write-WzLog "  [Test] Dienst $serviceName würde angehalten" -Level Test
+                        } else {
+                            Stop-Service -Name $serviceName -Force -ErrorAction SilentlyContinue
+                            $stoppedServices += $serviceName
+                        }
+                    }
+                }
+            }
+
+            switch ($category.method) {
+                'files'      { $result = Remove-WzPathSet -Paths $category.paths }
+                'windowsOld' { $result = Remove-WzWindowsOld -Path $category.paths[0] }
+                'recycleBin' { $result = Clear-WzRecycleBin }
+                'doCache'    { $result = Clear-WzDeliveryOptimization }
+                'dism'       { $result = Invoke-WzComponentCleanup }
+                default      { $result = [pscustomobject]@{ Removed = 0; Failed = 0 } }
+            }
+
+            $summary.Removed += $result.Removed
+            $summary.Failed += $result.Failed
+            if (-not $syncHash.DryRun -and $category.method -ne 'dism') {
+                $after = Measure-WzCleanupCategory -Category $category
+                $freed = [math]::Max(0, $before.Bytes - $after.Bytes)
+                $summary.FreedBytes += $freed
+                Write-WzLog "  $(Format-WzBytes $freed) freigegeben, $($result.Removed) Objekt(e) entfernt" -Level Ok
+            }
+        } catch {
+            $summary.Failed++
+            Write-WzLog "  Fehler: $($_.Exception.Message)" -Level Error
+        } finally {
+            foreach ($serviceName in $stoppedServices) {
+                Start-Service -Name $serviceName -ErrorAction SilentlyContinue
+            }
+        }
+    }
+
+    return $summary
+}
+
+function Remove-WzPathSet {
+    <#
+    .SYNOPSIS
+        Löscht Dateien hinter einer Pfadliste. Gesperrte Dateien werden
+        übersprungen, das ist bei Zwischenspeichern normal.
+    #>
+    param([Parameter(Mandatory = $true)][string[]]$Paths)
+
+    $removed = 0
+    $failed = 0
+
+    foreach ($rawPath in $Paths) {
+        $path = [Environment]::ExpandEnvironmentVariables($rawPath)
+
+        if ($syncHash.DryRun) {
+            $measure = Measure-WzPathSet -Paths @($rawPath)
+            Write-WzLog "  [Test] $path — $($measure.Items) Objekt(e), $(Format-WzBytes $measure.Bytes)" -Level Test
+            continue
+        }
+
+        try {
+            $entries = Get-ChildItem -Path $path -Force -ErrorAction SilentlyContinue
+            foreach ($entry in $entries) {
+                try {
+                    Remove-Item -LiteralPath $entry.FullName -Recurse -Force -ErrorAction Stop
+                    $removed++
+                } catch {
+                    $failed++
+                }
+            }
+        } catch {
+            $failed++
+        }
+    }
+
+    return [pscustomobject]@{ Removed = $removed; Failed = $failed }
+}
+
+function Clear-WzRecycleBin {
+    if ($syncHash.DryRun) {
+        Write-WzLog '  [Test] Papierkorb würde geleert' -Level Test
+        return [pscustomobject]@{ Removed = 0; Failed = 0 }
+    }
+    try {
+        Clear-RecycleBin -Force -ErrorAction Stop
+        return [pscustomobject]@{ Removed = 1; Failed = 0 }
+    } catch {
+        # Ein leerer Papierkorb meldet ebenfalls einen Fehler
+        return [pscustomobject]@{ Removed = 0; Failed = 0 }
+    }
+}
+
+function Clear-WzDeliveryOptimization {
+    if ($syncHash.DryRun) {
+        Write-WzLog '  [Test] Übermittlungsoptimierung würde geleert' -Level Test
+        return [pscustomobject]@{ Removed = 0; Failed = 0 }
+    }
+    try {
+        Delete-DeliveryOptimizationCache -Force -ErrorAction Stop
+        return [pscustomobject]@{ Removed = 1; Failed = 0 }
+    } catch {
+        return [pscustomobject]@{ Removed = 0; Failed = 1 }
+    }
+}
+
+function Invoke-WzComponentCleanup {
+    <#
+    .SYNOPSIS
+        Räumt den Komponentenspeicher auf (DISM StartComponentCleanup).
+        Läuft mehrere Minuten.
+    #>
+    param([switch]$AnalyzeOnly)
+
+    $arguments = if ($AnalyzeOnly) {
+        '/Online /Cleanup-Image /AnalyzeComponentStore'
+    } else {
+        '/Online /Cleanup-Image /StartComponentCleanup /NoRestart'
+    }
+
+    if ($syncHash.DryRun) {
+        Write-WzLog "  [Test] dism.exe $arguments" -Level Test
+        return [pscustomobject]@{ Removed = 0; Failed = 0 }
+    }
+
+    Write-WzLog '  DISM läuft — das dauert einige Minuten...' -Level Info
+    $result = Invoke-WzProcess -FilePath 'dism.exe' -Arguments $arguments -TimeoutSeconds 1800
+
+    if ($result.ExitCode -eq 0) {
+        Write-WzLog '  Komponentenspeicher aufgeräumt' -Level Ok
+        return [pscustomobject]@{ Removed = 1; Failed = 0 }
+    }
+    Write-WzLog "  DISM endete mit Code $($result.ExitCode) — Einzelheiten in %windir%\Logs\DISM\dism.log" -Level Warn
+    return [pscustomobject]@{ Removed = 0; Failed = 1 }
+}
+
+function Remove-WzWindowsOld {
+    <#
+    .SYNOPSIS
+        Entfernt den Ordner der vorherigen Windows-Installation.
+        Erst über die Datenträgerbereinigung, bei Bedarf mit Übernahme der
+        Besitzrechte — der Ordner gehört TrustedInstaller.
+    #>
+    param([Parameter(Mandatory = $true)][string]$Path)
+
+    $target = [Environment]::ExpandEnvironmentVariables($Path)
+    if (-not (Test-Path -LiteralPath $target)) {
+        Write-WzLog '  nicht vorhanden' -Level Info
+        return [pscustomobject]@{ Removed = 0; Failed = 0 }
+    }
+
+    if ($syncHash.DryRun) {
+        Write-WzLog "  [Test] $target würde entfernt" -Level Test
+        return [pscustomobject]@{ Removed = 0; Failed = 0 }
+    }
+
+    # Weg 1: Datenträgerbereinigung mit vorbereiteter Auswahl
+    try {
+        $stateKey = 'HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\VolumeCaches\Previous Installations'
+        if (Test-Path -LiteralPath $stateKey) {
+            Set-ItemProperty -Path $stateKey -Name 'StateFlags0117' -Value 2 -Type DWord -ErrorAction Stop
+            $result = Invoke-WzProcess -FilePath 'cleanmgr.exe' -Arguments '/sagerun:117' -TimeoutSeconds 1800
+            if ($result.ExitCode -eq 0 -and -not (Test-Path -LiteralPath $target)) {
+                Write-WzLog '  über die Datenträgerbereinigung entfernt' -Level Ok
+                return [pscustomobject]@{ Removed = 1; Failed = 0 }
+            }
+        }
+    } catch { }
+
+    # Weg 2: Besitzrechte übernehmen und löschen
+    Write-WzLog '  übernehme Besitzrechte...' -Level Info
+    [void](Invoke-WzProcess -FilePath 'takeown.exe' -Arguments "/f `"$target`" /r /d j" -TimeoutSeconds 900)
+    [void](Invoke-WzProcess -FilePath 'icacls.exe' -Arguments "`"$target`" /grant *S-1-5-32-544:F /t /c /q" -TimeoutSeconds 900)
+
+    try {
+        Remove-Item -LiteralPath $target -Recurse -Force -ErrorAction Stop
+        Write-WzLog '  entfernt' -Level Ok
+        return [pscustomobject]@{ Removed = 1; Failed = 0 }
+    } catch {
+        Write-WzLog "  konnte nicht vollständig entfernt werden: $($_.Exception.Message)" -Level Warn
+        return [pscustomobject]@{ Removed = 0; Failed = 1 }
+    }
+}

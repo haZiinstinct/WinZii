@@ -63,11 +63,6 @@ function Show-WzPage {
     #>
     param([Parameter(Mandatory = $true)][string]$Id)
 
-    if ($syncHash.Busy) {
-        Write-WzLog 'Seitenwechsel während eines laufenden Vorgangs nicht möglich.' -Level Warn
-        return
-    }
-
     if (-not $syncHash.Pages.ContainsKey($Id)) {
         $pagePath = Join-Path (Get-WzXamlDir) "pages\$Id.xaml"
         if (-not (Test-Path -LiteralPath $pagePath)) {
@@ -88,6 +83,10 @@ function Show-WzPage {
     $syncHash.PageScroller.ScrollToTop()
     $syncHash.CurrentPage = $Id
     Update-WzNavState -ActiveId $Id
+
+    # Läuft im Hintergrund noch etwas, wird der Seiteninhalt nicht automatisch
+    # aktualisiert — der Anwender kann die Seite trotzdem ansehen.
+    if ($syncHash.Busy) { return }
 
     $refresher = "Update-Wz$($Id)Page"
     if (Get-Command $refresher -ErrorAction SilentlyContinue) { & $refresher }
