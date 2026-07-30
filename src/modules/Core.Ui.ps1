@@ -543,8 +543,15 @@ function New-WzNotice {
     $border.Padding = New-Object Windows.Thickness(14, 9, 14, 9)
     $border.Margin = New-Object Windows.Thickness(0, 0, 0, 8)
 
-    $row = New-Object Windows.Controls.StackPanel
-    $row.Orientation = 'Horizontal'
+    # Grid statt StackPanel: nur so bekommt der Text eine begrenzte Breite
+    # und bricht um, statt rechts abgeschnitten zu werden.
+    $row = New-Object Windows.Controls.Grid
+    $iconColumn = New-Object Windows.Controls.ColumnDefinition
+    $iconColumn.Width = 'Auto'
+    $textColumn = New-Object Windows.Controls.ColumnDefinition
+    $textColumn.Width = '*'
+    [void]$row.ColumnDefinitions.Add($iconColumn)
+    [void]$row.ColumnDefinitions.Add($textColumn)
 
     $icon = New-Object Windows.Controls.TextBlock
     $icon.Text = $colors.Glyph
@@ -553,6 +560,7 @@ function New-WzNotice {
     $icon.Foreground = $syncHash.Window.FindResource($colors.Brush)
     $icon.VerticalAlignment = 'Center'
     $icon.Margin = New-Object Windows.Thickness(0, 0, 10, 0)
+    [Windows.Controls.Grid]::SetColumn($icon, 0)
     [void]$row.Children.Add($icon)
 
     $textBlock = New-Object Windows.Controls.TextBlock
@@ -562,6 +570,7 @@ function New-WzNotice {
     $textBlock.Foreground = $syncHash.Window.FindResource($colors.Brush)
     $textBlock.TextWrapping = 'Wrap'
     $textBlock.VerticalAlignment = 'Center'
+    [Windows.Controls.Grid]::SetColumn($textBlock, 1)
     [void]$row.Children.Add($textBlock)
 
     $border.Child = $row

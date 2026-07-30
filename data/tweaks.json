@@ -1,0 +1,886 @@
+{
+  "schemaVersion": 1,
+  "categories": [
+    {
+      "id": "performance",
+      "name": "Geschwindigkeit",
+      "description": "Startzeit, Reaktionsfreudigkeit und Energieeinstellungen."
+    },
+    {
+      "id": "telemetry",
+      "name": "Telemetrie",
+      "description": "Diagnose- und Nutzungsdaten, die Windows an Microsoft sendet."
+    },
+    {
+      "id": "privacy",
+      "name": "Datenschutz",
+      "description": "Werbe-ID, Aktivitätsverlauf, Vorschläge und Web-Suche im Startmenü."
+    },
+    {
+      "id": "security",
+      "name": "Sicherheit",
+      "description": "Veraltete Protokolle abschalten, Angriffsflächen verkleinern."
+    }
+  ],
+  "tweaks": [
+    {
+      "id": "perf-fast-startup-off",
+      "category": "performance",
+      "level": "soft",
+      "risk": "low",
+      "name": "Schnellstart abschalten",
+      "description": "Der Schnellstart fährt Windows nur scheinbar herunter. Das verursacht Probleme mit Treibern, Updates und Dual-Boot — und Neustarts helfen dann nicht mehr bei der Fehlersuche.",
+      "defaultChecked": true,
+      "appliesTo": "all",
+      "requiresReboot": false,
+      "actions": [
+        {
+          "type": "registry",
+          "path": "HKLM:\\SYSTEM\\CurrentControlSet\\Control\\Session Manager\\Power",
+          "name": "HiberbootEnabled",
+          "valueType": "DWord",
+          "value": 0
+        }
+      ]
+    },
+    {
+      "id": "perf-startup-delay",
+      "category": "performance",
+      "level": "soft",
+      "risk": "low",
+      "name": "Verzögerung der Autostart-Programme entfernen",
+      "description": "Windows wartet nach der Anmeldung künstlich etwa zehn Sekunden, bevor Autostart-Programme laufen. Auf schnellen PCs ist das unnötig.",
+      "defaultChecked": true,
+      "appliesTo": "all",
+      "requiresReboot": false,
+      "actions": [
+        {
+          "type": "registry",
+          "path": "HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\Serialize",
+          "name": "StartupDelayInMSec",
+          "valueType": "DWord",
+          "value": 0
+        }
+      ]
+    },
+    {
+      "id": "perf-menu-delay",
+      "category": "performance",
+      "level": "soft",
+      "risk": "low",
+      "name": "Menüs sofort öffnen",
+      "description": "Setzt die Verzögerung beim Aufklappen von Menüs von 400 auf 0 Millisekunden. Windows fühlt sich spürbar direkter an.",
+      "defaultChecked": true,
+      "appliesTo": "all",
+      "requiresReboot": true,
+      "actions": [
+        {
+          "type": "registry",
+          "path": "HKCU:\\Control Panel\\Desktop",
+          "name": "MenuShowDelay",
+          "valueType": "String",
+          "value": "0"
+        }
+      ]
+    },
+    {
+      "id": "perf-gamedvr-off",
+      "category": "performance",
+      "level": "soft",
+      "risk": "low",
+      "name": "Xbox-Spieleaufzeichnung abschalten",
+      "description": "Die Hintergrundaufzeichnung (Game DVR) läuft auch bei normalen Programmen mit und kostet Leistung. Wird für Spiele selbst nicht benötigt.",
+      "defaultChecked": true,
+      "appliesTo": "all",
+      "requiresReboot": false,
+      "actions": [
+        {
+          "type": "registry",
+          "path": "HKLM:\\SOFTWARE\\Policies\\Microsoft\\Windows\\GameDVR",
+          "name": "AllowGameDVR",
+          "valueType": "DWord",
+          "value": 0
+        },
+        {
+          "type": "registry",
+          "path": "HKCU:\\System\\GameConfigStore",
+          "name": "GameDVR_Enabled",
+          "valueType": "DWord",
+          "value": 0
+        },
+        {
+          "type": "registry",
+          "path": "HKCU:\\Software\\Microsoft\\GameBar",
+          "name": "UseNexusForGameBarEnabled",
+          "valueType": "DWord",
+          "value": 0
+        }
+      ]
+    },
+    {
+      "id": "perf-transparency-off",
+      "category": "performance",
+      "level": "soft",
+      "risk": "low",
+      "name": "Transparenzeffekte abschalten",
+      "description": "Die Milchglas-Effekte von Startmenü und Taskleiste kosten Grafikleistung. Auf älteren PCs und Notebooks merklich.",
+      "defaultChecked": true,
+      "appliesTo": "all",
+      "requiresReboot": false,
+      "actions": [
+        {
+          "type": "registry",
+          "path": "HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\Themes\\Personalize",
+          "name": "EnableTransparency",
+          "valueType": "DWord",
+          "value": 0
+        }
+      ]
+    },
+    {
+      "id": "perf-animations-off",
+      "category": "performance",
+      "level": "soft",
+      "risk": "medium",
+      "name": "Fensteranimationen abschalten",
+      "description": "Schaltet Ein- und Ausblendeffekte ab. Deutlich schneller auf schwacher Hardware, sieht dafür nüchterner aus.",
+      "defaultChecked": false,
+      "appliesTo": "all",
+      "requiresReboot": true,
+      "actions": [
+        {
+          "type": "registry",
+          "path": "HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\VisualEffects",
+          "name": "VisualFXSetting",
+          "valueType": "DWord",
+          "value": 3
+        },
+        {
+          "type": "registry",
+          "path": "HKCU:\\Control Panel\\Desktop\\WindowMetrics",
+          "name": "MinAnimate",
+          "valueType": "String",
+          "value": "0"
+        }
+      ]
+    },
+    {
+      "id": "perf-power-high",
+      "category": "performance",
+      "level": "soft",
+      "risk": "low",
+      "name": "Energiesparplan auf Höchstleistung",
+      "description": "Verhindert, dass der Prozessor im Leerlauf zu stark heruntertaktet. Bei Notebooks im Akkubetrieb sinkt dadurch die Laufzeit.",
+      "defaultChecked": false,
+      "appliesTo": "all",
+      "requiresReboot": false,
+      "actions": [
+        {
+          "type": "command",
+          "exec": "powercfg.exe",
+          "args": "/setactive 8c5e7fda-e8bf-4a96-9a85-a6e23a8c635c",
+          "undo": {
+            "exec": "powercfg.exe",
+            "args": "/setactive 381b4222-f694-41f0-9685-ff5bb260df2e"
+          }
+        }
+      ]
+    },
+    {
+      "id": "perf-sysmain-off",
+      "category": "performance",
+      "level": "soft",
+      "risk": "medium",
+      "name": "SysMain (Superfetch) abschalten",
+      "description": "SysMain lädt häufig genutzte Programme vorab in den Arbeitsspeicher. Auf SSDs bringt das kaum etwas und verursacht dauerhafte Hintergrundlast. Auf Festplatten besser eingeschaltet lassen.",
+      "defaultChecked": false,
+      "appliesTo": "all",
+      "requiresReboot": false,
+      "actions": [
+        {
+          "type": "service",
+          "serviceName": "SysMain",
+          "startupType": "Disabled",
+          "stop": true
+        }
+      ]
+    },
+
+    {
+      "id": "tele-allowtelemetry",
+      "category": "telemetry",
+      "level": "soft",
+      "risk": "low",
+      "name": "Diagnosedaten auf das Minimum setzen",
+      "description": "Setzt die Übermittlung von Diagnosedaten per Richtlinie auf die niedrigste Stufe. In Pro und Home bleibt eine Restmenge an Sicherheitsdaten, in Enterprise ist danach alles aus.",
+      "defaultChecked": true,
+      "appliesTo": "all",
+      "requiresReboot": true,
+      "actions": [
+        {
+          "type": "registry",
+          "path": "HKLM:\\SOFTWARE\\Policies\\Microsoft\\Windows\\DataCollection",
+          "name": "AllowTelemetry",
+          "valueType": "DWord",
+          "value": 0
+        },
+        {
+          "type": "registry",
+          "path": "HKLM:\\SOFTWARE\\Policies\\Microsoft\\Windows\\DataCollection",
+          "name": "LimitDiagnosticLogCollection",
+          "valueType": "DWord",
+          "value": 1
+        },
+        {
+          "type": "registry",
+          "path": "HKLM:\\SOFTWARE\\Policies\\Microsoft\\Windows\\DataCollection",
+          "name": "DoNotShowFeedbackNotifications",
+          "valueType": "DWord",
+          "value": 1
+        },
+        {
+          "type": "registry",
+          "path": "HKLM:\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Policies\\DataCollection",
+          "name": "AllowTelemetry",
+          "valueType": "DWord",
+          "value": 0
+        }
+      ]
+    },
+    {
+      "id": "tele-diagtrack",
+      "category": "telemetry",
+      "level": "soft",
+      "risk": "low",
+      "name": "Telemetriedienste abschalten",
+      "description": "Beendet die Dienste, die Nutzungsdaten sammeln und übertragen (DiagTrack und dmwappushservice).",
+      "defaultChecked": true,
+      "appliesTo": "all",
+      "requiresReboot": false,
+      "actions": [
+        {
+          "type": "service",
+          "serviceName": "DiagTrack",
+          "startupType": "Disabled",
+          "stop": true
+        },
+        {
+          "type": "service",
+          "serviceName": "dmwappushservice",
+          "startupType": "Disabled",
+          "stop": true
+        }
+      ]
+    },
+    {
+      "id": "tele-ceip-tasks",
+      "category": "telemetry",
+      "level": "soft",
+      "risk": "low",
+      "name": "Geplante Telemetrie-Aufgaben deaktivieren",
+      "description": "Windows startet regelmäßig Aufgaben, die Nutzungsdaten einsammeln und verschicken. Diese werden abgeschaltet.",
+      "defaultChecked": true,
+      "appliesTo": "all",
+      "requiresReboot": false,
+      "actions": [
+        {
+          "type": "scheduledTask",
+          "taskPath": "\\Microsoft\\Windows\\Application Experience\\",
+          "taskName": "Microsoft Compatibility Appraiser",
+          "state": "Disabled"
+        },
+        {
+          "type": "scheduledTask",
+          "taskPath": "\\Microsoft\\Windows\\Application Experience\\",
+          "taskName": "ProgramDataUpdater",
+          "state": "Disabled"
+        },
+        {
+          "type": "scheduledTask",
+          "taskPath": "\\Microsoft\\Windows\\Customer Experience Improvement Program\\",
+          "taskName": "Consolidator",
+          "state": "Disabled"
+        },
+        {
+          "type": "scheduledTask",
+          "taskPath": "\\Microsoft\\Windows\\Customer Experience Improvement Program\\",
+          "taskName": "UsbCeip",
+          "state": "Disabled"
+        },
+        {
+          "type": "scheduledTask",
+          "taskPath": "\\Microsoft\\Windows\\Autochk\\",
+          "taskName": "Proxy",
+          "state": "Disabled"
+        }
+      ]
+    },
+    {
+      "id": "tele-ceip",
+      "category": "telemetry",
+      "level": "soft",
+      "risk": "low",
+      "name": "Programm zur Verbesserung der Benutzerfreundlichkeit abschalten",
+      "description": "Beendet die Teilnahme am CEIP-Programm, über das Windows anonymisierte Nutzungsstatistiken sammelt.",
+      "defaultChecked": true,
+      "appliesTo": "all",
+      "requiresReboot": false,
+      "actions": [
+        {
+          "type": "registry",
+          "path": "HKLM:\\SOFTWARE\\Policies\\Microsoft\\SQMClient\\Windows",
+          "name": "CEIPEnable",
+          "valueType": "DWord",
+          "value": 0
+        },
+        {
+          "type": "registry",
+          "path": "HKLM:\\SOFTWARE\\Policies\\Microsoft\\Windows\\AppCompat",
+          "name": "AITEnable",
+          "valueType": "DWord",
+          "value": 0
+        },
+        {
+          "type": "registry",
+          "path": "HKLM:\\SOFTWARE\\Policies\\Microsoft\\Windows\\AppCompat",
+          "name": "DisableInventory",
+          "valueType": "DWord",
+          "value": 1
+        }
+      ]
+    },
+    {
+      "id": "tele-error-reporting",
+      "category": "telemetry",
+      "level": "soft",
+      "risk": "low",
+      "name": "Fehlerberichterstattung abschalten",
+      "description": "Windows sendet nach Abstürzen Berichte an Microsoft. Lokale Absturzprotokolle bleiben erhalten und sind weiterhin über die Diagnose auswertbar.",
+      "defaultChecked": true,
+      "appliesTo": "all",
+      "requiresReboot": false,
+      "actions": [
+        {
+          "type": "registry",
+          "path": "HKLM:\\SOFTWARE\\Microsoft\\Windows\\Windows Error Reporting",
+          "name": "Disabled",
+          "valueType": "DWord",
+          "value": 1
+        },
+        {
+          "type": "registry",
+          "path": "HKLM:\\SOFTWARE\\Policies\\Microsoft\\Windows\\Windows Error Reporting",
+          "name": "Disabled",
+          "valueType": "DWord",
+          "value": 1
+        }
+      ]
+    },
+    {
+      "id": "tele-inking",
+      "category": "telemetry",
+      "level": "soft",
+      "risk": "low",
+      "name": "Eingabe- und Freihanddaten nicht sammeln",
+      "description": "Verhindert, dass Windows Tastatureingaben und Handschrift zur Verbesserung der Texterkennung auswertet und überträgt.",
+      "defaultChecked": true,
+      "appliesTo": "all",
+      "requiresReboot": false,
+      "actions": [
+        {
+          "type": "registry",
+          "path": "HKCU:\\Software\\Microsoft\\InputPersonalization",
+          "name": "RestrictImplicitTextCollection",
+          "valueType": "DWord",
+          "value": 1
+        },
+        {
+          "type": "registry",
+          "path": "HKCU:\\Software\\Microsoft\\InputPersonalization",
+          "name": "RestrictImplicitInkCollection",
+          "valueType": "DWord",
+          "value": 1
+        },
+        {
+          "type": "registry",
+          "path": "HKCU:\\Software\\Microsoft\\Personalization\\Settings",
+          "name": "AcceptedPrivacyPolicy",
+          "valueType": "DWord",
+          "value": 0
+        },
+        {
+          "type": "registry",
+          "path": "HKLM:\\SOFTWARE\\Policies\\Microsoft\\InputPersonalization",
+          "name": "AllowInputPersonalization",
+          "valueType": "DWord",
+          "value": 0
+        }
+      ]
+    },
+
+    {
+      "id": "priv-advertising-id",
+      "category": "privacy",
+      "level": "soft",
+      "risk": "low",
+      "name": "Werbe-ID abschalten",
+      "description": "Apps können ohne diese Kennung kein geräteübergreifendes Werbeprofil mehr aufbauen.",
+      "defaultChecked": true,
+      "appliesTo": "all",
+      "requiresReboot": false,
+      "actions": [
+        {
+          "type": "registry",
+          "path": "HKLM:\\SOFTWARE\\Policies\\Microsoft\\Windows\\AdvertisingInfo",
+          "name": "DisabledByGroupPolicy",
+          "valueType": "DWord",
+          "value": 1
+        },
+        {
+          "type": "registry",
+          "path": "HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\AdvertisingInfo",
+          "name": "Enabled",
+          "valueType": "DWord",
+          "value": 0
+        }
+      ]
+    },
+    {
+      "id": "priv-activity-feed",
+      "category": "privacy",
+      "level": "soft",
+      "risk": "low",
+      "name": "Aktivitätsverlauf abschalten",
+      "description": "Windows merkt sich nicht mehr, welche Dateien und Programme wann geöffnet wurden, und überträgt diesen Verlauf nicht ins Microsoft-Konto.",
+      "defaultChecked": true,
+      "appliesTo": "all",
+      "requiresReboot": true,
+      "actions": [
+        {
+          "type": "registry",
+          "path": "HKLM:\\SOFTWARE\\Policies\\Microsoft\\Windows\\System",
+          "name": "EnableActivityFeed",
+          "valueType": "DWord",
+          "value": 0
+        },
+        {
+          "type": "registry",
+          "path": "HKLM:\\SOFTWARE\\Policies\\Microsoft\\Windows\\System",
+          "name": "PublishUserActivities",
+          "valueType": "DWord",
+          "value": 0
+        },
+        {
+          "type": "registry",
+          "path": "HKLM:\\SOFTWARE\\Policies\\Microsoft\\Windows\\System",
+          "name": "UploadUserActivities",
+          "valueType": "DWord",
+          "value": 0
+        }
+      ]
+    },
+    {
+      "id": "priv-feedback",
+      "category": "privacy",
+      "level": "soft",
+      "risk": "low",
+      "name": "Feedback-Nachfragen abschalten",
+      "description": "Windows fragt nicht mehr nach Bewertungen und Feedback.",
+      "defaultChecked": true,
+      "appliesTo": "all",
+      "requiresReboot": false,
+      "actions": [
+        {
+          "type": "registry",
+          "path": "HKCU:\\Software\\Microsoft\\Siuf\\Rules",
+          "name": "NumberOfSIUFInPeriod",
+          "valueType": "DWord",
+          "value": 0
+        },
+        {
+          "type": "registry",
+          "path": "HKCU:\\Software\\Microsoft\\Siuf\\Rules",
+          "name": "PeriodInNanoSeconds",
+          "valueType": "DWord",
+          "value": 0
+        }
+      ]
+    },
+    {
+      "id": "priv-tailored-experiences",
+      "category": "privacy",
+      "level": "soft",
+      "risk": "low",
+      "name": "Personalisierte Vorschläge und Werbung abschalten",
+      "description": "Entfernt App-Vorschläge im Startmenü, Werbung auf dem Sperrbildschirm und die »Vorschläge« in den Einstellungen.",
+      "defaultChecked": true,
+      "appliesTo": "all",
+      "requiresReboot": false,
+      "actions": [
+        {
+          "type": "registry",
+          "path": "HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\ContentDeliveryManager",
+          "name": "SilentInstalledAppsEnabled",
+          "valueType": "DWord",
+          "value": 0
+        },
+        {
+          "type": "registry",
+          "path": "HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\ContentDeliveryManager",
+          "name": "SystemPaneSuggestionsEnabled",
+          "valueType": "DWord",
+          "value": 0
+        },
+        {
+          "type": "registry",
+          "path": "HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\ContentDeliveryManager",
+          "name": "SubscribedContent-338388Enabled",
+          "valueType": "DWord",
+          "value": 0
+        },
+        {
+          "type": "registry",
+          "path": "HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\ContentDeliveryManager",
+          "name": "SubscribedContent-338389Enabled",
+          "valueType": "DWord",
+          "value": 0
+        },
+        {
+          "type": "registry",
+          "path": "HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\ContentDeliveryManager",
+          "name": "SubscribedContent-353694Enabled",
+          "valueType": "DWord",
+          "value": 0
+        },
+        {
+          "type": "registry",
+          "path": "HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\ContentDeliveryManager",
+          "name": "RotatingLockScreenOverlayEnabled",
+          "valueType": "DWord",
+          "value": 0
+        },
+        {
+          "type": "registry",
+          "path": "HKLM:\\SOFTWARE\\Policies\\Microsoft\\Windows\\CloudContent",
+          "name": "DisableWindowsConsumerFeatures",
+          "valueType": "DWord",
+          "value": 1
+        },
+        {
+          "type": "registry",
+          "path": "HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\Privacy",
+          "name": "TailoredExperiencesWithDiagnosticDataEnabled",
+          "valueType": "DWord",
+          "value": 0
+        }
+      ]
+    },
+    {
+      "id": "priv-web-search",
+      "category": "privacy",
+      "level": "soft",
+      "risk": "low",
+      "name": "Web-Suche im Startmenü abschalten",
+      "description": "Die Suche im Startmenü durchsucht nur noch den PC. Suchbegriffe gehen nicht mehr an Bing, und die Ergebnisse erscheinen deutlich schneller.",
+      "defaultChecked": true,
+      "appliesTo": "all",
+      "requiresReboot": true,
+      "actions": [
+        {
+          "type": "registry",
+          "path": "HKCU:\\Software\\Policies\\Microsoft\\Windows\\Explorer",
+          "name": "DisableSearchBoxSuggestions",
+          "valueType": "DWord",
+          "value": 1
+        },
+        {
+          "type": "registry",
+          "path": "HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\Search",
+          "name": "BingSearchEnabled",
+          "valueType": "DWord",
+          "value": 0
+        },
+        {
+          "type": "registry",
+          "path": "HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\Search",
+          "name": "CortanaConsent",
+          "valueType": "DWord",
+          "value": 0
+        },
+        {
+          "type": "registry",
+          "path": "HKLM:\\SOFTWARE\\Policies\\Microsoft\\Windows\\Windows Search",
+          "name": "DisableWebSearch",
+          "valueType": "DWord",
+          "value": 1
+        },
+        {
+          "type": "registry",
+          "path": "HKLM:\\SOFTWARE\\Policies\\Microsoft\\Windows\\Windows Search",
+          "name": "ConnectedSearchUseWeb",
+          "valueType": "DWord",
+          "value": 0
+        }
+      ]
+    },
+    {
+      "id": "priv-widgets",
+      "category": "privacy",
+      "level": "soft",
+      "risk": "low",
+      "name": "Widgets und Nachrichten abschalten",
+      "description": "Entfernt das Wetter- und Nachrichtenfeld aus der Taskleiste. Es lädt im Hintergrund dauernd Inhalte nach.",
+      "defaultChecked": true,
+      "appliesTo": "all",
+      "requiresReboot": true,
+      "actions": [
+        {
+          "type": "registry",
+          "path": "HKLM:\\SOFTWARE\\Policies\\Microsoft\\Dsh",
+          "name": "AllowNewsAndInterests",
+          "valueType": "DWord",
+          "value": 0
+        },
+        {
+          "type": "registry",
+          "path": "HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\Advanced",
+          "name": "TaskbarDa",
+          "valueType": "DWord",
+          "value": 0
+        }
+      ]
+    },
+    {
+      "id": "priv-start-recommendations",
+      "category": "privacy",
+      "level": "soft",
+      "risk": "low",
+      "name": "Empfehlungen im Startmenü abschalten",
+      "description": "Blendet die von Microsoft eingespielten Empfehlungen und Werbeeinträge im Startmenü aus.",
+      "defaultChecked": true,
+      "appliesTo": "win11",
+      "requiresReboot": true,
+      "actions": [
+        {
+          "type": "registry",
+          "path": "HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\Advanced",
+          "name": "Start_IrisRecommendations",
+          "valueType": "DWord",
+          "value": 0
+        },
+        {
+          "type": "registry",
+          "path": "HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\Advanced",
+          "name": "Start_AccountNotifications",
+          "valueType": "DWord",
+          "value": 0
+        },
+        {
+          "type": "registry",
+          "path": "HKLM:\\SOFTWARE\\Policies\\Microsoft\\Windows\\Explorer",
+          "name": "HideRecommendedSection",
+          "valueType": "DWord",
+          "value": 1
+        }
+      ]
+    },
+    {
+      "id": "priv-app-tracking",
+      "category": "privacy",
+      "level": "soft",
+      "risk": "low",
+      "name": "Programmnutzung nicht protokollieren",
+      "description": "Windows merkt sich nicht mehr, welche Programme wie oft gestartet werden. Die Liste »Meistverwendet« im Startmenü bleibt dann leer.",
+      "defaultChecked": false,
+      "appliesTo": "all",
+      "requiresReboot": false,
+      "actions": [
+        {
+          "type": "registry",
+          "path": "HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\Advanced",
+          "name": "Start_TrackProgs",
+          "valueType": "DWord",
+          "value": 0
+        },
+        {
+          "type": "registry",
+          "path": "HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\Advanced",
+          "name": "Start_TrackDocs",
+          "valueType": "DWord",
+          "value": 0
+        }
+      ]
+    },
+
+    {
+      "id": "sec-smb1-off",
+      "category": "security",
+      "level": "hard",
+      "risk": "low",
+      "name": "SMBv1 entfernen",
+      "description": "SMBv1 ist das Protokoll, über das sich WannaCry verbreitet hat. Es wird nur noch von sehr alten Geräten gebraucht (etwa Netzwerkscanner vor 2010).",
+      "defaultChecked": true,
+      "appliesTo": "all",
+      "requiresReboot": true,
+      "actions": [
+        {
+          "type": "feature",
+          "featureName": "SMB1Protocol",
+          "state": "Disabled"
+        }
+      ]
+    },
+    {
+      "id": "sec-psv2-off",
+      "category": "security",
+      "level": "hard",
+      "risk": "low",
+      "name": "PowerShell 2.0 entfernen",
+      "description": "Die alte PowerShell-Version kennt keine Protokollierung und wird von Schadsoftware gezielt genutzt, um Schutzmechanismen zu umgehen.",
+      "defaultChecked": true,
+      "appliesTo": "all",
+      "requiresReboot": true,
+      "actions": [
+        {
+          "type": "feature",
+          "featureName": "MicrosoftWindowsPowerShellV2Root",
+          "state": "Disabled"
+        }
+      ]
+    },
+    {
+      "id": "sec-autorun-off",
+      "category": "security",
+      "level": "soft",
+      "risk": "low",
+      "name": "Automatische Wiedergabe abschalten",
+      "description": "Verhindert, dass Programme von USB-Sticks und Datenträgern automatisch starten — ein klassischer Infektionsweg.",
+      "defaultChecked": true,
+      "appliesTo": "all",
+      "requiresReboot": true,
+      "actions": [
+        {
+          "type": "registry",
+          "path": "HKLM:\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Policies\\Explorer",
+          "name": "NoDriveTypeAutoRun",
+          "valueType": "DWord",
+          "value": 255
+        },
+        {
+          "type": "registry",
+          "path": "HKLM:\\SOFTWARE\\Policies\\Microsoft\\Windows\\Explorer",
+          "name": "NoAutoplayfornonVolume",
+          "valueType": "DWord",
+          "value": 1
+        }
+      ]
+    },
+    {
+      "id": "sec-file-extensions",
+      "category": "security",
+      "level": "soft",
+      "risk": "low",
+      "name": "Dateiendungen immer anzeigen",
+      "description": "Ohne sichtbare Endung sieht »Rechnung.pdf.exe« im Explorer aus wie ein PDF. Das ist der häufigste Trick bei E-Mail-Anhängen.",
+      "defaultChecked": true,
+      "appliesTo": "all",
+      "requiresReboot": false,
+      "actions": [
+        {
+          "type": "registry",
+          "path": "HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\Advanced",
+          "name": "HideFileExt",
+          "valueType": "DWord",
+          "value": 0
+        }
+      ]
+    },
+    {
+      "id": "sec-defender-pua",
+      "category": "security",
+      "level": "soft",
+      "risk": "low",
+      "name": "Schutz vor unerwünschten Programmen einschalten",
+      "description": "Aktiviert die PUA-Erkennung des Defenders. Sie blockiert Adware, Toolbars und aufdringliche »Optimierer«, die kein klassischer Virus sind.",
+      "defaultChecked": true,
+      "appliesTo": "all",
+      "requiresReboot": false,
+      "actions": [
+        {
+          "type": "registry",
+          "path": "HKLM:\\SOFTWARE\\Policies\\Microsoft\\Windows Defender",
+          "name": "PUAProtection",
+          "valueType": "DWord",
+          "value": 1
+        }
+      ]
+    },
+    {
+      "id": "sec-remote-assistance",
+      "category": "security",
+      "level": "soft",
+      "risk": "low",
+      "name": "Remoteunterstützung abschalten",
+      "description": "Schließt den eingebauten Fernwartungszugang, der praktisch nie genutzt wird. Fernwartung über AnyDesk oder RustDesk bleibt davon unberührt.",
+      "defaultChecked": true,
+      "appliesTo": "all",
+      "requiresReboot": false,
+      "actions": [
+        {
+          "type": "registry",
+          "path": "HKLM:\\SYSTEM\\CurrentControlSet\\Control\\Remote Assistance",
+          "name": "fAllowToGetHelp",
+          "valueType": "DWord",
+          "value": 0
+        },
+        {
+          "type": "registry",
+          "path": "HKLM:\\SYSTEM\\CurrentControlSet\\Control\\Remote Assistance",
+          "name": "fAllowFullControl",
+          "valueType": "DWord",
+          "value": 0
+        }
+      ]
+    },
+    {
+      "id": "sec-llmnr-off",
+      "category": "security",
+      "level": "soft",
+      "risk": "medium",
+      "name": "LLMNR und NetBIOS-Namensauflösung einschränken",
+      "description": "LLMNR wird in Netzwerken genutzt, um Anmeldedaten abzufangen (Responder-Angriffe). In reinen Heimnetzen ohne Server ist das Abschalten unkritisch, in Firmennetzen vorher prüfen.",
+      "defaultChecked": false,
+      "appliesTo": "all",
+      "requiresReboot": true,
+      "actions": [
+        {
+          "type": "registry",
+          "path": "HKLM:\\SOFTWARE\\Policies\\Microsoft\\Windows NT\\DNSClient",
+          "name": "EnableMulticast",
+          "valueType": "DWord",
+          "value": 0
+        }
+      ]
+    },
+    {
+      "id": "sec-wdigest-off",
+      "category": "security",
+      "level": "soft",
+      "risk": "low",
+      "name": "Klartext-Anmeldedaten im Speicher verhindern",
+      "description": "Schaltet WDigest ab. Sonst können Angreifer mit Werkzeugen wie Mimikatz Passwörter im Klartext aus dem Arbeitsspeicher auslesen.",
+      "defaultChecked": true,
+      "appliesTo": "all",
+      "requiresReboot": true,
+      "actions": [
+        {
+          "type": "registry",
+          "path": "HKLM:\\SYSTEM\\CurrentControlSet\\Control\\SecurityProviders\\WDigest",
+          "name": "UseLogonCredential",
+          "valueType": "DWord",
+          "value": 0
+        }
+      ]
+    }
+  ]
+}

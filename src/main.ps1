@@ -212,6 +212,15 @@ if ($env:WZ_SELFTEST) {
         try {
             $page = if ($env:WZ_SELFTEST_PAGE) { $env:WZ_SELFTEST_PAGE } else { 'Dashboard' }
             if ($syncHash.CurrentPage -ne $page) { Show-WzPage -Id $page }
+
+            # Laufende Hintergrundarbeit abwarten, damit das Abbild den
+            # fertigen Zustand zeigt und nicht den Ladezustand
+            $deadline = (Get-Date).AddSeconds(60)
+            while (($syncHash.Busy) -and ((Get-Date) -lt $deadline)) {
+                [Windows.Threading.Dispatcher]::CurrentDispatcher.Invoke(
+                    [Windows.Threading.DispatcherPriority]::Background, [Action]{ })
+                Start-Sleep -Milliseconds 150
+            }
             $syncHash.Window.UpdateLayout()
 
             $target = New-Object Windows.Media.Imaging.RenderTargetBitmap(

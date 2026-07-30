@@ -1,0 +1,40 @@
+﻿<StackPanel xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+            xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+
+    <TextBlock Text="// OPTIMIEREN" Style="{DynamicResource WzEyebrow}" />
+    <TextBlock Text="Windows-Optimierung" Style="{DynamicResource WzPageTitle}" />
+    <TextBlock Style="{DynamicResource WzPageLead}"
+               Text="Geschwindigkeit, Telemetrie, Datenschutz und Sicherheit. Jede Änderung wird vorher gesichert und lässt sich einzeln zurücknehmen." />
+
+    <ItemsControl Name="OptNotices" Margin="0,0,0,14" />
+
+    <!-- Aktionsleiste -->
+    <Border Style="{DynamicResource WzCardStatic}" Margin="0,0,0,16">
+        <StackPanel>
+            <Grid>
+                <StackPanel Orientation="Horizontal">
+                    <TextBlock Name="OptSelectionCount" Text="0 ausgewählt" Style="{DynamicResource WzValue}"
+                               VerticalAlignment="Center" Foreground="{DynamicResource WzCyan}" />
+                    <TextBlock Name="OptStatusHint" Text="Zustand wird geprüft..." Style="{DynamicResource WzLabel}"
+                               VerticalAlignment="Center" Margin="14,0,0,0" />
+                </StackPanel>
+                <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                    <Button Name="OptBtnRecommended" Style="{DynamicResource WzBtnGhost}" Content="empfohlene" Margin="0,0,4,0" />
+                    <Button Name="OptBtnAll" Style="{DynamicResource WzBtnGhost}" Content="alle" Margin="0,0,4,0" />
+                    <Button Name="OptBtnNone" Style="{DynamicResource WzBtnGhost}" Content="keine" />
+                </StackPanel>
+            </Grid>
+            <WrapPanel Margin="0,16,0,0">
+                <Button Name="OptBtnApply" Style="{DynamicResource WzBtnPrimary}" Margin="0,0,10,0"
+                        Content="Auswahl anwenden" />
+                <Button Name="OptBtnUndo" Style="{DynamicResource WzBtnSecondary}" Margin="0,0,10,0"
+                        Content="Änderungen zurücknehmen" />
+                <Button Name="OptBtnRefresh" Style="{DynamicResource WzBtnSecondary}"
+                        Content="Zustand neu prüfen" />
+            </WrapPanel>
+        </StackPanel>
+    </Border>
+
+    <!-- Kategorien werden zur Laufzeit eingefügt -->
+    <StackPanel Name="OptCategories" />
+</StackPanel>
