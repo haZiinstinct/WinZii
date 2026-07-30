@@ -1,0 +1,556 @@
+﻿<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+
+    <!-- ================================================================
+         haZii Designsystem — Quelle: hazii-org/src/styles/global.css
+         Farben 1:1 übernommen, Transparenzen als ARGB-Hex.
+         ================================================================ -->
+
+    <!-- Flächen -->
+    <SolidColorBrush x:Key="WzBgPage"       Color="#0A0A0F" />
+    <SolidColorBrush x:Key="WzBgDarker"     Color="#06060A" />
+    <SolidColorBrush x:Key="WzBgCard"       Color="#12121A" />
+    <SolidColorBrush x:Key="WzBgCardHover"  Color="#1A1A25" />
+
+    <!-- Akzent -->
+    <SolidColorBrush x:Key="WzCyan"         Color="#00D4FF" />
+    <SolidColorBrush x:Key="WzCyanDim"      Color="#00A8CC" />
+    <SolidColorBrush x:Key="WzCyanGlow"     Color="#2600D4FF" />
+    <SolidColorBrush x:Key="WzCyanSubtle"   Color="#1A00D4FF" />
+    <SolidColorBrush x:Key="WzCyanBorder"   Color="#3300D4FF" />
+
+    <!-- Linien -->
+    <SolidColorBrush x:Key="WzBorder"       Color="#14FFFFFF" />
+    <SolidColorBrush x:Key="WzBorderHover"  Color="#4D00D4FF" />
+
+    <!-- Text -->
+    <SolidColorBrush x:Key="WzText"         Color="#E2E8F0" />
+    <SolidColorBrush x:Key="WzTextDim"      Color="#94A3B8" />
+    <SolidColorBrush x:Key="WzTextBright"   Color="#F8FAFC" />
+    <SolidColorBrush x:Key="WzTextFaint"    Color="#64748B" />
+
+    <!-- Status -->
+    <SolidColorBrush x:Key="WzRed"          Color="#EF4444" />
+    <SolidColorBrush x:Key="WzAmber"        Color="#F59E0B" />
+    <SolidColorBrush x:Key="WzGreen"        Color="#22C55E" />
+    <SolidColorBrush x:Key="WzOrange"       Color="#F97316" />
+
+    <!-- Schriften: werden in main.ps1 durch die mitgelieferten TTF ersetzt -->
+    <FontFamily x:Key="WzFontMono">Consolas, Courier New</FontFamily>
+    <FontFamily x:Key="WzFontSans">Segoe UI</FontFamily>
+
+    <!-- Cyan-Glow für Karten und Buttons -->
+    <DropShadowEffect x:Key="WzGlow" Color="#00D4FF" BlurRadius="28" ShadowDepth="0" Opacity="0.16" />
+    <DropShadowEffect x:Key="WzGlowStrong" Color="#00D4FF" BlurRadius="36" ShadowDepth="0" Opacity="0.32" />
+
+    <!-- ================================================================
+         Scrollbalken — schlank und dunkel
+         ================================================================ -->
+    <Style x:Key="WzScrollThumb" TargetType="Thumb">
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="Thumb">
+                    <Border x:Name="Bar" Background="#22FFFFFF" CornerRadius="3" Margin="2,0,2,0" />
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsMouseOver" Value="True">
+                            <Setter TargetName="Bar" Property="Background" Value="#5500D4FF" />
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <Style TargetType="ScrollBar">
+        <Setter Property="Background" Value="Transparent" />
+        <Setter Property="Width" Value="10" />
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="ScrollBar">
+                    <Grid Background="Transparent">
+                        <Track x:Name="PART_Track" IsDirectionReversed="True">
+                            <Track.DecreaseRepeatButton>
+                                <RepeatButton Command="ScrollBar.PageUpCommand" Opacity="0" Focusable="False" />
+                            </Track.DecreaseRepeatButton>
+                            <Track.Thumb>
+                                <Thumb Style="{DynamicResource WzScrollThumb}" />
+                            </Track.Thumb>
+                            <Track.IncreaseRepeatButton>
+                                <RepeatButton Command="ScrollBar.PageDownCommand" Opacity="0" Focusable="False" />
+                            </Track.IncreaseRepeatButton>
+                        </Track>
+                    </Grid>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="Orientation" Value="Horizontal">
+                            <Setter Property="Height" Value="10" />
+                            <Setter TargetName="PART_Track" Property="IsDirectionReversed" Value="False" />
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <!-- ================================================================
+         Typografie
+         ================================================================ -->
+    <Style x:Key="WzPageTitle" TargetType="TextBlock">
+        <Setter Property="FontFamily" Value="{DynamicResource WzFontSans}" />
+        <Setter Property="FontSize" Value="26" />
+        <Setter Property="FontWeight" Value="SemiBold" />
+        <Setter Property="Foreground" Value="{DynamicResource WzTextBright}" />
+        <Setter Property="Margin" Value="0,0,0,4" />
+    </Style>
+
+    <Style x:Key="WzPageLead" TargetType="TextBlock">
+        <Setter Property="FontFamily" Value="{DynamicResource WzFontSans}" />
+        <Setter Property="FontSize" Value="13" />
+        <Setter Property="Foreground" Value="{DynamicResource WzTextDim}" />
+        <Setter Property="TextWrapping" Value="Wrap" />
+        <Setter Property="Margin" Value="0,0,0,22" />
+    </Style>
+
+    <Style x:Key="WzEyebrow" TargetType="TextBlock">
+        <Setter Property="FontFamily" Value="{DynamicResource WzFontMono}" />
+        <Setter Property="FontSize" Value="10.5" />
+        <Setter Property="Foreground" Value="{DynamicResource WzCyan}" />
+        <Setter Property="Margin" Value="0,0,0,7" />
+    </Style>
+
+    <Style x:Key="WzCardTitle" TargetType="TextBlock">
+        <Setter Property="FontFamily" Value="{DynamicResource WzFontSans}" />
+        <Setter Property="FontSize" Value="15" />
+        <Setter Property="FontWeight" Value="SemiBold" />
+        <Setter Property="Foreground" Value="{DynamicResource WzTextBright}" />
+        <Setter Property="Margin" Value="0,0,0,10" />
+    </Style>
+
+    <Style x:Key="WzLabel" TargetType="TextBlock">
+        <Setter Property="FontFamily" Value="{DynamicResource WzFontSans}" />
+        <Setter Property="FontSize" Value="11.5" />
+        <Setter Property="Foreground" Value="{DynamicResource WzTextDim}" />
+    </Style>
+
+    <Style x:Key="WzValue" TargetType="TextBlock">
+        <Setter Property="FontFamily" Value="{DynamicResource WzFontMono}" />
+        <Setter Property="FontSize" Value="13" />
+        <Setter Property="Foreground" Value="{DynamicResource WzText}" />
+        <Setter Property="TextTrimming" Value="CharacterEllipsis" />
+    </Style>
+
+    <Style x:Key="WzValueBig" TargetType="TextBlock">
+        <Setter Property="FontFamily" Value="{DynamicResource WzFontMono}" />
+        <Setter Property="FontSize" Value="21" />
+        <Setter Property="FontWeight" Value="Bold" />
+        <Setter Property="Foreground" Value="{DynamicResource WzCyan}" />
+    </Style>
+
+    <Style x:Key="WzHint" TargetType="TextBlock">
+        <Setter Property="FontFamily" Value="{DynamicResource WzFontSans}" />
+        <Setter Property="FontSize" Value="11" />
+        <Setter Property="Foreground" Value="{DynamicResource WzTextFaint}" />
+        <Setter Property="TextWrapping" Value="Wrap" />
+    </Style>
+
+    <!-- ================================================================
+         Karten
+         ================================================================ -->
+    <Style x:Key="WzCard" TargetType="Border">
+        <Setter Property="Background" Value="{DynamicResource WzBgCard}" />
+        <Setter Property="BorderBrush" Value="{DynamicResource WzBorder}" />
+        <Setter Property="BorderThickness" Value="1" />
+        <Setter Property="CornerRadius" Value="16" />
+        <Setter Property="Padding" Value="20" />
+        <Style.Triggers>
+            <Trigger Property="IsMouseOver" Value="True">
+                <Setter Property="BorderBrush" Value="{DynamicResource WzBorderHover}" />
+                <Setter Property="Effect" Value="{DynamicResource WzGlow}" />
+            </Trigger>
+        </Style.Triggers>
+    </Style>
+
+    <Style x:Key="WzCardStatic" TargetType="Border">
+        <Setter Property="Background" Value="{DynamicResource WzBgCard}" />
+        <Setter Property="BorderBrush" Value="{DynamicResource WzBorder}" />
+        <Setter Property="BorderThickness" Value="1" />
+        <Setter Property="CornerRadius" Value="16" />
+        <Setter Property="Padding" Value="20" />
+    </Style>
+
+    <!-- ================================================================
+         Buttons
+         ================================================================ -->
+    <Style x:Key="WzBtnPrimary" TargetType="Button">
+        <Setter Property="FontFamily" Value="{DynamicResource WzFontSans}" />
+        <Setter Property="FontSize" Value="13" />
+        <Setter Property="FontWeight" Value="SemiBold" />
+        <Setter Property="Foreground" Value="#0A0A0F" />
+        <Setter Property="Background" Value="{DynamicResource WzCyan}" />
+        <Setter Property="Padding" Value="18,9,18,9" />
+        <Setter Property="Cursor" Value="Hand" />
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="Button">
+                    <Border x:Name="Shell" Background="{TemplateBinding Background}"
+                            CornerRadius="10" Padding="{TemplateBinding Padding}"
+                            SnapsToDevicePixels="True">
+                        <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" />
+                    </Border>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsMouseOver" Value="True">
+                            <Setter TargetName="Shell" Property="Effect" Value="{DynamicResource WzGlowStrong}" />
+                        </Trigger>
+                        <Trigger Property="IsPressed" Value="True">
+                            <Setter TargetName="Shell" Property="Background" Value="{DynamicResource WzCyanDim}" />
+                        </Trigger>
+                        <Trigger Property="IsEnabled" Value="False">
+                            <Setter TargetName="Shell" Property="Opacity" Value="0.35" />
+                            <Setter Property="Cursor" Value="Arrow" />
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <Style x:Key="WzBtnSecondary" TargetType="Button">
+        <Setter Property="FontFamily" Value="{DynamicResource WzFontSans}" />
+        <Setter Property="FontSize" Value="13" />
+        <Setter Property="Foreground" Value="{DynamicResource WzTextDim}" />
+        <Setter Property="Background" Value="Transparent" />
+        <Setter Property="Padding" Value="18,9,18,9" />
+        <Setter Property="Cursor" Value="Hand" />
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="Button">
+                    <Border x:Name="Shell" Background="{TemplateBinding Background}"
+                            BorderBrush="{DynamicResource WzBorder}" BorderThickness="1"
+                            CornerRadius="10" Padding="{TemplateBinding Padding}"
+                            SnapsToDevicePixels="True">
+                        <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" />
+                    </Border>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsMouseOver" Value="True">
+                            <Setter TargetName="Shell" Property="BorderBrush" Value="{DynamicResource WzCyanBorder}" />
+                            <Setter TargetName="Shell" Property="Background" Value="{DynamicResource WzBgCardHover}" />
+                            <Setter Property="Foreground" Value="{DynamicResource WzCyan}" />
+                        </Trigger>
+                        <Trigger Property="IsEnabled" Value="False">
+                            <Setter TargetName="Shell" Property="Opacity" Value="0.35" />
+                            <Setter Property="Cursor" Value="Arrow" />
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <Style x:Key="WzBtnDanger" TargetType="Button">
+        <Setter Property="FontFamily" Value="{DynamicResource WzFontSans}" />
+        <Setter Property="FontSize" Value="13" />
+        <Setter Property="Foreground" Value="{DynamicResource WzRed}" />
+        <Setter Property="Padding" Value="18,9,18,9" />
+        <Setter Property="Cursor" Value="Hand" />
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="Button">
+                    <Border x:Name="Shell" Background="#14EF4444"
+                            BorderBrush="#4DEF4444" BorderThickness="1"
+                            CornerRadius="10" Padding="{TemplateBinding Padding}"
+                            SnapsToDevicePixels="True">
+                        <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" />
+                    </Border>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsMouseOver" Value="True">
+                            <Setter TargetName="Shell" Property="Background" Value="#26EF4444" />
+                        </Trigger>
+                        <Trigger Property="IsEnabled" Value="False">
+                            <Setter TargetName="Shell" Property="Opacity" Value="0.35" />
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <Style x:Key="WzBtnGhost" TargetType="Button">
+        <Setter Property="FontFamily" Value="{DynamicResource WzFontMono}" />
+        <Setter Property="FontSize" Value="11.5" />
+        <Setter Property="Foreground" Value="{DynamicResource WzTextDim}" />
+        <Setter Property="Background" Value="Transparent" />
+        <Setter Property="Padding" Value="10,5,10,5" />
+        <Setter Property="Cursor" Value="Hand" />
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="Button">
+                    <Border x:Name="Shell" Background="{TemplateBinding Background}"
+                            CornerRadius="8" Padding="{TemplateBinding Padding}">
+                        <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" />
+                    </Border>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsMouseOver" Value="True">
+                            <Setter TargetName="Shell" Property="Background" Value="{DynamicResource WzBgCardHover}" />
+                            <Setter Property="Foreground" Value="{DynamicResource WzCyan}" />
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <!-- ================================================================
+         Seitenleiste
+         ================================================================ -->
+    <Style x:Key="WzNavButton" TargetType="Button">
+        <Setter Property="FontFamily" Value="{DynamicResource WzFontSans}" />
+        <Setter Property="FontSize" Value="13.5" />
+        <Setter Property="Foreground" Value="{DynamicResource WzTextDim}" />
+        <Setter Property="Background" Value="Transparent" />
+        <Setter Property="HorizontalContentAlignment" Value="Left" />
+        <Setter Property="Padding" Value="14,10,14,10" />
+        <Setter Property="Margin" Value="0,1,0,1" />
+        <Setter Property="Cursor" Value="Hand" />
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="Button">
+                    <Border x:Name="Shell" Background="{TemplateBinding Background}"
+                            BorderBrush="Transparent" BorderThickness="1"
+                            CornerRadius="11" Padding="{TemplateBinding Padding}">
+                        <ContentPresenter HorizontalAlignment="Left" VerticalAlignment="Center" />
+                    </Border>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsMouseOver" Value="True">
+                            <Setter TargetName="Shell" Property="Background" Value="{DynamicResource WzBgCardHover}" />
+                            <Setter Property="Foreground" Value="{DynamicResource WzText}" />
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <Style x:Key="WzNavButtonActive" TargetType="Button">
+        <Setter Property="FontFamily" Value="{DynamicResource WzFontSans}" />
+        <Setter Property="FontSize" Value="13.5" />
+        <Setter Property="Foreground" Value="{DynamicResource WzCyan}" />
+        <Setter Property="FontWeight" Value="SemiBold" />
+        <Setter Property="HorizontalContentAlignment" Value="Left" />
+        <Setter Property="Padding" Value="14,10,14,10" />
+        <Setter Property="Margin" Value="0,1,0,1" />
+        <Setter Property="Cursor" Value="Hand" />
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="Button">
+                    <Border x:Name="Shell" Background="{DynamicResource WzCyanSubtle}"
+                            BorderBrush="{DynamicResource WzCyanBorder}" BorderThickness="1"
+                            CornerRadius="11" Padding="{TemplateBinding Padding}">
+                        <ContentPresenter HorizontalAlignment="Left" VerticalAlignment="Center" />
+                    </Border>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <!-- ================================================================
+         Eingabeelemente
+         ================================================================ -->
+    <Style x:Key="WzCheckBox" TargetType="CheckBox">
+        <Setter Property="FontFamily" Value="{DynamicResource WzFontSans}" />
+        <Setter Property="FontSize" Value="13" />
+        <Setter Property="Foreground" Value="{DynamicResource WzText}" />
+        <Setter Property="Cursor" Value="Hand" />
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="CheckBox">
+                    <StackPanel Orientation="Horizontal" Background="Transparent">
+                        <Border x:Name="Box" Width="17" Height="17" CornerRadius="5"
+                                Background="{DynamicResource WzBgDarker}"
+                                BorderBrush="{DynamicResource WzBorder}" BorderThickness="1"
+                                VerticalAlignment="Center">
+                            <Path x:Name="Tick" Data="M 0 4 L 3.5 7.5 L 9 0" Stroke="#0A0A0F"
+                                  StrokeThickness="2" Visibility="Collapsed"
+                                  HorizontalAlignment="Center" VerticalAlignment="Center"
+                                  StrokeEndLineCap="Round" StrokeStartLineCap="Round" />
+                        </Border>
+                        <ContentPresenter Margin="9,0,0,0" VerticalAlignment="Center" />
+                    </StackPanel>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsChecked" Value="True">
+                            <Setter TargetName="Box" Property="Background" Value="{DynamicResource WzCyan}" />
+                            <Setter TargetName="Box" Property="BorderBrush" Value="{DynamicResource WzCyan}" />
+                            <Setter TargetName="Tick" Property="Visibility" Value="Visible" />
+                        </Trigger>
+                        <Trigger Property="IsMouseOver" Value="True">
+                            <Setter TargetName="Box" Property="BorderBrush" Value="{DynamicResource WzBorderHover}" />
+                        </Trigger>
+                        <Trigger Property="IsEnabled" Value="False">
+                            <Setter Property="Opacity" Value="0.4" />
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <Style x:Key="WzToggle" TargetType="CheckBox">
+        <Setter Property="FontFamily" Value="{DynamicResource WzFontMono}" />
+        <Setter Property="FontSize" Value="11" />
+        <Setter Property="Foreground" Value="{DynamicResource WzTextDim}" />
+        <Setter Property="Cursor" Value="Hand" />
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="CheckBox">
+                    <StackPanel Orientation="Horizontal" Background="Transparent">
+                        <Border x:Name="Track" Width="32" Height="17" CornerRadius="999"
+                                Background="{DynamicResource WzBgCardHover}"
+                                BorderBrush="{DynamicResource WzBorder}" BorderThickness="1"
+                                VerticalAlignment="Center">
+                            <Ellipse x:Name="Knob" Width="11" Height="11" Fill="{DynamicResource WzTextFaint}"
+                                     HorizontalAlignment="Left" Margin="3,0,0,0" />
+                        </Border>
+                        <ContentPresenter Margin="8,0,0,0" VerticalAlignment="Center" />
+                    </StackPanel>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsChecked" Value="True">
+                            <Setter TargetName="Track" Property="Background" Value="{DynamicResource WzCyanSubtle}" />
+                            <Setter TargetName="Track" Property="BorderBrush" Value="{DynamicResource WzCyanBorder}" />
+                            <Setter TargetName="Knob" Property="Fill" Value="{DynamicResource WzCyan}" />
+                            <Setter TargetName="Knob" Property="HorizontalAlignment" Value="Right" />
+                            <Setter TargetName="Knob" Property="Margin" Value="0,0,3,0" />
+                            <Setter Property="Foreground" Value="{DynamicResource WzCyan}" />
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <Style x:Key="WzComboBox" TargetType="ComboBox">
+        <Setter Property="FontFamily" Value="{DynamicResource WzFontSans}" />
+        <Setter Property="FontSize" Value="13" />
+        <Setter Property="Foreground" Value="{DynamicResource WzText}" />
+        <Setter Property="Background" Value="{DynamicResource WzBgDarker}" />
+        <Setter Property="BorderBrush" Value="{DynamicResource WzBorder}" />
+        <Setter Property="Padding" Value="10,7,10,7" />
+        <Setter Property="Height" Value="34" />
+    </Style>
+
+    <Style x:Key="WzTextBox" TargetType="TextBox">
+        <Setter Property="FontFamily" Value="{DynamicResource WzFontMono}" />
+        <Setter Property="FontSize" Value="12.5" />
+        <Setter Property="Foreground" Value="{DynamicResource WzText}" />
+        <Setter Property="Background" Value="{DynamicResource WzBgDarker}" />
+        <Setter Property="BorderBrush" Value="{DynamicResource WzBorder}" />
+        <Setter Property="BorderThickness" Value="1" />
+        <Setter Property="Padding" Value="9,6,9,6" />
+        <Setter Property="CaretBrush" Value="{DynamicResource WzCyan}" />
+        <Setter Property="SelectionBrush" Value="{DynamicResource WzCyan}" />
+    </Style>
+
+    <!-- ================================================================
+         Tabellen
+         ================================================================ -->
+    <Style x:Key="WzDataGrid" TargetType="DataGrid">
+        <Setter Property="Background" Value="Transparent" />
+        <Setter Property="BorderBrush" Value="{DynamicResource WzBorder}" />
+        <Setter Property="BorderThickness" Value="1" />
+        <Setter Property="RowBackground" Value="Transparent" />
+        <Setter Property="AlternatingRowBackground" Value="#08FFFFFF" />
+        <Setter Property="GridLinesVisibility" Value="Horizontal" />
+        <Setter Property="HorizontalGridLinesBrush" Value="#0DFFFFFF" />
+        <Setter Property="HeadersVisibility" Value="Column" />
+        <Setter Property="AutoGenerateColumns" Value="True" />
+        <Setter Property="IsReadOnly" Value="True" />
+        <Setter Property="CanUserAddRows" Value="False" />
+        <Setter Property="SelectionMode" Value="Single" />
+        <Setter Property="FontFamily" Value="{DynamicResource WzFontSans}" />
+        <Setter Property="FontSize" Value="12" />
+        <Setter Property="Foreground" Value="{DynamicResource WzText}" />
+        <Setter Property="RowHeight" Value="30" />
+        <Setter Property="ColumnHeaderStyle">
+            <Setter.Value>
+                <Style TargetType="DataGridColumnHeader">
+                    <Setter Property="Background" Value="{DynamicResource WzBgDarker}" />
+                    <Setter Property="Foreground" Value="{DynamicResource WzCyan}" />
+                    <Setter Property="FontFamily" Value="{DynamicResource WzFontMono}" />
+                    <Setter Property="FontSize" Value="10.5" />
+                    <Setter Property="Padding" Value="10,8,10,8" />
+                    <Setter Property="BorderBrush" Value="{DynamicResource WzBorder}" />
+                    <Setter Property="BorderThickness" Value="0,0,0,1" />
+                    <Setter Property="HorizontalContentAlignment" Value="Left" />
+                </Style>
+            </Setter.Value>
+        </Setter>
+        <Setter Property="CellStyle">
+            <Setter.Value>
+                <Style TargetType="DataGridCell">
+                    <Setter Property="Background" Value="Transparent" />
+                    <Setter Property="BorderThickness" Value="0" />
+                    <Setter Property="Padding" Value="10,0,10,0" />
+                    <Setter Property="VerticalContentAlignment" Value="Center" />
+                    <Setter Property="Foreground" Value="{DynamicResource WzText}" />
+                    <Style.Triggers>
+                        <Trigger Property="IsSelected" Value="True">
+                            <Setter Property="Background" Value="{DynamicResource WzCyanSubtle}" />
+                            <Setter Property="Foreground" Value="{DynamicResource WzTextBright}" />
+                        </Trigger>
+                    </Style.Triggers>
+                </Style>
+            </Setter.Value>
+        </Setter>
+        <Setter Property="RowStyle">
+            <Setter.Value>
+                <Style TargetType="DataGridRow">
+                    <Setter Property="Background" Value="Transparent" />
+                    <Style.Triggers>
+                        <Trigger Property="IsMouseOver" Value="True">
+                            <Setter Property="Background" Value="{DynamicResource WzBgCardHover}" />
+                        </Trigger>
+                    </Style.Triggers>
+                </Style>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <!-- ================================================================
+         Fortschritt und Log-Konsole
+         ================================================================ -->
+    <Style x:Key="WzProgress" TargetType="ProgressBar">
+        <Setter Property="Height" Value="3" />
+        <Setter Property="Background" Value="Transparent" />
+        <Setter Property="Foreground" Value="{DynamicResource WzCyan}" />
+        <Setter Property="BorderThickness" Value="0" />
+        <Setter Property="IsIndeterminate" Value="True" />
+    </Style>
+
+    <Style x:Key="WzLogConsole" TargetType="RichTextBox">
+        <Setter Property="Background" Value="{DynamicResource WzBgDarker}" />
+        <Setter Property="BorderThickness" Value="0" />
+        <Setter Property="FontFamily" Value="{DynamicResource WzFontMono}" />
+        <Setter Property="FontSize" Value="11.5" />
+        <Setter Property="Foreground" Value="{DynamicResource WzTextDim}" />
+        <Setter Property="IsReadOnly" Value="True" />
+        <Setter Property="Padding" Value="14,8,14,8" />
+        <Setter Property="VerticalScrollBarVisibility" Value="Auto" />
+        <Setter Property="HorizontalScrollBarVisibility" Value="Disabled" />
+        <Setter Property="SelectionBrush" Value="{DynamicResource WzCyan}" />
+    </Style>
+
+    <!-- Pulsierender Punkt (haZii-Signatur) -->
+    <Style x:Key="WzPulseDot" TargetType="Ellipse">
+        <Setter Property="Width" Value="7" />
+        <Setter Property="Height" Value="7" />
+        <Setter Property="Fill" Value="{DynamicResource WzCyan}" />
+        <Style.Triggers>
+            <EventTrigger RoutedEvent="Loaded">
+                <BeginStoryboard>
+                    <Storyboard RepeatBehavior="Forever" AutoReverse="True">
+                        <DoubleAnimation Storyboard.TargetProperty="Opacity"
+                                         From="1.0" To="0.25" Duration="0:0:1.5" />
+                    </Storyboard>
+                </BeginStoryboard>
+            </EventTrigger>
+        </Style.Triggers>
+    </Style>
+
+</ResourceDictionary>

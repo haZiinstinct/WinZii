@@ -1,0 +1,232 @@
+﻿<Window xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="WinZii" Height="820" Width="1280" MinHeight="640" MinWidth="1060"
+        WindowStartupLocation="CenterScreen"
+        Background="#0A0A0F"
+        UseLayoutRounding="True"
+        TextOptions.TextFormattingMode="Display">
+
+    <WindowChrome.WindowChrome>
+        <WindowChrome CaptionHeight="52" ResizeBorderThickness="6" GlassFrameThickness="0" CornerRadius="0" />
+    </WindowChrome.WindowChrome>
+
+    <Grid>
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="260" />
+            <ColumnDefinition Width="*" />
+        </Grid.ColumnDefinitions>
+
+        <!-- ============================================================
+             Seitenleiste
+             ============================================================ -->
+        <Border Grid.Column="0" Background="#06060A" BorderBrush="#14FFFFFF" BorderThickness="0,0,1,0">
+            <Grid>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="*" />
+                    <RowDefinition Height="Auto" />
+                </Grid.RowDefinitions>
+
+                <!-- Wortmarke -->
+                <StackPanel Grid.Row="0" Margin="22,26,22,20">
+                    <TextBlock FontSize="25" FontWeight="Bold"
+                               FontFamily="{DynamicResource WzFontMono}">
+                        <Run Text="Win" Foreground="#00D4FF" /><Run Text="Z" Foreground="#F8FAFC" /><Run Text="ii" Foreground="#00D4FF" />
+                    </TextBlock>
+                    <StackPanel Orientation="Horizontal" Margin="0,7,0,0">
+                        <Ellipse Style="{DynamicResource WzPulseDot}" VerticalAlignment="Center" />
+                        <TextBlock Name="SidebarSubtitle" Text="portables Werkzeug" Margin="7,0,0,0"
+                                   FontFamily="{DynamicResource WzFontMono}" FontSize="10.5"
+                                   Foreground="#00D4FF" VerticalAlignment="Center" />
+                    </StackPanel>
+                </StackPanel>
+
+                <!-- Navigation -->
+                <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto" Margin="12,0,12,0">
+                    <StackPanel Name="NavPanel">
+                        <TextBlock Text="// SYSTEM" Style="{DynamicResource WzEyebrow}" Margin="14,8,0,6" />
+                        <Button Name="NavDashboard" Tag="Dashboard" Style="{DynamicResource WzNavButton}">
+                            <StackPanel Orientation="Horizontal">
+                                <TextBlock Text="&#xE80F;" FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets" FontSize="14" Width="24" VerticalAlignment="Center" />
+                                <TextBlock Text="Dashboard" VerticalAlignment="Center" />
+                            </StackPanel>
+                        </Button>
+                        <Button Name="NavDiagnostics" Tag="Diagnostics" Style="{DynamicResource WzNavButton}">
+                            <StackPanel Orientation="Horizontal">
+                                <TextBlock Text="&#xE9D9;" FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets" FontSize="14" Width="24" VerticalAlignment="Center" />
+                                <TextBlock Text="Diagnose" VerticalAlignment="Center" />
+                            </StackPanel>
+                        </Button>
+
+                        <TextBlock Text="// OPTIMIEREN" Style="{DynamicResource WzEyebrow}" Margin="14,16,0,6" />
+                        <Button Name="NavOptimizer" Tag="Optimizer" Style="{DynamicResource WzNavButton}">
+                            <StackPanel Orientation="Horizontal">
+                                <TextBlock Text="&#xE945;" FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets" FontSize="14" Width="24" VerticalAlignment="Center" />
+                                <TextBlock Text="Optimierung" VerticalAlignment="Center" />
+                            </StackPanel>
+                        </Button>
+                        <Button Name="NavAiRemoval" Tag="AiRemoval" Style="{DynamicResource WzNavButton}">
+                            <StackPanel Orientation="Horizontal">
+                                <TextBlock Text="&#xE99A;" FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets" FontSize="14" Width="24" VerticalAlignment="Center" />
+                                <TextBlock Text="KI-Entfernung" VerticalAlignment="Center" />
+                            </StackPanel>
+                        </Button>
+                        <Button Name="NavCleanup" Tag="Cleanup" Style="{DynamicResource WzNavButton}">
+                            <StackPanel Orientation="Horizontal">
+                                <TextBlock Text="&#xE74D;" FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets" FontSize="14" Width="24" VerticalAlignment="Center" />
+                                <TextBlock Text="Bereinigung" VerticalAlignment="Center" />
+                            </StackPanel>
+                        </Button>
+                        <Button Name="NavAutostart" Tag="Autostart" Style="{DynamicResource WzNavButton}">
+                            <StackPanel Orientation="Horizontal">
+                                <TextBlock Text="&#xE7E8;" FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets" FontSize="14" Width="24" VerticalAlignment="Center" />
+                                <TextBlock Text="Autostart" VerticalAlignment="Center" />
+                            </StackPanel>
+                        </Button>
+
+                        <TextBlock Text="// INSTALLIEREN" Style="{DynamicResource WzEyebrow}" Margin="14,16,0,6" />
+                        <Button Name="NavApps" Tag="Apps" Style="{DynamicResource WzNavButton}">
+                            <StackPanel Orientation="Horizontal">
+                                <TextBlock Text="&#xECAA;" FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets" FontSize="14" Width="24" VerticalAlignment="Center" />
+                                <TextBlock Text="Programme" VerticalAlignment="Center" />
+                            </StackPanel>
+                        </Button>
+                        <Button Name="NavOffice" Tag="Office" Style="{DynamicResource WzNavButton}">
+                            <StackPanel Orientation="Horizontal">
+                                <TextBlock Text="&#xE8A5;" FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets" FontSize="14" Width="24" VerticalAlignment="Center" />
+                                <TextBlock Text="Office" VerticalAlignment="Center" />
+                            </StackPanel>
+                        </Button>
+
+                        <TextBlock Text="// WERKZEUGE" Style="{DynamicResource WzEyebrow}" Margin="14,16,0,6" />
+                        <Button Name="NavToolbox" Tag="Toolbox" Style="{DynamicResource WzNavButton}">
+                            <StackPanel Orientation="Horizontal">
+                                <TextBlock Text="&#xE90F;" FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets" FontSize="14" Width="24" VerticalAlignment="Center" />
+                                <TextBlock Text="Reparatur" VerticalAlignment="Center" />
+                            </StackPanel>
+                        </Button>
+                        <Button Name="NavProtocol" Tag="Protocol" Style="{DynamicResource WzNavButton}">
+                            <StackPanel Orientation="Horizontal">
+                                <TextBlock Text="&#xE7C3;" FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets" FontSize="14" Width="24" VerticalAlignment="Center" />
+                                <TextBlock Text="Protokoll" VerticalAlignment="Center" />
+                            </StackPanel>
+                        </Button>
+                    </StackPanel>
+                </ScrollViewer>
+
+                <!-- Fußzeile: Version und haZii-Credit -->
+                <StackPanel Grid.Row="2" Margin="22,16,22,18">
+                    <Border Height="1" Background="#14FFFFFF" Margin="0,0,0,14" />
+                    <TextBlock Name="SidebarVersion" Text="v0.1.0"
+                               FontFamily="{DynamicResource WzFontMono}" FontSize="10.5"
+                               Foreground="#64748B" Margin="0,0,0,7" />
+                    <TextBlock Name="HaziiBadge" FontFamily="{DynamicResource WzFontMono}" FontSize="11.5" Cursor="Hand"
+                               ToolTip="https://hazii.org">
+                        <Run Text="// webdesign:" Foreground="#94A3B8" /><Run Text=" " /><Run Text="ha" Foreground="#00D4FF" FontWeight="Bold" /><Run Text="Z" Foreground="#F8FAFC" FontWeight="Bold" /><Run Text="ii" Foreground="#00D4FF" FontWeight="Bold" /><Run Text=".org" Foreground="#00A8CC" FontWeight="Bold" />
+                    </TextBlock>
+                </StackPanel>
+            </Grid>
+        </Border>
+
+        <!-- ============================================================
+             Hauptbereich
+             ============================================================ -->
+        <Grid Grid.Column="1">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="52" />
+                <RowDefinition Height="*" />
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="30" />
+            </Grid.RowDefinitions>
+
+            <!-- Kopfleiste (zugleich Fenstergriff) -->
+            <Grid Grid.Row="0" Background="#0A0A0F">
+                <Border BorderBrush="#14FFFFFF" BorderThickness="0,0,0,1" />
+                <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Margin="26,0,0,0">
+                    <Border Background="#12121A" BorderBrush="#14FFFFFF" BorderThickness="1"
+                            CornerRadius="999" Padding="11,3,11,3">
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Text="&#xE977;" FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets"
+                                       FontSize="11" Foreground="#64748B" VerticalAlignment="Center" Margin="0,0,7,0" />
+                            <TextBlock Name="HeaderHost" Text="COMPUTERNAME"
+                                       FontFamily="{DynamicResource WzFontMono}" FontSize="10.5"
+                                       Foreground="#94A3B8" VerticalAlignment="Center" />
+                        </StackPanel>
+                    </Border>
+                    <Border Background="#1A00D4FF" BorderBrush="#3300D4FF" BorderThickness="1"
+                            CornerRadius="999" Padding="11,3,11,3" Margin="9,0,0,0">
+                        <StackPanel Orientation="Horizontal">
+                            <Ellipse Style="{DynamicResource WzPulseDot}" Width="6" Height="6" VerticalAlignment="Center" />
+                            <TextBlock Name="HeaderOs" Text="WINDOWS" Margin="7,0,0,0"
+                                       FontFamily="{DynamicResource WzFontMono}" FontSize="10.5"
+                                       Foreground="#00D4FF" VerticalAlignment="Center" />
+                        </StackPanel>
+                    </Border>
+                    <Border Name="DryRunBadge" Background="#14F59E0B" BorderBrush="#4DF59E0B" BorderThickness="1"
+                            CornerRadius="999" Padding="11,3,11,3" Margin="9,0,0,0" Visibility="Collapsed">
+                        <TextBlock Text="TESTMODUS" FontFamily="{DynamicResource WzFontMono}"
+                                   FontSize="10.5" Foreground="#F59E0B" />
+                    </Border>
+                </StackPanel>
+
+                <!-- Fenstersteuerung -->
+                <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Stretch"
+                            WindowChrome.IsHitTestVisibleInChrome="True">
+                    <Button Name="BtnMinimize" Style="{DynamicResource WzBtnGhost}" Width="44" Padding="0"
+                            Content="&#xE921;" FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets" FontSize="10" />
+                    <Button Name="BtnMaximize" Style="{DynamicResource WzBtnGhost}" Width="44" Padding="0"
+                            Content="&#xE922;" FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets" FontSize="10" />
+                    <Button Name="BtnClose" Style="{DynamicResource WzBtnGhost}" Width="46" Padding="0"
+                            Content="&#xE8BB;" FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets" FontSize="10" />
+                </StackPanel>
+            </Grid>
+
+            <!-- Seiteninhalt -->
+            <ScrollViewer Grid.Row="1" Name="PageScroller" VerticalScrollBarVisibility="Auto"
+                          Padding="30,26,30,26">
+                <ContentControl Name="PageHost" />
+            </ScrollViewer>
+
+            <!-- Log-Konsole -->
+            <Border Grid.Row="2" Name="LogHeader" Background="#06060A" BorderBrush="#14FFFFFF" BorderThickness="0,1,0,0">
+                <Grid Height="34">
+                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Margin="26,0,0,0">
+                        <TextBlock Text="// KONSOLE" FontFamily="{DynamicResource WzFontMono}"
+                                   FontSize="10.5" Foreground="#00D4FF" VerticalAlignment="Center" />
+                        <TextBlock Name="LogHint" Text="Klicken zum Ein- oder Ausklappen" Margin="12,0,0,0"
+                                   FontFamily="{DynamicResource WzFontMono}" FontSize="10"
+                                   Foreground="#64748B" VerticalAlignment="Center" />
+                    </StackPanel>
+                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,0,20,0" VerticalAlignment="Center">
+                        <Button Name="BtnClearLog" Style="{DynamicResource WzBtnGhost}" Content="leeren" />
+                        <TextBlock Name="LogChevron" Text="&#xE70D;" FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets"
+                                   FontSize="10" Foreground="#64748B" VerticalAlignment="Center" Margin="10,0,0,0" />
+                    </StackPanel>
+                </Grid>
+            </Border>
+
+            <RichTextBox Grid.Row="3" Name="LogConsole" Height="150"
+                         Style="{DynamicResource WzLogConsole}" />
+
+            <!-- Statusleiste -->
+            <Grid Grid.Row="4" Background="#06060A">
+                <Border BorderBrush="#14FFFFFF" BorderThickness="0,1,0,0" />
+                <ProgressBar Name="BusyBar" Style="{DynamicResource WzProgress}" VerticalAlignment="Top"
+                             Visibility="Collapsed" />
+                <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Margin="26,0,0,0">
+                    <TextBlock Name="StatusText" Text="Bereit"
+                               FontFamily="{DynamicResource WzFontMono}" FontSize="10.5"
+                               Foreground="#94A3B8" VerticalAlignment="Center" />
+                </StackPanel>
+                <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center" Margin="0,0,26,0">
+                    <CheckBox Name="DryRunToggle" Style="{DynamicResource WzToggle}" Content="Testmodus"
+                              ToolTip="Änderungen werden nur protokolliert, nicht ausgeführt." />
+                    <TextBlock Name="StatusPath" Text="" Margin="18,0,0,0"
+                               FontFamily="{DynamicResource WzFontMono}" FontSize="10"
+                               Foreground="#64748B" VerticalAlignment="Center" />
+                </StackPanel>
+            </Grid>
+        </Grid>
+    </Grid>
+</Window>

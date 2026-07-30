@@ -1,0 +1,17 @@
+# Laufzeit-Daten (pro PC, gehören nicht ins Repo)
+/logs/
+/backups/
+/reports/
+
+# Offline-Cache (Installer, ODT, Office-Payload) — kann mehrere GB werden
+/offline/*
+!/offline/.gitkeep
+
+# Windows
+Thumbs.db
+desktop.ini
+$RECYCLE.BIN/
+
+# Editor
+.vscode/
+*.swp
