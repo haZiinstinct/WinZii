@@ -5,7 +5,8 @@
 param([switch]$Screenshots)
 
 $root = Split-Path -Parent $PSScriptRoot
-$pages = @('Dashboard', 'Diagnostics', 'Optimizer', 'AiRemoval', 'Cleanup', 'Apps', 'Office', 'Autostart', 'Toolbox', 'Protocol')
+$pages = @('Dashboard', 'Diagnostics', 'Optimizer', 'AiRemoval', 'Cleanup', 'Apps', 'Office',
+           'UserData', 'Drivers', 'Autostart', 'Toolbox', 'Protocol')
 
 $failed = 0
 $shotDir = Join-Path $env:TEMP 'winzii-pages'

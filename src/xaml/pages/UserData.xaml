@@ -1,0 +1,128 @@
+﻿<StackPanel xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+            xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+
+    <TextBlock Text="// ÜBERNEHMEN" Style="{DynamicResource WzEyebrow}" />
+    <TextBlock Text="Daten" Style="{DynamicResource WzPageTitle}" />
+    <TextBlock Style="{DynamicResource WzPageLead}"
+               Text="Die Frage vor jeder Neuinstallation: Was muss gesichert werden? Diese Seite zählt auf, wo die Daten liegen — und warnt vor den Stellen, an denen eine Sicherung gerne stillschweigend danebengeht." />
+
+    <ItemsControl Name="DataNotices" Margin="0,0,0,14" />
+
+    <!-- Steuerung -->
+    <Border Style="{DynamicResource WzCardStatic}" Margin="0,0,0,16">
+        <StackPanel>
+            <Grid>
+                <StackPanel Grid.Column="0">
+                    <TextBlock Text="// BESTANDSAUFNAHME" Style="{DynamicResource WzEyebrow}" />
+                    <TextBlock Name="DataTitle" Text="Noch nicht geprüft" Style="{DynamicResource WzCardTitle}" />
+                </StackPanel>
+                <Button Name="DataBtnScan" Style="{DynamicResource WzBtnPrimary}"
+                        HorizontalAlignment="Right" VerticalAlignment="Top" Content="Daten aufnehmen" />
+            </Grid>
+            <TextBlock Style="{DynamicResource WzHint}" Margin="0,0,0,0"
+                       Text="Es wird nur gelesen und gemessen. Die eigentlichen Nutzdaten kopiert WinZii bewusst nicht — das gehört an ein Sicherungsprogramm, nicht an ein Werkzeug wie dieses." />
+        </StackPanel>
+    </Border>
+
+    <!-- Benutzerprofile -->
+    <Border Style="{DynamicResource WzCardStatic}" Margin="0,0,0,14">
+        <StackPanel>
+            <TextBlock Text="// BENUTZERPROFILE" Style="{DynamicResource WzEyebrow}" />
+            <TextBlock Name="DataProfilesTitle" Text="Noch nicht geprüft" Style="{DynamicResource WzCardTitle}" />
+            <TextBlock Style="{DynamicResource WzHint}" Margin="0,0,0,10"
+                       Text="Größe der persönlichen Ordner je Konto. Die Summe ist der Platz, den eine vollständige Sicherung braucht." />
+            <StackPanel Name="DataProfiles" />
+        </StackPanel>
+    </Border>
+
+    <!-- OneDrive -->
+    <Border Style="{DynamicResource WzCardStatic}" Margin="0,0,0,14">
+        <StackPanel>
+            <TextBlock Text="// ONEDRIVE" Style="{DynamicResource WzEyebrow}" />
+            <TextBlock Name="DataOneDriveTitle" Text="Noch nicht geprüft" Style="{DynamicResource WzCardTitle}" />
+            <ItemsControl Name="DataOneDriveNotice" Margin="0,4,0,6" />
+            <StackPanel Name="DataOneDrive" />
+        </StackPanel>
+    </Border>
+
+    <Grid>
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="*" />
+            <ColumnDefinition Width="14" />
+            <ColumnDefinition Width="*" />
+        </Grid.ColumnDefinitions>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+        </Grid.RowDefinitions>
+
+        <!-- Outlook -->
+        <Border Grid.Row="0" Grid.Column="0" Style="{DynamicResource WzCardStatic}" Margin="0,0,0,14">
+            <StackPanel>
+                <TextBlock Text="// OUTLOOK" Style="{DynamicResource WzEyebrow}" />
+                <TextBlock Name="DataOutlookTitle" Text="Noch nicht geprüft" Style="{DynamicResource WzCardTitle}" />
+                <TextBlock Style="{DynamicResource WzHint}" Margin="0,0,0,10"
+                           Text="PST-Dateien enthalten Ordner, die es nur auf diesem PC gibt. OST-Dateien sind bloß ein Abbild des Postfachs und werden neu aufgebaut." />
+                <StackPanel Name="DataOutlook" />
+            </StackPanel>
+        </Border>
+
+        <!-- Browser -->
+        <Border Grid.Row="0" Grid.Column="2" Style="{DynamicResource WzCardStatic}" Margin="0,0,0,14">
+            <StackPanel>
+                <TextBlock Text="// BROWSER" Style="{DynamicResource WzEyebrow}" />
+                <TextBlock Name="DataBrowsersTitle" Text="Noch nicht geprüft" Style="{DynamicResource WzCardTitle}" />
+                <TextBlock Style="{DynamicResource WzHint}" Margin="0,0,0,10"
+                           Text="Gespeicherte Passwörter bleiben verschlüsselt und lassen sich nicht mitnehmen — die Lesezeichen schon." />
+                <StackPanel Name="DataBrowsers" />
+                <Button Name="DataBtnBookmarks" Style="{DynamicResource WzBtnSecondary}" Margin="0,10,0,0"
+                        HorizontalAlignment="Left" Content="Lesezeichen sichern" IsEnabled="False" />
+            </StackPanel>
+        </Border>
+
+        <!-- Drucker und Netzlaufwerke -->
+        <Border Grid.Row="1" Grid.Column="0" Style="{DynamicResource WzCardStatic}" Margin="0,0,0,14">
+            <StackPanel>
+                <TextBlock Text="// DRUCKER UND LAUFWERKE" Style="{DynamicResource WzEyebrow}" />
+                <TextBlock Name="DataDevicesTitle" Text="Noch nicht geprüft" Style="{DynamicResource WzCardTitle}" />
+                <TextBlock Style="{DynamicResource WzHint}" Margin="0,0,0,10"
+                           Text="Damit nach dem Neuaufsetzen nichts vergessen wird." />
+                <StackPanel Name="DataDevices" />
+            </StackPanel>
+        </Border>
+
+        <!-- Zugangsdaten -->
+        <Border Grid.Row="1" Grid.Column="2" Style="{DynamicResource WzCardStatic}" Margin="0,0,0,14">
+            <StackPanel>
+                <TextBlock Text="// SCHLÜSSEL UND ZUGÄNGE" Style="{DynamicResource WzEyebrow}" />
+                <TextBlock Name="DataKeysTitle" Text="Noch nicht geprüft" Style="{DynamicResource WzCardTitle}" />
+                <TextBlock Style="{DynamicResource WzHint}" Margin="0,0,0,10"
+                           Text="Diese Exporte schreiben Passwörter und Schlüssel im Klartext auf den Datenträger. Sie fragen deshalb einzeln nach." />
+                <StackPanel Name="DataKeys" />
+                <WrapPanel Margin="0,10,0,0">
+                    <Button Name="DataBtnWlan" Style="{DynamicResource WzBtnSecondary}" Margin="0,0,8,8"
+                            Content="WLAN sichern" IsEnabled="False" />
+                    <Button Name="DataBtnBitLocker" Style="{DynamicResource WzBtnSecondary}" Margin="0,0,8,8"
+                            Content="BitLocker-Schlüssel sichern" IsEnabled="False" />
+                </WrapPanel>
+            </StackPanel>
+        </Border>
+    </Grid>
+
+    <!-- Übernahme-Bericht -->
+    <Border Style="{DynamicResource WzCardStatic}">
+        <StackPanel>
+            <Grid>
+                <StackPanel Grid.Column="0">
+                    <TextBlock Text="// BERICHT" Style="{DynamicResource WzEyebrow}" />
+                    <TextBlock Text="Übernahme-Bericht" Style="{DynamicResource WzCardTitle}" />
+                </StackPanel>
+                <Button Name="DataBtnReport" Style="{DynamicResource WzBtnPrimary}"
+                        HorizontalAlignment="Right" VerticalAlignment="Top"
+                        Content="Bericht erstellen" IsEnabled="False" />
+            </Grid>
+            <TextBlock Style="{DynamicResource WzHint}"
+                       Text="Fasst die Bestandsaufnahme als Seite zum Ausdrucken zusammen — die Abhakliste für das Neuaufsetzen." />
+        </StackPanel>
+    </Border>
+</StackPanel>

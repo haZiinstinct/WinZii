@@ -331,6 +331,168 @@ function New-WzDiagReport {
     return $file
 }
 
+function New-WzUserDataReport {
+    <#
+    .SYNOPSIS
+        Übernahme-Bericht: die Abhakliste vor dem Neuaufsetzen.
+    .OUTPUTS
+        Pfad der Datei.
+    #>
+    param([Parameter(Mandatory = $true)]$Overview)
+
+    $profiles = @($Overview.Profiles)
+    $outlook = @($Overview.Outlook)
+    $browsers = @($Overview.Browsers)
+    $wlan = @($Overview.Wlan)
+    $encrypted = @($Overview.Encrypted)
+    $printers = @($Overview.Printers)
+    $netDrives = @($Overview.NetDrives)
+    $totalBytes = [int64](($profiles | Measure-Object -Property TotalBytes -Sum).Sum)
+
+    # --- Was zuerst schiefgehen kann --------------------------------------
+    $content = ''
+    if ($Overview.OneDrive.PlaceholderWarning) {
+        $content += New-WzHtmlNote -Text $Overview.OneDrive.PlaceholderWarning -Kind 'warn'
+    }
+    if ($encrypted.Count -gt 0) {
+        $content += New-WzHtmlNote -Kind 'warn' -Text (
+            "BitLocker ist auf $($encrypted -join ', ') aktiv. Ohne gesicherten Wiederherstellungsschlüssel " +
+            'ist das Laufwerk nach einem Mainboardtausch oder BIOS-Update nicht mehr zu öffnen.')
+    }
+
+    $content += New-WzHtmlSection -Title 'Umfang' `
+        -Lead 'Was gesichert werden muss, bevor der PC neu aufgesetzt wird.' `
+        -Body (New-WzHtmlCard -Title 'Auf einen Blick' -Rows @(
+            "Persönliche Daten|$(Format-WzBytes $totalBytes) in $($profiles.Count) Benutzerkonto/-konten"
+            "Outlook|$($outlook.Count) Datendatei(en)"
+            "Browser|$($browsers.Count) Profil(e) gefunden"
+            "WLAN-Netze|$($wlan.Count) gespeichert"
+            "Drucker|$($printers.Count)"
+            "Netzlaufwerke|$($netDrives.Count)"
+        ))
+
+    # --- Benutzerprofile ---------------------------------------------------
+    # Die Tabellen brauchen immer ein Feld — ein leeres foreach liefert $null,
+    # und New-WzHtmlTable lehnt das ab.
+    $profileRows = @(foreach ($profileEntry in $profiles) {
+        $folders = @($profileEntry.Folders | ForEach-Object { "$($_.Name) $(Format-WzBytes $_.Bytes)" })
+        $breakdown = if ($folders.Count -gt 0) {
+            $folders -join ' · '
+        } elseif ($profileEntry.Accessible) {
+            'vorhanden, aber leer'
+        } else {
+            'kein Zugriff'
+        }
+        [pscustomobject]@{
+            Konto   = $profileEntry.Account
+            Pfad    = $profileEntry.Path
+            Groesse = Format-WzBytes $profileEntry.TotalBytes
+            Ordner  = $breakdown
+        }
+    })
+    $content += New-WzHtmlSection -Title 'Benutzerdaten' `
+        -Lead 'Größe der persönlichen Ordner je Konto.' `
+        -Body (New-WzHtmlTable -Data $profileRows -Columns @(
+            'Konto|Konto', 'Pfad|Ordner|mono', 'Groesse|Größe|num', 'Ordner|Aufteilung'
+        ) -EmptyText 'Keine Benutzerprofile gefunden.')
+
+    # --- OneDrive ----------------------------------------------------------
+    $oneDriveBody = if (-not $Overview.OneDrive.Configured) {
+        New-WzHtmlNote -Text 'OneDrive ist auf diesem PC nicht eingerichtet.' -Kind 'info'
+    } else {
+        $rows = @(foreach ($folder in $Overview.OneDrive.Folders) {
+            [pscustomobject]@{
+                Konto  = $folder.Account
+                Pfad   = $folder.Path
+                Lokal  = "$(Format-WzBytes $folder.LocalBytes) · $($folder.LocalFiles) Datei(en)"
+                Cloud  = if ($folder.CloudOnly -gt 0) {
+                    "<span class=`"tag tag-warn`">$($folder.CloudOnly) nur online</span>"
+                } else { 'keine' }
+            }
+        })
+        New-WzHtmlTable -Data $rows -Columns @(
+            'Konto|Konto', 'Pfad|Ordner|mono', 'Lokal|Auf der Platte', 'Cloud|Platzhalter'
+        )
+    }
+    $content += New-WzHtmlSection -Title 'OneDrive' `
+        -Lead 'Platzhalter sehen im Explorer aus wie Dateien, enthalten aber nichts. Vor dem Kopieren herunterladen.' `
+        -Body $oneDriveBody
+
+    # --- Outlook und Browser ----------------------------------------------
+    $outlookRows = @(foreach ($file in $outlook) {
+        [pscustomobject]@{
+            Datei   = $file.Name
+            Pfad    = $file.Path
+            Groesse = Format-WzBytes $file.Bytes
+            Art     = $file.Kind
+        }
+    })
+    $content += New-WzHtmlSection -Title 'Outlook' `
+        -Lead 'PST-Dateien enthalten Daten, die es nur auf diesem PC gibt.' `
+        -Body (New-WzHtmlTable -Data $outlookRows -Columns @(
+            'Datei|Datei|mono', 'Pfad|Pfad|mono', 'Groesse|Größe|num', 'Art|Bedeutung'
+        ) -EmptyText 'Keine Outlook-Datendateien gefunden.')
+
+    $browserRows = @(foreach ($browser in $browsers) {
+        [pscustomobject]@{
+            Browser     = $browser.Name
+            Pfad        = $browser.Path
+            Groesse     = Format-WzBytes $browser.Bytes
+            Lesezeichen = "$(@($browser.BookmarkFiles).Count) Profil(e)"
+        }
+    })
+    $content += New-WzHtmlSection -Title 'Browser' `
+        -Lead 'Gespeicherte Passwörter sind an den PC gebunden und lassen sich nicht mitnehmen.' `
+        -Body (New-WzHtmlTable -Data $browserRows -Columns @(
+            'Browser|Browser', 'Pfad|Profilordner|mono', 'Groesse|Größe|num', 'Lesezeichen|Lesezeichen'
+        ) -EmptyText 'Keine Browser-Profile gefunden.')
+
+    # --- Zugänge und Geräte ------------------------------------------------
+    $keyRows = @()
+    $keys = $Overview.Keys
+    $keyRows += if ($keys.FirmwareKey) {
+        'Windows-Schlüssel im UEFI|vorhanden und auslesbar|ok'
+    } else {
+        'Windows-Schlüssel im UEFI|keiner hinterlegt (Volumen- oder Kontolizenz)'
+    }
+    if ($keys.Channel) { $keyRows += "Lizenzart|$($keys.Channel), endet auf $($keys.PartialKey)" }
+    foreach ($office in @($keys.Office)) { $keyRows += "Office|$($office.Name) ($($office.Channel))" }
+    $keyRows += if ($wlan.Count -gt 0) { "WLAN-Netze|$($wlan -join ', ')" } else { 'WLAN-Netze|keine gespeichert' }
+    $keyRows += if ($encrypted.Count -gt 0) {
+        "BitLocker|aktiv auf $($encrypted -join ', ')|warn"
+    } else {
+        'BitLocker|nicht aktiv'
+    }
+
+    $deviceRows = @()
+    foreach ($printer in $printers) {
+        $marker = if ($printer.IsDefault) { ' (Standard)' } else { '' }
+        $deviceRows += "Drucker$marker|$($printer.Name) an $($printer.Port)"
+    }
+    foreach ($drive in $netDrives) { $deviceRows += "Laufwerk $($drive.Letter)|$($drive.Target)" }
+    if ($deviceRows.Count -eq 0) { $deviceRows += 'Geräte|kein Drucker, kein Netzlaufwerk eingerichtet' }
+
+    $content += New-WzHtmlSection -Title 'Zugänge und Geräte' `
+        -Lead 'Damit der PC nach dem Neuaufsetzen wieder so arbeitet wie vorher.' `
+        -Body ((New-WzHtmlCard -Title 'Schlüssel und Zugänge' -Rows $keyRows) +
+               (New-WzHtmlCard -Title 'Drucker und Netzlaufwerke' -Rows $deviceRows))
+
+    $meta = @(
+        "Computer|$env:COMPUTERNAME"
+        "Datum|$(Get-Date -Format 'dd.MM.yyyy HH:mm')"
+        "Umfang|$(Format-WzBytes $totalBytes)"
+        "Konten|$($profiles.Count)"
+    )
+
+    $file = New-WzHtmlReport -Title 'Übernahme-Bericht' -Eyebrow 'ÜBERNAHME' `
+        -Subtitle "Bestandsaufnahme der Daten auf $env:COMPUTERNAME vor der Neuinstallation." `
+        -Meta $meta -Content $content `
+        -FileName "uebernahme-$(Get-Date -Format 'yyyy-MM-dd_HHmm').html"
+
+    Write-WzLog "Übernahme-Bericht gespeichert: $file" -Level Ok
+    return $file
+}
+
 function Export-WzProtocol {
     <#
     .SYNOPSIS

@@ -98,6 +98,20 @@
                             </StackPanel>
                         </Button>
 
+                        <TextBlock Text="// ÜBERNEHMEN" Style="{DynamicResource WzEyebrow}" Margin="14,16,0,6" />
+                        <Button Name="NavUserData" Tag="UserData" Style="{DynamicResource WzNavButton}">
+                            <StackPanel Orientation="Horizontal">
+                                <TextBlock Text="&#xE8B7;" FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets" FontSize="14" Width="24" VerticalAlignment="Center" />
+                                <TextBlock Text="Daten" VerticalAlignment="Center" />
+                            </StackPanel>
+                        </Button>
+                        <Button Name="NavDrivers" Tag="Drivers" Style="{DynamicResource WzNavButton}">
+                            <StackPanel Orientation="Horizontal">
+                                <TextBlock Text="&#xE950;" FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets" FontSize="14" Width="24" VerticalAlignment="Center" />
+                                <TextBlock Text="Treiber" VerticalAlignment="Center" />
+                            </StackPanel>
+                        </Button>
+
                         <TextBlock Text="// WERKZEUGE" Style="{DynamicResource WzEyebrow}" Margin="14,16,0,6" />
                         <Button Name="NavToolbox" Tag="Toolbox" Style="{DynamicResource WzNavButton}">
                             <StackPanel Orientation="Horizontal">

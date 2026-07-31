@@ -648,17 +648,22 @@ function New-WzInfoRow {
         Zeile mit Bezeichnung links und Wert rechts (Karteninhalt).
     .PARAMETER Kind
         normal | ok | warn | error — färbt den Wert ein.
+    .PARAMETER LabelWidth
+        Breite der linken Spalte. Die Vorgabe reicht für kurze Bezeichnungen;
+        Listen mit Geräte- oder Kontonamen brauchen deutlich mehr, sonst
+        bricht jeder zweite Name um.
     #>
     param(
-        [Parameter(Mandatory = $true, Position = 0)][string]$Label,
+        [Parameter(Mandatory = $true, Position = 0)][AllowEmptyString()][string]$Label,
         [Parameter(Position = 1)][string]$Value,
-        [ValidateSet('normal', 'ok', 'warn', 'error')][string]$Kind = 'normal'
+        [ValidateSet('normal', 'ok', 'warn', 'error')][string]$Kind = 'normal',
+        [int]$LabelWidth = 112
     )
 
     $grid = New-Object Windows.Controls.Grid
     $grid.Margin = New-Object Windows.Thickness(0, 3, 0, 3)
     $labelColumn = New-Object Windows.Controls.ColumnDefinition
-    $labelColumn.Width = New-Object Windows.GridLength(112)
+    $labelColumn.Width = New-Object Windows.GridLength($LabelWidth)
     $valueColumn = New-Object Windows.Controls.ColumnDefinition
     $valueColumn.Width = '*'
     [void]$grid.ColumnDefinitions.Add($labelColumn)

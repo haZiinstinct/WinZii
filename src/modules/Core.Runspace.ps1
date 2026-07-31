@@ -87,6 +87,9 @@ function Invoke-WzTask {
     $timer = New-Object Windows.Threading.DispatcherTimer
     $timer.Interval = [TimeSpan]::FromMilliseconds(120)
     $timer.Add_Tick({
+        # Zeilen aus dem Hintergrund gehören in die Konsole, während die Arbeit
+        # läuft — nicht erst am Ende
+        Sync-WzConsoleQueue
         if (-not $handle.IsCompleted) { return }
         $timer.Stop()
 
@@ -103,6 +106,9 @@ function Invoke-WzTask {
             Write-WzLog "$($state.Name): $($errorRecord.Exception.Message)" -Level Error
             $failed = $true
         }
+
+        # Nachzügler abholen, bevor die Abschlussmeldung geschrieben wird
+        Sync-WzConsoleQueue
 
         $state.PowerShell.Dispose()
         $state.Runspace.Close()

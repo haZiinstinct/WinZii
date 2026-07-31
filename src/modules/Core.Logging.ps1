@@ -79,11 +79,54 @@ function Write-WzLog {
 function Write-WzConsole {
     <#
     .SYNOPSIS
-        Hängt eine Zeile an die Log-Konsole der Oberfläche an (Dispatcher-sicher).
+        Hängt eine Zeile an die Log-Konsole der Oberfläche an (Thread-sicher).
+    .NOTES
+        Aus einem Hintergrund-Runspace darf hier kein Skriptblock über den
+        Dispatcher laufen: Er gehört zum Sitzungszustand seines Runspaces und
+        lässt sich vom UI-Thread nicht ausführen. Der Aufruf schlug bisher
+        kommentarlos fehl — jede Meldung aus einer Hintergrundarbeit landete
+        zwar in der Protokolldatei, aber nie in der Konsole. Stattdessen wird
+        die Zeile eingereiht; der Zeitgeber in Invoke-WzTask holt sie ab.
     #>
     param([string]$Line, [string]$Level = 'Info')
 
     if (-not $syncHash -or -not $syncHash.Window -or -not $syncHash.LogConsole) { return }
+
+    if (-not $syncHash.Window.Dispatcher.CheckAccess()) {
+        if ($null -ne $syncHash.ConsoleQueue) {
+            [void]$syncHash.ConsoleQueue.Add([pscustomobject]@{ Line = $Line; Level = $Level })
+        }
+        return
+    }
+
+    Add-WzConsoleLine -Line $Line -Level $Level
+}
+
+function Sync-WzConsoleQueue {
+    <#
+    .SYNOPSIS
+        Zeichnet die aus Hintergrundarbeiten eingereihten Zeilen. Nur im UI-Thread.
+    #>
+    if (-not $syncHash -or $null -eq $syncHash.ConsoleQueue) { return }
+    if (-not $syncHash.Window -or -not $syncHash.Window.Dispatcher.CheckAccess()) { return }
+
+    # Erst herausnehmen, dann zeichnen: Nur dieser Thread entfernt Einträge,
+    # deshalb kann dabei nichts doppelt erscheinen.
+    while ($syncHash.ConsoleQueue.Count -gt 0) {
+        $entry = $syncHash.ConsoleQueue[0]
+        $syncHash.ConsoleQueue.RemoveAt(0)
+        Add-WzConsoleLine -Line $entry.Line -Level $entry.Level
+    }
+}
+
+function Add-WzConsoleLine {
+    <#
+    .SYNOPSIS
+        Zeichnet eine einzelne Zeile. Setzt den UI-Thread voraus.
+    #>
+    param([string]$Line, [string]$Level = 'Info')
+
+    if (-not $syncHash -or -not $syncHash.LogConsole) { return }
 
     # Rot heller als die Statusfarbe WzRed — auf dem dunklen Konsolengrund
     # käme #EF4444 nur auf 5,4:1.
@@ -96,35 +139,23 @@ function Write-WzConsole {
         default  { '#94A3B8' }
     }
 
-    $action = [Action]{
-        try {
-            $console = $syncHash.LogConsole
-            $paragraph = New-Object Windows.Documents.Paragraph
-            $paragraph.Margin = New-Object Windows.Thickness(0)
-            $paragraph.LineHeight = 17
-            $run = New-Object Windows.Documents.Run($Line)
-            $run.Foreground = New-Object Windows.Media.SolidColorBrush(
-                [Windows.Media.ColorConverter]::ConvertFromString($color))
-            [void]$paragraph.Inlines.Add($run)
-            [void]$console.Document.Blocks.Add($paragraph)
-
-            while ($console.Document.Blocks.Count -gt 600) {
-                $console.Document.Blocks.Remove($console.Document.Blocks.FirstBlock)
-            }
-            $console.ScrollToEnd()
-        } catch {
-            # Fenster wurde bereits geschlossen
-        }
-    }.GetNewClosure()
-
     try {
-        if ($syncHash.Window.Dispatcher.CheckAccess()) {
-            $action.Invoke()
-        } else {
-            [void]$syncHash.Window.Dispatcher.BeginInvoke([Windows.Threading.DispatcherPriority]::Background, $action)
+        $console = $syncHash.LogConsole
+        $paragraph = New-Object Windows.Documents.Paragraph
+        $paragraph.Margin = New-Object Windows.Thickness(0)
+        $paragraph.LineHeight = 17
+        $run = New-Object Windows.Documents.Run($Line)
+        $run.Foreground = New-Object Windows.Media.SolidColorBrush(
+            [Windows.Media.ColorConverter]::ConvertFromString($color))
+        [void]$paragraph.Inlines.Add($run)
+        [void]$console.Document.Blocks.Add($paragraph)
+
+        while ($console.Document.Blocks.Count -gt 600) {
+            $console.Document.Blocks.Remove($console.Document.Blocks.FirstBlock)
         }
+        $console.ScrollToEnd()
     } catch {
-        # UI nicht mehr erreichbar
+        # Fenster wurde bereits geschlossen
     }
 }
 

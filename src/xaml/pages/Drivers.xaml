@@ -1,0 +1,80 @@
+﻿<StackPanel xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+            xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+
+    <TextBlock Text="// ÜBERNEHMEN" Style="{DynamicResource WzEyebrow}" />
+    <TextBlock Text="Treiber" Style="{DynamicResource WzPageTitle}" />
+    <TextBlock Style="{DynamicResource WzPageLead}"
+               Text="Geräte, die nicht laufen — und die Treibersicherung, ohne die ein Notebook nach dem Neuaufsetzen schnell ohne WLAN dasteht." />
+
+    <ItemsControl Name="DrvNotices" Margin="0,0,0,14" />
+
+    <!-- Steuerung -->
+    <Border Style="{DynamicResource WzCardStatic}" Margin="0,0,0,16">
+        <StackPanel>
+            <Grid>
+                <StackPanel Grid.Column="0">
+                    <TextBlock Text="// GERÄTE" Style="{DynamicResource WzEyebrow}" />
+                    <TextBlock Name="DrvTitle" Text="Noch nicht geprüft" Style="{DynamicResource WzCardTitle}" />
+                </StackPanel>
+                <Button Name="DrvBtnScan" Style="{DynamicResource WzBtnPrimary}"
+                        HorizontalAlignment="Right" VerticalAlignment="Top" Content="Geräte prüfen" />
+            </Grid>
+            <TextBlock Style="{DynamicResource WzHint}"
+                       Text="Liest den Geräte-Manager aus und übersetzt die Fehlercodes in Klartext." />
+        </StackPanel>
+    </Border>
+
+    <!-- Geräte mit Problemen -->
+    <Border Style="{DynamicResource WzCardStatic}" Margin="0,0,0,14">
+        <StackPanel>
+            <TextBlock Text="// PROBLEMGERÄTE" Style="{DynamicResource WzEyebrow}" />
+            <TextBlock Name="DrvProblemsTitle" Text="Noch nicht geprüft" Style="{DynamicResource WzCardTitle}" />
+            <StackPanel Name="DrvProblems" />
+        </StackPanel>
+    </Border>
+
+    <!-- Treiberliste -->
+    <Border Style="{DynamicResource WzCardStatic}" Margin="0,0,0,14">
+        <StackPanel>
+            <Grid>
+                <StackPanel Grid.Column="0">
+                    <TextBlock Text="// TREIBERBESTAND" Style="{DynamicResource WzEyebrow}" />
+                    <TextBlock Name="DrvListTitle" Text="Noch nicht geprüft" Style="{DynamicResource WzCardTitle}" />
+                </StackPanel>
+                <CheckBox Name="DrvShowMicrosoft" Style="{DynamicResource WzToggle}"
+                          HorizontalAlignment="Right" VerticalAlignment="Top"
+                          Content="Windows-eigene einblenden"
+                          ToolTip="Die Treiber von Microsoft sind fast immer alt und trotzdem in Ordnung." />
+            </Grid>
+            <TextBlock Style="{DynamicResource WzHint}" Margin="0,0,0,10"
+                       Text="Älteste zuerst. Bei Bluescreens und Abstürzen steht der Verdächtige meist ganz oben." />
+            <StackPanel Name="DrvList" />
+        </StackPanel>
+    </Border>
+
+    <!-- Sicherung -->
+    <Border Style="{DynamicResource WzCardStatic}" Margin="0,0,0,14">
+        <StackPanel>
+            <TextBlock Text="// SICHERUNG" Style="{DynamicResource WzEyebrow}" />
+            <TextBlock Name="DrvBackupTitle" Text="Treiber auf den Datenträger sichern" Style="{DynamicResource WzCardTitle}" />
+            <TextBlock Style="{DynamicResource WzHint}" Margin="0,0,0,10"
+                       Text="Die Sicherung landet neben WinZii unter offline\treiber und lässt sich nach dem Neuaufsetzen in einem Rutsch zurückspielen." />
+            <StackPanel Name="DrvBackupInfo" />
+            <WrapPanel Margin="0,10,0,0">
+                <Button Name="DrvBtnExport" Style="{DynamicResource WzBtnPrimary}" Margin="0,0,8,0"
+                        Content="Treiber sichern" />
+                <Button Name="DrvBtnImport" Style="{DynamicResource WzBtnSecondary}"
+                        Content="Sicherung zurückspielen" IsEnabled="False" />
+            </WrapPanel>
+        </StackPanel>
+    </Border>
+
+    <!-- Vorhandene Sicherungen -->
+    <Border Style="{DynamicResource WzCardStatic}">
+        <StackPanel>
+            <TextBlock Text="// VORHANDENE SICHERUNGEN" Style="{DynamicResource WzEyebrow}" />
+            <TextBlock Name="DrvBackupsTitle" Text="Noch nicht geprüft" Style="{DynamicResource WzCardTitle}" />
+            <StackPanel Name="DrvBackups" />
+        </StackPanel>
+    </Border>
+</StackPanel>

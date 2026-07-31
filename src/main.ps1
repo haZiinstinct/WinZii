@@ -18,6 +18,8 @@ $global:syncHash = [hashtable]::Synchronized(@{})
 $syncHash.Pages = @{}
 $syncHash.NavButtons = @()
 $syncHash.LogEntries = [Collections.ArrayList]::Synchronized((New-Object Collections.ArrayList))
+# Warteschlange für Konsolenzeilen aus Hintergrund-Runspaces
+$syncHash.ConsoleQueue = [Collections.ArrayList]::Synchronized((New-Object Collections.ArrayList))
 $syncHash.Busy = $false
 $syncHash.DryRun = $DryRun.IsPresent
 $syncHash.CurrentPage = $null
@@ -31,7 +33,8 @@ $moduleOrder = @(
     'Core.Paths', 'Core.Logging', 'Core.Json', 'Core.Runspace', 'Core.Ui',
     'Core.System', 'Core.Backup',
     'Optimizer', 'AiRemoval', 'Cleanup', 'Apps', 'Office',
-    'Diagnostics', 'NetworkDiag', 'Report', 'Autostart', 'Toolbox'
+    'Diagnostics', 'NetworkDiag', 'Report', 'Autostart', 'Toolbox',
+    'UserData', 'Drivers'
 )
 foreach ($moduleName in $moduleOrder) {
     $modulePath = Join-Path $PSScriptRoot "modules\$moduleName.ps1"
