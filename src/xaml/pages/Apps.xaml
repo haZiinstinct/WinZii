@@ -34,4 +34,31 @@
     </Border>
 
     <StackPanel Name="AppsCategories" />
+
+    <!-- Zweiter Bereich: entfernen statt installieren -->
+    <Border Style="{DynamicResource WzCardStatic}" Margin="0,4,0,0">
+        <StackPanel>
+            <TextBlock Text="// DEINSTALLIEREN" Style="{DynamicResource WzEyebrow}" />
+            <TextBlock Name="AppsUninstallTitle" Text="Installierte Programme" Style="{DynamicResource WzCardTitle}" />
+            <TextBlock Style="{DynamicResource WzHint}" Margin="0,0,0,12"
+                       Text="Dieselbe Liste wie in der Systemsteuerung. Vorinstallierte Herstellersoftware und abgelaufene Virenscanner-Testversionen lassen sich hier in einem Durchgang entfernen." />
+
+            <Grid Margin="0,0,0,12">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+                <TextBox Name="AppsUninstallSearch" Grid.Column="0" Style="{DynamicResource WzTextBox}"
+                         ToolTip="Filtert nach Name oder Herausgeber." />
+                <StackPanel Grid.Column="1" Orientation="Horizontal" Margin="10,0,0,0">
+                    <Button Name="AppsBtnUninstallScan" Style="{DynamicResource WzBtnSecondary}" Margin="0,0,8,0"
+                            Content="Liste laden" />
+                    <Button Name="AppsBtnUninstall" Style="{DynamicResource WzBtnDanger}"
+                            Content="Ausgewählte entfernen" IsEnabled="False" />
+                </StackPanel>
+            </Grid>
+
+            <StackPanel Name="AppsUninstallList" />
+        </StackPanel>
+    </Border>
 </StackPanel>

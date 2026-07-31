@@ -84,7 +84,22 @@ function Write-WzDashboardCards {
         if ($speeds) { $moduleText += " · $speeds MHz" }
         [void]$rows.Children.Add((New-WzInfoRow 'Bestückung' $moduleText))
     }
+    if ($Info.RamSlots -gt 0) {
+        # Die Aufrüstfrage: Ist noch ein Steckplatz frei, und wie viel geht rein?
+        $free = $Info.RamSlots - $Info.RamSlotsUsed
+        $slotText = "$($Info.RamSlotsUsed) von $($Info.RamSlots) belegt"
+        if ($Info.RamMaxBytes -gt 0) { $slotText += " · max. $(Format-WzBytes $Info.RamMaxBytes)" }
+        [void]$rows.Children.Add((New-WzInfoRow 'Steckplätze' $slotText -Kind $(if ($free -gt 0) { 'ok' } else { 'normal' })))
+    }
     [void]$rows.Children.Add((New-WzInfoRow 'Bauform' $(if ($Info.IsLaptop) { 'Notebook' } else { 'Desktop' })))
+    if ($Info.Battery.Present) {
+        $batteryKind = if ($null -eq $Info.Battery.WearPercent) { 'normal' }
+                       elseif ($Info.Battery.WearPercent -ge 40) { 'warn' }
+                       else { 'ok' }
+        [void]$rows.Children.Add((New-WzInfoRow 'Akku' $Info.Battery.Verdict -Kind $batteryKind))
+    }
+
+    Write-WzDashboardDevices -Info $Info
 
     # --- Sicherheit (Platzhalter bis Stufe 2 fertig ist) ------------------
     if (-not $syncHash.SecurityInfo) {
@@ -134,6 +149,71 @@ function Write-WzDashboardCards {
         -Kind $(if ($Info.WingetAvailable) { 'ok' } else { 'warn' })))
 
     Write-WzDashboardNotices -Info $Info
+}
+
+function Write-WzDashboardDevices {
+    <#
+    .SYNOPSIS
+        Füllt die Karten Grafik, Anzeige und Firmware.
+    #>
+    param([Parameter(Mandatory = $true)]$Info)
+
+    # --- Grafik -----------------------------------------------------------
+    $gpus = @($Info.Gpus)
+    $syncHash.DashGpuTitle.Text = if ($gpus.Count -eq 0) { 'nicht abfragbar' } else { $gpus[0].Name }
+    $rows = $syncHash.DashGpuRows
+    $rows.Children.Clear()
+    foreach ($gpu in $gpus) {
+        if ($gpus.Count -gt 1) { [void]$rows.Children.Add((New-WzInfoRow 'Karte' $gpu.Name)) }
+        if ($gpu.MemoryBytes -gt 0) {
+            [void]$rows.Children.Add((New-WzInfoRow 'Speicher' (Format-WzBytes $gpu.MemoryBytes)))
+        }
+        if ($gpu.Resolution) { [void]$rows.Children.Add((New-WzInfoRow 'Auflösung' $gpu.Resolution)) }
+        [void]$rows.Children.Add((New-WzInfoRow 'Treiber' $gpu.DriverVersion))
+    }
+    if ($gpus.Count -eq 0) {
+        [void]$rows.Children.Add((New-WzInfoRow 'Ergebnis' 'Es ließ sich keine Grafikkarte auslesen.' -Kind 'warn'))
+    }
+
+    # --- Anzeige ----------------------------------------------------------
+    $monitors = @($Info.Monitors)
+    $syncHash.DashMonitorTitle.Text = switch ($monitors.Count) {
+        0       { 'kein Bildschirm erkannt' }
+        1       { 'Ein Bildschirm' }
+        default { "$($monitors.Count) Bildschirme" }
+    }
+    $rows = $syncHash.DashMonitorRows
+    $rows.Children.Clear()
+    foreach ($monitor in $monitors) {
+        $parts = @()
+        if ($monitor.Inches -gt 0) { $parts += "$($monitor.Inches)″" }
+        if ($monitor.Year -gt 0) { $parts += "Baujahr $($monitor.Year)" }
+        $label = "$($monitor.Vendor) $($monitor.Name)".Trim()
+        [void]$rows.Children.Add((New-WzInfoRow $label ($parts -join ' · ') -LabelWidth 140))
+    }
+    if ($monitors.Count -eq 0) {
+        # Über Fernwartung ist das normal und kein Fehler
+        [void]$rows.Children.Add((New-WzInfoRow 'Ergebnis' `
+            'Kein Bildschirm meldet sich — bei Fernwartung ist das üblich.'))
+    }
+
+    # --- Firmware ---------------------------------------------------------
+    $syncHash.DashFirmwareTitle.Text = if ($Info.BiosVersion -ne 'n/v') {
+        "BIOS $($Info.BiosVersion)"
+    } else { 'nicht abfragbar' }
+    $rows = $syncHash.DashFirmwareRows
+    $rows.Children.Clear()
+    if ($Info.BiosDate) {
+        $years = [math]::Round(((Get-Date) - $Info.BiosDate).TotalDays / 365.25, 1)
+        [void]$rows.Children.Add((New-WzInfoRow 'Stand' "$($Info.BiosDate.ToString('dd.MM.yyyy')) · $years Jahre alt"))
+    }
+    [void]$rows.Children.Add((New-WzInfoRow 'Hersteller' $Info.BiosVendor))
+    [void]$rows.Children.Add((New-WzInfoRow 'Mainboard' $Info.BaseBoard))
+    if ($Info.SerialNumber) {
+        [void]$rows.Children.Add((New-WzInfoRow 'Seriennummer' $Info.SerialNumber -Kind 'ok'))
+    } else {
+        [void]$rows.Children.Add((New-WzInfoRow 'Seriennummer' 'keine hinterlegt — bei Selbstbau normal'))
+    }
 }
 
 function Write-WzDashboardSecurity {

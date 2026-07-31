@@ -71,11 +71,65 @@ function Get-WzSystemInfo {
     } else { 0 }
     $info.RamModules = @()
     try {
-        $info.RamModules = @(Get-CimInstance -Query 'SELECT DeviceLocator,Capacity,Speed FROM Win32_PhysicalMemory' -ErrorAction Stop |
+        $info.RamModules = @(Get-CimInstance -Query 'SELECT BankLabel,DeviceLocator,Capacity,Speed,Manufacturer FROM Win32_PhysicalMemory' -ErrorAction Stop |
             ForEach-Object {
-                [pscustomobject]@{ Bank = $_.DeviceLocator; Bytes = [int64]$_.Capacity; Speed = $_.Speed }
+                # Der DeviceLocator wiederholt sich über die Kanäle hinweg
+                # ("DIMM 0" gibt es zweimal) — erst mit dem BankLabel wird die
+                # Zeile eindeutig.
+                $bank = if ($_.BankLabel -and $_.BankLabel -ne $_.DeviceLocator) {
+                    "$($_.BankLabel) / $($_.DeviceLocator)"
+                } else { $_.DeviceLocator }
+                [pscustomobject]@{
+                    Bank    = $bank
+                    Bytes   = [int64]$_.Capacity
+                    Speed   = $_.Speed
+                    Vendor  = $_.Manufacturer
+                }
             })
     } catch { }
+
+    # Steckplätze und Höchstausbau — die eigentliche Aufrüstfrage
+    $info.RamSlots = 0
+    $info.RamSlotsUsed = @($info.RamModules).Count
+    $info.RamMaxBytes = 0
+    try {
+        $array = Get-CimInstance -Query 'SELECT MemoryDevices,MaxCapacityEx FROM Win32_PhysicalMemoryArray' -ErrorAction Stop |
+            Select-Object -First 1
+        if ($array) {
+            $info.RamSlots = [int]$array.MemoryDevices
+            # MaxCapacityEx steht in Kilobyte
+            $info.RamMaxBytes = [int64]$array.MaxCapacityEx * 1KB
+        }
+    } catch { }
+
+    # --- Grafik und Monitore ----------------------------------------------
+    $info.Gpus = Get-WzGraphicsInfo
+    $info.Monitors = Get-WzMonitorInfo
+
+    # --- Firmware ---------------------------------------------------------
+    $info.BiosVersion = 'n/v'
+    $info.BiosVendor = 'n/v'
+    $info.BiosDate = $null
+    $info.SerialNumber = ''
+    try {
+        $bios = Get-CimInstance -Query 'SELECT SMBIOSBIOSVersion,Manufacturer,ReleaseDate,SerialNumber FROM Win32_BIOS' -ErrorAction Stop |
+            Select-Object -First 1
+        if ($bios) {
+            if ($bios.SMBIOSBIOSVersion) { $info.BiosVersion = $bios.SMBIOSBIOSVersion.Trim() }
+            if ($bios.Manufacturer) { $info.BiosVendor = $bios.Manufacturer.Trim() }
+            $info.BiosDate = $bios.ReleaseDate
+            $info.SerialNumber = Get-WzUsableSerial $bios.SerialNumber
+        }
+    } catch { }
+
+    $info.BaseBoard = 'n/v'
+    try {
+        $board = Get-CimInstance -Query 'SELECT Manufacturer,Product FROM Win32_BaseBoard' -ErrorAction Stop | Select-Object -First 1
+        if ($board) { $info.BaseBoard = "$($board.Manufacturer) $($board.Product)".Trim() }
+    } catch { }
+
+    # --- Akku -------------------------------------------------------------
+    $info.Battery = Get-WzBatteryHealth
 
     # --- Laufwerke --------------------------------------------------------
     $info.Volumes = @()
@@ -124,6 +178,160 @@ function Get-WzSystemInfo {
     $info.WingetAvailable = [bool](Resolve-WzWingetPath)
 
     return [pscustomobject]$info
+}
+
+function Get-WzGraphicsInfo {
+    <#
+    .SYNOPSIS
+        Grafikkarten mit Treiberstand, Auflösung und tatsächlichem Speicher.
+    .NOTES
+        AdapterRAM aus WMI ist eine 32-Bit-Zahl und läuft über: eine Karte mit
+        12 GB meldet dort 4 GB. Der richtige Wert steht als qwMemorySize in der
+        Registry. Fehlt er, wird gar keine Größe genannt — eine falsche wäre
+        schlimmer als keine.
+    #>
+    $result = @()
+    $memoryByName = @{}
+    try {
+        $classPath = 'HKLM:\SYSTEM\CurrentControlSet\Control\Class\{4d36e968-e325-11ce-bfc1-08002be10318}'
+        foreach ($key in (Get-ChildItem $classPath -ErrorAction SilentlyContinue)) {
+            $properties = Get-ItemProperty -LiteralPath $key.PSPath -ErrorAction SilentlyContinue
+            if ($null -eq $properties) { continue }
+            if (-not $properties.PSObject.Properties['DriverDesc']) { continue }
+            $size = $properties.PSObject.Properties['HardwareInformation.qwMemorySize']
+            if ($size -and $size.Value) { $memoryByName[[string]$properties.DriverDesc] = [int64]$size.Value }
+        }
+    } catch { }
+
+    try {
+        $controllers = Get-CimInstance -Query 'SELECT Name,DriverVersion,CurrentHorizontalResolution,CurrentVerticalResolution,CurrentRefreshRate FROM Win32_VideoController' -ErrorAction Stop
+        foreach ($controller in $controllers) {
+            $resolution = if ($controller.CurrentHorizontalResolution) {
+                "$($controller.CurrentHorizontalResolution) × $($controller.CurrentVerticalResolution) bei $($controller.CurrentRefreshRate) Hz"
+            } else { '' }
+            $result += [pscustomobject]@{
+                Name          = $controller.Name
+                DriverVersion = $controller.DriverVersion
+                Resolution    = $resolution
+                MemoryBytes   = [int64]$memoryByName[[string]$controller.Name]
+            }
+        }
+    } catch { }
+    return @($result)
+}
+
+function Get-WzMonitorInfo {
+    <#
+    .SYNOPSIS
+        Angeschlossene Bildschirme mit Größe und Baujahr.
+    .NOTES
+        Die Namen stehen im WMI als Zeichen-Arrays mit abschließenden Nullen.
+    #>
+    $result = @()
+    try {
+        $ids = @(Get-CimInstance -Namespace root\wmi -ClassName WmiMonitorID -ErrorAction Stop)
+        $sizes = @(Get-CimInstance -Namespace root\wmi -ClassName WmiMonitorBasicDisplayParams -ErrorAction SilentlyContinue)
+
+        for ($index = 0; $index -lt $ids.Count; $index++) {
+            $id = $ids[$index]
+            $name = ConvertFrom-WzWmiString $id.UserFriendlyName
+            $vendor = ConvertFrom-WzWmiString $id.ManufacturerName
+
+            $inches = 0
+            $size = $sizes | Where-Object { $_.InstanceName -eq $id.InstanceName } | Select-Object -First 1
+            if (-not $size -and $index -lt $sizes.Count) { $size = $sizes[$index] }
+            if ($size -and $size.MaxHorizontalImageSize -gt 0) {
+                $diagonal = [math]::Sqrt(($size.MaxHorizontalImageSize * $size.MaxHorizontalImageSize) +
+                                         ($size.MaxVerticalImageSize * $size.MaxVerticalImageSize))
+                $inches = [math]::Round($diagonal / 2.54, 1)
+            }
+
+            $result += [pscustomobject]@{
+                Name   = if ($name) { $name } else { 'Bildschirm' }
+                Vendor = $vendor
+                Year   = $id.YearOfManufacture
+                Inches = $inches
+            }
+        }
+    } catch { }
+    return @($result)
+}
+
+function ConvertFrom-WzWmiString {
+    <#
+    .SYNOPSIS
+        Wandelt ein WMI-Zeichenarray in Text (ohne die Nullen am Ende).
+    #>
+    param($Characters)
+    if (-not $Characters) { return '' }
+    return (-join ($Characters | Where-Object { $_ -gt 0 } | ForEach-Object { [char]$_ })).Trim()
+}
+
+function Get-WzUsableSerial {
+    <#
+    .SYNOPSIS
+        Seriennummer, sofern der Hersteller überhaupt eine eingetragen hat.
+    .NOTES
+        Selbstbau-Mainboards melden hier Platzhalter wie "Default string" oder
+        lauter Nullen. Die im Bericht als Seriennummer zu führen, wäre irreführend.
+    #>
+    param([string]$Value)
+    if (-not $Value) { return '' }
+    $trimmed = $Value.Trim()
+    if ($trimmed -match '^(To be filled by O\.E\.M\.|System Serial Number|Default string|None|0+|\.+)$') { return '' }
+    if ($trimmed.Length -lt 3) { return '' }
+    return $trimmed
+}
+
+function Get-WzBatteryHealth {
+    <#
+    .SYNOPSIS
+        Akkuverschleiß in Prozent — die eine Zahl, die zählt.
+    .DESCRIPTION
+        Verschleiß = 1 - (heutige volle Ladung / Auslegungskapazität). Der
+        powercfg-Bericht enthält dieselbe Angabe, aber vergraben in mehreren
+        Bildschirmseiten HTML.
+    #>
+    $result = [pscustomobject]@{
+        Present      = $false
+        WearPercent  = $null
+        DesignmWh    = 0
+        FullmWh      = 0
+        ChargePercent = $null
+        Verdict      = 'kein Akku vorhanden'
+    }
+
+    try {
+        $static = @(Get-CimInstance -Namespace root\wmi -ClassName BatteryStaticData -ErrorAction Stop)
+        $full = @(Get-CimInstance -Namespace root\wmi -ClassName BatteryFullChargedCapacity -ErrorAction SilentlyContinue)
+        if ($static.Count -eq 0) { return $result }
+
+        $result.Present = $true
+        $result.DesignmWh = [int]($static | Measure-Object -Property DesignedCapacity -Sum).Sum
+        $result.FullmWh = [int]($full | Measure-Object -Property FullChargedCapacity -Sum).Sum
+
+        if ($result.DesignmWh -gt 0 -and $result.FullmWh -gt 0) {
+            $result.WearPercent = [math]::Round((1 - ($result.FullmWh / $result.DesignmWh)) * 100)
+            $result.Verdict = if ($result.WearPercent -lt 20) {
+                "$($result.WearPercent) % Verschleiß — der Akku ist in Ordnung"
+            } elseif ($result.WearPercent -lt 40) {
+                "$($result.WearPercent) % Verschleiß — merklich schwächer, aber brauchbar"
+            } else {
+                "$($result.WearPercent) % Verschleiß — ein Austausch lohnt sich"
+            }
+        } else {
+            $result.Verdict = 'Akku vorhanden, aber ohne Kapazitätsangaben'
+        }
+    } catch {
+        return $result
+    }
+
+    try {
+        $battery = Get-CimInstance -Query 'SELECT EstimatedChargeRemaining FROM Win32_Battery' -ErrorAction Stop | Select-Object -First 1
+        if ($battery) { $result.ChargePercent = [int]$battery.EstimatedChargeRemaining }
+    } catch { }
+
+    return $result
 }
 
 function Get-WzSecurityInfo {

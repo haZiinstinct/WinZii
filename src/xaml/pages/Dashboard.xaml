@@ -20,6 +20,7 @@
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto" />
             <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
         </Grid.RowDefinitions>
 
         <Border Grid.Row="0" Grid.Column="0" Style="{DynamicResource WzCard}" Margin="0,0,0,14">
@@ -67,6 +68,30 @@
                 <TextBlock Text="// SITZUNG" Style="{DynamicResource WzEyebrow}" />
                 <TextBlock Text="Laufzeit und Umgebung" Style="{DynamicResource WzCardTitle}" />
                 <StackPanel Name="DashSessionRows" />
+            </StackPanel>
+        </Border>
+
+        <Border Grid.Row="2" Grid.Column="0" Style="{DynamicResource WzCard}" Margin="0,0,0,14">
+            <StackPanel>
+                <TextBlock Text="// GRAFIK" Style="{DynamicResource WzEyebrow}" />
+                <TextBlock Name="DashGpuTitle" Text="wird geladen" Style="{DynamicResource WzCardTitle}" TextWrapping="Wrap" />
+                <StackPanel Name="DashGpuRows" />
+            </StackPanel>
+        </Border>
+
+        <Border Grid.Row="2" Grid.Column="2" Style="{DynamicResource WzCard}" Margin="0,0,0,14">
+            <StackPanel>
+                <TextBlock Text="// ANZEIGE" Style="{DynamicResource WzEyebrow}" />
+                <TextBlock Name="DashMonitorTitle" Text="wird geladen" Style="{DynamicResource WzCardTitle}" TextWrapping="Wrap" />
+                <StackPanel Name="DashMonitorRows" />
+            </StackPanel>
+        </Border>
+
+        <Border Grid.Row="2" Grid.Column="4" Style="{DynamicResource WzCard}" Margin="0,0,0,14">
+            <StackPanel>
+                <TextBlock Text="// FIRMWARE" Style="{DynamicResource WzEyebrow}" />
+                <TextBlock Name="DashFirmwareTitle" Text="wird geladen" Style="{DynamicResource WzCardTitle}" TextWrapping="Wrap" />
+                <StackPanel Name="DashFirmwareRows" />
             </StackPanel>
         </Border>
     </Grid>

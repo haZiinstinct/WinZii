@@ -19,6 +19,14 @@ function Initialize-WzAppsPage {
         Update-WzAppsSelection
     })
 
+    $syncHash.AppsBtnUninstallScan.Add_Click({ Start-WzUninstallScan })
+    $syncHash.AppsBtnUninstall.Add_Click({ Start-WzUninstallSelected })
+    # Enter im Suchfeld sucht, statt nur den Fokus zu halten
+    $syncHash.AppsUninstallSearch.Add_KeyDown({
+        param($sender, $eventArgs)
+        if ($eventArgs.Key -eq [Windows.Input.Key]::Return) { Start-WzUninstallScan }
+    })
+
     Update-WzAppsSelection
 }
 
@@ -35,6 +43,8 @@ function Update-WzAppsPage {
         param($info)
         if (-not $info) { return }
         Write-WzAppsStatus -Info $info
+        # Die Programmliste erst danach, damit die winget-Meldung nicht wartet
+        Start-WzUninstallScan
     }
 }
 
@@ -164,6 +174,102 @@ function Start-WzAppDownload {
             -Message "$($summary.Saved) Programm(e) gespeichert ($(Format-WzBytes $summary.Bytes)), $($summary.Failed) fehlgeschlagen."
         $syncHash.AppsChecked = $false
         Update-WzAppsPage
+    }
+}
+
+# --- Deinstallation --------------------------------------------------------
+
+function Start-WzUninstallScan {
+    $filter = $syncHash.AppsUninstallSearch.Text
+    $syncHash.AppsUninstallTitle.Text = 'wird gelesen...'
+    $syncHash.AppsUninstallList.Children.Clear()
+
+    Invoke-WzTask -Name 'Programmliste lesen' -Silent -ArgumentList @($filter) -ScriptBlock {
+        param($needle)
+        Get-WzInstalledPrograms -Filter $needle
+    } -OnComplete {
+        param($programs)
+        Write-WzUninstallList -Programs @($programs)
+    }
+}
+
+function Write-WzUninstallList {
+    param([Parameter(Mandatory = $true)][AllowEmptyCollection()][array]$Programs)
+
+    $filter = $syncHash.AppsUninstallSearch.Text
+    $syncHash.AppsUninstallTitle.Text = if ($Programs.Count -eq 0 -and $filter) {
+        "Nichts gefunden für »$filter«"
+    } elseif ($Programs.Count -eq 0) {
+        'Keine Programme gefunden'
+    } elseif ($filter) {
+        "$($Programs.Count) Treffer für »$filter«"
+    } else {
+        "$($Programs.Count) installierte Programme"
+    }
+
+    $container = $syncHash.AppsUninstallList
+    $container.Children.Clear()
+    $syncHash.AppsUninstallBoxes = @()
+
+    # Bei einer vollen Liste sind über hundert Zeilen zu viel für den Bildschirm
+    $shown = @($Programs | Select-Object -First 40)
+    foreach ($program in $shown) {
+        $parts = @()
+        if ($program.Version) { $parts += $program.Version }
+        if ($program.Publisher) { $parts += $program.Publisher }
+        if ($program.SizeBytes -gt 0) { $parts += Format-WzBytes $program.SizeBytes }
+        if (-not $program.CanSilent) { $parts += 'fragt beim Entfernen nach' }
+
+        $item = [pscustomobject]@{
+            name        = $program.Name
+            description = ($parts -join ' · ')
+        }
+        $row = New-WzCheckRow -Item $item -IsChecked $false
+        $row.CheckBox.Tag = $program
+        $row.CheckBox.Add_Click({ Update-WzUninstallSelection })
+        [void]$container.Children.Add($row.Row)
+        $syncHash.AppsUninstallBoxes += $row.CheckBox
+    }
+
+    if ($Programs.Count -gt $shown.Count) {
+        [void]$container.Children.Add((New-WzInfoRow 'weitere' `
+            "$($Programs.Count - $shown.Count) Einträge sind ausgeblendet — bitte die Suche oben nutzen." -LabelWidth 200))
+    }
+
+    Update-WzUninstallSelection
+}
+
+function Update-WzUninstallSelection {
+    $count = @($syncHash.AppsUninstallBoxes | Where-Object { $_.IsChecked }).Count
+    $syncHash.AppsBtnUninstall.IsEnabled = ($count -gt 0)
+}
+
+function Start-WzUninstallSelected {
+    $selected = @($syncHash.AppsUninstallBoxes | Where-Object { $_.IsChecked } | ForEach-Object { $_.Tag })
+    if ($selected.Count -eq 0) { return }
+
+    $loud = @($selected | Where-Object { -not $_.CanSilent })
+    $message = "$($selected.Count) Programm(e) werden entfernt. Das lässt sich nicht rückgängig machen — die Programme müssen danach neu installiert werden."
+    if ($loud.Count -gt 0) {
+        $message += "`n`n$($loud.Count) davon bringen einen eigenen Assistenten mit und fragen selbst noch einmal nach. " +
+            'Solange muss WinZii warten; bitte die Fenster durchklicken.'
+    }
+
+    $answer = Show-WzConfirm -Title 'Programme entfernen' -Message $message `
+        -Items @($selected | ForEach-Object { $_.Name }) `
+        -ConfirmText 'Entfernen' -Danger
+    if (-not $answer.Confirmed) { return }
+
+    Invoke-WzTask -Name 'Programme entfernen' -ArgumentList (, $selected) -ScriptBlock {
+        param($programs)
+        Uninstall-WzPrograms -Programs $programs
+    } -OnComplete {
+        param($summary)
+        if (-not $summary) { return }
+        Show-WzInfo -Title 'Deinstallation abgeschlossen' `
+            -Message "$($summary.Removed) entfernt, $($summary.Failed) fehlgeschlagen." `
+            -Items @($summary.Details)
+        Start-WzUninstallScan
     }
 }
 
