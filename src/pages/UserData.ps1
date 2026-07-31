@@ -236,6 +236,8 @@ function Start-WzBookmarkExport {
     } -OnComplete {
         param($result)
         if (-not $result) { return }
+        Add-WzAction -Area 'Datensicherung' `
+            -Summary "Lesezeichen von $($result.Count) Browser-Profil(en) gesichert" -Detail @($result.Path)
         Show-WzInfo -Title 'Lesezeichen' `
             -Message "$($result.Count) Datei(en) gesichert." -Items @($result.Path)
     }
@@ -265,6 +267,8 @@ function Start-WzWlanExport {
     } -OnComplete {
         param($result)
         if (-not $result) { return }
+        Add-WzAction -Area 'Datensicherung' `
+            -Summary "$($result.Count) WLAN-Netz(e) gesichert. $($result.Note)" -Detail @($result.Path)
         Show-WzInfo -Title 'WLAN gesichert' `
             -Message "$($result.Count) Netz(e) gesichert. $($result.Note)" -Items @($result.Path)
     }
@@ -294,6 +298,12 @@ function Start-WzBitLockerExport {
             "$($result.Count) Schlüssel gesichert. Die Datei bitte vertraulich behandeln."
         } else {
             "$($result.Count) Schlüssel gefunden — im Testmodus wurde nichts geschrieben."
+        }
+        if ($result.Path) {
+            # Bewusst nur Anzahl und Ablageort — die Schlüssel selbst gehören
+            # in keinen Bericht und in kein Protokoll.
+            Add-WzAction -Area 'Datensicherung' `
+                -Summary "$($result.Count) BitLocker-Wiederherstellungsschlüssel gesichert" -Detail @($result.Path)
         }
         Show-WzInfo -Title 'BitLocker' -Message $message -Items @($result.Path | Where-Object { $_ })
     }

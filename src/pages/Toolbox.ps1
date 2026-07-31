@@ -95,6 +95,7 @@ function Start-WzDefenderQuickScan {
     } -OnComplete {
         param($scan)
         if (-not $scan) { return }
+        Add-WzAction -Area 'Sicherheit' -Summary "Virenschnellprüfung durchgeführt: $($scan.Summary)"
         Show-WzInfo -Title 'Virenschnellprüfung' -Message $scan.Summary -Items @($scan.Threats)
     }
 }
@@ -107,6 +108,7 @@ function Start-WzNetworkRenew {
     } -OnComplete {
         param($result)
         if (-not $result) { return }
+        Add-WzAction -Area 'Reparatur' -Summary 'Netzwerkverbindung aufgefrischt'
         Show-WzInfo -Title 'Netzwerk aufgefrischt' `
             -Message "$($result.Done) Schritt(e) ausgeführt. Prüfe, ob die Verbindung jetzt steht — sonst hilft der vollständige Reset."
     }
@@ -124,6 +126,8 @@ function Start-WzNetworkReset {
     } -OnComplete {
         param($result)
         if (-not $result) { return }
+        Add-WzAction -Area 'Reparatur' -RebootRequired `
+            -Summary 'Netzwerkeinstellungen auf den Auslieferungszustand zurückgesetzt'
         Show-WzInfo -Title 'Netzwerk zurückgesetzt' `
             -Message "$($result.Done) Schritt(e) erledigt. Der PC muss neu gestartet werden, damit die Änderungen greifen."
     }
@@ -150,9 +154,10 @@ function Start-WzDnsChange {
     } -OnComplete {
         param($result)
         if (-not $result) { return }
+        Add-WzAction -Area 'Reparatur' -Summary "Namensauflösung auf $Provider umgestellt"
         Show-WzInfo -Title 'DNS umgestellt' `
             -Message "$($result.Changed) Netzwerkkarte(n) geändert." -Items @($result.Adapters)
-    }
+    }.GetNewClosure()
 }
 
 # --- Windows Update und Drucker -------------------------------------------
@@ -173,6 +178,9 @@ function Start-WzUpdateReset {
         } else {
             'Es konnte nichts umbenannt werden — die Ordner waren gesperrt. Nach einem Neustart erneut versuchen.'
         }
+        if ($result.Success) {
+            Add-WzAction -Area 'Reparatur' -Summary 'Zwischenspeicher von Windows Update zurückgesetzt'
+        }
         Show-WzInfo -Title 'Windows Update' -Message $message -Items @($result.Messages)
     }
 }
@@ -188,6 +196,8 @@ function Start-WzSpoolerRepair {
     } -OnComplete {
         param($result)
         if (-not $result) { return }
+        Add-WzAction -Area 'Reparatur' `
+            -Summary "Druckwarteschlange geleert ($($result.Removed) Auftrag/Aufträge)"
         Show-WzInfo -Title 'Druckwarteschlange' `
             -Message "$($result.Removed) Auftrag/Aufträge entfernt, Dienst neu gestartet."
     }
@@ -203,6 +213,7 @@ function Start-WzRestorePoint {
         New-WzRestorePoint -Description 'WinZii — manuell angelegt'
     } -OnComplete {
         param($ok)
+        if ($ok) { Add-WzAction -Area 'Sicherung' -Summary 'Systemwiederherstellungspunkt angelegt' }
         $message = if ($ok) {
             'Der Wiederherstellungspunkt wurde angelegt.'
         } else {
@@ -275,8 +286,12 @@ function Start-WzBloatwareRemove {
     } -OnComplete {
         param($result)
         if (-not $result) { return }
+        Add-WzAction -Area 'Vorinstallierte Apps' `
+            -Summary "$($result.Removed) mitgelieferte App(s) entfernt" `
+            -Detail @($selected | ForEach-Object { $_.DisplayName })
+
         Show-WzInfo -Title 'Fertig' `
             -Message "$($result.Removed) App(s) entfernt, $($result.Failed) fehlgeschlagen."
         Start-WzBloatwareScan
-    }
+    }.GetNewClosure()
 }

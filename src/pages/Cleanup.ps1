@@ -286,7 +286,11 @@ function Start-WzCleanupRun {
             $lines += "$($summary.Failed) Objekt(e) waren gesperrt und blieben liegen — bei Zwischenspeichern ist das normal."
         }
 
+        Add-WzAction -Area 'Speicherplatz' `
+            -Summary "$(Format-WzBytes $summary.FreedBytes) freigegeben, $($summary.Removed) Objekt(e) gelöscht" `
+            -Detail @($categories | ForEach-Object { $_.name })
+
         Show-WzInfo -Title 'Bereinigung abgeschlossen' -Message ($lines -join ' ')
         Start-WzCleanupScan
-    }
+    }.GetNewClosure()
 }

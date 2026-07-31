@@ -150,8 +150,12 @@ function Start-WzAppInstall {
         if ($summary.Skipped -gt 0) { $lines += "$($summary.Skipped) übersprungen (bereits vorhanden)" }
         if ($summary.Failed -gt 0) { $lines += "$($summary.Failed) fehlgeschlagen" }
 
+        Add-WzAction -Area 'Programme' `
+            -Summary "$($summary.Installed) Programm(e) installiert$(if ($summary.Failed -gt 0) { ", $($summary.Failed) ohne Erfolg" })" `
+            -Detail @($selected | ForEach-Object { $_.name })
+
         Show-WzInfo -Title 'Installation abgeschlossen' -Message ($lines -join ' · ') -Items @($summary.Details)
-    }
+    }.GetNewClosure()
 }
 
 function Start-WzAppDownload {
@@ -266,11 +270,15 @@ function Start-WzUninstallSelected {
     } -OnComplete {
         param($summary)
         if (-not $summary) { return }
+        Add-WzAction -Area 'Programme' `
+            -Summary "$($summary.Removed) Programm(e) entfernt$(if ($summary.Failed -gt 0) { ", $($summary.Failed) ohne Erfolg" })" `
+            -Detail @($selected | ForEach-Object { $_.Name })
+
         Show-WzInfo -Title 'Deinstallation abgeschlossen' `
             -Message "$($summary.Removed) entfernt, $($summary.Failed) fehlgeschlagen." `
             -Items @($summary.Details)
         Start-WzUninstallScan
-    }
+    }.GetNewClosure()
 }
 
 function Start-WzWingetBootstrap {

@@ -159,6 +159,45 @@ function Add-WzConsoleLine {
     }
 }
 
+function Add-WzAction {
+    <#
+    .SYNOPSIS
+        Hält fest, was an diesem PC tatsächlich verändert wurde.
+    .DESCRIPTION
+        Das Protokoll ist ein Entwicklerlog und für den Kunden unbrauchbar.
+        Hier landet dieselbe Arbeit noch einmal in einem Satz Klartext — daraus
+        entsteht später das Übergabeblatt.
+    .PARAMETER Area
+        Bereich in Kundensprache, z. B. "Optimierung" oder "Speicherplatz".
+    .PARAMETER Summary
+        Ein Satz, den auch jemand ohne Fachkenntnis versteht.
+    .PARAMETER Detail
+        Optionale Einzelposten.
+    #>
+    param(
+        [Parameter(Mandatory = $true, Position = 0)][string]$Area,
+        [Parameter(Mandatory = $true, Position = 1)][string]$Summary,
+        [string[]]$Detail = @(),
+        [switch]$RebootRequired
+    )
+
+    if (-not $syncHash -or $null -eq $syncHash.Actions) { return }
+
+    [void]$syncHash.Actions.Add([pscustomobject]@{
+        Time           = Get-Date
+        Area           = $Area
+        Summary        = $Summary
+        Detail         = @($Detail)
+        RebootRequired = $RebootRequired.IsPresent
+        IsTest         = [bool]$syncHash.DryRun
+    })
+}
+
+function Get-WzActions {
+    if ($syncHash -and $syncHash.Actions) { return @($syncHash.Actions.ToArray()) }
+    return @()
+}
+
 function Get-WzLogEntries {
     if ($syncHash -and $syncHash.LogEntries) { return @($syncHash.LogEntries.ToArray()) }
     return @()

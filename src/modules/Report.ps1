@@ -331,6 +331,198 @@ function New-WzDiagReport {
     return $file
 }
 
+function New-WzHandoverReport {
+    <#
+    .SYNOPSIS
+        Übergabeblatt: was gemacht wurde, wie der PC jetzt dasteht, was noch
+        ansteht — in Kundensprache und zum Ausdrucken.
+    .PARAMETER Technician
+        Wer die Arbeit gemacht hat.
+    .PARAMETER Customer
+        Für wen.
+    .PARAMETER OrderNumber
+        Auftragsnummer, falls vorhanden.
+    .OUTPUTS
+        Pfad der Datei.
+    #>
+    param(
+        [string]$Technician,
+        [string]$Customer,
+        [string]$OrderNumber
+    )
+
+    $actions = @(Get-WzActions)
+    $before = $syncHash.SessionStartInfo
+    # Frisch abfragen: der freie Platz hat sich durch die Arbeit verändert
+    $after = Get-WzSystemInfo
+    $security = $syncHash.SecurityInfo
+
+    # --- Was wurde gemacht -------------------------------------------------
+    $content = ''
+    if ($actions.Count -eq 0) {
+        $content += New-WzHtmlNote -Kind 'info' -Text (
+            'In dieser Sitzung wurde nichts am PC verändert. Das Blatt hält nur den Zustand fest.')
+    } elseif (@($actions | Where-Object { $_.IsTest }).Count -eq $actions.Count) {
+        $content += New-WzHtmlNote -Kind 'warn' -Text (
+            'Alle Schritte liefen im Testmodus — am PC wurde tatsächlich nichts geändert.')
+    }
+
+    $groups = $actions | Group-Object Area
+    $workBody = if ($actions.Count -eq 0) {
+        New-WzHtmlNote -Kind 'info' -Text 'Keine Änderungen.'
+    } else {
+        $rows = @(foreach ($group in $groups) {
+            $summaries = @($group.Group | ForEach-Object {
+                if ($_.IsTest) { "$($_.Summary) (nur Testlauf)" } else { $_.Summary }
+            })
+            [pscustomobject]@{
+                Bereich = $group.Name
+                Anzahl  = $group.Count
+                Was     = $summaries -join ' · '
+            }
+        })
+        New-WzHtmlTable -Data $rows -Columns @('Bereich|Bereich', 'Anzahl|Schritte|num', 'Was|Was gemacht wurde')
+    }
+    $content += New-WzHtmlSection -Title 'Durchgeführte Arbeiten' `
+        -Lead 'Alles, was in dieser Sitzung am PC verändert wurde.' -Body $workBody
+
+    # --- Vorher und nachher ------------------------------------------------
+    if ($before) {
+        $diskRows = @(foreach ($volume in $after.Volumes) {
+            $old = $before.Volumes | Where-Object { $_.Letter -eq $volume.Letter } | Select-Object -First 1
+            $gained = if ($old) { $volume.FreeBytes - $old.FreeBytes } else { 0 }
+            $change = if (-not $old) {
+                'kein Vergleichswert'
+            } elseif ($gained -gt 0) {
+                "<span class=`"tag tag-ok`">+$(Format-WzBytes $gained)</span>"
+            } elseif ($gained -lt 0) {
+                "-$(Format-WzBytes ([math]::Abs($gained)))"
+            } else { 'unverändert' }
+
+            [pscustomobject]@{
+                Laufwerk = "$($volume.Letter) $($volume.Label)".Trim()
+                Vorher   = if ($old) { Format-WzBytes $old.FreeBytes } else { 'n/v' }
+                Nachher  = Format-WzBytes $volume.FreeBytes
+                Aenderung = $change
+                Belegt   = "$($volume.UsedPercent) %"
+            }
+        })
+        $content += New-WzHtmlSection -Title 'Speicherplatz vorher und nachher' `
+            -Lead 'Freier Platz zu Beginn der Sitzung im Vergleich zu jetzt.' `
+            -Body (New-WzHtmlTable -Data $diskRows -Columns @(
+                'Laufwerk|Laufwerk', 'Vorher|Vorher|num', 'Nachher|Nachher|num',
+                'Aenderung|Gewonnen', 'Belegt|Belegt|num'
+            ))
+    }
+
+    # --- Geräteblatt -------------------------------------------------------
+    $deviceRows = @(
+        "Computer|$($after.ComputerName)"
+        "Gerät|$($after.Manufacturer) $($after.Model) ($(if ($after.IsLaptop) { 'Notebook' } else { 'Desktop' }))"
+        "Windows|$($after.OsCaption) $($after.OsVersion), Build $($after.OsBuild)"
+        "Sprache|$($after.OsLanguage)"
+        "Prozessor|$($after.CpuName)"
+        "Arbeitsspeicher|$(Format-WzBytes $after.RamTotalBytes) · $($after.RamSlotsUsed) von $($after.RamSlots) Steckplätzen belegt · max. $(Format-WzBytes $after.RamMaxBytes)"
+    )
+    if ($after.InstallDate) { $deviceRows += "Windows installiert am|$($after.InstallDate.ToString('dd.MM.yyyy'))" }
+    if (@($after.Gpus).Count -gt 0) { $deviceRows += "Grafik|$(@($after.Gpus)[0].Name)" }
+    if (@($after.Monitors).Count -gt 0) {
+        $deviceRows += "Bildschirme|$((@($after.Monitors) | ForEach-Object { "$($_.Vendor) $($_.Name)".Trim() }) -join ', ')"
+    }
+    $deviceRows += "BIOS|$($after.BiosVersion)$(if ($after.BiosDate) { " vom $($after.BiosDate.ToString('dd.MM.yyyy'))" })"
+    if ($after.SerialNumber) { $deviceRows += "Seriennummer|$($after.SerialNumber)" }
+    if ($after.Battery.Present) { $deviceRows += "Akku|$($after.Battery.Verdict)" }
+    foreach ($adapter in $after.Network) { $deviceRows += "Netzwerk|$($adapter.Adapter): $($adapter.IPv4)" }
+
+    $securityRows = @()
+    if ($security) {
+        $securityRows += "Aktivierung|$($security.Activation)|$(if ($security.Activation -like 'aktiviert*') { 'ok' } else { 'warn' })"
+        $securityRows += "Virenschutz|$($security.Defender)|$(if ($security.DefenderOk) { 'ok' } else { 'warn' })"
+        $securityRows += "BitLocker|$($security.BitLocker)"
+        $securityRows += "Secure Boot|$($security.SecureBoot)"
+        $securityRows += "TPM|$($security.Tpm)"
+        foreach ($disk in $security.PhysicalDisks) {
+            $health = if ($disk.Health -eq 'Healthy') { 'in Ordnung' } else { $disk.Health }
+            $securityRows += "$($disk.MediaType)|$($disk.Model) · $(Format-WzBytes $disk.SizeBytes) · $health|$(if ($disk.Health -eq 'Healthy') { 'ok' } else { 'warn' })"
+        }
+    } else {
+        $securityRows += 'Hinweis|Der Sicherheitsstatus wurde in dieser Sitzung nicht abgefragt.'
+    }
+
+    $content += New-WzHtmlSection -Title 'Geräteblatt' `
+        -Lead 'Die Eckdaten dieses PCs zum Zeitpunkt der Übergabe.' `
+        -Body ((New-WzHtmlCard -Title 'Ausstattung' -Rows $deviceRows) +
+               (New-WzHtmlCard -Title 'Sicherheit und Datenträger' -Rows $securityRows))
+
+    # --- Empfehlungen ------------------------------------------------------
+    $recommendations = Get-WzHandoverRecommendations -Info $after -Security $security -Actions $actions
+    $recommendationBody = if ($recommendations.Count -eq 0) {
+        New-WzHtmlNote -Kind 'ok' -Text 'Es steht nichts weiter an — der PC ist einsatzbereit.'
+    } else {
+        ($recommendations | ForEach-Object { New-WzHtmlNote -Kind $_.Kind -Text $_.Text }) -join "`n"
+    }
+    $content += New-WzHtmlSection -Title 'Was noch ansteht' `
+        -Lead 'Punkte, die der Kunde wissen sollte.' -Body $recommendationBody
+
+    # --- Kopfdaten ---------------------------------------------------------
+    $meta = @("Computer|$env:COMPUTERNAME", "Datum|$(Get-Date -Format 'dd.MM.yyyy HH:mm')")
+    if ($Technician) { $meta += "Techniker|$Technician" }
+    if ($Customer) { $meta += "Kunde|$Customer" }
+    if ($OrderNumber) { $meta += "Auftrag|$OrderNumber" }
+    $meta += "Schritte|$($actions.Count)"
+
+    $file = New-WzHtmlReport -Title 'Übergabeblatt' -Eyebrow 'ÜBERGABE' `
+        -Subtitle "Was an $env:COMPUTERNAME gemacht wurde und wie der PC jetzt dasteht." `
+        -Meta $meta -Content $content `
+        -FileName "uebergabe-$(Get-Date -Format 'yyyy-MM-dd_HHmm').html"
+
+    Write-WzLog "Übergabeblatt gespeichert: $file" -Level Ok
+    return $file
+}
+
+function Get-WzHandoverRecommendations {
+    <#
+    .SYNOPSIS
+        Formt die vorhandenen Befunde in Sätze um, die dem Kunden etwas sagen.
+    #>
+    param($Info, $Security, $Actions)
+
+    $result = @()
+
+    if ($Info.PendingReboot -or @($Actions | Where-Object { $_.RebootRequired }).Count -gt 0) {
+        $result += @{ Kind = 'warn'; Text = 'Der PC muss noch einmal neu gestartet werden. Erst danach greifen alle Änderungen.' }
+    }
+
+    foreach ($volume in $Info.Volumes) {
+        if ($volume.UsedPercent -ge 90) {
+            $result += @{ Kind = 'warn'; Text = "Laufwerk $($volume.Letter) ist zu $($volume.UsedPercent) % voll. Windows wird langsam, wenn weniger als ein Zehntel frei bleibt." }
+        }
+    }
+
+    if ($Security) {
+        if (-not $Security.DefenderOk) {
+            $result += @{ Kind = 'warn'; Text = "Der Virenschutz ist nicht auf dem aktuellen Stand: $($Security.Defender)." }
+        }
+        if ($Security.Activation -notlike 'aktiviert*') {
+            $result += @{ Kind = 'warn'; Text = "Windows ist nicht aktiviert ($($Security.Activation)). Dafür wird ein gültiger Lizenzschlüssel gebraucht." }
+        }
+        foreach ($disk in @($Security.PhysicalDisks)) {
+            if ($disk.Health -ne 'Healthy') {
+                $result += @{ Kind = 'err'; Text = "Der Datenträger $($disk.Model) meldet »$($disk.Health)«. Bitte zeitnah sichern und tauschen lassen." }
+            }
+        }
+        if ($Info.IsLaptop -and $Security.BitLocker -like '*nicht*') {
+            $result += @{ Kind = 'info'; Text = 'Dieses Notebook ist nicht verschlüsselt. Bei Verlust kann jeder die Daten auslesen — BitLocker wäre einen Gedanken wert.' }
+        }
+    }
+
+    if ($Info.Battery.Present -and $null -ne $Info.Battery.WearPercent -and $Info.Battery.WearPercent -ge 40) {
+        $result += @{ Kind = 'warn'; Text = "Der Akku hat $($Info.Battery.WearPercent) % seiner Kapazität verloren. Ein Austausch bringt die Laufzeit zurück." }
+    }
+
+    return @($result)
+}
+
 function New-WzUserDataReport {
     <#
     .SYNOPSIS

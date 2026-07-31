@@ -33,6 +33,9 @@ function Update-WzDashboardPage {
             return
         }
         $syncHash.SystemInfo = $info
+        # Der allererste Stand bleibt liegen — das Übergabeblatt vergleicht
+        # damit später den freien Speicher.
+        if (-not $syncHash.SessionStartInfo) { $syncHash.SessionStartInfo = $info }
         Write-WzDashboardCards -Info $info
         Write-WzLog "$($info.OsCaption) · Version $($info.OsVersion) · Build $($info.OsBuild)" -Level Info
 

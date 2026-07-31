@@ -20,6 +20,8 @@ $syncHash.NavButtons = @()
 $syncHash.LogEntries = [Collections.ArrayList]::Synchronized((New-Object Collections.ArrayList))
 # Warteschlange für Konsolenzeilen aus Hintergrund-Runspaces
 $syncHash.ConsoleQueue = [Collections.ArrayList]::Synchronized((New-Object Collections.ArrayList))
+# Was an diesem PC verändert wurde — Grundlage des Übergabeblatts
+$syncHash.Actions = [Collections.ArrayList]::Synchronized((New-Object Collections.ArrayList))
 $syncHash.Busy = $false
 $syncHash.DryRun = $DryRun.IsPresent
 $syncHash.CurrentPage = $null

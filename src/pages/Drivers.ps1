@@ -210,6 +210,11 @@ function Start-WzDriverExport {
         } else {
             'Es wurde nichts gesichert. Für den Treiberexport sind Administratorrechte nötig.'
         }
+        if ($result.Success) {
+            Add-WzAction -Area 'Treiber' `
+                -Summary "$($result.Packages) Treiberpaket(e) auf den Datenträger gesichert ($(Format-WzBytes $result.Bytes))" `
+                -Detail @($result.Path)
+        }
         Show-WzInfo -Title 'Treibersicherung' -Message $message -Items @($result.Path)
         Start-WzDriverScan
     }
@@ -237,6 +242,9 @@ function Start-WzDriverImport {
     } -OnComplete {
         param($result)
         if (-not $result) { return }
+        if ($result.Success) {
+            Add-WzAction -Area 'Treiber' -RebootRequired -Summary "Treibersicherung eingespielt: $($result.Summary)"
+        }
         Show-WzInfo -Title 'Treiber eingespielt' -Message $result.Summary
     }
 }

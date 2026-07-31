@@ -154,12 +154,14 @@ function Start-WzOfficeInstall {
         $syncHash.OffChecked = $false
         Update-WzOfficePage
         if ($ok) {
+            Add-WzAction -Area 'Office' -Summary "$($choice.Variant.name) installiert ($($choice.Language))" `
+                -Detail @($choice.Apps)
             Show-WzInfo -Title 'Office eingerichtet' `
                 -Message 'Beim ersten Start ist die Anmeldung beziehungsweise die Eingabe des Lizenzschlüssels nötig.'
         } else {
             Show-WzInfo -Title 'Nicht abgeschlossen' -Message 'Die Installation lief nicht durch. Einzelheiten stehen im Protokoll.'
         }
-    }
+    }.GetNewClosure()
 }
 
 function Start-WzOfficeDownload {

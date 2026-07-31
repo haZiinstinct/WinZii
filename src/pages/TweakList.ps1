@@ -217,6 +217,10 @@ function Invoke-WzTweakSelection {
         if ($summary.RebootRequired) { $lines += 'Ein Neustart ist nötig, damit alles greift.' }
         if ($summary.UndoFile) { $lines += "Sicherung: $(Split-Path -Parent $summary.UndoFile)" }
 
+        Add-WzAction -Area $Title -RebootRequired:([bool]$summary.RebootRequired) `
+            -Summary "$($summary.Applied) Einstellung(en) angepasst$(if ($summary.Failed -gt 0) { ", $($summary.Failed) davon ohne Erfolg" })" `
+            -Detail @($selected | ForEach-Object { $_.name })
+
         Show-WzInfo -Title 'Fertig' -Message ($lines -join ' ') -Items @()
         if ($OnDone) { & $OnDone }
     }.GetNewClosure()
@@ -274,6 +278,8 @@ function Show-WzUndoDialog {
         $lines = @("$($result.Restored) Einstellung(en) zurückgesetzt.")
         if ($result.Failed -gt 0) { $lines += "$($result.Failed) fehlgeschlagen." }
         if ($result.Skipped -gt 0) { $lines += "$($result.Skipped) nicht automatisch umkehrbar." }
+
+        Add-WzAction -Area 'Rücknahme' -Summary "$($result.Restored) Einstellung(en) auf den vorherigen Stand zurückgesetzt"
 
         Show-WzInfo -Title 'Zurückgenommen' -Message ($lines -join ' ') -Items @($result.Notes)
         if ($OnDone) { & $OnDone }

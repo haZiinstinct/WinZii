@@ -59,6 +59,45 @@
 
     <Border Style="{DynamicResource WzCardStatic}" Margin="0,14,0,0">
         <StackPanel>
+            <Grid>
+                <StackPanel Grid.Column="0">
+                    <TextBlock Text="// ÜBERGABE" Style="{DynamicResource WzEyebrow}" />
+                    <TextBlock Name="ProtoHandoverTitle" Text="Übergabeblatt für den Kunden" Style="{DynamicResource WzCardTitle}" />
+                </StackPanel>
+                <Button Name="ProtoBtnHandover" Style="{DynamicResource WzBtnPrimary}"
+                        HorizontalAlignment="Right" VerticalAlignment="Top"
+                        Content="Übergabeblatt erstellen" />
+            </Grid>
+            <TextBlock Style="{DynamicResource WzHint}" Margin="0,0,0,14"
+                       Text="Fasst in Kundensprache zusammen, was gemacht wurde, wie viel Platz gewonnen wurde, wie der PC ausgestattet ist und was noch ansteht. Das Protokoll darüber ist ein Entwicklerlog und dafür ungeeignet." />
+
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="12" />
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="12" />
+                    <ColumnDefinition Width="*" />
+                </Grid.ColumnDefinitions>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
+                </Grid.RowDefinitions>
+
+                <TextBlock Grid.Row="0" Grid.Column="0" Text="Techniker" Style="{DynamicResource WzLabel}" Margin="0,0,0,5" />
+                <TextBox Grid.Row="1" Grid.Column="0" Name="ProtoTechnician" Style="{DynamicResource WzTextBox}" />
+
+                <TextBlock Grid.Row="0" Grid.Column="2" Text="Kunde" Style="{DynamicResource WzLabel}" Margin="0,0,0,5" />
+                <TextBox Grid.Row="1" Grid.Column="2" Name="ProtoCustomer" Style="{DynamicResource WzTextBox}" />
+
+                <TextBlock Grid.Row="0" Grid.Column="4" Text="Auftragsnummer" Style="{DynamicResource WzLabel}" Margin="0,0,0,5" />
+                <TextBox Grid.Row="1" Grid.Column="4" Name="ProtoOrderNumber" Style="{DynamicResource WzTextBox}" />
+            </Grid>
+        </StackPanel>
+    </Border>
+
+    <Border Style="{DynamicResource WzCardStatic}" Margin="0,14,0,0">
+        <StackPanel>
             <TextBlock Text="// VERLAUF" Style="{DynamicResource WzEyebrow}" />
             <TextBlock Text="Letzte Schritte" Style="{DynamicResource WzCardTitle}" />
             <ItemsControl Name="ProtoEntries" />

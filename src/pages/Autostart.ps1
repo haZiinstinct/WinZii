@@ -68,7 +68,10 @@ function New-WzAutostartRow {
     $toggle.Tag = $Item
     $toggle.Add_Click({
         $target = [bool]$this.IsChecked
-        if (-not (Set-WzAutostartItem -Item $this.Tag -Enabled $target)) {
+        if (Set-WzAutostartItem -Item $this.Tag -Enabled $target) {
+            $verb = if ($target) { 'eingeschaltet' } else { 'abgeschaltet' }
+            Add-WzAction -Area 'Autostart' -Summary "»$($this.Tag.Name)« beim Systemstart $verb"
+        } else {
             $this.IsChecked = -not $target
         }
         Update-WzAutostartCounts
