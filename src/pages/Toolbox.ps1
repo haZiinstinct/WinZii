@@ -2,6 +2,8 @@
 # vorinstallierte Apps.
 
 function Initialize-WzToolboxPage {
+    $syncHash.ToolBtnNetDiag.Add_Click({ Start-WzNetworkDiagnosis })
+    $syncHash.ToolBtnScan.Add_Click({ Start-WzDefenderQuickScan })
     $syncHash.ToolBtnRenew.Add_Click({ Start-WzNetworkRenew })
     $syncHash.ToolBtnNetReset.Add_Click({ Start-WzNetworkReset })
     $syncHash.ToolBtnWuReset.Add_Click({ Start-WzUpdateReset })
@@ -31,7 +33,73 @@ function Update-WzToolboxPage {
     Start-WzBloatwareScan
 }
 
-# --- Netzwerk --------------------------------------------------------------
+# --- Netzwerk prüfen -------------------------------------------------------
+
+function Start-WzNetworkDiagnosis {
+    $syncHash.NetDiagTitle.Text = 'wird geprüft...'
+    $syncHash.NetDiagSteps.Children.Clear()
+    $syncHash.NetDiagVerdict.Items.Clear()
+
+    Invoke-WzTask -Name 'Verbindung prüfen' -ScriptBlock {
+        Invoke-WzNetworkDiagnosis
+    } -OnComplete {
+        param($diagnosis)
+        if (-not $diagnosis) { return }
+        Write-WzNetworkDiagnosis -Diagnosis $diagnosis
+    }
+}
+
+function Write-WzNetworkDiagnosis {
+    param([Parameter(Mandatory = $true)]$Diagnosis)
+
+    $failed = @($Diagnosis.Steps | Where-Object { $_.Status -eq 'fail' })
+    $syncHash.NetDiagTitle.Text = if ($Diagnosis.Ok) {
+        'Verbindung in Ordnung'
+    } elseif ($failed.Count -gt 0) {
+        "Es hängt bei: $($failed[0].Name)"
+    } else {
+        'Auffälligkeit gefunden'
+    }
+
+    $container = $syncHash.NetDiagSteps
+    $container.Children.Clear()
+    foreach ($step in $Diagnosis.Steps) {
+        $kind = switch ($step.Status) {
+            'ok'   { 'ok' }
+            'warn' { 'warn' }
+            default { 'error' }
+        }
+        $mark = switch ($step.Status) {
+            'ok'   { '✓' }
+            'warn' { '!' }
+            default { '✗' }
+        }
+        [void]$container.Children.Add((New-WzInfoRow "$mark $($step.Name)" $step.Detail -Kind $kind))
+    }
+
+    $verdictKind = if ($Diagnosis.Ok) { 'ok' } else { 'warn' }
+    [void]$syncHash.NetDiagVerdict.Items.Add((New-WzNotice -Kind $verdictKind -Text $Diagnosis.Verdict))
+    [void]$syncHash.NetDiagVerdict.Items.Add((New-WzNotice -Kind 'info' -Text $Diagnosis.Recommendation))
+
+    Write-WzLog $Diagnosis.Verdict -Level $(if ($Diagnosis.Ok) { 'Ok' } else { 'Warn' })
+}
+
+function Start-WzDefenderQuickScan {
+    $answer = Show-WzConfirm -Title 'Virenschnellprüfung' `
+        -Message 'Der Windows-Defender prüft die üblichen Verstecke von Schadsoftware. Das dauert je nach PC fünf bis fünfzehn Minuten; solange lässt sich WinZii nicht weiter bedienen.' `
+        -ConfirmText 'Starten'
+    if (-not $answer.Confirmed) { return }
+
+    Invoke-WzTask -Name 'Virenschnellprüfung' -ScriptBlock {
+        Start-WzDefenderScan
+    } -OnComplete {
+        param($scan)
+        if (-not $scan) { return }
+        Show-WzInfo -Title 'Virenschnellprüfung' -Message $scan.Summary -Items @($scan.Threats)
+    }
+}
+
+# --- Netzwerk reparieren ---------------------------------------------------
 
 function Start-WzNetworkRenew {
     Invoke-WzTask -Name 'IP-Adresse auffrischen' -ScriptBlock {

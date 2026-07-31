@@ -73,6 +73,109 @@ function Get-WzEventSummary {
     return @($groups | Sort-Object @{ Expression = { $order[$_.Severity] } }, @{ Expression = 'Count'; Descending = $true })
 }
 
+function Get-WzBootPerformance {
+    <#
+    .SYNOPSIS
+        Startdauer der letzten Startvorgänge samt Bremser.
+    .DESCRIPTION
+        Windows protokolliert im Leistungsprotokoll zu jedem Start die Dauer
+        und benennt den Dienst oder das Programm, das am meisten verzögert hat.
+        Genau das braucht man bei »der PC startet so langsam« — und es steht in
+        einem Protokoll, das die normale Ereignisauswertung nicht liest.
+    .OUTPUTS
+        PSCustomObject mit Runs, AverageSeconds, Worst und Hint
+    #>
+    param([int]$Count = 10)
+
+    $result = [pscustomobject]@{
+        Runs           = @()
+        AverageSeconds = 0
+        Worst          = $null
+        Hint           = ''
+    }
+
+    $events = @()
+    try {
+        $events = @(Get-WinEvent -FilterHashtable @{
+            LogName = 'Microsoft-Windows-Diagnostics-Performance/Operational'
+            Id      = 100
+        } -MaxEvents $Count -ErrorAction Stop)
+    } catch {
+        $message = $_.Exception.Message
+        $result.Hint = if ($message -match 'nicht autorisiert|not authorized|Zugriff verweigert|access is denied') {
+            'Das Leistungsprotokoll ließ sich nicht öffnen — dafür fehlen die Administratorrechte.'
+        } elseif ($message -match 'Keine Ereignisse|No events') {
+            'Es sind noch keine Startvorgänge aufgezeichnet. Nach dem nächsten Neustart steht der Wert zur Verfügung.'
+        } else {
+            'Das Leistungsprotokoll ist auf diesem PC nicht verfügbar. In virtuellen Maschinen ist es oft abgeschaltet.'
+        }
+        return $result
+    }
+
+    $runs = foreach ($event in $events) {
+        try {
+            $xml = [xml]$event.ToXml()
+            $data = @{}
+            foreach ($item in $xml.Event.EventData.Data) { $data[$item.Name] = $item.'#text' }
+
+            [pscustomobject]@{
+                Time          = $event.TimeCreated
+                TotalSeconds  = [math]::Round([int]$data['BootTime'] / 1000, 1)
+                DegradedBy    = $data['BootPostBootTime']
+                MainPathMs    = [int]$data['MainPathBootTime']
+                Culprit       = ''
+            }
+        } catch { }
+    }
+    $runs = @($runs | Where-Object { $_ })
+
+    if ($runs.Count -eq 0) {
+        $result.Hint = 'Es sind noch keine Startvorgänge aufgezeichnet.'
+        return $result
+    }
+
+    # Wer bremst? Ereignis 101/102/103 nennt Programm beziehungsweise Dienst
+    $culprits = @()
+    try {
+        $slow = @(Get-WinEvent -FilterHashtable @{
+            LogName = 'Microsoft-Windows-Diagnostics-Performance/Operational'
+            Id      = 101, 102, 103
+        } -MaxEvents 40 -ErrorAction Stop)
+
+        foreach ($event in $slow) {
+            try {
+                $xml = [xml]$event.ToXml()
+                $data = @{}
+                foreach ($item in $xml.Event.EventData.Data) { $data[$item.Name] = $item.'#text' }
+                $name = $data['Name']
+                if (-not $name) { $name = $data['FriendlyName'] }
+                $delay = [int]$data['TotalTime']
+                if ($name -and $delay -gt 0) {
+                    $culprits += [pscustomobject]@{
+                        Name         = $name
+                        DelaySeconds = [math]::Round($delay / 1000, 1)
+                        Time         = $event.TimeCreated
+                    }
+                }
+            } catch { }
+        }
+    } catch { }
+
+    $result.Runs = @($runs)
+    $result.AverageSeconds = [math]::Round((($runs | Measure-Object -Property TotalSeconds -Average).Average), 1)
+    $result.Worst = @($culprits | Sort-Object DelaySeconds -Descending | Select-Object -First 5)
+
+    $result.Hint = if ($result.AverageSeconds -lt 30) {
+        'Die Startzeit ist unauffällig.'
+    } elseif ($result.AverageSeconds -lt 60) {
+        'Der Start dauert länger als üblich. Ein Blick auf die Autostart-Einträge lohnt sich.'
+    } else {
+        'Der Start dauert deutlich zu lange. Autostart ausdünnen und den Datenträgerzustand prüfen — bei alten Festplatten ist das der häufigste Grund.'
+    }
+
+    return $result
+}
+
 function Get-WzMinidumps {
     <#
     .SYNOPSIS

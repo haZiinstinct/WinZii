@@ -34,6 +34,7 @@ function Start-WzDiagnosticsScan {
             Events = Get-WzEventSummary -Days $days
             Dumps  = Get-WzMinidumps -Days 90
             Disks  = Get-WzSmartStatus
+            Boot   = Get-WzBootPerformance
             Days   = $days
         }
     } -OnComplete {
@@ -67,6 +68,31 @@ function Write-WzDiagnosticsResult {
     }
     if ($events.Count -gt 20) {
         [void]$container.Children.Add((New-WzInfoRow 'Hinweis' "$($events.Count - 20) weitere Einträge stehen im Bericht"))
+    }
+
+    # --- Startdauer -------------------------------------------------------
+    $boot = $Result.Boot
+    $container = $syncHash.DiagBoot
+    $container.Children.Clear()
+
+    if (-not $boot -or $boot.Runs.Count -eq 0) {
+        $syncHash.DiagBootTitle.Text = 'Keine Startdaten verfügbar'
+        [void]$container.Children.Add((New-WzInfoRow 'Hinweis' $(if ($boot) { $boot.Hint } else { 'nicht abfragbar' })))
+    } else {
+        $syncHash.DiagBootTitle.Text = "Im Schnitt $($boot.AverageSeconds) Sekunden bis zum fertigen Desktop"
+        $kind = if ($boot.AverageSeconds -lt 30) { 'ok' } elseif ($boot.AverageSeconds -lt 60) { 'warn' } else { 'error' }
+        [void]$container.Children.Add((New-WzInfoRow 'Bewertung' $boot.Hint -Kind $kind))
+
+        $latest = $boot.Runs[0]
+        [void]$container.Children.Add((New-WzInfoRow 'Letzter Start' `
+            "$($latest.Time.ToString('dd.MM.yyyy HH:mm')) · $($latest.TotalSeconds) s"))
+
+        if ($boot.Worst.Count -gt 0) {
+            foreach ($culprit in $boot.Worst) {
+                [void]$container.Children.Add((New-WzInfoRow 'Bremst' `
+                    "$($culprit.Name) — $($culprit.DelaySeconds) s" -Kind 'warn'))
+            }
+        }
     }
 
     # --- Abstürze ---------------------------------------------------------

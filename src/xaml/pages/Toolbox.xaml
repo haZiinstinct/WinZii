@@ -8,6 +8,24 @@
 
     <ItemsControl Name="ToolNotices" Margin="0,0,0,14" />
 
+    <!-- Erst messen, dann reparieren -->
+    <Border Style="{DynamicResource WzCardStatic}" Margin="0,0,0,14">
+        <StackPanel>
+            <Grid>
+                <StackPanel Grid.Column="0">
+                    <TextBlock Text="// NETZWERK PRÜFEN" Style="{DynamicResource WzEyebrow}" />
+                    <TextBlock Name="NetDiagTitle" Text="Wo klemmt es?" Style="{DynamicResource WzCardTitle}" />
+                </StackPanel>
+                <Button Name="ToolBtnNetDiag" Style="{DynamicResource WzBtnPrimary}"
+                        HorizontalAlignment="Right" VerticalAlignment="Top" Content="Verbindung prüfen" />
+            </Grid>
+            <TextBlock Name="NetDiagHint" Style="{DynamicResource WzHint}" Margin="0,0,0,10"
+                       Text="Prüft der Reihe nach Netzwerkkarte, IP-Adresse, Router, Namensauflösung und Internetzugang — und sagt, welcher der Knöpfe unten hilft." />
+            <StackPanel Name="NetDiagSteps" />
+            <ItemsControl Name="NetDiagVerdict" Margin="0,10,0,0" />
+        </StackPanel>
+    </Border>
+
     <Grid>
         <Grid.ColumnDefinitions>
             <ColumnDefinition Width="*" />
@@ -56,6 +74,12 @@
                            Text="Wenn Druckaufträge in der Warteschlange festhängen und sich nicht löschen lassen." />
                 <Button Name="ToolBtnSpooler" Style="{DynamicResource WzBtnSecondary}" HorizontalAlignment="Left"
                         Content="Druckwarteschlange leeren" />
+
+                <TextBlock Text="Virenschutz" Style="{DynamicResource WzLabel}" Margin="0,18,0,6" />
+                <TextBlock Style="{DynamicResource WzHint}" Margin="0,0,0,10"
+                           Text="Schnellprüfung des Windows-Defenders. Bei »der PC ist langsam« gehört Schadsoftware zu den häufigsten Ursachen." />
+                <Button Name="ToolBtnScan" Style="{DynamicResource WzBtnSecondary}" HorizontalAlignment="Left"
+                        Content="Schnellprüfung starten" />
             </StackPanel>
         </Border>
 
