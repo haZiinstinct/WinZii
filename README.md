@@ -7,7 +7,7 @@
 **Portables Windows-Werkzeug für die tägliche Technikerarbeit.**
 Vom USB-Stick starten, aufräumen, optimieren, einrichten — ohne Installation, ohne Konto, ohne Telemetrie.
 
-![Version](https://img.shields.io/badge/Version-0.1.0-00d4ff?labelColor=0a0a0f&style=flat-square)
+![Version](https://img.shields.io/badge/Version-0.2.0-00d4ff?labelColor=0a0a0f&style=flat-square)
 ![Windows](https://img.shields.io/badge/Windows-10%20%7C%2011-00d4ff?labelColor=0a0a0f&style=flat-square)
 ![PowerShell](https://img.shields.io/badge/PowerShell-5.1-00d4ff?labelColor=0a0a0f&style=flat-square)
 ![Installation](https://img.shields.io/badge/Installation-keine-00d4ff?labelColor=0a0a0f&style=flat-square)
@@ -22,16 +22,18 @@ Vom USB-Stick starten, aufräumen, optimieren, einrichten — ohne Installation,
 
 | Bereich | Was es tut |
 | --- | --- |
-| **Dashboard** | Windows-Version, Hardware, Aktivierung, BitLocker, Virenschutz, Datenträger, Netzwerk — alles auf einem Blick beim Aufsetzen des PCs. |
+| **Dashboard** | Windows-Version, Hardware, Grafik, Bildschirme, BIOS, RAM-Steckplätze und Akkuverschleiß, dazu Aktivierung, BitLocker, Virenschutz, Datenträger und Netzwerk — alles auf einen Blick beim Aufsetzen des PCs. |
 | **Diagnose** | Wertet die Ereignisprotokolle aus und übersetzt sie in Klartext: was passiert ist, was es bedeutet, was zu tun ist. Dazu Bluescreen-Stoppcodes, Datenträgerzustand und die Werkzeuge sfc, DISM und chkdsk. |
-| **Optimierung** | 30 Eingriffe für Geschwindigkeit, Telemetrie, Datenschutz und Sicherheit. Jeder mit Begründung, jeder einzeln zurücknehmbar. |
+| **Optimierung** | 40 Eingriffe für Geschwindigkeit, Telemetrie, Datenschutz und Sicherheit. Jeder mit Begründung, jeder einzeln zurücknehmbar. |
 | **KI-Entfernung** | Findet Copilot, Recall und Click to Do — sperrt sie per Richtlinie oder entfernt sie ganz. Die Sperren wirken auch vorbeugend gegen Funktionsupdates. |
 | **Bereinigung** | Zeigt erst, wo wie viel Platz liegt (Zwischenspeicher, Update-Reste, Browser-Caches, Windows.old), dann wird gezielt gelöscht. Persönliche Dateien sind ausgeschlossen. |
-| **Programme** | 28 Programme über winget, mit Nachinstallation von winget selbst für LTSC-Systeme. Installationsdateien lassen sich auf den Stick laden. |
+| **Programme** | 52 Programme über winget, mit Nachinstallation von winget selbst für LTSC-Systeme. Installationsdateien lassen sich auf den Stick laden. Zweiter Bereich: installierte Programme suchen und entfernen, still wo möglich. |
 | **Office** | Microsoft 365, Office LTSC 2024 und 2021 über das offizielle Bereitstellungswerkzeug — auf Wunsch komplett offline vom Stick. Dazu LibreOffice. |
+| **Daten** | Beantwortet vor der Neuinstallation: Was muss gesichert werden? Profilgrößen je Konto, Outlook-Dateien, Browser-Profile, Drucker, Netzlaufwerke, Produktschlüssel. Warnt vor OneDrive-Platzhaltern, die im Explorer wie Dateien aussehen, aber leer sind. Exportiert Lesezeichen, WLAN-Zugänge und BitLocker-Wiederherstellungsschlüssel. |
+| **Treiber** | Geräte mit Fehlercode im Klartext statt als Nummer. Treiberbestand nach Alter sortiert — bei Bluescreens der schnellste Weg zum Verdächtigen. Treiber auf den Stick sichern und nach dem Neuaufsetzen in einem Rutsch zurückspielen. |
 | **Autostart** | Zeigt alles, was beim Anmelden mitstartet, samt Herausgeber. Abschalten statt löschen, jederzeit umkehrbar. |
-| **Reparatur** | Netzwerk zurücksetzen, DNS umstellen, Windows-Update-Zwischenspeicher leeren, Druckwarteschlange befreien, vorinstallierte Apps entfernen. |
-| **Protokoll** | Jeder Schritt wird mitgeschrieben und lässt sich als HTML-Bericht ausgeben — als Nachweis für den Kunden. |
+| **Reparatur** | Misst erst, wo es klemmt (Netzwerkkarte, IP, Router, Namensauflösung, Internet), und benennt dann die passende Maßnahme. Dazu Windows-Update-Zwischenspeicher leeren, Druckwarteschlange befreien, Virenschnellprüfung, vorinstallierte Apps entfernen. |
+| **Protokoll** | Jeder Schritt wird mitgeschrieben. Zwei Ausgaben: das technische Protokoll und das **Übergabeblatt** — was gemacht wurde, wie viel Platz gewonnen wurde, wie der PC ausgestattet ist und was noch ansteht, in Kundensprache und mit Feldern für Techniker, Kunde und Auftragsnummer. |
 
 ---
 
@@ -71,6 +73,18 @@ Was **nicht** passiert: keine Telemetrie, keine Verbindung nach außen außer f�
 ## 🖼️ Oberfläche
 
 Dunkles Design im haZii-Stil, deutschsprachig, mit mitlaufender Konsole: Jede Aktion ist sichtbar, während sie läuft. Lange Vorgänge blockieren die Oberfläche nicht.
+
+<img src="docs/screenshot-dashboard.png" alt="Dashboard von WinZii" width="100%">
+
+Zwölf Seiten in fünf Gruppen:
+
+```
+// SYSTEM        Dashboard · Diagnose
+// OPTIMIEREN    Optimierung · KI-Entfernung · Bereinigung · Autostart
+// INSTALLIEREN  Programme · Office
+// ÜBERNEHMEN    Daten · Treiber
+// WERKZEUGE     Reparatur · Protokoll
+```
 
 ---
 
@@ -149,8 +163,20 @@ powershell -NoProfile -File tools\Test-Catalogs.ps1
 | --- | --- |
 | `tools\Test-Smoke.ps1` | Syntax, XAML, Kataloge und Encoding in einem Durchlauf |
 | `tools\Test-Catalogs.ps1` | Kataloge auf Pflichtfelder und Konsistenz prüfen |
+| `tools\Test-Pages.ps1` | Jede Seite laden und auf Verdrahtungsfehler prüfen |
+| `tools\Test-Contrast.ps1` | Schrift- und Flächenkontraste gegen WCAG 2.1 rechnen |
+| `tools\Test-Dialogs.ps1` | Prüft, dass sich jeder Dialog auf allen vier Wegen schließen lässt |
+| `tools\Test-Process.ps1` | Rückgabewerte externer Programme, auch im Hintergrund-Runspace |
+| `tools\Invoke-Analyzer.ps1` | PSScriptAnalyzer mit Zielversion PowerShell 5.1 |
 | `tools\Repair-Encoding.ps1` | UTF-8 mit BOM erzwingen (Pflicht bei PowerShell 5.1 und Umlauten) |
-| `tools\WinZii.wsb` | Windows Sandbox zum gefahrlosen Ausprobieren |
+| `tools\WinZii.wsb` | Windows Sandbox zum gefahrlosen Ausprobieren (schreibgeschützt) |
+| `tools\WinZii-Schreibend.wsb` | Dasselbe mit Schreibrecht — für Treibersicherung und Berichte |
+
+Die Sandbox muss einmalig freigeschaltet werden, danach ist ein Neustart nötig:
+
+```powershell
+Enable-WindowsOptionalFeature -Online -FeatureName Containers-DisposableClientVM -All
+```
 
 Alle `.ps1`- und `.xaml`-Dateien müssen **UTF-8 mit BOM** sein, sonst liest PowerShell 5.1 sie als ANSI und zerstört die Umlaute.
 

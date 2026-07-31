@@ -1,0 +1,31 @@
+<Configuration>
+  <!--
+    Windows Sandbox mit Schreibrecht auf den WinZii-Ordner.
+
+    Nötig für alles, was etwas ablegt: Treibersicherung, Übernahme-Bericht,
+    Übergabeblatt, Protokolle, Offline-Installer. Die Sandbox selbst wird beim
+    Schließen verworfen — der eingebundene Ordner aber nicht. Was hier
+    geschrieben wird, landet wirklich im Arbeitsverzeichnis.
+
+    Wer nur die Oberfläche ansehen will, nimmt WinZii.wsb; das bindet
+    denselben Ordner schreibgeschützt ein.
+
+    HostFolder steht relativ zu dieser Datei — ".." ist der WinZii-Ordner.
+    Sollte Windows das ablehnen, hier den vollständigen Pfad eintragen.
+
+    Voraussetzung, einmalig und mit Neustart:
+      Enable-WindowsOptionalFeature -Online -FeatureName Containers-DisposableClientVM -All
+  -->
+  <VGpu>Disable</VGpu>
+  <Networking>Enable</Networking>
+  <MappedFolders>
+    <MappedFolder>
+      <HostFolder>..</HostFolder>
+      <SandboxFolder>C:\WinZii</SandboxFolder>
+      <ReadOnly>false</ReadOnly>
+    </MappedFolder>
+  </MappedFolders>
+  <LogonCommand>
+    <Command>cmd.exe /c echo ACHTUNG: C:\WinZii ist beschreibbar - Aenderungen landen im echten Ordner. Start.bat startet WinZii.</Command>
+  </LogonCommand>
+</Configuration>

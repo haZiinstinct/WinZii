@@ -1,9 +1,17 @@
 <Configuration>
   <!--
-    Windows Sandbox zum gefahrlosen Ausprobieren.
-    Die Sandbox bringt kein winget mit — damit lässt sich die Nachinstallation
-    testen. Der Ordner wird schreibgeschützt eingebunden, damit Testläufe
-    das Arbeitsverzeichnis nicht verändern.
+    Windows Sandbox zum gefahrlosen Ausprobieren — schreibgeschützt.
+
+    Die Sandbox bringt kein winget mit; damit lässt sich die Nachinstallation
+    testen. Der Ordner wird schreibgeschützt eingebunden, damit Testläufe das
+    Arbeitsverzeichnis nicht verändern. Für alles, was schreiben muss
+    (Treibersicherung, Berichte, Protokolle), gibt es WinZii-Schreibend.wsb.
+
+    HostFolder steht relativ zu dieser Datei — ".." ist der WinZii-Ordner.
+    Sollte Windows das ablehnen, hier den vollständigen Pfad eintragen.
+
+    Voraussetzung, einmalig und mit Neustart:
+      Enable-WindowsOptionalFeature -Online -FeatureName Containers-DisposableClientVM -All
 
     Aufruf: Doppelklick auf diese Datei (Windows Pro oder Enterprise).
   -->
@@ -11,7 +19,7 @@
   <Networking>Enable</Networking>
   <MappedFolders>
     <MappedFolder>
-      <HostFolder>C:\Users\haZii\Documents\GitHub\WinZii</HostFolder>
+      <HostFolder>..</HostFolder>
       <SandboxFolder>C:\WinZii</SandboxFolder>
       <ReadOnly>true</ReadOnly>
     </MappedFolder>

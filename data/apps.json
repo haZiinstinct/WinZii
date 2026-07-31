@@ -13,7 +13,10 @@
     { "id": "browser", "name": "Browser", "description": "Nur installieren, was der Kunde auch nutzt." },
     { "id": "technik", "name": "Techniker-Werkzeuge", "description": "Diagnose, Speicheranalyse, Hardware-Auslesen." },
     { "id": "fernwartung", "name": "Fernwartung und Netzwerk", "description": "Zugriff auf entfernte Rechner." },
+    { "id": "rettung", "name": "Datenrettung und Sicherung", "description": "Wenn Daten weg sind — oder bevor sie es werden." },
+    { "id": "belastung", "name": "Belastungstest", "description": "Bringt sporadische Abstürze zum Vorschein, indem es die Hardware unter Last setzt." },
     { "id": "medien", "name": "Medien und Grafik", "description": "Wiedergabe, Aufnahme, Bildbearbeitung." },
+    { "id": "laufzeit", "name": "Laufzeitumgebungen", "description": "Unterbau, den andere Programme brauchen. Fehlt er, startet die Anwendung mit einer Fehlermeldung über eine fehlende DLL." },
     { "id": "entwicklung", "name": "Entwicklung", "description": "Editoren und Werkzeuge für die Entwicklung." }
   ],
   "apps": [
@@ -63,6 +66,14 @@
       "category": "basis",
       "wingetId": "Microsoft.PowerToys",
       "description": "Werkzeugsammlung von Microsoft: Fenstereinteilung, Umbenennen in Serie, Farbwähler.",
+      "defaultChecked": false
+    },
+    {
+      "id": "thunderbird",
+      "name": "Mozilla Thunderbird",
+      "category": "basis",
+      "wingetId": "Mozilla.Thunderbird",
+      "description": "Mailprogramm ohne Office-Lizenz. Kann Outlook-Konten übernehmen.",
       "defaultChecked": false
     },
 
@@ -139,6 +150,78 @@
       "description": "Zusätzliche Bereinigung für Programme, die WinZii nicht abdeckt.",
       "defaultChecked": false
     },
+    {
+      "id": "sysinternals",
+      "name": "Sysinternals Suite",
+      "category": "technik",
+      "wingetId": "Microsoft.Sysinternals.Suite",
+      "description": "Autoruns, Process Explorer und Konsorten — die Werkzeuge, mit denen Microsoft selbst sucht.",
+      "defaultChecked": false
+    },
+    {
+      "id": "bulkcrap",
+      "name": "Bulk Crap Uninstaller",
+      "category": "technik",
+      "wingetId": "Klocman.BulkCrapUninstaller",
+      "description": "Entfernt viele Programme hintereinander und räumt die Reste hinterher auf.",
+      "defaultChecked": false
+    },
+    {
+      "id": "wiztree",
+      "name": "WizTree",
+      "category": "technik",
+      "wingetId": "AntibodySoftware.WizTree",
+      "description": "Speicheranalyse direkt über die NTFS-Tabelle — Sekunden statt Minuten, wo TreeSize noch sucht.",
+      "defaultChecked": false
+    },
+    {
+      "id": "snappydriver",
+      "name": "Snappy Driver Installer Origin",
+      "category": "technik",
+      "wingetId": "GlennDelahoy.SnappyDriverInstallerOrigin",
+      "description": "Treiber nachrüsten, wenn nach der Neuinstallation kein Netzwerk läuft. Treiberpakete lassen sich vorab herunterladen.",
+      "defaultChecked": false
+    },
+    {
+      "id": "aomeipartition",
+      "name": "AOMEI Partition Assistant",
+      "category": "technik",
+      "wingetId": "AOMEI.PartitionAssistant",
+      "description": "Partitionen anlegen, verschieben und Platten klonen — etwa beim Umzug auf eine SSD.",
+      "defaultChecked": false
+    },
+    {
+      "id": "rufus",
+      "name": "Rufus",
+      "category": "technik",
+      "wingetId": "Rufus.Rufus",
+      "description": "Macht aus einem USB-Stick ein startfähiges Windows-Installationsmedium.",
+      "defaultChecked": false
+    },
+    {
+      "id": "ventoy",
+      "name": "Ventoy",
+      "category": "technik",
+      "wingetId": "Ventoy.Ventoy",
+      "description": "Mehrere ISO-Abbilder auf einem Stick: einmal einrichten, danach nur noch Dateien draufkopieren.",
+      "defaultChecked": false
+    },
+    {
+      "id": "malwarebytes",
+      "name": "Malwarebytes",
+      "category": "technik",
+      "wingetId": "Malwarebytes.Malwarebytes",
+      "description": "Zweitmeinung neben dem Windows-Defender. Findet Werbe- und Erpressersoftware, die dieser durchlässt.",
+      "defaultChecked": false
+    },
+    {
+      "id": "adwcleaner",
+      "name": "AdwCleaner",
+      "category": "technik",
+      "wingetId": "Malwarebytes.AdwCleaner",
+      "description": "Räumt Werbesoftware, Browser-Symbolleisten und veränderte Startseiten weg.",
+      "defaultChecked": false
+    },
 
     {
       "id": "anydesk",
@@ -180,6 +263,88 @@
       "description": "Findet alle Geräte im Netzwerk samt Namen und MAC-Adresse.",
       "defaultChecked": false
     },
+    {
+      "id": "teamviewer",
+      "name": "TeamViewer",
+      "category": "fernwartung",
+      "wingetId": "TeamViewer.TeamViewer",
+      "description": "Fernwartung, die auch der Kunde schon kennt. Für gewerbliche Nutzung kostenpflichtig.",
+      "defaultChecked": false
+    },
+    {
+      "id": "wireshark",
+      "name": "Wireshark",
+      "category": "fernwartung",
+      "wingetId": "WiresharkFoundation.Wireshark",
+      "description": "Zeichnet den Netzwerkverkehr mit. Für Fälle, in denen die Verbindung steht, aber trotzdem nichts ankommt.",
+      "defaultChecked": false
+    },
+
+    {
+      "id": "recuva",
+      "name": "Recuva",
+      "category": "rettung",
+      "wingetId": "Piriform.Recuva",
+      "description": "Holt versehentlich gelöschte Dateien zurück. Wichtig: nicht auf das Laufwerk installieren, von dem gerettet werden soll.",
+      "defaultChecked": false
+    },
+    {
+      "id": "testdisk",
+      "name": "TestDisk und PhotoRec",
+      "category": "rettung",
+      "wingetId": "CGSecurity.TestDisk",
+      "description": "Stellt verlorene Partitionen wieder her und fischt Fotos aus beschädigten Dateisystemen.",
+      "defaultChecked": false
+    },
+    {
+      "id": "veeam",
+      "name": "Veeam Agent",
+      "category": "rettung",
+      "wingetId": "Veeam.VeeamAgent",
+      "description": "Vollständiges Abbild der Platte, bevor es ans Neuaufsetzen geht. Für Privatgebrauch kostenlos.",
+      "defaultChecked": false
+    },
+    {
+      "id": "duplicati",
+      "name": "Duplicati",
+      "category": "rettung",
+      "wingetId": "Duplicati.Duplicati",
+      "description": "Verschlüsselte, geplante Sicherung auf externe Platte oder Cloud — als Dauerlösung für den Kunden.",
+      "defaultChecked": false
+    },
+
+    {
+      "id": "occt",
+      "name": "OCCT",
+      "category": "belastung",
+      "wingetId": "OCBase.OCCT.Personal",
+      "description": "Setzt Prozessor, Speicher und Netzteil unter Volllast. Bringt Abstürze hervor, die im Alltag nur sporadisch auftreten.",
+      "defaultChecked": false
+    },
+    {
+      "id": "furmark",
+      "name": "FurMark 2",
+      "category": "belastung",
+      "wingetId": "Geeks3D.FurMark.2",
+      "description": "Belastet die Grafikkarte. Bei Bildfehlern und Abstürzen in Spielen der schnellste Weg zur Gewissheit.",
+      "defaultChecked": false
+    },
+    {
+      "id": "crystaldiskmark",
+      "name": "CrystalDiskMark",
+      "category": "belastung",
+      "wingetId": "CrystalDewWorld.CrystalDiskMark",
+      "description": "Misst, wie schnell die Platte wirklich ist — bei »der PC ist langsam« oft die Antwort.",
+      "defaultChecked": false
+    },
+    {
+      "id": "hwmonitor",
+      "name": "HWMonitor",
+      "category": "belastung",
+      "wingetId": "CPUID.HWMonitor",
+      "description": "Temperaturen, Spannungen und Lüfterdrehzahlen im Blick, während der Test läuft.",
+      "defaultChecked": false
+    },
 
     {
       "id": "vlc",
@@ -211,6 +376,39 @@
       "category": "medien",
       "wingetId": "GIMP.GIMP.3",
       "description": "Bildbearbeitung, kostenlose Alternative zu Photoshop.",
+      "defaultChecked": false
+    },
+    {
+      "id": "handbrake",
+      "name": "HandBrake",
+      "category": "medien",
+      "wingetId": "HandBrake.HandBrake",
+      "description": "Wandelt Videos in gängige Formate um und schrumpft sie dabei.",
+      "defaultChecked": false
+    },
+
+    {
+      "id": "vcredist",
+      "name": "Visual C++ Laufzeit 2015-2022",
+      "category": "laufzeit",
+      "wingetId": "Microsoft.VCRedist.2015+.x64",
+      "description": "Die mit Abstand häufigste fehlende Abhängigkeit. Fehlt sie, starten viele Programme und Spiele nicht.",
+      "defaultChecked": true
+    },
+    {
+      "id": "dotnetdesktop",
+      "name": ".NET Desktop Runtime 8",
+      "category": "laufzeit",
+      "wingetId": "Microsoft.DotNet.DesktopRuntime.8",
+      "description": "Nötig für neuere Windows-Programme, die auf .NET aufsetzen.",
+      "defaultChecked": false
+    },
+    {
+      "id": "webview2",
+      "name": "Edge WebView2",
+      "category": "laufzeit",
+      "wingetId": "Microsoft.EdgeWebView2Runtime",
+      "description": "Zeigt Weboberflächen innerhalb anderer Programme an. Auf Windows 11 meist schon vorhanden.",
       "defaultChecked": false
     },
 

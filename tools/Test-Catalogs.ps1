@@ -129,6 +129,11 @@ if ($apps) {
         if ($app.category -notin $categoryIds) {
             Add-Problem 'apps' "$label : Kategorie '$($app.category)' ist nicht definiert"
         }
+        # winget-Kennungen sind immer Herausgeber.Paket — ein Tippfehler fällt
+        # sonst erst beim Kunden auf, wenn die Installation nichts findet
+        if ($app.wingetId -and $app.wingetId -notmatch '^[\w+.-]+\.[\w+.-]+$') {
+            Add-Problem 'apps' "$label : '$($app.wingetId)' sieht nicht wie eine winget-Kennung aus"
+        }
     }
     Write-Host "  apps        $($apps.apps.Count) Programme in $($categoryIds.Count) Kategorien" -ForegroundColor Gray
 }
