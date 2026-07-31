@@ -209,6 +209,14 @@ function Invoke-WzProcess {
     <#
     .SYNOPSIS
         Externes Programm ausführen und die Ausgabe ins Protokoll spiegeln.
+    .DESCRIPTION
+        Bewusst über System.Diagnostics.Process statt Start-Process:
+        `Start-Process -PassThru` **ohne** `-Wait` liefert unter PowerShell 5.1
+        immer `ExitCode = $null`, auch nach `WaitForExit()`. Da `$null -eq 0`
+        falsch ist, hätte damit jedes erfolgreich gelaufene Programm als
+        Fehlschlag gegolten — und `$null -le 1` umgekehrt jeden chkdsk-Lauf als
+        fehlerfrei. `-Wait` wäre keine Lösung, weil es sich mit der zeitlich
+        begrenzten Variante von `WaitForExit` ausschließt.
     .PARAMETER FilePath
         Programm, zum Beispiel dism.exe.
     .PARAMETER Arguments
@@ -228,8 +236,6 @@ function Invoke-WzProcess {
         [string]$WorkingDirectory
     )
 
-    $stdOutFile = [IO.Path]::GetTempFileName()
-    $stdErrFile = [IO.Path]::GetTempFileName()
     $result = [pscustomobject]@{
         ExitCode = -1
         StdOut   = ''
@@ -237,31 +243,58 @@ function Invoke-WzProcess {
         TimedOut = $false
     }
 
+    $process = $null
     try {
-        $startParams = @{
-            FilePath               = $FilePath
-            NoNewWindow            = $true
-            PassThru               = $true
-            RedirectStandardOutput = $stdOutFile
-            RedirectStandardError  = $stdErrFile
-        }
-        if ($Arguments) { $startParams.ArgumentList = $Arguments }
-        if ($WorkingDirectory) { $startParams.WorkingDirectory = $WorkingDirectory }
+        $startInfo = New-Object Diagnostics.ProcessStartInfo
+        $startInfo.FileName = $FilePath
+        $startInfo.Arguments = $Arguments
+        $startInfo.UseShellExecute = $false
+        $startInfo.CreateNoWindow = $true
+        $startInfo.RedirectStandardOutput = $true
+        $startInfo.RedirectStandardError = $true
+        if ($WorkingDirectory) { $startInfo.WorkingDirectory = $WorkingDirectory }
 
-        $process = Start-Process @startParams
+        $process = New-Object Diagnostics.Process
+        $process.StartInfo = $startInfo
+        [void]$process.Start()
+
+        # Beide Ausgabekanäle gleichzeitig leerlesen. Läse man erst den einen
+        # ganz und dann den anderen, könnte ein Programm mit viel Ausgabe auf
+        # dem vollen Puffer des zweiten Kanals stehen bleiben.
+        # Bewusst über .NET-Aufgaben statt Register-ObjectEvent: Letzteres
+        # bräuchte die Ereignisschleife von PowerShell, die es in den
+        # Hintergrund-Runspaces nicht gibt.
+        $outTask = $process.StandardOutput.ReadToEndAsync()
+        $errTask = $process.StandardError.ReadToEndAsync()
+
         if ($TimeoutSeconds -gt 0) {
             if (-not $process.WaitForExit($TimeoutSeconds * 1000)) {
                 $result.TimedOut = $true
-                try { $process.Kill() } catch { }
+                # Den ganzen Prozessbaum beenden: Kill() trifft nur das
+                # gestartete Programm selbst, ein von ihm gestartetes
+                # Unterprogramm liefe weiter und hielte die Ausgabeleitung offen.
+                try {
+                    $killer = New-Object Diagnostics.ProcessStartInfo
+                    $killer.FileName = 'taskkill.exe'
+                    $killer.Arguments = "/PID $($process.Id) /T /F"
+                    $killer.UseShellExecute = $false
+                    $killer.CreateNoWindow = $true
+                    [void][Diagnostics.Process]::Start($killer).WaitForExit(5000)
+                } catch { }
+                try { if (-not $process.HasExited) { $process.Kill() } } catch { }
                 Write-WzLog "$([IO.Path]::GetFileName($FilePath)) nach $TimeoutSeconds s abgebrochen." -Level Warn
+                [void]$process.WaitForExit(5000)
             }
         } else {
             $process.WaitForExit()
         }
+
         $result.ExitCode = $process.ExitCode
 
-        if (Test-Path $stdOutFile) { $result.StdOut = Get-Content $stdOutFile -Raw -ErrorAction SilentlyContinue }
-        if (Test-Path $stdErrFile) { $result.StdErr = Get-Content $stdErrFile -Raw -ErrorAction SilentlyContinue }
+        # Das Lesen ebenfalls begrenzen: Hält nach einem Abbruch noch ein
+        # Unterprogramm die Leitung offen, würde .Result sonst weiter warten.
+        try { if ($outTask.Wait(5000)) { $result.StdOut = $outTask.Result } } catch { }
+        try { if ($errTask.Wait(2000)) { $result.StdErr = $errTask.Result } } catch { }
 
         if ($LogOutput -and $result.StdOut) {
             foreach ($line in ($result.StdOut -split "`r?`n")) {
@@ -273,7 +306,7 @@ function Invoke-WzProcess {
         $result.StdErr = $_.Exception.Message
         Write-WzLog "Start von $FilePath fehlgeschlagen: $($_.Exception.Message)" -Level Error
     } finally {
-        Remove-Item $stdOutFile, $stdErrFile -Force -ErrorAction SilentlyContinue
+        if ($process) { $process.Dispose() }
     }
 
     return $result

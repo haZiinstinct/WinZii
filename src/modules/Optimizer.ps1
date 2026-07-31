@@ -22,12 +22,13 @@ function Get-WzTweaks {
     }
     $isWin11 = ($build -ge 22000)
 
+    # Bewusst if/elseif statt switch: ein "continue" innerhalb eines switch
+    # beendet nur den switch, nicht den Schleifendurchlauf — der Eintrag wäre
+    # trotzdem durchgerutscht und der Windows-Filter damit wirkungslos.
     $tweaks = foreach ($tweak in $catalog.tweaks) {
         if ($Category -and $tweak.category -notin $Category) { continue }
-        switch ($tweak.appliesTo) {
-            'win11' { if (-not $isWin11) { continue } }
-            'win10' { if ($isWin11) { continue } }
-        }
+        if ($tweak.appliesTo -eq 'win11' -and -not $isWin11) { continue }
+        if ($tweak.appliesTo -eq 'win10' -and $isWin11) { continue }
         if ($tweak.PSObject.Properties['minBuild'] -and $build -lt $tweak.minBuild) { continue }
         $tweak
     }

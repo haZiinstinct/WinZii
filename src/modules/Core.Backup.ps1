@@ -208,6 +208,11 @@ function Get-WzUndoSessions {
             try { $created = [datetime]$data.created } catch { }
         }
 
+        $restoredAt = $null
+        if ($data.PSObject.Properties['restoredAt'] -and $data.restoredAt) {
+            try { $restoredAt = [datetime]$data.restoredAt } catch { }
+        }
+
         [pscustomobject]@{
             Directory   = $directory.FullName
             UndoFile    = $undoFile
@@ -215,6 +220,8 @@ function Get-WzUndoSessions {
             Created     = $created
             ItemCount   = @($data.entries | Select-Object -ExpandProperty itemId -Unique).Count
             ActionCount = @($data.entries).Count
+            Restored    = ($null -ne $restoredAt)
+            RestoredAt  = $restoredAt
             Data        = $data
         }
     }
@@ -306,6 +313,17 @@ function Restore-WzUndoSession {
         } catch {
             $result.Failed++
             Write-WzLog "Rückgängig fehlgeschlagen ($($entry.itemName)): $($_.Exception.Message)" -Level Warn
+        }
+    }
+
+    # Erledigt vermerken. Ohne diese Markierung bliebe die Sicherung für immer
+    # die "neueste" und ältere wären nie erreichbar.
+    if (-not $syncHash.DryRun) {
+        try {
+            $data | Add-Member -NotePropertyName 'restoredAt' -NotePropertyValue ((Get-Date).ToString('s')) -Force
+            [void](Save-WzJson -InputObject $data -Path $UndoFile -Depth 12)
+        } catch {
+            Write-WzLog "Sicherung konnte nicht als zurückgenommen vermerkt werden: $($_.Exception.Message)" -Level Warn
         }
     }
 

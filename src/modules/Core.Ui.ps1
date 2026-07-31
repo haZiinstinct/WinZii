@@ -200,10 +200,13 @@ function Show-WzConfirm {
         Zeilen, die genau auflisten, was passieren wird.
     .PARAMETER OptionText
         Wenn gesetzt, erscheint eine zusätzliche Checkbox (z. B. Wiederherstellungspunkt).
+    .PARAMETER Choices
+        Wenn gesetzt, erscheint ein Auswahlfeld. Die getroffene Wahl steht
+        danach in SelectedIndex.
     .PARAMETER HideCancel
         Nur einen Knopf zeigen — für reine Hinweise ohne Entscheidung.
     .OUTPUTS
-        PSCustomObject mit Confirmed (bool) und OptionChecked (bool)
+        PSCustomObject mit Confirmed, OptionChecked und SelectedIndex
     #>
     param(
         [Parameter(Mandatory = $true)][string]$Title,
@@ -211,12 +214,19 @@ function Show-WzConfirm {
         [string[]]$Items = @(),
         [string]$OptionText,
         [bool]$OptionDefault = $true,
+        [string[]]$Choices = @(),
+        [string]$ChoiceLabel = 'Auswahl',
+        [int]$ChoiceDefault = 0,
         [string]$ConfirmText = 'Ausführen',
         [switch]$Danger,
         [switch]$HideCancel
     )
 
-    $result = [pscustomobject]@{ Confirmed = $false; OptionChecked = $OptionDefault }
+    $result = [pscustomobject]@{
+        Confirmed     = $false
+        OptionChecked = $OptionDefault
+        SelectedIndex = $ChoiceDefault
+    }
 
     # Ohne Hauptfenster gibt es keine Ressourcen für das Design — dann lieber
     # nichts anzeigen als abstürzen (kommt vor, wenn beim Beenden noch eine
@@ -389,6 +399,26 @@ function Show-WzConfirm {
         [void]$stack.Children.Add($listBorder)
     }
 
+    $choiceBox = $null
+    if ($Choices.Count -gt 0) {
+        $choiceCaption = New-Object Windows.Controls.TextBlock
+        $choiceCaption.Text = $ChoiceLabel
+        $choiceCaption.Style = $syncHash.Window.FindResource('WzLabel')
+        $choiceCaption.Margin = New-Object Windows.Thickness(0, 0, 0, 5)
+        [void]$stack.Children.Add($choiceCaption)
+
+        $choiceBox = New-Object Windows.Controls.ComboBox
+        $choiceBox.Style = $syncHash.Window.FindResource('WzComboBox')
+        $choiceBox.Margin = New-Object Windows.Thickness(0, 0, 0, 14)
+        foreach ($choice in $Choices) {
+            $item = New-Object Windows.Controls.ComboBoxItem
+            $item.Content = $choice
+            [void]$choiceBox.Items.Add($item)
+        }
+        $choiceBox.SelectedIndex = [math]::Max(0, [math]::Min($ChoiceDefault, $Choices.Count - 1))
+        [void]$stack.Children.Add($choiceBox)
+    }
+
     $optionBox = $null
     if ($OptionText) {
         $optionBox = New-Object Windows.Controls.CheckBox
@@ -414,6 +444,7 @@ function Show-WzConfirm {
         if ($Confirmed) {
             $result.Confirmed = $true
             if ($optionBox) { $result.OptionChecked = [bool]$optionBox.IsChecked }
+            if ($choiceBox) { $result.SelectedIndex = [int]$choiceBox.SelectedIndex }
         }
         $window.DialogResult = [bool]$Confirmed
         $window.Close()

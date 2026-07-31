@@ -225,8 +225,18 @@ function Get-WzSmartStatus {
                 Assessment   = ''
             }
 
+            # Zwingend je Datenträger zurücksetzen: Bleibt hier der Wert des
+            # vorherigen Laufwerks stehen (USB-Gehäuse liefern oft nichts),
+            # bekäme dieses Laufwerk dessen Bewertung — und die landet so im
+            # Kundenbericht.
+            $counter = $null
             try {
                 $counter = $disk | Get-StorageReliabilityCounter -ErrorAction Stop
+            } catch {
+                $counter = $null
+            }
+
+            if ($counter) {
                 if ($null -ne $counter.Temperature -and $counter.Temperature -gt 0) {
                     $entry.Temperature = "$($counter.Temperature) °C"
                 }
@@ -236,14 +246,23 @@ function Get-WzSmartStatus {
                 }
                 if ($null -ne $counter.Wear) { $entry.Wear = "$($counter.Wear) %" }
                 if ($null -ne $counter.ReadErrorsUncorrected) { $entry.ReadErrors = [string]$counter.ReadErrorsUncorrected }
-            } catch { }
+            }
 
             $notes = @()
             if ($entry.Health -ne 'Healthy') { $notes += 'Windows meldet einen Fehlerzustand' }
-            if ($counter -and $counter.Wear -gt 80) { $notes += 'Abnutzung über 80 Prozent — Austausch einplanen' }
-            if ($counter -and $counter.ReadErrorsUncorrected -gt 0) { $notes += 'nicht behebbare Lesefehler vorhanden' }
-            if ($counter -and $counter.Temperature -gt 60) { $notes += 'Temperatur auffällig hoch' }
-            $entry.Assessment = if ($notes.Count -gt 0) { $notes -join '; ' } else { 'unauffällig' }
+            if ($counter) {
+                if ($counter.Wear -gt 80) { $notes += 'Abnutzung über 80 Prozent — Austausch einplanen' }
+                if ($counter.ReadErrorsUncorrected -gt 0) { $notes += 'nicht behebbare Lesefehler vorhanden' }
+                if ($counter.Temperature -gt 60) { $notes += 'Temperatur auffällig hoch' }
+            }
+            $entry.Assessment = if ($notes.Count -gt 0) {
+                $notes -join '; '
+            } elseif ($counter) {
+                'unauffällig'
+            } else {
+                # Ohne Messwerte ist "unauffällig" eine Behauptung, keine Aussage
+                'keine Zustandswerte verfügbar'
+            }
 
             $disks += $entry
         }

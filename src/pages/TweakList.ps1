@@ -236,18 +236,35 @@ function Show-WzUndoDialog {
         return
     }
 
-    $latest = $sessions[0]
-    $items = foreach ($session in ($sessions | Select-Object -First 8)) {
-        "{0}  ·  {1}  ·  {2} Änderung(en)" -f $session.Created.ToString('dd.MM.yyyy HH:mm'), $session.Scope, $session.ActionCount
+    $available = @($sessions | Select-Object -First 12)
+
+    # Vorauswahl: die neueste, die noch nicht zurückgenommen wurde
+    $preselect = 0
+    for ($i = 0; $i -lt $available.Count; $i++) {
+        if (-not $available[$i].Restored) { $preselect = $i; break }
+    }
+
+    $choices = foreach ($session in $available) {
+        $suffix = if ($session.Restored) {
+            ' — bereits zurückgenommen'
+        } else {
+            ''
+        }
+        "{0}  ·  {1}  ·  {2} Änderung(en){3}" -f `
+            $session.Created.ToString('dd.MM.yyyy HH:mm'), $session.Scope, $session.ActionCount, $suffix
     }
 
     $answer = Show-WzConfirm -Title 'Änderungen zurücknehmen' `
-        -Message "Die neueste Sicherung vom $($latest.Created.ToString('dd.MM.yyyy HH:mm')) wird zurückgespielt. Ältere Sicherungen bleiben erhalten und lassen sich danach ebenfalls zurücknehmen." `
-        -Items $items -ConfirmText 'Neueste zurücknehmen' -Danger
+        -Message 'Wähle die Sicherung, die zurückgespielt werden soll. Jede Sicherung enthält den Zustand vor genau einem Durchlauf; bereits zurückgenommene sind gekennzeichnet.' `
+        -Choices @($choices) -ChoiceLabel 'Sicherung' -ChoiceDefault $preselect `
+        -ConfirmText 'Zurücknehmen' -Danger
 
     if (-not $answer.Confirmed) { return }
 
-    Invoke-WzTask -Name 'Änderungen zurücknehmen' -ArgumentList @($latest.UndoFile) -ScriptBlock {
+    $selected = $available[$answer.SelectedIndex]
+    Write-WzLog "Sicherung vom $($selected.Created.ToString('dd.MM.yyyy HH:mm')) ($($selected.Scope)) wird zurückgenommen." -Level Action
+
+    Invoke-WzTask -Name 'Änderungen zurücknehmen' -ArgumentList @($selected.UndoFile) -ScriptBlock {
         param($undoFile)
         Restore-WzUndoSession -UndoFile $undoFile
     } -OnComplete {
