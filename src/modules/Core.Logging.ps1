@@ -85,10 +85,12 @@ function Write-WzConsole {
 
     if (-not $syncHash -or -not $syncHash.Window -or -not $syncHash.LogConsole) { return }
 
+    # Rot heller als die Statusfarbe WzRed — auf dem dunklen Konsolengrund
+    # käme #EF4444 nur auf 5,4:1.
     $color = switch ($Level) {
         'Ok'     { '#22C55E' }
         'Warn'   { '#F59E0B' }
-        'Error'  { '#EF4444' }
+        'Error'  { '#FCA5A5' }
         'Action' { '#00D4FF' }
         'Test'   { '#7DD3FC' }
         default  { '#94A3B8' }

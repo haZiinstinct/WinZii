@@ -119,10 +119,10 @@
                     <Border Height="1" Background="#14FFFFFF" Margin="0,0,0,14" />
                     <TextBlock Name="SidebarVersion" Text="v0.1.0"
                                FontFamily="{DynamicResource WzFontMono}" FontSize="10.5"
-                               Foreground="#64748B" Margin="0,0,0,7" />
+                               Foreground="{DynamicResource WzTextFaint}" Margin="0,0,0,7" />
                     <TextBlock Name="HaziiBadge" FontFamily="{DynamicResource WzFontMono}" FontSize="11.5" Cursor="Hand"
                                ToolTip="https://hazii.org">
-                        <Run Text="// webdesign:" Foreground="#94A3B8" /><Run Text=" " /><Run Text="ha" Foreground="#00D4FF" FontWeight="Bold" /><Run Text="Z" Foreground="#F8FAFC" FontWeight="Bold" /><Run Text="ii" Foreground="#00D4FF" FontWeight="Bold" /><Run Text=".org" Foreground="#00A8CC" FontWeight="Bold" />
+                        <Run Text="// webdesign:" Foreground="#94A3B8" /><Run Text=" " Foreground="#94A3B8" /><Run Text="ha" Foreground="#00D4FF" FontWeight="Bold" /><Run Text="Z" Foreground="#F8FAFC" FontWeight="Bold" /><Run Text="ii" Foreground="#00D4FF" FontWeight="Bold" /><Run Text=".org" Foreground="#00A8CC" FontWeight="Bold" />
                     </TextBlock>
                 </StackPanel>
             </Grid>
@@ -148,7 +148,7 @@
                             CornerRadius="999" Padding="11,3,11,3">
                         <StackPanel Orientation="Horizontal">
                             <TextBlock Text="&#xE977;" FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets"
-                                       FontSize="11" Foreground="#64748B" VerticalAlignment="Center" Margin="0,0,7,0" />
+                                       FontSize="11" Foreground="{DynamicResource WzTextFaint}" VerticalAlignment="Center" Margin="0,0,7,0" />
                             <TextBlock Name="HeaderHost" Text="COMPUTERNAME"
                                        FontFamily="{DynamicResource WzFontMono}" FontSize="10.5"
                                        Foreground="#94A3B8" VerticalAlignment="Center" />
@@ -195,13 +195,13 @@
                         <TextBlock Text="// KONSOLE" FontFamily="{DynamicResource WzFontMono}"
                                    FontSize="10.5" Foreground="#00D4FF" VerticalAlignment="Center" />
                         <TextBlock Name="LogHint" Text="Klicken zum Ein- oder Ausklappen" Margin="12,0,0,0"
-                                   FontFamily="{DynamicResource WzFontMono}" FontSize="10"
-                                   Foreground="#64748B" VerticalAlignment="Center" />
+                                   FontFamily="{DynamicResource WzFontMono}" FontSize="10.5"
+                                   Foreground="{DynamicResource WzTextFaint}" VerticalAlignment="Center" />
                     </StackPanel>
                     <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,0,20,0" VerticalAlignment="Center">
                         <Button Name="BtnClearLog" Style="{DynamicResource WzBtnGhost}" Content="leeren" />
                         <TextBlock Name="LogChevron" Text="&#xE70D;" FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets"
-                                   FontSize="10" Foreground="#64748B" VerticalAlignment="Center" Margin="10,0,0,0" />
+                                   FontSize="10.5" Foreground="{DynamicResource WzTextFaint}" VerticalAlignment="Center" Margin="10,0,0,0" />
                     </StackPanel>
                 </Grid>
             </Border>
@@ -223,8 +223,8 @@
                     <CheckBox Name="DryRunToggle" Style="{DynamicResource WzToggle}" Content="Testmodus"
                               ToolTip="Änderungen werden nur protokolliert, nicht ausgeführt." />
                     <TextBlock Name="StatusPath" Text="" Margin="18,0,0,0"
-                               FontFamily="{DynamicResource WzFontMono}" FontSize="10"
-                               Foreground="#64748B" VerticalAlignment="Center" />
+                               FontFamily="{DynamicResource WzFontMono}" FontSize="10.5"
+                               Foreground="{DynamicResource WzTextFaint}" VerticalAlignment="Center" />
                 </StackPanel>
             </Grid>
         </Grid>

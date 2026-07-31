@@ -92,7 +92,7 @@ function New-WzLogRow {
     $textBlock.Foreground = switch ($Entry.Level) {
         'Ok'     { $syncHash.Window.FindResource('WzGreen') }
         'Warn'   { $syncHash.Window.FindResource('WzAmber') }
-        'Error'  { $syncHash.Window.FindResource('WzRed') }
+        'Error'  { $syncHash.Window.FindResource('WzRedText') }
         'Action' { $syncHash.Window.FindResource('WzCyan') }
         default  { $syncHash.Window.FindResource('WzTextDim') }
     }

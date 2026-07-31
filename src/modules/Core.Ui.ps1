@@ -135,14 +135,73 @@ function New-WzPlaceholderPage {
     return $stack
 }
 
+function Get-WzOverlayBounds {
+    <#
+    .SYNOPSIS
+        Fläche, die ein Dialog abdecken soll — die des Hauptfensters.
+    .DESCRIPTION
+        Im Normalzustand reichen Left/Top/Width/Height des Fensters. Ist es
+        maximiert, stimmen diese Werte nicht, dann wird der Arbeitsbereich des
+        zugehörigen Bildschirms genommen und von Geräte- in WPF-Einheiten
+        umgerechnet (sonst sitzt die Abdunklung auf hoch aufgelösten
+        Bildschirmen falsch).
+    .OUTPUTS
+        PSCustomObject mit Left, Top, Width, Height — oder $null, wenn es kein
+        nutzbares Hauptfenster gibt.
+    #>
+    $owner = $syncHash.Window
+    if (-not $owner -or -not $owner.IsLoaded) { return $null }
+
+    try {
+        if ($owner.WindowState -eq 'Normal' -and $owner.ActualWidth -gt 0) {
+            return [pscustomobject]@{
+                Left   = $owner.Left
+                Top    = $owner.Top
+                Width  = $owner.ActualWidth
+                Height = $owner.ActualHeight
+            }
+        }
+
+        $helper = New-Object Windows.Interop.WindowInteropHelper($owner)
+        $screen = [Windows.Forms.Screen]::FromHandle($helper.Handle)
+        $area = $screen.WorkingArea
+
+        $scaleX = 1.0
+        $scaleY = 1.0
+        $source = [Windows.PresentationSource]::FromVisual($owner)
+        if ($source -and $source.CompositionTarget) {
+            $transform = $source.CompositionTarget.TransformFromDevice
+            $scaleX = $transform.M11
+            $scaleY = $transform.M22
+        }
+
+        return [pscustomobject]@{
+            Left   = $area.Left * $scaleX
+            Top    = $area.Top * $scaleY
+            Width  = $area.Width * $scaleX
+            Height = $area.Height * $scaleY
+        }
+    } catch {
+        return $null
+    }
+}
+
 function Show-WzConfirm {
     <#
     .SYNOPSIS
         Bestätigungsdialog im haZii-Look.
+    .DESCRIPTION
+        Der Dialog legt sich als abgedunkelte Fläche über das Hauptfenster und
+        lässt sich auf vier Wegen schließen: Schließkreuz, Escape, Klick auf die
+        Abdunklung daneben und der Abbrechen-Knopf. Alle vier bedeuten Abbruch.
+        Der Inhalt sitzt in einem Scrollbereich, die Knopfzeile darunter fest —
+        so können die Knöpfe auch bei viel Text nie aus dem Bild rutschen.
     .PARAMETER Items
         Zeilen, die genau auflisten, was passieren wird.
     .PARAMETER OptionText
         Wenn gesetzt, erscheint eine zusätzliche Checkbox (z. B. Wiederherstellungspunkt).
+    .PARAMETER HideCancel
+        Nur einen Knopf zeigen — für reine Hinweise ohne Entscheidung.
     .OUTPUTS
         PSCustomObject mit Confirmed (bool) und OptionChecked (bool)
     #>
@@ -153,43 +212,113 @@ function Show-WzConfirm {
         [string]$OptionText,
         [bool]$OptionDefault = $true,
         [string]$ConfirmText = 'Ausführen',
-        [switch]$Danger
+        [switch]$Danger,
+        [switch]$HideCancel
     )
 
     $result = [pscustomobject]@{ Confirmed = $false; OptionChecked = $OptionDefault }
 
+    # Ohne Hauptfenster gibt es keine Ressourcen für das Design — dann lieber
+    # nichts anzeigen als abstürzen (kommt vor, wenn beim Beenden noch eine
+    # Hintergrundarbeit fertig wird).
+    if (-not $syncHash.Window) {
+        Write-WzLog "Dialog '$Title' übersprungen — kein Fenster mehr vorhanden." -Level Warn
+        return $result
+    }
+
+    $bounds = Get-WzOverlayBounds
+
     $window = New-Object Windows.Window
     $window.Title = $Title
-    $window.Width = 580
-    $window.SizeToContent = 'Height'
-    $window.MaxHeight = 640
-    $window.WindowStartupLocation = 'CenterOwner'
-    $window.Owner = $syncHash.Window
     $window.ResizeMode = 'NoResize'
     $window.WindowStyle = 'None'
     $window.AllowsTransparency = $true
     $window.Background = [Windows.Media.Brushes]::Transparent
+    $window.ShowInTaskbar = $false
 
+    # Das Design mitgeben. Ein Dialog ist ein eigenes Fenster und damit ein
+    # eigener Ressourcenbaum — ohne diese Zeile finden die {DynamicResource}-
+    # Verweise in den Stilen nichts und WPF nimmt seine Standardfarben
+    # (weißer Knopf, grauer Text) mitten im dunklen Design.
+    $window.Resources.MergedDictionaries.Add($syncHash.Window.Resources)
+
+    if ($bounds) {
+        $window.Owner = $syncHash.Window
+        $window.WindowStartupLocation = 'Manual'
+        $window.Left = $bounds.Left
+        $window.Top = $bounds.Top
+        $window.Width = $bounds.Width
+        $window.Height = $bounds.Height
+    } else {
+        # Kein nutzbares Hauptfenster (z. B. beim Beenden): freistehend anzeigen
+        $window.WindowStartupLocation = 'CenterScreen'
+        $window.Width = 640
+        $window.SizeToContent = 'Height'
+        $window.MaxHeight = 640
+    }
+
+    # --- Abdunklung; ein Klick darauf bricht ab --------------------------
+    $backdrop = New-Object Windows.Controls.Grid
+    if ($bounds) {
+        $backdrop.Background = New-Object Windows.Media.SolidColorBrush(
+            [Windows.Media.ColorConverter]::ConvertFromString('#B3000000'))
+    } else {
+        $backdrop.Background = [Windows.Media.Brushes]::Transparent
+    }
+
+    # --- Karte ------------------------------------------------------------
     $shell = New-Object Windows.Controls.Border
     $shell.Background = $syncHash.Window.FindResource('WzBgCard')
     $shell.BorderBrush = $syncHash.Window.FindResource('WzBorder')
     $shell.BorderThickness = New-Object Windows.Thickness(1)
     $shell.CornerRadius = New-Object Windows.CornerRadius(16)
-    $shell.Padding = New-Object Windows.Thickness(28, 24, 28, 22)
+    $shell.Padding = New-Object Windows.Thickness(28, 22, 28, 22)
+    $shell.HorizontalAlignment = 'Center'
+    $shell.VerticalAlignment = 'Center'
+    $shell.MaxWidth = 640
+    $shell.Margin = New-Object Windows.Thickness(24)
+    if ($bounds) {
+        $shell.MaxHeight = [math]::Max(320, $bounds.Height * 0.84)
+        $shell.Effect = $syncHash.Window.FindResource('WzGlow')
+    }
 
-    $stack = New-Object Windows.Controls.StackPanel
+    $layout = New-Object Windows.Controls.Grid
+    foreach ($height in @('Auto', '*', 'Auto')) {
+        $row = New-Object Windows.Controls.RowDefinition
+        $row.Height = $height
+        [void]$layout.RowDefinitions.Add($row)
+    }
+
+    # --- Kopf: Eyebrow, Titel, Schließkreuz -------------------------------
+    $header = New-Object Windows.Controls.Grid
+    $header.Margin = New-Object Windows.Thickness(0, 0, 0, 14)
+    $titleColumn = New-Object Windows.Controls.ColumnDefinition
+    $titleColumn.Width = '*'
+    $closeColumn = New-Object Windows.Controls.ColumnDefinition
+    $closeColumn.Width = 'Auto'
+    [void]$header.ColumnDefinitions.Add($titleColumn)
+    [void]$header.ColumnDefinitions.Add($closeColumn)
+
+    $headerText = New-Object Windows.Controls.StackPanel
+    [Windows.Controls.Grid]::SetColumn($headerText, 0)
 
     $eyebrow = New-Object Windows.Controls.TextBlock
-    $eyebrow.Text = if ($Danger) { '// ACHTUNG' } else { '// BESTÄTIGUNG' }
+    $eyebrow.Text = if ($Danger) {
+        '// ACHTUNG'
+    } elseif ($HideCancel) {
+        '// HINWEIS'
+    } else {
+        '// BESTÄTIGUNG'
+    }
     $eyebrow.FontFamily = $syncHash.Window.FindResource('WzFontMono')
     $eyebrow.FontSize = 10.5
     $eyebrow.Foreground = if ($Danger) {
-        $syncHash.Window.FindResource('WzRed')
+        $syncHash.Window.FindResource('WzRedText')
     } else {
         $syncHash.Window.FindResource('WzCyan')
     }
     $eyebrow.Margin = New-Object Windows.Thickness(0, 0, 0, 8)
-    [void]$stack.Children.Add($eyebrow)
+    [void]$headerText.Children.Add($eyebrow)
 
     $titleBlock = New-Object Windows.Controls.TextBlock
     $titleBlock.Text = $Title
@@ -198,8 +327,34 @@ function Show-WzConfirm {
     $titleBlock.FontWeight = 'SemiBold'
     $titleBlock.Foreground = $syncHash.Window.FindResource('WzTextBright')
     $titleBlock.TextWrapping = 'Wrap'
-    $titleBlock.Margin = New-Object Windows.Thickness(0, 0, 0, 10)
-    [void]$stack.Children.Add($titleBlock)
+    $titleBlock.Margin = New-Object Windows.Thickness(0, 0, 12, 0)
+    [void]$headerText.Children.Add($titleBlock)
+    [void]$header.Children.Add($headerText)
+
+    $closeButton = New-Object Windows.Controls.Button
+    $closeButton.Content = [char]0xE8BB
+    $closeButton.FontFamily = New-Object Windows.Media.FontFamily('Segoe Fluent Icons, Segoe MDL2 Assets')
+    $closeButton.FontSize = 10
+    $closeButton.Width = 34
+    $closeButton.Height = 30
+    $closeButton.Padding = New-Object Windows.Thickness(0)
+    $closeButton.Style = $syncHash.Window.FindResource('WzBtnGhost')
+    $closeButton.VerticalAlignment = 'Top'
+    $closeButton.ToolTip = 'Schließen (Esc)'
+    [Windows.Controls.Grid]::SetColumn($closeButton, 1)
+    [void]$header.Children.Add($closeButton)
+
+    [Windows.Controls.Grid]::SetRow($header, 0)
+    [void]$layout.Children.Add($header)
+
+    # --- Inhalt: scrollt, damit nichts abgeschnitten wird -----------------
+    $bodyScroller = New-Object Windows.Controls.ScrollViewer
+    $bodyScroller.VerticalScrollBarVisibility = 'Auto'
+    $bodyScroller.HorizontalScrollBarVisibility = 'Disabled'
+    $bodyScroller.Padding = New-Object Windows.Thickness(0, 0, 4, 0)
+    [Windows.Controls.Grid]::SetRow($bodyScroller, 1)
+
+    $stack = New-Object Windows.Controls.StackPanel
 
     $messageBlock = New-Object Windows.Controls.TextBlock
     $messageBlock.Text = $Message
@@ -218,10 +373,7 @@ function Show-WzConfirm {
         $listBorder.CornerRadius = New-Object Windows.CornerRadius(10)
         $listBorder.Padding = New-Object Windows.Thickness(14, 12, 14, 12)
         $listBorder.Margin = New-Object Windows.Thickness(0, 0, 0, 16)
-        $listBorder.MaxHeight = 280
 
-        $scroller = New-Object Windows.Controls.ScrollViewer
-        $scroller.VerticalScrollBarVisibility = 'Auto'
         $listStack = New-Object Windows.Controls.StackPanel
         foreach ($item in $Items) {
             $itemBlock = New-Object Windows.Controls.TextBlock
@@ -233,8 +385,7 @@ function Show-WzConfirm {
             $itemBlock.Margin = New-Object Windows.Thickness(0, 2, 0, 2)
             [void]$listStack.Children.Add($itemBlock)
         }
-        $scroller.Content = $listStack
-        $listBorder.Child = $scroller
+        $listBorder.Child = $listStack
         [void]$stack.Children.Add($listBorder)
     }
 
@@ -244,58 +395,110 @@ function Show-WzConfirm {
         $optionBox.Content = $OptionText
         $optionBox.IsChecked = $OptionDefault
         $optionBox.Style = $syncHash.Window.FindResource('WzCheckBox')
-        $optionBox.Margin = New-Object Windows.Thickness(0, 0, 0, 18)
+        $optionBox.Margin = New-Object Windows.Thickness(0, 0, 0, 4)
         [void]$stack.Children.Add($optionBox)
     }
 
+    $bodyScroller.Content = $stack
+    [void]$layout.Children.Add($bodyScroller)
+
+    # --- Knopfzeile: fest unten, immer sichtbar ---------------------------
     $buttonRow = New-Object Windows.Controls.StackPanel
     $buttonRow.Orientation = 'Horizontal'
     $buttonRow.HorizontalAlignment = 'Right'
+    $buttonRow.Margin = New-Object Windows.Thickness(0, 18, 0, 0)
+    [Windows.Controls.Grid]::SetRow($buttonRow, 2)
 
-    $cancelButton = New-Object Windows.Controls.Button
-    $cancelButton.Content = 'Abbrechen'
-    $cancelButton.Style = $syncHash.Window.FindResource('WzBtnSecondary')
-    $cancelButton.Margin = New-Object Windows.Thickness(0, 0, 10, 0)
-    $cancelButton.Add_Click({ $window.DialogResult = $false; $window.Close() }.GetNewClosure())
-    [void]$buttonRow.Children.Add($cancelButton)
+    $closeDialog = {
+        param($Confirmed)
+        if ($Confirmed) {
+            $result.Confirmed = $true
+            if ($optionBox) { $result.OptionChecked = [bool]$optionBox.IsChecked }
+        }
+        $window.DialogResult = [bool]$Confirmed
+        $window.Close()
+    }.GetNewClosure()
+
+    $cancelButton = $null
+    if (-not $HideCancel) {
+        $cancelButton = New-Object Windows.Controls.Button
+        $cancelButton.Content = 'Abbrechen'
+        $cancelButton.Style = $syncHash.Window.FindResource('WzBtnSecondary')
+        $cancelButton.Margin = New-Object Windows.Thickness(0, 0, 10, 0)
+        $cancelButton.IsCancel = $true
+        $cancelButton.Add_Click({ & $closeDialog $false }.GetNewClosure())
+        [void]$buttonRow.Children.Add($cancelButton)
+    }
 
     $okButton = New-Object Windows.Controls.Button
     $okButton.Content = $ConfirmText
+    $okButton.IsDefault = $true
     $okButton.Style = if ($Danger) {
         $syncHash.Window.FindResource('WzBtnDanger')
     } else {
         $syncHash.Window.FindResource('WzBtnPrimary')
     }
-    $okButton.Add_Click({
-        $result.Confirmed = $true
-        if ($optionBox) { $result.OptionChecked = [bool]$optionBox.IsChecked }
-        $window.DialogResult = $true
-        $window.Close()
-    }.GetNewClosure())
+    $okButton.Add_Click({ & $closeDialog $true }.GetNewClosure())
     [void]$buttonRow.Children.Add($okButton)
 
-    [void]$stack.Children.Add($buttonRow)
-    $shell.Child = $stack
-    $window.Content = $shell
-    $window.Add_KeyDown({
-        if ($_.Key -eq 'Escape') { $window.DialogResult = $false; $window.Close() }
+    [void]$layout.Children.Add($buttonRow)
+
+    $shell.Child = $layout
+    [void]$backdrop.Children.Add($shell)
+    $window.Content = $backdrop
+
+    # --- Schließwege ------------------------------------------------------
+    $closeButton.Add_Click({ & $closeDialog $false }.GetNewClosure())
+
+    # Klick neben die Karte bricht ab. Klicks auf die Karte selbst laufen
+    # ebenfalls hier durch (sie steckt im Grid), deshalb die Herkunftsprüfung.
+    $backdrop.Add_MouseLeftButtonDown({
+        param($eventSender, $eventArgs)
+        if ($eventArgs.OriginalSource -eq $backdrop) { & $closeDialog $false }
     }.GetNewClosure())
 
-    [void]$window.ShowDialog()
+    # IsCancel deckt Escape bereits ab; bei reinen Hinweisen ohne
+    # Abbrechen-Knopf braucht es zusätzlich diesen Handler.
+    $window.Add_PreviewKeyDown({
+        param($eventSender, $eventArgs)
+        if ($eventArgs.Key -eq 'Escape') {
+            $eventArgs.Handled = $true
+            & $closeDialog $false
+        }
+    }.GetNewClosure())
+
+    # Bei gefährlichen Aktionen liegt der Fokus auf »Abbrechen« — sonst löst
+    # ein unbedachter Druck auf die Eingabetaste die Löschung aus.
+    $window.Add_Loaded({
+        if ($Danger -and $cancelButton) {
+            [void]$cancelButton.Focus()
+        } else {
+            [void]$okButton.Focus()
+        }
+    }.GetNewClosure())
+
+    $syncHash.ActiveDialog = $window
+    try {
+        [void]$window.ShowDialog()
+    } finally {
+        $syncHash.ActiveDialog = $null
+    }
     return $result
 }
 
 function Show-WzInfo {
     <#
     .SYNOPSIS
-        Kurze Hinweismeldung im haZii-Look.
+        Kurze Hinweismeldung im haZii-Look — mit nur einem Knopf, weil es
+        nichts abzubrechen gibt.
     #>
     param(
         [Parameter(Mandatory = $true)][string]$Title,
         [Parameter(Mandatory = $true)][string]$Message,
         [string[]]$Items = @()
     )
-    [void](Show-WzConfirm -Title $Title -Message $Message -Items $Items -ConfirmText 'Verstanden')
+    [void](Show-WzConfirm -Title $Title -Message $Message -Items $Items `
+        -ConfirmText 'Verstanden' -HideCancel)
 }
 
 function New-WzCard {
@@ -447,7 +650,7 @@ function New-WzInfoRow {
     $valueBlock.Foreground = switch ($Kind) {
         'ok'    { $syncHash.Window.FindResource('WzGreen') }
         'warn'  { $syncHash.Window.FindResource('WzAmber') }
-        'error' { $syncHash.Window.FindResource('WzRed') }
+        'error' { $syncHash.Window.FindResource('WzRedText') }
         default { $syncHash.Window.FindResource('WzText') }
     }
     [Windows.Controls.Grid]::SetColumn($valueBlock, 1)
@@ -474,7 +677,7 @@ function New-WzMeter {
     $track.Height = 5
     $track.CornerRadius = New-Object Windows.CornerRadius(999)
     $track.Background = $syncHash.Window.FindResource('WzBgDarker')
-    $track.BorderBrush = $syncHash.Window.FindResource('WzBorder')
+    $track.BorderBrush = $syncHash.Window.FindResource('WzBorderControl')
     $track.BorderThickness = New-Object Windows.Thickness(1)
     $track.HorizontalAlignment = 'Stretch'
 
@@ -506,7 +709,7 @@ function New-WzMeter {
         $captionBlock = New-Object Windows.Controls.TextBlock
         $captionBlock.Text = $Caption
         $captionBlock.FontFamily = $syncHash.Window.FindResource('WzFontMono')
-        $captionBlock.FontSize = 10
+        $captionBlock.FontSize = 10.5
         $captionBlock.Foreground = $syncHash.Window.FindResource('WzTextFaint')
         $captionBlock.Margin = New-Object Windows.Thickness(0, 3, 0, 0)
         [void]$stack.Children.Add($captionBlock)
@@ -525,11 +728,13 @@ function New-WzNotice {
         [ValidateSet('info', 'warn', 'error', 'ok')][string]$Kind = 'info'
     )
 
+    # Rot bekommt eine eigene, hellere Schriftfarbe — #EF4444 erreicht auf der
+    # rot getönten Fläche keine 4,5:1.
     $colors = switch ($Kind) {
-        'warn'  { @{ Brush = 'WzAmber'; Background = '#14F59E0B'; Border = '#4DF59E0B'; Glyph = [char]0xE7BA } }
-        'error' { @{ Brush = 'WzRed';   Background = '#14EF4444'; Border = '#4DEF4444'; Glyph = [char]0xEA39 } }
-        'ok'    { @{ Brush = 'WzGreen'; Background = '#1422C55E'; Border = '#4D22C55E'; Glyph = [char]0xE73E } }
-        default { @{ Brush = 'WzCyan';  Background = '#1400D4FF'; Border = '#3300D4FF'; Glyph = [char]0xE946 } }
+        'warn'  { @{ Brush = 'WzAmber';   Background = '#14F59E0B'; Border = '#4DF59E0B'; Glyph = [char]0xE7BA } }
+        'error' { @{ Brush = 'WzRedText'; Background = '#14EF4444'; Border = '#4DEF4444'; Glyph = [char]0xEA39 } }
+        'ok'    { @{ Brush = 'WzGreen';   Background = '#1422C55E'; Border = '#4D22C55E'; Glyph = [char]0xE73E } }
+        default { @{ Brush = 'WzCyan';    Background = '#1400D4FF'; Border = '#3300D4FF'; Glyph = [char]0xE946 } }
     }
 
     $border = New-Object Windows.Controls.Border
@@ -586,30 +791,30 @@ function New-WzBadge {
         [ValidateSet('low', 'medium', 'high', 'hard', 'ok', 'info', 'warn')][string]$Kind = 'info'
     )
 
-    $colorKey = switch ($Kind) {
-        'high'   { 'WzRed' }
-        'hard'   { 'WzRed' }
-        'medium' { 'WzAmber' }
-        'warn'   { 'WzAmber' }
-        'ok'     { 'WzGreen' }
-        default  { 'WzCyan' }
+    # Schrift und Rahmen getrennt: Rot ist als Rahmen kräftig genug, als
+    # Schrift auf dunklem Grund aber zu dunkel.
+    $textKey, $borderKey = switch ($Kind) {
+        'high'   { 'WzRedText', 'WzRed' }
+        'hard'   { 'WzRedText', 'WzRed' }
+        'medium' { 'WzAmber', 'WzAmber' }
+        'warn'   { 'WzAmber', 'WzAmber' }
+        'ok'     { 'WzGreen', 'WzGreen' }
+        default  { 'WzCyan', 'WzCyan' }
     }
-    $brush = $syncHash.Window.FindResource($colorKey)
 
     $badge = New-Object Windows.Controls.Border
-    $badge.BorderBrush = $brush
+    $badge.BorderBrush = $syncHash.Window.FindResource($borderKey)
     $badge.BorderThickness = New-Object Windows.Thickness(1)
     $badge.CornerRadius = New-Object Windows.CornerRadius(999)
     $badge.Padding = New-Object Windows.Thickness(7, 1, 7, 1)
     $badge.Margin = New-Object Windows.Thickness(8, 0, 0, 0)
     $badge.VerticalAlignment = 'Center'
-    $badge.Opacity = 0.85
 
     $label = New-Object Windows.Controls.TextBlock
     $label.Text = $Text
     $label.FontFamily = $syncHash.Window.FindResource('WzFontMono')
-    $label.FontSize = 9.5
-    $label.Foreground = $brush
+    $label.FontSize = 10.5
+    $label.Foreground = $syncHash.Window.FindResource($textKey)
     $badge.Child = $label
 
     return $badge

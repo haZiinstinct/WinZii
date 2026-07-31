@@ -19,18 +19,33 @@
     <SolidColorBrush x:Key="WzCyanSubtle"   Color="#1A00D4FF" />
     <SolidColorBrush x:Key="WzCyanBorder"   Color="#3300D4FF" />
 
-    <!-- Linien -->
-    <SolidColorBrush x:Key="WzBorder"       Color="#14FFFFFF" />
-    <SolidColorBrush x:Key="WzBorderHover"  Color="#4D00D4FF" />
+    <!-- Linien
+         WzBorder ist rein dekorativ (Kartenkanten). WzBorderControl umrandet
+         Bedienelemente und erreicht die von WCAG geforderten 3:1 — ein leeres
+         Auswahlkästchen muss man sehen können. -->
+    <SolidColorBrush x:Key="WzBorder"        Color="#14FFFFFF" />
+    <SolidColorBrush x:Key="WzBorderHover"   Color="#4D00D4FF" />
+    <SolidColorBrush x:Key="WzBorderControl" Color="#59636F" />
 
-    <!-- Text -->
+    <!-- Text — alle Werte erreichen auf Karte, Seite und Seitenleiste
+         mindestens 4,5:1. WzTextFaint war mit #64748B darunter. -->
     <SolidColorBrush x:Key="WzText"         Color="#E2E8F0" />
     <SolidColorBrush x:Key="WzTextDim"      Color="#94A3B8" />
     <SolidColorBrush x:Key="WzTextBright"   Color="#F8FAFC" />
-    <SolidColorBrush x:Key="WzTextFaint"    Color="#64748B" />
+    <SolidColorBrush x:Key="WzTextFaint"    Color="#7E8CA0" />
 
-    <!-- Status -->
+    <!-- Deaktiviert: eigene Farben statt Opacity. Opacity dimmt in WPF den
+         ganzen Teilbaum, also Schrift und Fläche zugleich — der Kontrast
+         bricht dabei auf unter 2:1 ein. -->
+    <SolidColorBrush x:Key="WzDisabledText"     Color="#7E8CA0" />
+    <SolidColorBrush x:Key="WzDisabledFill"     Color="#171722" />
+    <SolidColorBrush x:Key="WzDisabledFillCyan" Color="#16323C" />
+    <SolidColorBrush x:Key="WzDisabledTextCyan" Color="#8FBACB" />
+
+    <!-- Status. WzRed ist für Flächen, Rahmen und Punkte gedacht; als
+         Schriftfarbe ist es zu dunkel, dafür gibt es WzRedText. -->
     <SolidColorBrush x:Key="WzRed"          Color="#EF4444" />
+    <SolidColorBrush x:Key="WzRedText"      Color="#FCA5A5" />
     <SolidColorBrush x:Key="WzAmber"        Color="#F59E0B" />
     <SolidColorBrush x:Key="WzGreen"        Color="#22C55E" />
     <SolidColorBrush x:Key="WzOrange"       Color="#F97316" />
@@ -50,7 +65,7 @@
         <Setter Property="Template">
             <Setter.Value>
                 <ControlTemplate TargetType="Thumb">
-                    <Border x:Name="Bar" Background="#22FFFFFF" CornerRadius="3" Margin="2,0,2,0" />
+                    <Border x:Name="Bar" Background="#66FFFFFF" CornerRadius="3" Margin="2,0,2,0" />
                     <ControlTemplate.Triggers>
                         <Trigger Property="IsMouseOver" Value="True">
                             <Setter TargetName="Bar" Property="Background" Value="#5500D4FF" />
@@ -204,7 +219,9 @@
                             <Setter TargetName="Shell" Property="Background" Value="{DynamicResource WzCyanDim}" />
                         </Trigger>
                         <Trigger Property="IsEnabled" Value="False">
-                            <Setter TargetName="Shell" Property="Opacity" Value="0.35" />
+                            <Setter TargetName="Shell" Property="Background" Value="{DynamicResource WzDisabledFillCyan}" />
+                            <Setter TargetName="Shell" Property="Effect" Value="{x:Null}" />
+                            <Setter Property="Foreground" Value="{DynamicResource WzDisabledTextCyan}" />
                             <Setter Property="Cursor" Value="Arrow" />
                         </Trigger>
                     </ControlTemplate.Triggers>
@@ -236,7 +253,8 @@
                             <Setter Property="Foreground" Value="{DynamicResource WzCyan}" />
                         </Trigger>
                         <Trigger Property="IsEnabled" Value="False">
-                            <Setter TargetName="Shell" Property="Opacity" Value="0.35" />
+                            <Setter TargetName="Shell" Property="Background" Value="{DynamicResource WzDisabledFill}" />
+                            <Setter Property="Foreground" Value="{DynamicResource WzDisabledText}" />
                             <Setter Property="Cursor" Value="Arrow" />
                         </Trigger>
                     </ControlTemplate.Triggers>
@@ -248,24 +266,28 @@
     <Style x:Key="WzBtnDanger" TargetType="Button">
         <Setter Property="FontFamily" Value="{DynamicResource WzFontSans}" />
         <Setter Property="FontSize" Value="13" />
-        <Setter Property="Foreground" Value="{DynamicResource WzRed}" />
+        <Setter Property="Foreground" Value="{DynamicResource WzRedText}" />
         <Setter Property="Padding" Value="18,9,18,9" />
         <Setter Property="Cursor" Value="Hand" />
         <Setter Property="Template">
             <Setter.Value>
                 <ControlTemplate TargetType="Button">
-                    <Border x:Name="Shell" Background="#14EF4444"
-                            BorderBrush="#4DEF4444" BorderThickness="1"
+                    <Border x:Name="Shell" Background="#1FEF4444"
+                            BorderBrush="#66EF4444" BorderThickness="1"
                             CornerRadius="10" Padding="{TemplateBinding Padding}"
                             SnapsToDevicePixels="True">
                         <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" />
                     </Border>
                     <ControlTemplate.Triggers>
                         <Trigger Property="IsMouseOver" Value="True">
-                            <Setter TargetName="Shell" Property="Background" Value="#26EF4444" />
+                            <Setter TargetName="Shell" Property="Background" Value="#33EF4444" />
+                            <Setter TargetName="Shell" Property="BorderBrush" Value="{DynamicResource WzRed}" />
                         </Trigger>
                         <Trigger Property="IsEnabled" Value="False">
-                            <Setter TargetName="Shell" Property="Opacity" Value="0.35" />
+                            <Setter TargetName="Shell" Property="Background" Value="{DynamicResource WzDisabledFill}" />
+                            <Setter TargetName="Shell" Property="BorderBrush" Value="{DynamicResource WzBorder}" />
+                            <Setter Property="Foreground" Value="{DynamicResource WzDisabledText}" />
+                            <Setter Property="Cursor" Value="Arrow" />
                         </Trigger>
                     </ControlTemplate.Triggers>
                 </ControlTemplate>
@@ -365,7 +387,7 @@
                     <StackPanel Orientation="Horizontal" Background="Transparent">
                         <Border x:Name="Box" Width="17" Height="17" CornerRadius="5"
                                 Background="{DynamicResource WzBgDarker}"
-                                BorderBrush="{DynamicResource WzBorder}" BorderThickness="1"
+                                BorderBrush="{DynamicResource WzBorderControl}" BorderThickness="1.4"
                                 VerticalAlignment="Center">
                             <Path x:Name="Tick" Data="M 0 4 L 3.5 7.5 L 9 0" Stroke="#0A0A0F"
                                   StrokeThickness="2" Visibility="Collapsed"
@@ -384,7 +406,10 @@
                             <Setter TargetName="Box" Property="BorderBrush" Value="{DynamicResource WzBorderHover}" />
                         </Trigger>
                         <Trigger Property="IsEnabled" Value="False">
-                            <Setter Property="Opacity" Value="0.4" />
+                            <Setter Property="Foreground" Value="{DynamicResource WzDisabledText}" />
+                            <Setter TargetName="Box" Property="Background" Value="{DynamicResource WzDisabledFill}" />
+                            <Setter TargetName="Box" Property="BorderBrush" Value="{DynamicResource WzBorder}" />
+                            <Setter Property="Cursor" Value="Arrow" />
                         </Trigger>
                     </ControlTemplate.Triggers>
                 </ControlTemplate>
@@ -403,9 +428,9 @@
                     <StackPanel Orientation="Horizontal" Background="Transparent">
                         <Border x:Name="Track" Width="32" Height="17" CornerRadius="999"
                                 Background="{DynamicResource WzBgCardHover}"
-                                BorderBrush="{DynamicResource WzBorder}" BorderThickness="1"
+                                BorderBrush="{DynamicResource WzBorderControl}" BorderThickness="1.4"
                                 VerticalAlignment="Center">
-                            <Ellipse x:Name="Knob" Width="11" Height="11" Fill="{DynamicResource WzTextFaint}"
+                            <Ellipse x:Name="Knob" Width="11" Height="11" Fill="{DynamicResource WzTextDim}"
                                      HorizontalAlignment="Left" Margin="3,0,0,0" />
                         </Border>
                         <ContentPresenter Margin="8,0,0,0" VerticalAlignment="Center" />
@@ -418,6 +443,12 @@
                             <Setter TargetName="Knob" Property="HorizontalAlignment" Value="Right" />
                             <Setter TargetName="Knob" Property="Margin" Value="0,0,3,0" />
                             <Setter Property="Foreground" Value="{DynamicResource WzCyan}" />
+                        </Trigger>
+                        <Trigger Property="IsEnabled" Value="False">
+                            <Setter Property="Foreground" Value="{DynamicResource WzDisabledText}" />
+                            <Setter TargetName="Knob" Property="Fill" Value="{DynamicResource WzDisabledText}" />
+                            <Setter TargetName="Track" Property="BorderBrush" Value="{DynamicResource WzBorder}" />
+                            <Setter Property="Cursor" Value="Arrow" />
                         </Trigger>
                     </ControlTemplate.Triggers>
                 </ControlTemplate>
@@ -448,7 +479,7 @@
                             <Setter Property="Foreground" Value="{DynamicResource WzCyan}" />
                         </Trigger>
                         <Trigger Property="IsEnabled" Value="False">
-                            <Setter Property="Opacity" Value="0.4" />
+                            <Setter Property="Foreground" Value="{DynamicResource WzDisabledText}" />
                         </Trigger>
                     </ControlTemplate.Triggers>
                 </ControlTemplate>
@@ -510,7 +541,8 @@
                     </Grid>
                     <ControlTemplate.Triggers>
                         <Trigger Property="IsEnabled" Value="False">
-                            <Setter Property="Opacity" Value="0.4" />
+                            <Setter Property="Foreground" Value="{DynamicResource WzDisabledText}" />
+                            <Setter Property="Cursor" Value="Arrow" />
                         </Trigger>
                     </ControlTemplate.Triggers>
                 </ControlTemplate>
@@ -617,6 +649,32 @@
         <Setter Property="VerticalScrollBarVisibility" Value="Auto" />
         <Setter Property="HorizontalScrollBarVisibility" Value="Disabled" />
         <Setter Property="SelectionBrush" Value="{DynamicResource WzCyan}" />
+    </Style>
+
+    <!-- ================================================================
+         Mouseover-Hinweise — ohne eigenen Stil zeichnet Windows sie im
+         hellen Systemlook mitten in die dunkle Oberfläche.
+         Bewusst ohne x:Key, damit der Stil für alle Tooltips im Fenster gilt.
+         ================================================================ -->
+    <Style TargetType="ToolTip">
+        <Setter Property="Foreground" Value="{DynamicResource WzText}" />
+        <Setter Property="Background" Value="{DynamicResource WzBgCard}" />
+        <Setter Property="BorderBrush" Value="{DynamicResource WzCyanBorder}" />
+        <Setter Property="FontFamily" Value="{DynamicResource WzFontSans}" />
+        <Setter Property="FontSize" Value="11.5" />
+        <Setter Property="HasDropShadow" Value="False" />
+        <Setter Property="MaxWidth" Value="420" />
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="ToolTip">
+                    <Border Background="{TemplateBinding Background}"
+                            BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="1"
+                            CornerRadius="8" Padding="11,7,11,7">
+                        <ContentPresenter />
+                    </Border>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
     </Style>
 
     <!-- Pulsierender Punkt (haZii-Signatur) -->
