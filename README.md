@@ -192,6 +192,6 @@ Die Techniken zur KI-Entfernung orientieren sich an [zoicware/RemoveWindowsAI](h
 
 <div align="center">
 
-Built by haZii · <a href="https://hazii.org"><code>// webdesign: haZii.org</code></a>
+Built by haZii · `// code:` [**haZii.org**](https://hazii.org)
 
 </div>

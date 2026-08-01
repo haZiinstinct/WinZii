@@ -17,6 +17,8 @@ function Write-Boot {
 Write-Host ''
 Write-Host '  WinZii' -ForegroundColor Cyan -NoNewline
 Write-Host ' — portables Windows-Werkzeug' -ForegroundColor DarkGray
+Write-Host '  // code: ' -ForegroundColor DarkGray -NoNewline
+Write-Host 'haZii.org' -ForegroundColor Cyan
 Write-Host ''
 
 # --- Vorbedingungen -------------------------------------------------------
@@ -93,5 +95,12 @@ if ([Threading.Thread]::CurrentThread.GetApartmentState() -ne 'STA') {
 }
 
 # --- Start ----------------------------------------------------------------
-& $mainScript -DryRun:$DryRun
+# Punktweise laden, nicht mit "&" aufrufen: Der Aufrufoperator legt einen
+# eigenen Bereich an, und die Funktionen aus src\modules landen dann in einem
+# Bereich, den die Ereignisbehandlungen von WPF nicht mehr sehen. Beim Tick des
+# Zeitgebers scheiterte dann jeder Aufruf mit "wurde nicht als Name eines
+# Cmdlet ... erkannt". Auffällig wurde das nie, weil der übliche Weg über die
+# Rechteanforderung geht und dort ohnehin ein neuer Prozess mit -File startet —
+# dieser Zweig greift nur, wenn WinZii bereits mit Administratorrechten läuft.
+. $mainScript -DryRun:$DryRun
 exit $LASTEXITCODE

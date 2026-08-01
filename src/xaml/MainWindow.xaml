@@ -136,7 +136,7 @@
                                Foreground="{DynamicResource WzTextFaint}" Margin="0,0,0,7" />
                     <TextBlock Name="HaziiBadge" FontFamily="{DynamicResource WzFontMono}" FontSize="11.5" Cursor="Hand"
                                ToolTip="https://hazii.org">
-                        <Run Text="// webdesign:" Foreground="#94A3B8" /><Run Text=" " Foreground="#94A3B8" /><Run Text="ha" Foreground="#00D4FF" FontWeight="Bold" /><Run Text="Z" Foreground="#F8FAFC" FontWeight="Bold" /><Run Text="ii" Foreground="#00D4FF" FontWeight="Bold" /><Run Text=".org" Foreground="#00A8CC" FontWeight="Bold" />
+                        <Run Text="// code:" Foreground="#94A3B8" /><Run Text=" " Foreground="#94A3B8" /><Run Text="ha" Foreground="#00D4FF" FontWeight="Bold" /><Run Text="Z" Foreground="#F8FAFC" FontWeight="Bold" /><Run Text="ii" Foreground="#00D4FF" FontWeight="Bold" /><Run Text=".org" Foreground="#00A8CC" FontWeight="Bold" />
                     </TextBlock>
                 </StackPanel>
             </Grid>

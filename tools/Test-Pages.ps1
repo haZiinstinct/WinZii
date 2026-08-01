@@ -35,13 +35,32 @@ foreach ($page in $pages) {
     }
 }
 
+# Zusätzlich der Startweg über den Launcher. Die Prüfungen oben rufen main.ps1
+# direkt mit -File auf und würden nicht bemerken, wenn der Launcher die Module
+# in einen Bereich lädt, den die Ereignisbehandlungen von WPF nicht sehen.
+$env:WZ_SELFTEST = '1500'
+$env:WZ_SELFTEST_PAGE = 'Dashboard'
+$env:WZ_SELFTEST_OUT = Join-Path $env:TEMP 'winzii-launcher-test.png'
+$launcherOutput = & powershell.exe -NoProfile -ExecutionPolicy Bypass -File (Join-Path $root 'src\launcher.ps1') -NoElevate 2>&1
+$launcherText = $launcherOutput -join "`n"
+
+if ($launcherText -match 'wurde nicht als Name|fehlgeschlagen|Exception') {
+    Write-Host '  [FEHL] Launcher-Startweg' -ForegroundColor Red
+    foreach ($line in ($launcherOutput | Where-Object { $_ -match 'wurde nicht als Name|fehlgeschlagen|Stelle:' })) {
+        Write-Host "         $line" -ForegroundColor DarkGray
+    }
+    $failed++
+} else {
+    Write-Host '  [ok]   Launcher-Startweg' -ForegroundColor Green
+}
+
 Remove-Item Env:\WZ_SELFTEST, Env:\WZ_SELFTEST_PAGE, Env:\WZ_SELFTEST_OUT -ErrorAction SilentlyContinue
 
 Write-Host ''
 if ($failed -eq 0) {
-    Write-Host "  Ergebnis: alle $($pages.Count) Seiten laden fehlerfrei." -ForegroundColor Green
+    Write-Host "  Ergebnis: alle $($pages.Count) Seiten und der Launcher laden fehlerfrei." -ForegroundColor Green
     if ($Screenshots) { Write-Host "  Abbilder: $shotDir" -ForegroundColor DarkGray }
     exit 0
 }
-Write-Host "  Ergebnis: $failed von $($pages.Count) Seiten mit Fehlern." -ForegroundColor Red
+Write-Host "  Ergebnis: $failed von $($pages.Count) Seiten und der Launcher mit Fehlern." -ForegroundColor Red
 exit 1
