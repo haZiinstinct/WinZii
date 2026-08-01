@@ -1,0 +1,28 @@
+# https://editorconfig.org
+#
+# Wichtigster Punkt: charset = utf-8-bom für PowerShell und XAML. Ohne BOM liest
+# PowerShell 5.1 die Dateien als ANSI und zerstört alle Umlaute — siehe CONTRIBUTING.md.
+# Nicht jeder Editor hält sich daran, deshalb bleibt tools\Repair-Encoding.ps1 Pflicht.
+
+root = true
+
+[*]
+end_of_line = crlf
+insert_final_newline = true
+trim_trailing_whitespace = true
+indent_style = space
+indent_size = 4
+
+[*.{ps1,psm1,xaml}]
+charset = utf-8-bom
+
+[*.{json,md,html,svg}]
+charset = utf-8
+end_of_line = lf
+indent_size = 2
+
+[*.{bat,cmd}]
+charset = utf-8
+
+[*.md]
+trim_trailing_whitespace = false

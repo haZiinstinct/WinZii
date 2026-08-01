@@ -25,7 +25,8 @@ $syncHash.Pages = @{}
 $syncHash.LogEntries = [Collections.ArrayList]::Synchronized((New-Object Collections.ArrayList))
 $syncHash.Busy = $false
 $syncHash.DryRun = $true
-$syncHash.Version = '0.1.0'
+. (Join-Path $root 'src\version.ps1')
+$syncHash.Version = $script:WzVersion
 
 foreach ($module in 'Core.Paths', 'Core.Logging', 'Core.Json', 'Core.Runspace', 'Core.Ui') {
     . (Join-Path $root "src\modules\$module.ps1")

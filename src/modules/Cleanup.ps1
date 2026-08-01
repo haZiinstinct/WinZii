@@ -383,8 +383,7 @@ function Remove-WzWindowsOld {
 
     # Weg 2: Besitzrechte übernehmen und löschen
     Write-WzLog '  übernehme Besitzrechte...' -Level Info
-    [void](Invoke-WzProcess -FilePath 'takeown.exe' -Arguments "/f `"$target`" /r /d j" -TimeoutSeconds 900)
-    [void](Invoke-WzProcess -FilePath 'icacls.exe' -Arguments "`"$target`" /grant *S-1-5-32-544:F /t /c /q" -TimeoutSeconds 900)
+    Invoke-WzTakeOwnership -Path $target
 
     try {
         Remove-Item -LiteralPath $target -Recurse -Force -ErrorAction Stop
@@ -394,4 +393,50 @@ function Remove-WzWindowsOld {
         Write-WzLog "  konnte nicht vollständig entfernt werden: $($_.Exception.Message)" -Level Warn
         return [pscustomobject]@{ Removed = 0; Failed = 1 }
     }
+}
+
+function Get-WzAffirmativeLetter {
+    <#
+    .SYNOPSIS
+        Der Buchstabe, mit dem man in der Oberflächensprache von Windows „ja" sagt.
+    #>
+    $language = try { (Get-UICulture).TwoLetterISOLanguageName } catch { 'en' }
+    switch ($language) {
+        'de' { 'j' }  # Ja
+        'nl' { 'j' }  # Ja
+        'fr' { 'o' }  # Oui
+        'es' { 's' }  # Sí
+        'it' { 's' }  # Sì
+        'pt' { 's' }  # Sim
+        'pl' { 't' }  # Tak
+        'tr' { 'e' }  # Evet
+        default { 'y' }
+    }
+}
+
+function Invoke-WzTakeOwnership {
+    <#
+    .SYNOPSIS
+        Übernimmt Besitz und Vollzugriff für einen Ordnerbaum.
+    .NOTES
+        Die Standardantwort von takeown (/d) ist übersetzt: deutsch »J«, englisch
+        »Y«, französisch »O«. Hier stand früher fest »j« — auf jedem nicht-deutschen
+        Windows quittiert takeown das mit »Ungültiges Argument«, die Besitzübernahme
+        scheitert still und Windows.old bleibt liegen. Der Buchstabe kommt jetzt aus
+        der Oberflächensprache; passt er trotzdem nicht, wird der Reihe nach
+        nachgesetzt statt aufzugeben.
+    #>
+    param([Parameter(Mandatory = $true)][string]$Path)
+
+    $answers = @((Get-WzAffirmativeLetter), 'y', 'j') | Select-Object -Unique
+    foreach ($answer in $answers) {
+        $result = Invoke-WzProcess -FilePath 'takeown.exe' `
+            -Arguments "/f `"$Path`" /r /d $answer" -TimeoutSeconds 900
+        if ($result.ExitCode -eq 0) { break }
+        # Nur wenn takeown den Buchstaben bemängelt, lohnt ein zweiter Versuch
+        if ("$($result.StdOut) $($result.StdErr)" -notmatch '(?i)invalid|ungültig|ungueltig') { break }
+    }
+
+    [void](Invoke-WzProcess -FilePath 'icacls.exe' `
+        -Arguments "`"$Path`" /grant *S-1-5-32-544:F /t /c /q" -TimeoutSeconds 900)
 }

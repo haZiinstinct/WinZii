@@ -172,7 +172,7 @@ function Get-WzSystemInfo {
 
     # --- WinZii-Umgebung --------------------------------------------------
     $volume = Get-WzVolumeInfo
-    $info.StickDrive = "$($volume.DriveLetter): ($($volume.FileSystem))"
+    $info.StickDrive = "$($volume.DisplayName) ($($volume.FileSystem))"
     $info.StickFreeBytes = $volume.FreeBytes
     $info.StickIsFat32 = $volume.IsFat32
     $info.WingetAvailable = [bool](Resolve-WzWingetPath)

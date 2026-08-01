@@ -65,10 +65,22 @@ function New-WzDirectory {
     <#
     .SYNOPSIS
         Verzeichnis anlegen (falls nötig) und Pfad zurückgeben.
+    .NOTES
+        Wirft bewusst nicht. main.ps1 läuft mit $ErrorActionPreference = 'Stop', und
+        die erste Anlage passiert über Start-WzSession — bevor überhaupt ein Fenster
+        steht. Auf einem schreibgeschützten Stick oder unter der Gruppenrichtlinie
+        »Wechseldatenträger: Schreibzugriff verweigern« brach WinZii dadurch
+        kommentarlos ab, ohne dass der Anwender je etwas zu sehen bekam.
+        Die Aufrufer schreiben ohnehin abgesichert; wer wissen will, ob überhaupt
+        etwas ankommt, fragt Test-WzWritableRoot.
     #>
     param([Parameter(Mandatory = $true)][string]$Path)
     if (-not (Test-Path -LiteralPath $Path)) {
-        [void](New-Item -ItemType Directory -Path $Path -Force)
+        try {
+            [void](New-Item -ItemType Directory -Path $Path -Force -ErrorAction Stop)
+        } catch {
+            if ($syncHash) { $syncHash.WriteBlocked = $true }
+        }
     }
     return $Path
 }
@@ -95,15 +107,30 @@ function Get-WzVolumeInfo {
         Wichtig für die 4-GB-Dateigrenze von FAT32 beim Office-Download.
     #>
     $rootPath = Get-WzRoot
-    $driveLetter = (Split-Path -Qualifier $rootPath).TrimEnd(':')
+
+    # Split-Path -Qualifier wirft bei UNC-Pfaden (\\server\freigabe\WinZii) einen
+    # ParsePathFormatError. Das stand früher außerhalb jeder Absicherung und beendete
+    # den Start, bevor das Fenster kam. Deshalb hier von Hand zerlegt.
+    $driveLetter = ''
+    $displayName = $rootPath
+    if ($rootPath -match '^([A-Za-z]):') {
+        $driveLetter = $Matches[1]
+        $displayName = "$($Matches[1]):"
+    } elseif ($rootPath -match '^(\\\\[^\\]+\\[^\\]+)') {
+        $displayName = $Matches[1]
+    }
+
     $result = [pscustomobject]@{
         DriveLetter = $driveLetter
+        DisplayName = $displayName
         FileSystem  = 'unbekannt'
         FreeBytes   = 0
         SizeBytes   = 0
         IsFat32     = $false
         IsRemovable = $false
     }
+    if (-not $driveLetter) { return $result }
+
     try {
         $volume = Get-CimInstance -ClassName Win32_LogicalDisk -Filter "DeviceID='$driveLetter`:'" -ErrorAction Stop
         $result.FileSystem = $volume.FileSystem

@@ -258,6 +258,19 @@ function Invoke-WzProcess {
         $startInfo.CreateNoWindow = $true
         $startInfo.RedirectStandardOutput = $true
         $startInfo.RedirectStandardError = $true
+
+        # Ohne feste Codierung dekodiert .NET die Ausgabe mit der Codepage der
+        # Konsole — die es in einem Hintergrund-Runspace nicht zwingend gibt.
+        # Aus »Hinzugefügte Treiberpakete« wird dann Buchstabensalat, und die
+        # Muster in Drivers.ps1 und Diagnostics.ps1 greifen nicht mehr.
+        $consoleEncoding = try { [Console]::OutputEncoding } catch { $null }
+        if (-not $consoleEncoding) {
+            $consoleEncoding = [Text.Encoding]::GetEncoding(
+                [Globalization.CultureInfo]::CurrentCulture.TextInfo.OEMCodePage)
+        }
+        $startInfo.StandardOutputEncoding = $consoleEncoding
+        $startInfo.StandardErrorEncoding = $consoleEncoding
+
         if ($WorkingDirectory) { $startInfo.WorkingDirectory = $WorkingDirectory }
 
         $process = New-Object Diagnostics.Process

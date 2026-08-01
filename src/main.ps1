@@ -126,7 +126,7 @@ try {
 }
 
 $volume = Get-WzVolumeInfo
-$syncHash.StatusPath.Text = "$($volume.DriveLetter): $($volume.FileSystem)"
+$syncHash.StatusPath.Text = "$($volume.DisplayName) $($volume.FileSystem)"
 
 # --- Fenstersteuerung -----------------------------------------------------
 $syncHash.BtnMinimize.Add_Click({ $syncHash.Window.WindowState = 'Minimized' })

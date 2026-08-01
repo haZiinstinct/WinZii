@@ -43,6 +43,63 @@ function Invoke-WzNetworkReset {
     return $result
 }
 
+function Save-WzDnsState {
+    <#
+    .SYNOPSIS
+        Schreibt die aktuelle DNS-Konfiguration aller Netzwerkkarten in den
+        Sicherungsordner und gibt den Dateipfad zurück.
+    .NOTES
+        Set-DnsClientServerAddress kennt keinen Rückweg: »Auto« stellt auf DHCP um,
+        und ein von Hand eingetragener Server ist damit weg. Diese Datei ist der
+        einzige Weg zurück — deshalb läuft sie vor jeder Änderung.
+    #>
+    [CmdletBinding()]
+    param()
+
+    $lines = @(
+        'DNS-Konfiguration vor der Änderung durch WinZii'
+        "Computer: $env:COMPUTERNAME"
+        "Zeitpunkt: $(Get-Date -Format 'dd.MM.yyyy HH:mm:ss')"
+        ''
+    )
+    $found = 0
+
+    try {
+        foreach ($entry in (Get-DnsClientServerAddress -AddressFamily IPv4 -ErrorAction Stop)) {
+            $addresses = @($entry.ServerAddresses)
+            $lines += "$($entry.InterfaceAlias) (Index $($entry.InterfaceIndex))"
+            $lines += if ($addresses.Count -gt 0) {
+                "  $($addresses -join ', ')"
+            } else {
+                '  automatisch (vom Router)'
+            }
+            $lines += "  Zurücksetzen: Set-DnsClientServerAddress -InterfaceIndex $($entry.InterfaceIndex) " + $(
+                if ($addresses.Count -gt 0) { "-ServerAddresses $($addresses -join ',')" } else { '-ResetServerAddresses' })
+            $lines += ''
+            $found++
+        }
+    } catch {
+        Write-WzLog "DNS-Konfiguration nicht auslesbar: $($_.Exception.Message.Split([char]10)[0])" -Level Warn
+        return ''
+    }
+
+    if ($found -eq 0) { return '' }
+    if ($syncHash.DryRun) {
+        Write-WzLog '[Test] DNS-Konfiguration würde gesichert' -Level Test
+        return ''
+    }
+
+    try {
+        $target = Join-Path (Get-WzBackupDir -Stamp "$(Get-Date -Format 'yyyy-MM-dd_HHmmss')-dns") 'dns-vorher.txt'
+        [IO.File]::WriteAllText($target, ($lines -join [Environment]::NewLine), [Text.Encoding]::UTF8)
+        Write-WzLog "Bisherige DNS-Einstellungen gesichert: $target" -Level Ok
+        return $target
+    } catch {
+        Write-WzLog "DNS-Sicherung nicht schreibbar: $($_.Exception.Message.Split([char]10)[0])" -Level Warn
+        return ''
+    }
+}
+
 function Set-WzDnsServers {
     <#
     .SYNOPSIS
@@ -59,7 +116,12 @@ function Set-WzDnsServers {
         default      { @() }
     }
 
-    $result = [pscustomobject]@{ Changed = 0; Failed = 0; Adapters = @() }
+    $result = [pscustomobject]@{ Changed = 0; Failed = 0; Adapters = @(); BackupFile = '' }
+
+    # Vor jeder Änderung den Vorzustand wegschreiben. »Auto« bedeutet DHCP — ein
+    # fest eingetragener Firmen-DNS wäre danach unwiederbringlich weg, und der
+    # Dialog hat früher trotzdem behauptet, das sei umkehrbar.
+    $result.BackupFile = Save-WzDnsState
 
     try {
         $adapters = @(Get-NetAdapter -Physical -ErrorAction Stop | Where-Object { $_.Status -eq 'Up' })
@@ -255,7 +317,8 @@ function Remove-WzBloatware {
     #>
     param([Parameter(Mandatory = $true)]$Packages)
 
-    $result = [pscustomobject]@{ Removed = 0; Failed = 0 }
+    $result = [pscustomobject]@{ Removed = 0; Failed = 0; RecordFile = '' }
+    $removed = @()
 
     foreach ($package in $Packages) {
         if ($syncHash.DryRun) {
@@ -266,6 +329,7 @@ function Remove-WzBloatware {
         try {
             Remove-AppxPackage -Package $package.FullName -AllUsers -ErrorAction Stop
             $result.Removed++
+            $removed += $package
             Write-WzLog "$($package.DisplayName) entfernt" -Level Ok
         } catch {
             $result.Failed++
@@ -282,5 +346,46 @@ function Remove-WzBloatware {
     }
 
     $script:WzAppxCache = $null
+    $result.RecordFile = Save-WzRemovedAppsRecord -Packages $removed
     return $result
+}
+
+function Save-WzRemovedAppsRecord {
+    <#
+    .SYNOPSIS
+        Hält fest, welche mitgelieferten Apps entfernt wurden.
+    .NOTES
+        Anders als bei den Optimierungen gibt es hier keine Rücknahme per Knopfdruck:
+        Ein entferntes Appx-Paket lässt sich nur über den Store oder das
+        Windows-Abbild zurückholen. Ohne diese Liste wüsste hinterher niemand mehr,
+        was überhaupt weg ist — auch nicht, wenn der Kunde eine App vermisst.
+    #>
+    param([Parameter(Mandatory = $true)][AllowEmptyCollection()]$Packages)
+
+    $list = @($Packages)
+    if ($list.Count -eq 0) { return '' }
+
+    $lines = @(
+        'Von WinZii entfernte mitgelieferte Apps'
+        "Computer: $env:COMPUTERNAME"
+        "Zeitpunkt: $(Get-Date -Format 'dd.MM.yyyy HH:mm:ss')"
+        ''
+        'Zurückholen: über den Microsoft Store suchen und neu installieren.'
+        ''
+    )
+    foreach ($package in $list) {
+        $lines += $package.DisplayName
+        $lines += "  $($package.FullName)"
+        $lines += ''
+    }
+
+    try {
+        $target = Join-Path (Get-WzBackupDir -Stamp "$(Get-Date -Format 'yyyy-MM-dd_HHmmss')-apps") 'entfernte-apps.txt'
+        [IO.File]::WriteAllText($target, ($lines -join [Environment]::NewLine), [Text.Encoding]::UTF8)
+        Write-WzLog "Liste der entfernten Apps gesichert: $target" -Level Ok
+        return $target
+    } catch {
+        Write-WzLog "Liste der entfernten Apps nicht schreibbar: $($_.Exception.Message.Split([char]10)[0])" -Level Warn
+        return ''
+    }
 }

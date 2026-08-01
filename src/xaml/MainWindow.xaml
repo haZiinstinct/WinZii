@@ -131,7 +131,7 @@
                 <!-- Fußzeile: Version und haZii-Credit -->
                 <StackPanel Grid.Row="2" Margin="22,16,22,18">
                     <Border Height="1" Background="#14FFFFFF" Margin="0,0,0,14" />
-                    <TextBlock Name="SidebarVersion" Text="v0.1.0"
+                    <TextBlock Name="SidebarVersion" Text="v0.2.0"
                                FontFamily="{DynamicResource WzFontMono}" FontSize="10.5"
                                Foreground="{DynamicResource WzTextFaint}" Margin="0,0,0,7" />
                     <TextBlock Name="HaziiBadge" FontFamily="{DynamicResource WzFontMono}" FontSize="11.5" Cursor="Hand"

@@ -1,11 +1,13 @@
 ﻿# Prüft Invoke-WzProcess: Rückgabewerte, Ausgabe, Zeitbegrenzung — und ob es
 # auch in einem Hintergrund-Runspace funktioniert (dort läuft es im Betrieb).
 Add-Type -AssemblyName PresentationFramework
-$src = 'C:\Users\haZii\Documents\GitHub\WinZii\src'
-$global:WzRootPath = Split-Path -Parent $src
+$root = Split-Path -Parent $PSScriptRoot
+$src = Join-Path $root 'src'
+$global:WzRootPath = $root
 $global:syncHash = [hashtable]::Synchronized(@{})
 $syncHash.LogEntries = [Collections.ArrayList]::Synchronized((New-Object Collections.ArrayList))
-$syncHash.Version = '0.2.0'
+. (Join-Path $src 'version.ps1')
+$syncHash.Version = $script:WzVersion
 foreach ($m in 'Core.Paths', 'Core.Logging', 'Core.Json', 'Core.Runspace') {
     . (Join-Path $src "modules\$m.ps1")
 }

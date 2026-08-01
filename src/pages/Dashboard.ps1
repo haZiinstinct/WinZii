@@ -257,6 +257,13 @@ function Write-WzDashboardNotices {
         [void]$notices.Items.Add((New-WzNotice -Kind 'warn' `
             -Text "Ein Neustart steht aus ($($Info.PendingReboot)). Manche Änderungen greifen erst danach."))
     }
+    if ($syncHash.WriteBlocked -or -not (Test-WzWritableRoot)) {
+        # Auf einem schreibgeschützten Stick läuft WinZii weiter, kann aber weder
+        # Protokoll noch Sicherungen noch Berichte ablegen. Das gehört sichtbar
+        # nach oben und nicht nur ins Protokoll, das es ja gerade nicht gibt.
+        [void]$notices.Items.Add((New-WzNotice -Kind 'warn' `
+            -Text 'Auf diesen Datenträger lässt sich nicht schreiben. Protokoll, Sicherungen und Berichte können nicht gespeichert werden — und damit gibt es zu Änderungen keinen Rückweg. Vor Eingriffen bitte auf einen beschreibbaren Datenträger wechseln.'))
+    }
     if ($Info.StickIsFat32) {
         [void]$notices.Items.Add((New-WzNotice -Kind 'warn' `
             -Text 'WinZii liegt auf einem FAT32-Datenträger. Für Office-Downloads werden exFAT oder NTFS empfohlen (4-GB-Dateigrenze).'))

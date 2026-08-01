@@ -7,6 +7,9 @@
 /offline/*
 !/offline/.gitkeep
 
+# Gebaute Release-Archive (tools\New-Release.ps1)
+/dist/
+
 # Windows
 Thumbs.db
 desktop.ini

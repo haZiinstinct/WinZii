@@ -143,8 +143,14 @@ function Start-WzDnsChange {
         default      { 'Die Einstellungen kommen wieder vom Router' }
     }
 
+    # Bewusst genau formuliert: »zurück auf Router« stellt auf DHCP um und ist
+    # nicht dasselbe wie ein von Hand eingetragener Server. Die bisherigen Werte
+    # landen deshalb vorher als Datei im Sicherungsordner.
     $answer = Show-WzConfirm -Title "DNS auf $Provider umstellen" `
-        -Message "$description`n`nDie Änderung gilt für alle aktiven Netzwerkkarten und lässt sich jederzeit auf »Router« zurückstellen." `
+        -Message ("$description`n`nDie Änderung gilt für alle aktiven Netzwerkkarten. Die bisherigen " +
+            "Einstellungen werden vorher unter backups\ abgelegt — bei einem PC mit fest eingetragenem " +
+            'Server (Firmennetz, eigener Router) ist das der einzige Weg zurück, denn »zurück auf Router« ' +
+            'bedeutet nur: wieder automatisch beziehen.') `
         -ConfirmText 'Umstellen'
     if (-not $answer.Confirmed) { return }
 
@@ -154,9 +160,12 @@ function Start-WzDnsChange {
     } -OnComplete {
         param($result)
         if (-not $result) { return }
-        Add-WzAction -Area 'Reparatur' -Summary "Namensauflösung auf $Provider umgestellt"
-        Show-WzInfo -Title 'DNS umgestellt' `
-            -Message "$($result.Changed) Netzwerkkarte(n) geändert." -Items @($result.Adapters)
+        Add-WzAction -Area 'Reparatur' -Summary "Namensauflösung auf $Provider umgestellt" `
+            -Detail @($result.Adapters)
+        $message = "$($result.Changed) Netzwerkkarte(n) geändert."
+        if ($result.BackupFile) { $message += ' Die bisherigen Einstellungen liegen als Datei bereit.' }
+        Show-WzInfo -Title 'DNS umgestellt' -Message $message `
+            -Items @(@($result.Adapters) + @($result.BackupFile | Where-Object { $_ }))
     }.GetNewClosure()
 }
 
@@ -290,8 +299,10 @@ function Start-WzBloatwareRemove {
             -Summary "$($result.Removed) mitgelieferte App(s) entfernt" `
             -Detail @($selected | ForEach-Object { $_.DisplayName })
 
-        Show-WzInfo -Title 'Fertig' `
-            -Message "$($result.Removed) App(s) entfernt, $($result.Failed) fehlgeschlagen."
+        $message = "$($result.Removed) App(s) entfernt, $($result.Failed) fehlgeschlagen."
+        if ($result.RecordFile) { $message += ' Was entfernt wurde, steht in der Liste darunter.' }
+        Show-WzInfo -Title 'Fertig' -Message $message `
+            -Items @($result.RecordFile | Where-Object { $_ })
         Start-WzBloatwareScan
     }.GetNewClosure()
 }

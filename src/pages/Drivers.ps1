@@ -144,7 +144,7 @@ function Write-WzDriverBackupInfo {
 
     $needed = if ($Store.ThirdPartyKnown) { $Store.ThirdPartyBytes } else { $Store.TotalBytes }
     $freeKind = if ($Volume.FreeBytes -lt $needed) { 'error' } else { 'ok' }
-    [void]$container.Children.Add((New-WzInfoRow "Frei auf Laufwerk $($Volume.DriveLetter):" `
+    [void]$container.Children.Add((New-WzInfoRow "Frei auf $($Volume.DisplayName)" `
         (Format-WzBytes $Volume.FreeBytes) -Kind $freeKind -LabelWidth 250))
 
     if ($Volume.FreeBytes -lt $Store.TotalBytes) {

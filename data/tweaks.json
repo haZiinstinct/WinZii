@@ -638,10 +638,10 @@
       "category": "privacy",
       "level": "soft",
       "risk": "low",
-      "name": "Widgets und Nachrichten abschalten",
+      "name": "Widgets abschalten",
       "description": "Entfernt das Wetter- und Nachrichtenfeld aus der Taskleiste. Es lädt im Hintergrund dauernd Inhalte nach.",
       "defaultChecked": true,
-      "appliesTo": "all",
+      "appliesTo": "win11",
       "requiresReboot": true,
       "actions": [
         {
@@ -657,6 +657,33 @@
           "name": "TaskbarDa",
           "valueType": "DWord",
           "value": 0
+        }
+      ]
+    },
+    {
+      "id": "priv-newsinterests-win10",
+      "category": "privacy",
+      "level": "soft",
+      "risk": "low",
+      "name": "Neuigkeiten und Interessen abschalten",
+      "description": "Das Gegenstück zu den Widgets unter Windows 10. Windows 11 nutzt dafür andere Schlüssel, deshalb sind es zwei getrennte Einträge — sonst hätte der eine auf dem jeweils anderen System Erfolg gemeldet, ohne etwas zu bewirken.",
+      "defaultChecked": true,
+      "appliesTo": "win10",
+      "requiresReboot": true,
+      "actions": [
+        {
+          "type": "registry",
+          "path": "HKLM:\\SOFTWARE\\Policies\\Microsoft\\Windows\\Windows Feeds",
+          "name": "EnableFeeds",
+          "valueType": "DWord",
+          "value": 0
+        },
+        {
+          "type": "registry",
+          "path": "HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\Feeds",
+          "name": "ShellFeedsTaskbarViewMode",
+          "valueType": "DWord",
+          "value": 2
         }
       ]
     },

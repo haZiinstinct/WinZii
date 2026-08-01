@@ -7,12 +7,14 @@
 **Portables Windows-Werkzeug für die tägliche Technikerarbeit.**
 Vom USB-Stick starten, aufräumen, optimieren, einrichten — ohne Installation, ohne Konto, ohne Telemetrie.
 
+<sub>A German-language Windows maintenance toolkit for IT technicians. Interface and documentation are German only.</sub>
+
 ![Version](https://img.shields.io/badge/Version-0.2.0-00d4ff?labelColor=0a0a0f&style=flat-square)
 ![Windows](https://img.shields.io/badge/Windows-10%20%7C%2011-00d4ff?labelColor=0a0a0f&style=flat-square)
 ![PowerShell](https://img.shields.io/badge/PowerShell-5.1-00d4ff?labelColor=0a0a0f&style=flat-square)
 ![Installation](https://img.shields.io/badge/Installation-keine-00d4ff?labelColor=0a0a0f&style=flat-square)
 
-[Loslegen](#-loslegen) · [Funktionen](#-funktionen) · [Sicherheit](#%EF%B8%8F-sicherheit) · [Aufbau](#%EF%B8%8F-aufbau) · [Erweitern](#-erweitern)
+[Loslegen](#-loslegen) · [Funktionen](#-funktionen) · [Sicherheit](#-sicherheit) · [Grenzen](#-bekannte-grenzen) · [Aufbau](#-aufbau) · [Erweitern](#-erweitern)
 
 </div>
 
@@ -39,22 +41,25 @@ Vom USB-Stick starten, aufräumen, optimieren, einrichten — ohne Installation,
 
 ## 🚀 Loslegen
 
-1. Ordner auf einen USB-Stick kopieren (**exFAT oder NTFS**, nicht FAT32 — sonst passen die Office-Pakete nicht drauf).
+1. Aktuelles ZIP aus den [Releases](https://github.com/haZiinstinct/WinZii/releases) laden und auf einen USB-Stick entpacken (**exFAT oder NTFS**, nicht FAT32 — sonst passen die Office-Pakete nicht drauf).
 2. `Start.bat` doppelklicken.
 3. Die Abfrage der Administratorrechte bestätigen.
 
-Das war alles. WinZii braucht keine Installation, keine Laufzeitumgebung und keinen bestimmten Laufwerksbuchstaben.
+Das war alles. WinZii braucht keine Installation, keine Laufzeitumgebung und keinen bestimmten Laufwerksbuchstaben. Der Ordner darf heißen, wie er will, und an jeder Stelle liegen — auch in einem Pfad mit Leerzeichen.
 
 > **Windows meldet sich mit einem blauen Hinweis?**
-> Auf »Weitere Informationen« und dann »Trotzdem ausführen« klicken. Der Hinweis erscheint bei jeder Datei aus dem Internet, die nicht kostenpflichtig signiert wurde.
+> Auf »Weitere Informationen« und dann »Trotzdem ausführen« klicken. Der Hinweis erscheint bei jeder Datei aus dem Internet, die nicht kostenpflichtig signiert wurde. Zu jedem Release gehört eine SHA256-Prüfsumme — damit lässt sich das Archiv vor dem Entpacken abgleichen:
+> ```powershell
+> Get-FileHash .\WinZii-0.2.0.zip -Algorithm SHA256
+> ```
 
 **Voraussetzungen:** Windows 10 oder 11 mit Administratorrechten. PowerShell 5.1 und .NET Framework sind in Windows enthalten.
 
-**Erster Start empfohlen im Testmodus:** Der Schalter unten rechts protokolliert alle Änderungen, ohne sie auszuführen. So lässt sich jede Aktion vorher ansehen.
+**Erster Start empfohlen im Testmodus:** Der Schalter unten rechts protokolliert alle Änderungen, ohne sie auszuführen. So lässt sich jede Aktion vorher ansehen. `Start.bat` reicht Schalter durch — `Start.bat -DryRun` startet gleich im Testmodus, `Start.bat -NoElevate` ohne Rechteanforderung.
 
 ---
 
-## 🛡️ Sicherheit
+## 🛡 Sicherheit
 
 Ein Werkzeug, das tief ins System eingreift, muss den Weg zurück kennen:
 
@@ -67,6 +72,27 @@ Ein Werkzeug, das tief ins System eingreift, muss den Weg zurück kennen:
 Alles landet unter `backups\<Computername>\<Zeitstempel>\`.
 
 Was **nicht** passiert: keine Telemetrie, keine Verbindung nach außen außer für ausdrücklich angestoßene Downloads (winget, Office, LibreOffice), kein Löschen persönlicher Dateien. Der Download-Ordner wird nur ausgewertet, nie geleert.
+
+Zwei Ausgaben schreiben absichtlich Geheimnisse im Klartext auf den Datenträger, jeweils hinter einer eigenen Bestätigung: der **WLAN-Export mit Schlüsseln** und die **BitLocker-Wiederherstellungsschlüssel**. Der Stick gehört danach nicht in fremde Hände. Einzelheiten in [SECURITY.md](SECURITY.md).
+
+> **Ohne Gewähr.** WinZii greift tief in Windows ein. Die Nutzung erfolgt auf eigene Verantwortung — erst im Testmodus ansehen, vor größeren Eingriffen einen Wiederherstellungspunkt anlegen lassen, und bei Kundendaten vorher sichern.
+
+---
+
+## ⚠ Bekannte Grenzen
+
+Ehrlich gesagt, damit niemand böse überrascht wird: WinZii wurde auf **einem** Rechner entwickelt und geprüft — Windows 11 Enterprise, deutschsprachig, Desktop ohne Akku, ohne WLAN, ohne BitLocker, ohne OneDrive.
+
+| Bereich | Stand |
+| --- | --- |
+| **Windows 10** | Die Versionsweiche greift (34 Einträge für beide Systeme, 6 nur für Windows 11, 1 nur für Windows 10), aber es lief dort nie ein vollständiger Durchlauf. |
+| **Nicht-deutsches Windows** | Die Stellen, die Windows-Ausgaben auswerten, kennen Deutsch und Englisch; `takeown` fragt die Oberflächensprache ab. Geprüft wurde nur die deutsche Seite. |
+| **Akku, WLAN, BitLocker, OneDrive** | Die »nicht vorhanden«-Pfade sind geprüft und melden sauber. Der jeweilige Positiv-Fall ist mangels Hardware ungetestet. |
+| **Treibersicherung, Office, winget-Nachinstallation** | Nur lesend geprüft, nie vollständig durchgeführt. |
+| **Windows Sandbox** | Die beiden `.wsb`-Dateien sind ungetestet. |
+| **Kleine Bildschirme** | Das Fenster verlangt mindestens 1060 × 640 Punkte. Auf 1366 × 768 bei 125 % Skalierung wird es eng. |
+
+Rückmeldungen von anderen Systemen sind ausdrücklich willkommen — besonders von Windows 10 und von nicht-deutschen Installationen.
 
 ---
 
@@ -88,7 +114,7 @@ Zwölf Seiten in fünf Gruppen:
 
 ---
 
-## 🛠️ Aufbau
+## 🛠 Aufbau
 
 ```
 WinZii/
@@ -101,8 +127,9 @@ WinZii/
 │  ├─ xaml/               Oberfläche: Theme.xaml + eine Datei je Seite
 │  └─ templates/          Vorlage für die HTML-Berichte
 ├─ data/                  Kataloge als JSON — hier wird erweitert
-├─ assets/fonts/          JetBrains Mono und Inter
-├─ tools/                 Prüfwerkzeuge für die Entwicklung
+├─ assets/fonts/          JetBrains Mono und Inter (SIL OFL 1.1, siehe unten)
+├─ tools/                 Prüfwerkzeuge und Release-Bauskript
+├─ docs/                  Banner und Bildschirmfoto für dieses README
 ├─ offline/               Zwischenspeicher für Installationsdateien
 ├─ logs/ backups/ reports/  Ergebnisse je Computer
 ```
@@ -151,7 +178,7 @@ Aktionstypen: `registry`, `service`, `scheduledTask`, `feature`, `appx`, `capabi
 
 Nach jeder Änderung prüfen:
 
-```bash
+```powershell
 powershell -NoProfile -File tools\Test-Catalogs.ps1
 ```
 
@@ -169,6 +196,7 @@ powershell -NoProfile -File tools\Test-Catalogs.ps1
 | `tools\Test-Process.ps1` | Rückgabewerte externer Programme, auch im Hintergrund-Runspace |
 | `tools\Invoke-Analyzer.ps1` | PSScriptAnalyzer mit Zielversion PowerShell 5.1 |
 | `tools\Repair-Encoding.ps1` | UTF-8 mit BOM erzwingen (Pflicht bei PowerShell 5.1 und Umlauten) |
+| `tools\New-Release.ps1` | Release-ZIP bauen und SHA256-Prüfsumme ausgeben |
 | `tools\WinZii.wsb` | Windows Sandbox zum gefahrlosen Ausprobieren (schreibgeschützt) |
 | `tools\WinZii-Schreibend.wsb` | Dasselbe mit Schreibrecht — für Treibersicherung und Berichte |
 
@@ -178,13 +206,17 @@ Die Sandbox muss einmalig freigeschaltet werden, danach ist ein Neustart nötig:
 Enable-WindowsOptionalFeature -Online -FeatureName Containers-DisposableClientVM -All
 ```
 
-Alle `.ps1`- und `.xaml`-Dateien müssen **UTF-8 mit BOM** sein, sonst liest PowerShell 5.1 sie als ANSI und zerstört die Umlaute.
+Alle `.ps1`- und `.xaml`-Dateien müssen **UTF-8 mit BOM** sein, sonst liest PowerShell 5.1 sie als ANSI und zerstört die Umlaute. Einzelheiten und die Prüfliste vor dem Commit stehen in [CONTRIBUTING.md](CONTRIBUTING.md).
+
+Was sich zwischen den Fassungen geändert hat: [CHANGELOG.md](CHANGELOG.md).
 
 ---
 
 ## 📄 Lizenz
 
-MIT — siehe [LICENSE](LICENSE).
+**WinZii** steht unter der MIT-Lizenz — siehe [LICENSE](LICENSE).
+
+**Die mitgelieferten Schriften nicht.** [Inter](https://github.com/rsms/inter) und [JetBrains Mono](https://github.com/JetBrains/JetBrainsMono) unter `assets/fonts/` stehen unter der **SIL Open Font License 1.1**; die Lizenztexte liegen als `OFL-Inter.txt` und `OFL-JetBrainsMono.txt` daneben.
 
 Die Techniken zur KI-Entfernung orientieren sich an [zoicware/RemoveWindowsAI](https://github.com/zoicware/RemoveWindowsAI), der Aufbau als portables Werkzeug an [Chris Titus WinUtil](https://github.com/christitustech/winutil).
 
@@ -192,6 +224,6 @@ Die Techniken zur KI-Entfernung orientieren sich an [zoicware/RemoveWindowsAI](h
 
 <div align="center">
 
-Built by haZii · `// code:` [**haZii.org**](https://hazii.org)
+Gebaut von haZii · `// code:` [**haZii.org**](https://hazii.org)
 
 </div>
