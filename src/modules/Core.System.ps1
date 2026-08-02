@@ -311,7 +311,9 @@ function Get-WzBatteryHealth {
         $result.FullmWh = [int]($full | Measure-Object -Property FullChargedCapacity -Sum).Sum
 
         if ($result.DesignmWh -gt 0 -and $result.FullmWh -gt 0) {
-            $result.WearPercent = [math]::Round((1 - ($result.FullmWh / $result.DesignmWh)) * 100)
+            # Neue Akkus melden gern mehr als die Auslegungskapazität — ein
+            # negativer Verschleiß wäre Unsinn, also bei 0 abschneiden.
+            $result.WearPercent = [math]::Max(0, [math]::Round((1 - ($result.FullmWh / $result.DesignmWh)) * 100))
             $result.Verdict = if ($result.WearPercent -lt 20) {
                 "$($result.WearPercent) % Verschleiß — der Akku ist in Ordnung"
             } elseif ($result.WearPercent -lt 40) {
@@ -447,7 +449,9 @@ function Get-WzBitLockerStatus {
     $bootStatus = (Get-ItemProperty 'HKLM:\SYSTEM\CurrentControlSet\Control\BitLockerStatus' -ErrorAction SilentlyContinue).BootStatus
     $service = Get-Service BDESVC -ErrorAction SilentlyContinue
 
-    if (-not $service) { return 'nicht verfügbar (Windows Home)' }
+    # Kein pauschales »Windows Home«: Home hat den Dienst ebenfalls, nur die
+    # Verwaltungsoberfläche fehlt dort.
+    if (-not $service) { return 'Dienst nicht vorhanden' }
     if ($bootStatus -eq 0 -and $service.Status -ne 'Running') {
         return 'Systemlaufwerk nicht verschlüsselt'
     }
@@ -522,4 +526,89 @@ function Format-WzUptime {
     if ($TimeSpan.Hours -gt 0) { $parts += "$($TimeSpan.Hours) Std" }
     $parts += "$($TimeSpan.Minutes) Min"
     return ($parts -join ' ')
+}
+
+function Get-WzInteractiveProfile {
+    <#
+    .SYNOPSIS
+        Profilordner des am Bildschirm angemeldeten Anwenders — aber nur, wenn
+        WinZii unter einem anderen Konto läuft. Sonst $null.
+    .DESCRIPTION
+        Das Gegenstück zu Resolve-WzRegistryPath für das Dateisystem: Wird die
+        Rechteanforderung mit einem Technikerkonto beantwortet, zeigen
+        $env:USERPROFILE und Verwandte auf dessen Profil. Die Seite »Daten«
+        würde dann »kein OneDrive« melden, obwohl der Kunde eines hat, und die
+        Bereinigung würde das falsche Profil aufräumen.
+    #>
+    if ($script:WzInteractiveProfileChecked) { return $script:WzInteractiveProfile }
+    $script:WzInteractiveProfileChecked = $true
+    $script:WzInteractiveProfile = $null
+
+    $sid = Get-WzInteractiveUserSid
+    if (-not $sid) { return $null }
+
+    try {
+        $entry = Get-ItemProperty "HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\ProfileList\$sid" -ErrorAction Stop
+        $profilePath = [Environment]::ExpandEnvironmentVariables([string]$entry.ProfileImagePath)
+        if ($profilePath -and (Test-Path -LiteralPath $profilePath -ErrorAction SilentlyContinue)) {
+            $script:WzInteractiveProfile = [pscustomobject]@{
+                Sid  = $sid
+                Path = $profilePath
+            }
+        }
+    } catch { }
+    return $script:WzInteractiveProfile
+}
+
+function Expand-WzUserPath {
+    <#
+    .SYNOPSIS
+        Löst Umgebungsvariablen auf — benutzerbezogene aber auf das Profil des
+        angemeldeten Anwenders statt auf das Konto, unter dem WinZii läuft.
+    .NOTES
+        Läuft WinZii unter dem Konto des Anwenders (der Normalfall), ist das
+        Ergebnis identisch mit ExpandEnvironmentVariables.
+    #>
+    param([Parameter(Mandatory = $true)][string]$Path)
+
+    $interactive = Get-WzInteractiveProfile
+    if ($interactive) {
+        $userRoot = $interactive.Path
+        $replacements = @(
+            @('%USERPROFILE%', $userRoot),
+            @('%LOCALAPPDATA%', (Join-Path $userRoot 'AppData\Local')),
+            @('%APPDATA%', (Join-Path $userRoot 'AppData\Roaming')),
+            @('%TEMP%', (Join-Path $userRoot 'AppData\Local\Temp')),
+            @('%TMP%', (Join-Path $userRoot 'AppData\Local\Temp'))
+        )
+        foreach ($pair in $replacements) {
+            # -replace ist in PowerShell ohnehin schreibungsunabhängig; im
+            # Ersatztext ist nur $ besonders und wird verdoppelt.
+            $Path = $Path -replace [regex]::Escape($pair[0]), $pair[1].Replace('$', '$$')
+        }
+    }
+    return [Environment]::ExpandEnvironmentVariables($Path)
+}
+
+function Get-WzUserFolder {
+    <#
+    .SYNOPSIS
+        Benutzerordner des angemeldeten Anwenders (LocalAppData, RoamingAppData,
+        Profile) — fällt auf die Umgebung des laufenden Kontos zurück.
+    #>
+    param([ValidateSet('Profile', 'LocalAppData', 'RoamingAppData')][string]$Kind = 'Profile')
+
+    $interactive = Get-WzInteractiveProfile
+    if ($interactive) {
+        switch ($Kind) {
+            'LocalAppData'   { return Join-Path $interactive.Path 'AppData\Local' }
+            'RoamingAppData' { return Join-Path $interactive.Path 'AppData\Roaming' }
+            default          { return $interactive.Path }
+        }
+    }
+    switch ($Kind) {
+        'LocalAppData'   { return $env:LOCALAPPDATA }
+        'RoamingAppData' { return $env:APPDATA }
+        default          { return $env:USERPROFILE }
+    }
 }

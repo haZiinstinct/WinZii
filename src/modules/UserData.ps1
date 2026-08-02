@@ -65,12 +65,17 @@ function Get-WzUserProfiles {
         return @()
     }
 
+    # Der Vergleichspunkt für »angemeldet«: bei Elevierung mit einem fremden
+    # Konto das Profil des Anwenders am Bildschirm, nicht das des Technikers.
+    $currentProfile = Get-WzUserFolder -Kind Profile
+
     foreach ($entry in $entries) {
         $path = $entry.LocalPath
-        # Fremde Profile sind auch mit Administratorrechten nicht immer lesbar.
-        # Test-Path wirft dann »Zugriff verweigert« — ein Fehler, der niemandem
-        # im Protokoll hilft, weil das Profil ja trotzdem aufgeführt gehört.
-        if (-not (Test-Path -LiteralPath $path -ErrorAction SilentlyContinue)) { continue }
+        # Nur überspringen, wenn der Ordner wirklich fehlt (verwaister
+        # Registry-Eintrag). »Zugriff verweigert« sieht für Test-Path genauso
+        # aus — solche Profile gehören aber in die Liste, sonst fehlt auf der
+        # Sicherungs-Checkliste ein ganzer Benutzer.
+        if (-not (Test-WzDirectoryPresent $path)) { continue }
 
         $name = Split-Path -Leaf $path
         $account = $name
@@ -84,6 +89,9 @@ function Get-WzUserProfiles {
         $accessible = $false
 
         if ($IncludeSizes) {
+            # Bei großen Profilen dauert das Vermessen — die Zeile zeigt, dass
+            # es vorangeht und welches Konto gerade dran ist
+            Write-WzLog "Vermesse Profil $account..." -Level Info
             foreach ($folder in $known) {
                 $folderPath = Join-Path $path $folder.Key
                 if (-not (Test-Path -LiteralPath $folderPath -ErrorAction SilentlyContinue)) { continue }
@@ -108,11 +116,48 @@ function Get-WzUserProfiles {
             Folders     = $folders
             TotalBytes  = $total
             Accessible  = $accessible
-            IsCurrent   = ($path -eq $env:USERPROFILE)
+            IsCurrent   = ($path -eq $currentProfile)
         }
     }
 
     return @($profiles | Sort-Object -Property @{ Expression = 'IsCurrent'; Descending = $true }, Name)
+}
+
+function Test-WzDirectoryPresent {
+    <#
+    .SYNOPSIS
+        Gibt es diesen Ordner — auch dann richtig beantwortet, wenn der Zugriff
+        verweigert wird?
+    .NOTES
+        Test-Path liefert bei »Zugriff verweigert« dasselbe $false wie bei
+        »fehlt«. Das Elternverzeichnis (C:\Users) ist mit Administratorrechten
+        aber lesbar — dort lässt sich nachsehen, ob der Ordner existiert.
+    #>
+    param([Parameter(Mandatory = $true)][string]$Path)
+
+    if (Test-Path -LiteralPath $Path -ErrorAction SilentlyContinue) { return $true }
+
+    # GetAttributes unterscheidet die beiden Fälle sauber: bei »fehlt« kommt
+    # eine (File|Directory)NotFoundException, bei »Zugriff verweigert« eine
+    # UnauthorizedAccessException — und Letztere beweist gerade, dass es den
+    # Ordner gibt.
+    try {
+        [void][IO.File]::GetAttributes($Path)
+        return $true
+    } catch [UnauthorizedAccessException] {
+        return $true
+    } catch { }
+
+    # Letzte Instanz: im Elternverzeichnis nachsehen
+    try {
+        $parent = Split-Path -Parent $Path
+        $leaf = Split-Path -Leaf $Path
+        if (-not $parent -or -not $leaf) { return $false }
+        foreach ($directory in [IO.Directory]::EnumerateDirectories($parent)) {
+            if ([IO.Path]::GetFileName($directory) -ieq $leaf) { return $true }
+        }
+    } catch { }
+    return $false
 }
 
 function Get-WzOneDriveState {
@@ -137,7 +182,11 @@ function Get-WzOneDriveState {
 
     $accounts = @()
     try {
-        $accounts = @(Get-ItemProperty 'HKCU:\Software\Microsoft\OneDrive\Accounts\*' -ErrorAction Stop |
+        # HKCU über Resolve-WzRegistryPath: bei Elevierung mit einem fremden
+        # Konto zeigt HKCU sonst auf den Techniker — und die Seite meldete
+        # »OneDrive nicht eingerichtet«, obwohl der Kunde eines hat.
+        $accountsKey = Resolve-WzRegistryPath 'HKCU:\Software\Microsoft\OneDrive\Accounts'
+        $accounts = @(Get-ItemProperty "$accountsKey\*" -ErrorAction Stop |
             Where-Object { $_.UserFolder })
     } catch { }
 
@@ -150,6 +199,8 @@ function Get-WzOneDriveState {
     $folders = @()
     $anyPlaceholder = $false
 
+    $anyIncomplete = $false
+
     foreach ($account in $accounts) {
         $path = $account.UserFolder
         if (-not (Test-Path -LiteralPath $path)) { continue }
@@ -157,6 +208,10 @@ function Get-WzOneDriveState {
         $localBytes = [int64]0
         $cloudOnly = 0
         $localFiles = 0
+        $incomplete = $false
+        # Zeitbudget: Bei sechsstelligen Dateizahlen dauert die Zählung Minuten
+        # und sieht aus wie ein Absturz. Lieber ehrlich abbrechen und das sagen.
+        $watch = [Diagnostics.Stopwatch]::StartNew()
         try {
             foreach ($file in [IO.Directory]::EnumerateFiles($path, '*', [IO.SearchOption]::AllDirectories)) {
                 try {
@@ -170,6 +225,17 @@ function Get-WzOneDriveState {
                         $localFiles++
                     }
                 } catch { }
+
+                $count = $localFiles + $cloudOnly
+                if (($count % 20000) -eq 0 -and $count -gt 0) {
+                    Write-WzLog "OneDrive: $count Datei(en) geprüft..." -Level Info
+                }
+                if ($watch.Elapsed.TotalSeconds -gt 45) {
+                    $incomplete = $true
+                    $anyIncomplete = $true
+                    Write-WzLog "OneDrive-Ordner sehr groß — Zählung nach 45 s abgebrochen ($count Datei(en) geprüft)." -Level Warn
+                    break
+                }
             }
         } catch { }
 
@@ -181,11 +247,17 @@ function Get-WzOneDriveState {
             LocalBytes = $localBytes
             LocalFiles = $localFiles
             CloudOnly  = $cloudOnly
+            Incomplete = $incomplete
         }
     }
 
     $result.Folders = @($folders)
-    if ($anyPlaceholder) {
+    if ($anyIncomplete) {
+        # Eine halbe Zählung darf nicht beruhigend klingen — die eigentliche
+        # Empfehlung gilt dann erst recht.
+        $result.PlaceholderWarning = 'Der OneDrive-Ordner ist so groß, dass die Prüfung abgebrochen wurde — die Zahlen sind unvollständig. ' +
+            'Vor dem Kopieren in OneDrive »Immer auf diesem Gerät behalten« wählen und das Herunterladen abwarten.'
+    } elseif ($anyPlaceholder) {
         $total = ($folders | Measure-Object -Property CloudOnly -Sum).Sum
         $result.PlaceholderWarning = "Achtung: $total Datei(en) liegen nur in der Cloud und nicht auf dieser Platte. " +
             'Wer den OneDrive-Ordner einfach kopiert, sichert leere Platzhalter. Vorher in OneDrive ' +
@@ -202,10 +274,14 @@ function Get-WzOutlookFiles {
         OST ist nur ein Zwischenspeicher des Postfachs.
     #>
     $files = @()
+    # Über Get-WzUserFolder statt $env: — sonst wird bei Elevierung mit einem
+    # fremden Konto im Profil des Technikers gesucht.
+    $localAppData = Get-WzUserFolder -Kind LocalAppData
+    $userProfile = Get-WzUserFolder -Kind Profile
     $roots = @(
-        (Join-Path $env:LOCALAPPDATA 'Microsoft\Outlook')
-        (Join-Path $env:USERPROFILE 'Documents\Outlook-Dateien')
-        (Join-Path $env:USERPROFILE 'Documents\Outlook Files')
+        (Join-Path $localAppData 'Microsoft\Outlook')
+        (Join-Path $userProfile 'Documents\Outlook-Dateien')
+        (Join-Path $userProfile 'Documents\Outlook Files')
     )
 
     foreach ($root in $roots) {
@@ -232,11 +308,13 @@ function Get-WzBrowserProfiles {
     .SYNOPSIS
         Gefundene Browser-Profile mit Größe.
     #>
+    $localAppData = Get-WzUserFolder -Kind LocalAppData
+    $roamingAppData = Get-WzUserFolder -Kind RoamingAppData
     $browsers = @(
-        @{ Name = 'Microsoft Edge'; Path = (Join-Path $env:LOCALAPPDATA 'Microsoft\Edge\User Data'); Kind = 'chromium' }
-        @{ Name = 'Google Chrome';  Path = (Join-Path $env:LOCALAPPDATA 'Google\Chrome\User Data'); Kind = 'chromium' }
-        @{ Name = 'Brave';          Path = (Join-Path $env:LOCALAPPDATA 'BraveSoftware\Brave-Browser\User Data'); Kind = 'chromium' }
-        @{ Name = 'Mozilla Firefox'; Path = (Join-Path $env:APPDATA 'Mozilla\Firefox\Profiles'); Kind = 'firefox' }
+        @{ Name = 'Microsoft Edge'; Path = (Join-Path $localAppData 'Microsoft\Edge\User Data'); Kind = 'chromium' }
+        @{ Name = 'Google Chrome';  Path = (Join-Path $localAppData 'Google\Chrome\User Data'); Kind = 'chromium' }
+        @{ Name = 'Brave';          Path = (Join-Path $localAppData 'BraveSoftware\Brave-Browser\User Data'); Kind = 'chromium' }
+        @{ Name = 'Mozilla Firefox'; Path = (Join-Path $roamingAppData 'Mozilla\Firefox\Profiles'); Kind = 'firefox' }
     )
 
     $found = @()

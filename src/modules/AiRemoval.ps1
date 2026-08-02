@@ -93,7 +93,9 @@ function Get-WzAllAppxPackages {
     try {
         $packages = @(Get-AppxPackage -AllUsers -ErrorAction Stop)
     } catch {
-        # Ohne Administratorrechte geht nur das eigene Profil
+        # Ohne Administratorrechte geht nur das eigene Profil — das gehört
+        # gesagt, sonst wirkt die Liste vollständig, obwohl sie es nicht ist.
+        Write-WzLog 'App-Pakete: ohne Administratorrechte ist nur das eigene Konto sichtbar — bei anderen Benutzern kann mehr installiert sein.' -Level Warn
         try { $packages = @(Get-AppxPackage -ErrorAction Stop) } catch { }
     }
     $script:WzAppxCache = $packages
@@ -107,7 +109,7 @@ function Get-WzAppxMatches {
     #>
     param([Parameter(Mandatory = $true)][string[]]$Patterns)
 
-    $matches = foreach ($package in (Get-WzAllAppxPackages)) {
+    $found = foreach ($package in (Get-WzAllAppxPackages)) {
         foreach ($pattern in $Patterns) {
             if ($package.Name -like $pattern) {
                 $package
@@ -115,7 +117,7 @@ function Get-WzAppxMatches {
             }
         }
     }
-    return @($matches)
+    return @($found)
 }
 
 function Invoke-WzAppxAction {
@@ -125,7 +127,7 @@ function Invoke-WzAppxAction {
     #>
     param($Action, $Session, $Tweak)
 
-    $matches = Get-WzAppxMatches -Patterns $Action.patterns
+    $found = Get-WzAppxMatches -Patterns $Action.patterns
     $provisioned = @()
     if ($Action.removeProvisioned) {
         try {
@@ -136,23 +138,23 @@ function Invoke-WzAppxAction {
         } catch { }
     }
 
-    if ($matches.Count -eq 0 -and $provisioned.Count -eq 0) {
+    if ($found.Count -eq 0 -and $provisioned.Count -eq 0) {
         Write-WzLog "  keine passenden Pakete installiert ($($Action.patterns -join ', '))" -Level Info
         return
     }
 
     if ($syncHash.DryRun) {
-        foreach ($package in $matches) { Write-WzLog "  [Test] App entfernen: $($package.Name)" -Level Test }
+        foreach ($package in $found) { Write-WzLog "  [Test] App entfernen: $($package.Name)" -Level Test }
         foreach ($package in $provisioned) { Write-WzLog "  [Test] Bereitstellung entfernen: $($package.DisplayName)" -Level Test }
         return
     }
 
     Save-WzUndoState -Session $Session -ItemId $Tweak.id -ItemName $Tweak.name -Action $Action -Previous @{
-        packages = @($matches | ForEach-Object { $_.PackageFullName })
+        packages = @($found | ForEach-Object { $_.PackageFullName })
         note     = 'App-Pakete lassen sich nur über den Microsoft Store neu installieren'
     }
 
-    foreach ($package in $matches) {
+    foreach ($package in $found) {
         try {
             if ($package.NonRemovable -and $Action.forceNonRemovable) {
                 Set-WzAppxEndOfLife -PackageFullName $package.PackageFullName

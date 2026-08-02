@@ -158,9 +158,19 @@ function New-WzRestorePoint {
     $frequencyChanged = $false
 
     try {
-        # Systemschutz muss für C: aktiv sein
+        # Systemschutz muss für C: aktiv sein. War er aus, ist das Einschalten
+        # eine bleibende Änderung — die gehört ins Protokoll. Zurückschalten
+        # wäre falsch: Damit wäre der frisch angelegte Punkt gleich wieder weg.
+        $protectionWasOff = $false
+        try {
+            $restoreConfig = Get-ItemProperty 'HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\SystemRestore' -ErrorAction SilentlyContinue
+            $protectionWasOff = (-not $restoreConfig -or [int]$restoreConfig.RPSessionInterval -eq 0)
+        } catch { }
         try {
             Enable-ComputerRestore -Drive "$env:SystemDrive\" -ErrorAction Stop
+            if ($protectionWasOff) {
+                Write-WzLog "Der Systemschutz für $env:SystemDrive war ausgeschaltet und wurde eingeschaltet. Er bleibt an — sonst wäre der Punkt sofort wieder weg. Das kostet etwas Speicherplatz." -Level Warn
+            }
         } catch {
             Write-WzLog 'Systemschutz konnte nicht aktiviert werden — Wiederherstellungspunkt evtl. nicht möglich.' -Level Warn
         }
@@ -295,7 +305,14 @@ function Restore-WzUndoSession {
                 }
                 'command' {
                     if ($action.undo -and $action.undo.exec) {
-                        $undoResult = Invoke-WzProcess -FilePath $action.undo.exec -Arguments $action.undo.args
+                        # Der beim Anwenden eingefangene Vorzustand geht vor dem
+                        # statischen Katalogwert — er stellt genau das wieder
+                        # her, was vorher eingestellt war.
+                        $undoArgs = $action.undo.args
+                        if ($entry.previous -and $entry.previous.undoArgs) {
+                            $undoArgs = $entry.previous.undoArgs
+                        }
+                        $undoResult = Invoke-WzProcess -FilePath $action.undo.exec -Arguments $undoArgs
                         if ($undoResult.ExitCode -eq 0) { $result.Restored++ } else { $result.Failed++ }
                     } else {
                         $result.Skipped++

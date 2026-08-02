@@ -214,7 +214,7 @@ function Start-WzSpoolerRepair {
 
 function Start-WzRestorePoint {
     $answer = Show-WzConfirm -Title 'Wiederherstellungspunkt anlegen' `
-        -Message 'Windows legt einen Systemwiederherstellungspunkt an. Das dauert bis zu einer Minute und braucht etwas Speicherplatz.' `
+        -Message 'Windows legt einen Systemwiederherstellungspunkt an. Das dauert bis zu einer Minute und braucht etwas Speicherplatz. Ist der Systemschutz für C: ausgeschaltet, wird er dafür eingeschaltet und bleibt an.' `
         -ConfirmText 'Anlegen'
     if (-not $answer.Confirmed) { return }
 

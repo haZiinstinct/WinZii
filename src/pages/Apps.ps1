@@ -188,7 +188,7 @@ function Start-WzUninstallScan {
     $syncHash.AppsUninstallTitle.Text = 'wird gelesen...'
     $syncHash.AppsUninstallList.Children.Clear()
 
-    Invoke-WzTask -Name 'Programmliste lesen' -Silent -ArgumentList @($filter) -ScriptBlock {
+    Invoke-WzTask -Name 'Programmliste lesen' -Cancelable -Silent -ArgumentList @($filter) -ScriptBlock {
         param($needle)
         Get-WzInstalledPrograms -Filter $needle
     } -OnComplete {

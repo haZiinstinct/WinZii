@@ -163,7 +163,7 @@ function Start-WzCleanupScan {
 
     $categories = @($syncHash.CleanRows | ForEach-Object { $_.Category })
 
-    Invoke-WzTask -Name 'Speicherplatz analysieren' -ArgumentList (, $categories) -ScriptBlock {
+    Invoke-WzTask -Name 'Speicherplatz analysieren' -Cancelable -ArgumentList (, $categories) -ScriptBlock {
         param($categories)
         $results = @{}
         foreach ($category in $categories) {

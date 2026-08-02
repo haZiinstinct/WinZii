@@ -7,9 +7,11 @@
 **Portables Windows-Werkzeug für die tägliche Technikerarbeit.**
 Vom USB-Stick starten, aufräumen, optimieren, einrichten — ohne Installation, ohne Konto, ohne Telemetrie.
 
-<sub>A German-language Windows maintenance toolkit for IT technicians. Interface and documentation are German only.</sub>
+**Deutsch** · [English](README.en.md)
 
-![Version](https://img.shields.io/badge/Version-0.2.0-00d4ff?labelColor=0a0a0f&style=flat-square)
+<sub>A German-language Windows maintenance toolkit for IT technicians — English readme available, interface is German only.</sub>
+
+![Version](https://img.shields.io/badge/Version-0.2.1-00d4ff?labelColor=0a0a0f&style=flat-square)
 ![Windows](https://img.shields.io/badge/Windows-10%20%7C%2011-00d4ff?labelColor=0a0a0f&style=flat-square)
 ![PowerShell](https://img.shields.io/badge/PowerShell-5.1-00d4ff?labelColor=0a0a0f&style=flat-square)
 ![Installation](https://img.shields.io/badge/Installation-keine-00d4ff?labelColor=0a0a0f&style=flat-square)
@@ -50,7 +52,7 @@ Das war alles. WinZii braucht keine Installation, keine Laufzeitumgebung und kei
 > **Windows meldet sich mit einem blauen Hinweis?**
 > Auf »Weitere Informationen« und dann »Trotzdem ausführen« klicken. Der Hinweis erscheint bei jeder Datei aus dem Internet, die nicht kostenpflichtig signiert wurde. Zu jedem Release gehört eine SHA256-Prüfsumme — damit lässt sich das Archiv vor dem Entpacken abgleichen:
 > ```powershell
-> Get-FileHash .\WinZii-0.2.0.zip -Algorithm SHA256
+> Get-FileHash .\WinZii-0.2.1.zip -Algorithm SHA256
 > ```
 
 **Voraussetzungen:** Windows 10 oder 11 mit Administratorrechten. PowerShell 5.1 und .NET Framework sind in Windows enthalten.
@@ -90,7 +92,7 @@ Ehrlich gesagt, damit niemand böse überrascht wird: WinZii wurde auf **einem**
 | **Akku, WLAN, BitLocker, OneDrive** | Die »nicht vorhanden«-Pfade sind geprüft und melden sauber. Der jeweilige Positiv-Fall ist mangels Hardware ungetestet. |
 | **Treibersicherung, Office, winget-Nachinstallation** | Nur lesend geprüft, nie vollständig durchgeführt. |
 | **Windows Sandbox** | Die beiden `.wsb`-Dateien sind ungetestet. |
-| **Kleine Bildschirme** | Das Fenster verlangt mindestens 1060 × 640 Punkte. Auf 1366 × 768 bei 125 % Skalierung wird es eng. |
+| **Kleine Bildschirme** | Das Fenster braucht mindestens 1000 × 560 Punkte und verkleinert sich beim Start selbst auf die Arbeitsfläche. |
 
 Rückmeldungen von anderen Systemen sind ausdrücklich willkommen — besonders von Windows 10 und von nicht-deutschen Installationen.
 

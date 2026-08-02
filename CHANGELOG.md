@@ -3,6 +3,57 @@
 Alle nennenswerten Änderungen an WinZii. Die Fassungen folgen
 [Semantic Versioning](https://semver.org/lang/de/).
 
+## [0.2.1] — 2026-08-02
+
+Robustheit auf fremden Rechnern — die offenen Funde der Veröffentlichungs-Prüfung.
+
+### Behoben
+
+- **Elevierung mit einem fremden Konto:** Beantwortet ein Techniker die
+  Rechteanforderung mit seinem eigenen Konto, zeigten `HKCU:` und die
+  Benutzerpfade auf dessen Profil. Die Seite »Daten« meldete dann »OneDrive nicht
+  eingerichtet« und fand keine Browser-Profile, und die Bereinigung räumte das
+  falsche Profil auf. OneDrive, Outlook, Browser, Bereinigung und die
+  »angemeldet«-Kennung arbeiten jetzt mit dem Profil des Anwenders am Bildschirm —
+  im Normalfall (gleiches Konto) ändert sich nichts.
+- **Benutzerprofile ohne Lesezugriff** wurden ganz aus der Sicherungs-Checkliste
+  gelassen, weil »Zugriff verweigert« wie »fehlt« aussah. Sie erscheinen jetzt mit
+  dem Hinweis, dass sie nicht lesbar sind.
+- **Energiesparplan:** Die Rücknahme stellte stur auf »Ausbalanciert« und verwarf
+  damit den vorher aktiven Plan (etwa einen Herstellerplan oder »Ultimative
+  Leistung«). Der aktive Plan wird jetzt vor der Umstellung eingefangen und bei der
+  Rücknahme exakt wiederhergestellt. Auf Geräten ohne Höchstleistungsplan gibt es
+  statt eines rohen Fehlercodes eine erklärte Meldung.
+- **Office-Installation** beendet laufende Office-Programme ohne eigene Nachfrage
+  (`FORCEAPPSHUTDOWN`). Der Dialog nennt jetzt ausdrücklich, welche Programme
+  gerade laufen und dass ungespeicherte Dokumente verloren gehen.
+- **Ohne Adminrechte** meldete die App-Suche still nur das eigene Konto; jetzt
+  steht der Hinweis im Protokoll.
+
+### Neu
+
+- **Abbrechen-Knopf** in der Statusleiste für die Bestandsaufnahmen (Daten,
+  Geräte, Speicherplatz-Analyse, Programmliste). Eingriffe bleiben bewusst nicht
+  abbrechbar.
+- **Fortschritt und Zeitbudget** bei der Daten-Aufnahme: je Konto eine
+  Protokollzeile, bei OneDrive alle 20 000 Dateien eine Zwischenmeldung. Bricht
+  die Zählung nach 45 Sekunden ab, sagt die Seite »Prüfung unvollständig« statt
+  eine beruhigende, aber halbe Zahl zu zeigen.
+- **Englisches README** (`README.en.md`) — die Oberfläche bleibt deutsch.
+
+### Geändert
+
+- Das Fenster passt sich beim Start an die Arbeitsfläche an und kommt mit
+  1000 × 560 Punkten aus (vorher mindestens 1060 × 640 — zu groß für 1366 × 768
+  bei 125 % Skalierung).
+- Wird der Systemschutz für den Wiederherstellungspunkt erst eingeschaltet, steht
+  das jetzt im Protokoll und im Dialog.
+- Die Auswahl beim Treiber-Zurückspielen markiert Sicherungen **anderer Rechner**
+  deutlich.
+- Entfernte mitgelieferte Apps: Meldung »nicht verfügbar (Windows Home)« beim
+  BitLocker-Dienst korrigiert (Home hat den Dienst ebenfalls); Akkuverschleiß
+  kann nicht mehr negativ werden.
+
 ## [0.2.0] — 2026-08-01
 
 Schwerpunkt: WinZii war stark darin, einen PC zu *verändern*, und schwach darin, ihn zu

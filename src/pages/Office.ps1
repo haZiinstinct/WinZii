@@ -139,7 +139,21 @@ function Start-WzOfficeInstall {
     $items += "Programme: $($choice.Apps -join ', ')"
     $items += if ($cache.Available) { 'Quelle: Datenträger (kein Internet nötig)' } else { 'Quelle: Microsoft (Internet nötig)' }
 
-    $message = 'Office wird installiert. Vorhandene Office-Versionen werden dabei ersetzt. Der Vorgang dauert je nach Verbindung 10 bis 30 Minuten.'
+    # Die Installation läuft mit FORCEAPPSHUTDOWN: laufende Office-Programme
+    # werden ohne eigene Nachfrage beendet. Das gehört in den Dialog — sonst
+    # verliert der Kunde ein offenes, ungespeichertes Dokument.
+    $officeProcessNames = @{
+        winword = 'Word'; excel = 'Excel'; powerpnt = 'PowerPoint'; outlook = 'Outlook'
+        onenote = 'OneNote'; msaccess = 'Access'; visio = 'Visio'; mspub = 'Publisher'
+    }
+    $running = @(Get-Process -Name @($officeProcessNames.Keys) -ErrorAction SilentlyContinue |
+        ForEach-Object { $officeProcessNames[$_.ProcessName.ToLower()] } | Sort-Object -Unique)
+    foreach ($name in $running) {
+        $items += "Läuft gerade: $name — wird beim Installieren beendet, ungespeicherte Dokumente gehen verloren"
+    }
+
+    $message = 'Office wird installiert. Vorhandene Office-Versionen werden dabei ersetzt, laufende Office-Programme werden ohne Nachfrage beendet. Der Vorgang dauert je nach Verbindung 10 bis 30 Minuten.'
+    if ($running.Count -gt 0) { $message += ' Bitte vorher alle offenen Dokumente speichern.' }
     if ($choice.Variant.note) { $message += " $($choice.Variant.note)" }
 
     $answer = Show-WzConfirm -Title 'Office installieren' -Message $message -Items $items `

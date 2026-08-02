@@ -17,14 +17,14 @@ function Get-WzCleanupCategories {
         if ($category.group -eq 'browser') {
             $hasData = $false
             foreach ($path in $category.paths) {
-                $base = Split-Path -Parent ([Environment]::ExpandEnvironmentVariables($path))
+                $base = Split-Path -Parent (Expand-WzUserPath $path)
                 $base = $base -replace '\\\*.*$', ''
                 if (Test-Path -Path $base -ErrorAction SilentlyContinue) { $hasData = $true; break }
             }
             if (-not $hasData) { continue }
         }
         if ($category.method -eq 'windowsOld') {
-            $target = [Environment]::ExpandEnvironmentVariables($category.paths[0])
+            $target = Expand-WzUserPath $category.paths[0]
             if (-not (Test-Path -LiteralPath $target)) { continue }
         }
         $category
@@ -131,7 +131,7 @@ function Measure-WzPathSet {
     $threshold = (Get-Date).AddDays(-90)
 
     foreach ($rawPath in $Paths) {
-        $path = [Environment]::ExpandEnvironmentVariables($rawPath)
+        $path = Expand-WzUserPath $rawPath
 
         # Platzhalter auflösen; das liefert Dateien und Ordner der ersten Ebene
         $targets = @()
@@ -265,7 +265,7 @@ function Remove-WzPathSet {
     $failed = 0
 
     foreach ($rawPath in $Paths) {
-        $path = [Environment]::ExpandEnvironmentVariables($rawPath)
+        $path = Expand-WzUserPath $rawPath
 
         if ($syncHash.DryRun) {
             $measure = Measure-WzPathSet -Paths @($rawPath)
@@ -357,7 +357,7 @@ function Remove-WzWindowsOld {
     #>
     param([Parameter(Mandatory = $true)][string]$Path)
 
-    $target = [Environment]::ExpandEnvironmentVariables($Path)
+    $target = Expand-WzUserPath $Path
     if (-not (Test-Path -LiteralPath $target)) {
         Write-WzLog '  nicht vorhanden' -Level Info
         return [pscustomobject]@{ Removed = 0; Failed = 0 }

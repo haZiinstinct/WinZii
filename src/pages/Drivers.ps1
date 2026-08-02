@@ -22,7 +22,7 @@ function Start-WzDriverScan {
         $syncHash[$name].Children.Clear()
     }
 
-    Invoke-WzTask -Name 'Geräte prüfen' -ScriptBlock {
+    Invoke-WzTask -Name 'Geräte prüfen' -Cancelable -ScriptBlock {
         $problems = Get-WzProblemDevices
         $inventory = Get-WzDriverInventory -IncludeMicrosoft
         # Der Treiberspeicher braucht knapp zehn Sekunden — ohne Zwischenmeldung
@@ -225,12 +225,20 @@ function Start-WzDriverImport {
     if ($backups.Count -eq 0) { return }
 
     $labels = @($backups | ForEach-Object {
-        "$($_.Host) — $($_.Packages) Paket(e), $(Format-WzBytes $_.Bytes), $($_.Created.ToString('dd.MM.yyyy'))"
+        $marker = if ($_.Host -ne $env:COMPUTERNAME) { ' — ANDERER PC' } else { '' }
+        "$($_.Host)$marker — $($_.Packages) Paket(e), $(Format-WzBytes $_.Bytes), $($_.Created.ToString('dd.MM.yyyy'))"
     })
 
-    $answer = Show-WzConfirm -Title 'Treiber zurückspielen' `
-        -Message ('Die Treiber aus der gewählten Sicherung werden in Windows aufgenommen und für passende Geräte installiert. ' +
-            'Vorhandene, neuere Treiber ersetzt Windows dabei nicht. Nach dem Einspielen ist ein Neustart sinnvoll.') `
+    # Der Stick sammelt Sicherungen mehrerer Rechner — Treiber vom falschen PC
+    # gehören nicht ungefragt auf fremde Hardware.
+    $message = 'Die Treiber aus der gewählten Sicherung werden in Windows aufgenommen und für passende Geräte installiert. ' +
+        'Vorhandene, neuere Treiber ersetzt Windows dabei nicht. Nach dem Einspielen ist ein Neustart sinnvoll.'
+    if (@($backups | Where-Object { $_.Host -ne $env:COMPUTERNAME }).Count -gt 0) {
+        $message += "`n`nAchtung: Es liegen auch Sicherungen anderer Rechner auf dem Datenträger (dieser PC heißt $env:COMPUTERNAME). " +
+            'Treiber eines anderen Geräts nur einspielen, wenn es wirklich dieselbe Hardware ist.'
+    }
+
+    $answer = Show-WzConfirm -Title 'Treiber zurückspielen' -Message $message `
         -Choices $labels -ChoiceLabel 'Sicherung' -ChoiceDefault 0 `
         -ConfirmText 'Einspielen' -Danger
     if (-not $answer.Confirmed) { return }

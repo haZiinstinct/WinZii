@@ -51,7 +51,10 @@ function Invoke-WzTask {
         [Parameter(Mandatory = $true)][scriptblock]$ScriptBlock,
         [object[]]$ArgumentList = @(),
         [scriptblock]$OnComplete,
-        [switch]$Silent
+        [switch]$Silent,
+        # Nur für reine Lese-Aufgaben gedacht: Eingriffe dürfen nicht mitten in
+        # der Arbeit angehalten werden, eine Bestandsaufnahme schon.
+        [switch]$Cancelable
     )
 
     if ($syncHash.Busy) {
@@ -59,7 +62,7 @@ function Invoke-WzTask {
         return
     }
 
-    Set-WzBusy -On -Status $Name
+    Set-WzBusy -On -Status $Name -Cancelable:$Cancelable
     if (-not $Silent) { Write-WzLog "$Name gestartet..." -Level Action }
 
     $runspace = [runspacefactory]::CreateRunspace($syncHash.SessionState)
@@ -78,6 +81,8 @@ function Invoke-WzTask {
         Name       = $Name
         OnComplete = $OnComplete
         Silent     = $Silent.IsPresent
+        Cancelable = $Cancelable.IsPresent
+        Canceled   = $false
         Started    = Get-Date
     }
     $syncHash.CurrentTask = $state
@@ -98,13 +103,20 @@ function Invoke-WzTask {
         try {
             $result = $state.PowerShell.EndInvoke($handle)
         } catch {
-            $failed = $true
-            Write-WzLog "$($state.Name) fehlgeschlagen: $($_.Exception.Message)" -Level Error
+            if ($state.Canceled) {
+                # Der Abbruch beendet die Pipeline mit einer Ausnahme — das ist
+                # gewollt und kein Fehler.
+            } else {
+                $failed = $true
+                Write-WzLog "$($state.Name) fehlgeschlagen: $($_.Exception.Message)" -Level Error
+            }
         }
 
-        foreach ($errorRecord in $state.PowerShell.Streams.Error) {
-            Write-WzLog "$($state.Name): $($errorRecord.Exception.Message)" -Level Error
-            $failed = $true
+        if (-not $state.Canceled) {
+            foreach ($errorRecord in $state.PowerShell.Streams.Error) {
+                Write-WzLog "$($state.Name): $($errorRecord.Exception.Message)" -Level Error
+                $failed = $true
+            }
         }
 
         # Nachzügler abholen, bevor die Abschlussmeldung geschrieben wird
@@ -116,9 +128,11 @@ function Invoke-WzTask {
         $syncHash.CurrentTask = $null
         Set-WzBusy -Off
 
-        if (-not $state.Silent) {
+        if (-not $state.Silent -or $state.Canceled) {
             $seconds = [math]::Round(((Get-Date) - $state.Started).TotalSeconds, 1)
-            if ($failed) {
+            if ($state.Canceled) {
+                Write-WzLog "$($state.Name) abgebrochen ($seconds s)." -Level Warn
+            } elseif ($failed) {
                 Write-WzLog "$($state.Name) mit Fehlern beendet ($seconds s)." -Level Warn
             } else {
                 Write-WzLog "$($state.Name) abgeschlossen ($seconds s)." -Level Ok
@@ -146,15 +160,24 @@ function Set-WzBusy {
     .SYNOPSIS
         Sperrt beziehungsweise entsperrt die Oberfläche während eines Vorgangs.
     #>
-    param([switch]$On, [switch]$Off, [string]$Status)
+    param([switch]$On, [switch]$Off, [string]$Status, [switch]$Cancelable)
 
     $isBusy = $On.IsPresent
+    $canCancel = ($isBusy -and $Cancelable.IsPresent)
     $syncHash.Busy = $isBusy
     $syncHash.BusyName = if ($isBusy) { $Status } else { $null }
 
     $action = [Action]{
         if ($syncHash.StatusText) {
             $syncHash.StatusText.Text = if ($isBusy) { $Status } else { 'Bereit' }
+        }
+        if ($syncHash.BtnCancelTask) {
+            $syncHash.BtnCancelTask.Visibility = if ($canCancel) {
+                [Windows.Visibility]::Visible
+            } else {
+                [Windows.Visibility]::Collapsed
+            }
+            $syncHash.BtnCancelTask.IsEnabled = $canCancel
         }
         if ($syncHash.BusyBar) {
             $syncHash.BusyBar.Visibility = if ($isBusy) {
@@ -175,6 +198,25 @@ function Set-WzBusy {
             [void]$syncHash.Window.Dispatcher.Invoke($action)
         }
     }
+}
+
+function Stop-WzTask {
+    <#
+    .SYNOPSIS
+        Bricht die laufende Hintergrundarbeit ab — nur wenn sie als abbrechbar
+        gekennzeichnet ist.
+    .NOTES
+        BeginStop statt Stop: Stop blockiert den UI-Thread, bis die Pipeline
+        wirklich steht. Das Ende holt der ohnehin laufende Zeitgeber ab.
+    #>
+    $state = $syncHash.CurrentTask
+    if (-not $state -or -not $state.Cancelable -or $state.Canceled) { return }
+
+    $state.Canceled = $true
+    Write-WzLog "$($state.Name) wird abgebrochen..." -Level Warn
+    try {
+        [void]$state.PowerShell.BeginStop($null, $null)
+    } catch { }
 }
 
 function Invoke-WzDoEvents {

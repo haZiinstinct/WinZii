@@ -332,13 +332,30 @@ function Invoke-WzCommandAction {
         return
     }
 
-    Save-WzUndoState -Session $Session -ItemId $Tweak.id -ItemName $Tweak.name -Action $Action -Previous @{
-        note = 'Befehl ausgeführt'
+    # Kennt der Katalog einen Weg, den Vorzustand auszulesen (undoCapture),
+    # wird er hier eingefangen und in die Undo-Sitzung geschrieben. Beispiel
+    # Energiesparplan: Ohne das würde die Rücknahme stur auf »Ausbalanciert«
+    # stellen und einen vom Hersteller eingerichteten Plan verwerfen.
+    $previous = @{ note = 'Befehl ausgeführt' }
+    if ($Action.undoCapture) {
+        $capture = Invoke-WzProcess -FilePath $Action.undoCapture.exec `
+            -Arguments $Action.undoCapture.args -TimeoutSeconds 60
+        if ($capture.ExitCode -eq 0 -and $capture.StdOut -match $Action.undoCapture.pattern) {
+            $value = if ($Matches.Count -gt 1) { $Matches[1] } else { $Matches[0] }
+            $previous.undoArgs = $Action.undoCapture.argsFormat -f $value
+        } else {
+            Write-WzLog '  Vorzustand nicht auslesbar — die Rücknahme nutzt den Standardwert.' -Level Info
+        }
     }
+
+    Save-WzUndoState -Session $Session -ItemId $Tweak.id -ItemName $Tweak.name -Action $Action -Previous $previous
 
     $result = Invoke-WzProcess -FilePath $Action.exec -Arguments $Action.args -TimeoutSeconds 120
     if ($result.ExitCode -eq 0) {
         Write-WzLog "  ausgeführt: $($Action.exec) $($Action.args)" -Level Ok
+    } elseif ($Action.failHint) {
+        # Ein erklärter Fehlschlag ist besser als ein roher Exit-Code
+        throw [string]$Action.failHint
     } else {
         throw "$($Action.exec) endete mit Code $($result.ExitCode)"
     }

@@ -113,6 +113,22 @@ try {
     # Ohne Symbol läuft WinZii genauso
 }
 
+# --- Fenster an den Bildschirm anpassen -----------------------------------
+# Die Vorgabe 1280×820 passt nicht auf jedes Kundengerät: 1366×768 bei 125 %
+# Skalierung sind logisch nur 1092×614 — Statusleiste und Konsole lägen
+# außerhalb des Bildschirms und wären nicht erreichbar.
+try {
+    $workArea = [Windows.SystemParameters]::WorkArea
+    if ($window.Height -gt $workArea.Height) {
+        $window.Height = [math]::Max($window.MinHeight, $workArea.Height - 20)
+    }
+    if ($window.Width -gt $workArea.Width) {
+        $window.Width = [math]::Max($window.MinWidth, $workArea.Width - 20)
+    }
+} catch {
+    # Ohne Anpassung bleibt die Vorgabegröße
+}
+
 # --- Kopfzeile füllen -----------------------------------------------------
 $syncHash.HeaderHost.Text = $env:COMPUTERNAME.ToUpper()
 $syncHash.SidebarVersion.Text = "v$($syncHash.Version)"
@@ -188,6 +204,9 @@ $syncHash.DryRunToggle.Add_Click({
 $syncHash.HaziiBadge.Add_MouseLeftButtonUp({
     Start-Process 'https://hazii.org'
 })
+
+# --- Laufende Bestandsaufnahme abbrechen ----------------------------------
+$syncHash.BtnCancelTask.Add_Click({ Stop-WzTask })
 
 # --- Navigation verdrahten ------------------------------------------------
 $navButtons = @()

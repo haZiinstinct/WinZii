@@ -24,7 +24,7 @@ function Start-WzUserDataScan {
     }
     $syncHash.DataOneDriveNotice.Items.Clear()
 
-    Invoke-WzTask -Name 'Daten aufnehmen' -ScriptBlock {
+    Invoke-WzTask -Name 'Daten aufnehmen' -Cancelable -ScriptBlock {
         Get-WzUserDataOverview
     } -OnComplete {
         param($overview)
@@ -93,7 +93,10 @@ function Write-WzDataOneDrive {
     }
 
     $cloudOnly = ($State.Folders | Measure-Object -Property CloudOnly -Sum).Sum
-    $syncHash.DataOneDriveTitle.Text = if ($cloudOnly -gt 0) {
+    $incomplete = (@($State.Folders | Where-Object { $_.Incomplete }).Count -gt 0)
+    $syncHash.DataOneDriveTitle.Text = if ($incomplete) {
+        'Prüfung unvollständig — Ordner sehr groß'
+    } elseif ($cloudOnly -gt 0) {
         "$cloudOnly Datei(en) liegen nur in der Cloud"
     } else {
         'Alle Dateien liegen auch auf der Platte'
@@ -101,16 +104,20 @@ function Write-WzDataOneDrive {
 
     if ($State.PlaceholderWarning) {
         [void]$syncHash.DataOneDriveNotice.Items.Add((New-WzNotice -Kind 'warn' -Text $State.PlaceholderWarning))
-        Write-WzLog "OneDrive: $cloudOnly Datei(en) sind nur Platzhalter — vor dem Kopieren herunterladen." -Level Warn
+        if (-not $incomplete) {
+            Write-WzLog "OneDrive: $cloudOnly Datei(en) sind nur Platzhalter — vor dem Kopieren herunterladen." -Level Warn
+        }
     }
 
     foreach ($folder in $State.Folders) {
         [void]$container.Children.Add((New-WzInfoRow $folder.Account $folder.Path -LabelWidth 250))
+        $suffix = if ($folder.Incomplete) { ' (unvollständig gezählt)' } else { '' }
         [void]$container.Children.Add((New-WzInfoRow '    auf der Platte' `
-            "$(Format-WzBytes $folder.LocalBytes) · $($folder.LocalFiles) Datei(en)" -Kind 'ok' -LabelWidth 250))
+            "$(Format-WzBytes $folder.LocalBytes) · $($folder.LocalFiles) Datei(en)$suffix" `
+            -Kind $(if ($folder.Incomplete) { 'warn' } else { 'ok' }) -LabelWidth 250))
         if ($folder.CloudOnly -gt 0) {
             [void]$container.Children.Add((New-WzInfoRow '    nur in der Cloud' `
-                "$($folder.CloudOnly) Datei(en)" -Kind 'warn' -LabelWidth 250))
+                "$($folder.CloudOnly) Datei(en)$suffix" -Kind 'warn' -LabelWidth 250))
         }
     }
 }

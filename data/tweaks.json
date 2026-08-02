@@ -189,6 +189,13 @@
           "type": "command",
           "exec": "powercfg.exe",
           "args": "/setactive 8c5e7fda-e8bf-4a96-9a85-a6e23a8c635c",
+          "undoCapture": {
+            "exec": "powercfg.exe",
+            "args": "/getactivescheme",
+            "pattern": "([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12})",
+            "argsFormat": "/setactive {0}"
+          },
+          "failHint": "Der Höchstleistungsplan ist auf diesem Gerät nicht vorhanden — auf Notebooks mit modernem Standby ist das normal, die Einstellung ist dort gegenstandslos.",
           "undo": {
             "exec": "powercfg.exe",
             "args": "/setactive 381b4222-f694-41f0-9685-ff5bb260df2e"
