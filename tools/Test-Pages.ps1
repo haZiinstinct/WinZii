@@ -5,8 +5,21 @@
 param([switch]$Screenshots)
 
 $root = Split-Path -Parent $PSScriptRoot
-$pages = @('Dashboard', 'Diagnostics', 'Optimizer', 'AiRemoval', 'Cleanup', 'Apps', 'Office',
-           'UserData', 'Drivers', 'Autostart', 'Toolbox', 'Protocol')
+
+# Die Liste kommt aus dem Verzeichnis, nicht aus dieser Datei: Eine fest
+# eingetragene Aufzählung veraltet beim ersten Hinzufügen einer Seite still —
+# der Test meldet dann weiter "alles in Ordnung" und prüft die neue Seite nie.
+# Die Reihenfolge folgt der Navigation, damit die Ausgabe der Oberfläche gleicht.
+$navOrder = @()
+foreach ($line in [IO.File]::ReadAllLines((Join-Path $root 'src\xaml\MainWindow.xaml'))) {
+    if ($line -match 'Tag="([A-Za-z]+)"\s+Style="\{DynamicResource WzNavButton\}"') {
+        $navOrder += $Matches[1]
+    }
+}
+$onDisk = @(Get-ChildItem -LiteralPath (Join-Path $root 'src\xaml\pages') -Filter '*.xaml' -File |
+    ForEach-Object { $_.BaseName })
+$pages = @($navOrder | Where-Object { $onDisk -contains $_ }) +
+         @($onDisk | Where-Object { $navOrder -notcontains $_ })
 
 $failed = 0
 $shotDir = Join-Path $env:TEMP 'winzii-pages'

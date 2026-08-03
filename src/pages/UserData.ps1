@@ -4,6 +4,7 @@ function Initialize-WzUserDataPage {
     $syncHash.DataBtnScan.Add_Click({ Start-WzUserDataScan })
     $syncHash.DataBtnBookmarks.Add_Click({ Start-WzBookmarkExport })
     $syncHash.DataBtnWlan.Add_Click({ Start-WzWlanExport })
+    $syncHash.DataBtnDevices.Add_Click({ Start-WzDeviceExport })
     $syncHash.DataBtnBitLocker.Add_Click({ Start-WzBitLockerExport })
     $syncHash.DataBtnReport.Add_Click({ Start-WzUserDataReport })
 
@@ -202,6 +203,7 @@ function Write-WzDataDevices {
     if ($Printers.Count -eq 0 -and $NetDrives.Count -eq 0) {
         [void]$container.Children.Add((New-WzInfoRow 'Nichts eingerichtet' 'kein Drucker, kein Netzlaufwerk' -LabelWidth 220))
     }
+    $syncHash.DataBtnDevices.IsEnabled = ($Printers.Count -gt 0 -or $NetDrives.Count -gt 0)
 }
 
 function Write-WzDataKeys {
@@ -261,6 +263,32 @@ function Start-WzBookmarkExport {
             -Summary "Lesezeichen von $($result.Count) Browser-Profil(en) gesichert" -Detail @($result.Path)
         Show-WzInfo -Title 'Lesezeichen' `
             -Message "$($result.Count) Datei(en) gesichert." -Items @($result.Path)
+    }
+}
+
+function Start-WzDeviceExport {
+    $printers = @($syncHash.DataOverview.Printers)
+    $drives = @($syncHash.DataOverview.NetDrives)
+    if ($printers.Count -eq 0 -and $drives.Count -eq 0) { return }
+
+    $items = @($printers | ForEach-Object { "$($_.Name) an $($_.Port)" }) +
+             @($drives | ForEach-Object { "Laufwerk $($_.Letter) auf $($_.Target)" })
+
+    $answer = Show-WzConfirm -Title 'Geräteliste sichern' `
+        -Message 'Drucker und Netzlaufwerke werden als geraete.json auf den Datenträger geschrieben. Auf der Seite »Zurückspielen« lassen sie sich damit nach dem Neuaufsetzen wieder anlegen. Kennwörter für geschützte Freigaben sind nicht dabei.' `
+        -Items $items -ConfirmText 'Sichern'
+    if (-not $answer.Confirmed) { return }
+
+    Invoke-WzTask -Name 'Geräteliste sichern' -ArgumentList @($printers, $drives) -ScriptBlock {
+        param($printers, $drives)
+        Export-WzDeviceList -Printers $printers -NetDrives $drives
+    } -OnComplete {
+        param($result)
+        if (-not $result) { return }
+        Add-WzAction -Area 'Datensicherung' `
+            -Summary "Drucker und Netzlaufwerke gesichert ($($result.Count) Eintrag/Einträge)" -Detail @($result.Path)
+        Show-WzInfo -Title 'Geräteliste' `
+            -Message "$($result.Count) Eintrag/Einträge gesichert." -Items @($result.Path)
     }
 }
 

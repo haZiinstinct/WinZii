@@ -569,6 +569,57 @@ function Get-WzUserDataDir {
     New-WzDirectory (Get-WzPath 'offline' 'daten' $env:COMPUTERNAME)
 }
 
+function Export-WzDeviceList {
+    <#
+    .SYNOPSIS
+        Schreibt Drucker und Netzlaufwerke als geraete.json auf den Datenträger.
+    .DESCRIPTION
+        Bisher wurden beide nur angezeigt. Nach dem Neuaufsetzen ist die Liste
+        aber genau das, was fehlt — ohne sie muss der Techniker aus dem
+        Gedächtnis rekonstruieren, welcher Drucker an welchem Anschluss hing.
+    #>
+    param(
+        [Parameter(Mandatory = $true)][AllowEmptyCollection()][array]$Printers,
+        [Parameter(Mandatory = $true)][AllowEmptyCollection()][array]$NetDrives
+    )
+
+    $target = Get-WzUserDataDir
+    $file = Join-Path $target 'geraete.json'
+
+    if ($syncHash.DryRun) {
+        Write-WzLog "[Test] $($Printers.Count) Drucker und $($NetDrives.Count) Netzlaufwerk(e) würden nach $file geschrieben" -Level Test
+        return [pscustomobject]@{ Count = 0; Path = $file }
+    }
+
+    $payload = [pscustomobject]@{
+        computer  = $env:COMPUTERNAME
+        erstellt  = (Get-Date).ToString('yyyy-MM-dd HH:mm')
+        drucker   = @($Printers | ForEach-Object {
+            [pscustomobject]@{
+                name      = $_.Name
+                treiber   = $_.Driver
+                anschluss = $_.Port
+                standard  = [bool]$_.IsDefault
+                netzwerk  = [bool]$_.IsNetwork
+            }
+        })
+        laufwerke = @($NetDrives | ForEach-Object {
+            [pscustomobject]@{ buchstabe = $_.Letter; ziel = $_.Target }
+        })
+    }
+
+    try {
+        [void](Save-WzJson -InputObject $payload -Path $file)
+    } catch {
+        Write-WzLog "Geräteliste nicht speicherbar: $($_.Exception.Message.Split([char]10)[0])" -Level Warn
+        return [pscustomobject]@{ Count = 0; Path = $file }
+    }
+
+    $count = $Printers.Count + $NetDrives.Count
+    Write-WzLog "$($Printers.Count) Drucker und $($NetDrives.Count) Netzlaufwerk(e) gesichert nach $file" -Level Ok
+    return [pscustomobject]@{ Count = $count; Path = $file }
+}
+
 function Export-WzBrowserBookmarks {
     <#
     .SYNOPSIS

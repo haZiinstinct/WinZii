@@ -1,0 +1,71 @@
+﻿<StackPanel xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+            xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+
+    <TextBlock Text="// ÜBERNEHMEN" Style="{DynamicResource WzEyebrow}" />
+    <TextBlock Text="Zurückspielen" Style="{DynamicResource WzPageTitle}" />
+    <TextBlock Style="{DynamicResource WzPageLead}"
+               Text="Die andere Hälfte des Datenumzugs: Was auf der Datenseite gesichert wurde, kommt hier wieder auf den PC — WLAN-Netze, Lesezeichen, Drucker und Netzlaufwerke." />
+
+    <ItemsControl Name="RstNotices" Margin="0,0,0,14" />
+
+    <!-- Quelle -->
+    <Border Style="{DynamicResource WzCardStatic}" Margin="0,0,0,16">
+        <StackPanel>
+            <Grid>
+                <StackPanel Grid.Column="0">
+                    <TextBlock Text="// QUELLE" Style="{DynamicResource WzEyebrow}" />
+                    <TextBlock Name="RstSourceTitle" Text="Noch nicht gesucht" Style="{DynamicResource WzCardTitle}" />
+                </StackPanel>
+                <Button Name="RstBtnScan" Style="{DynamicResource WzBtnPrimary}"
+                        HorizontalAlignment="Right" VerticalAlignment="Top" Content="Sicherungen suchen" />
+            </Grid>
+            <TextBlock Style="{DynamicResource WzHint}" Margin="0,0,0,10"
+                       Text="Gesucht wird unter offline\daten. Eine Sicherung von einem anderen Rechner lässt sich ebenfalls einspielen — sie ist dann besonders gekennzeichnet." />
+            <StackPanel Name="RstSources" />
+        </StackPanel>
+    </Border>
+
+    <!-- WLAN -->
+    <Border Style="{DynamicResource WzCardStatic}" Margin="0,0,0,14">
+        <StackPanel>
+            <TextBlock Text="// WLAN-NETZE" Style="{DynamicResource WzEyebrow}" />
+            <TextBlock Name="RstWlanTitle" Text="Noch keine Quelle gewählt" Style="{DynamicResource WzCardTitle}" />
+            <TextBlock Style="{DynamicResource WzHint}" Margin="0,0,0,10"
+                       Text="Die Profile werden für alle Benutzer angelegt. Wurde ohne Schlüssel gesichert, entsteht der Eintrag zwar, der PC verbindet sich aber nicht von selbst." />
+            <StackPanel Name="RstWlan" />
+            <Button Name="RstBtnWlan" Style="{DynamicResource WzBtnSecondary}" Margin="0,10,0,0"
+                    HorizontalAlignment="Left" IsEnabled="False" Content="WLAN-Netze einrichten" />
+        </StackPanel>
+    </Border>
+
+    <!-- Lesezeichen -->
+    <Border Style="{DynamicResource WzCardStatic}" Margin="0,0,0,14">
+        <StackPanel>
+            <TextBlock Text="// LESEZEICHEN" Style="{DynamicResource WzEyebrow}" />
+            <TextBlock Name="RstMarksTitle" Text="Noch keine Quelle gewählt" Style="{DynamicResource WzCardTitle}" />
+            <TextBlock Style="{DynamicResource WzHint}" Margin="0,0,0,10"
+                       Text="Die vorhandene Lesezeichen-Datei wird ersetzt. WinZii legt vorher eine Kopie mit der Endung .winzii-vorher daneben. Der Browser muss dabei geschlossen sein." />
+            <StackPanel Name="RstMarks" />
+            <Button Name="RstBtnMarks" Style="{DynamicResource WzBtnSecondary}" Margin="0,10,0,0"
+                    HorizontalAlignment="Left" IsEnabled="False" Content="Lesezeichen zurückspielen" />
+        </StackPanel>
+    </Border>
+
+    <!-- Drucker und Netzlaufwerke -->
+    <Border Style="{DynamicResource WzCardStatic}" Margin="0,0,0,14">
+        <StackPanel>
+            <TextBlock Text="// DRUCKER UND NETZLAUFWERKE" Style="{DynamicResource WzEyebrow}" />
+            <TextBlock Name="RstDevicesTitle" Text="Noch keine Quelle gewählt" Style="{DynamicResource WzCardTitle}" />
+            <TextBlock Style="{DynamicResource WzHint}" Margin="0,0,0,10"
+                       Text="Ein Drucker lässt sich nur anlegen, wenn sein Treiber schon installiert ist — sonst steht das hier als Hinweis statt als Fehler. Geschützte Freigaben fragen ihre Anmeldung selbst ab." />
+            <StackPanel Name="RstDevices" />
+            <WrapPanel Margin="0,10,0,0">
+                <Button Name="RstBtnPrinters" Style="{DynamicResource WzBtnSecondary}" Margin="0,0,8,0"
+                        IsEnabled="False" Content="Drucker anlegen" />
+                <Button Name="RstBtnDrives" Style="{DynamicResource WzBtnSecondary}"
+                        IsEnabled="False" Content="Netzlaufwerke verbinden" />
+            </WrapPanel>
+        </StackPanel>
+    </Border>
+
+</StackPanel>

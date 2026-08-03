@@ -105,6 +105,12 @@
                                 <TextBlock Text="Daten" VerticalAlignment="Center" />
                             </StackPanel>
                         </Button>
+                        <Button Name="NavRestore" Tag="Restore" Style="{DynamicResource WzNavButton}">
+                            <StackPanel Orientation="Horizontal">
+                                <TextBlock Text="&#xE777;" FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets" FontSize="14" Width="24" VerticalAlignment="Center" />
+                                <TextBlock Text="Zurückspielen" VerticalAlignment="Center" />
+                            </StackPanel>
+                        </Button>
                         <Button Name="NavDrivers" Tag="Drivers" Style="{DynamicResource WzNavButton}">
                             <StackPanel Orientation="Horizontal">
                                 <TextBlock Text="&#xE950;" FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets" FontSize="14" Width="24" VerticalAlignment="Center" />

@@ -36,7 +36,7 @@ $moduleOrder = @(
     'Core.System', 'Core.Backup',
     'Optimizer', 'AiRemoval', 'Cleanup', 'Apps', 'Office',
     'Diagnostics', 'NetworkDiag', 'Report', 'Autostart', 'Toolbox',
-    'UserData', 'Drivers', 'Uninstall'
+    'UserData', 'Migration', 'Drivers', 'Uninstall'
 )
 foreach ($moduleName in $moduleOrder) {
     $modulePath = Join-Path $PSScriptRoot "modules\$moduleName.ps1"

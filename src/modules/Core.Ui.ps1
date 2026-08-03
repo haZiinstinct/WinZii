@@ -918,7 +918,10 @@ function Format-WzAgo {
     if (-not $Time) { return '' }
     try { $stamp = [datetime]$Time } catch { return '' }
 
-    $days = [int][math]::Floor(((Get-Date) - $stamp).TotalDays)
+    # Über Kalendertage, nicht über verstrichene Stunden: 23:50 Uhr gestern liegt
+    # keine Stunde zurück, »heute« wäre trotzdem falsch.
+    $now = Get-Date
+    $days = [int]($now.Date - $stamp.Date).TotalDays
     $span = if ($days -lt 0) { 'in der Zukunft' }
         elseif ($days -eq 0) { 'heute' }
         elseif ($days -eq 1) { 'gestern' }
