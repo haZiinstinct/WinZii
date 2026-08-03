@@ -1,8 +1,283 @@
-﻿# Migration — die Gegenstücke zu den Exporten auf der Datenseite.
+﻿# Migration — die Gegenstücke zu den Exporten auf der Datenseite, dazu der
+# echte Dateiumzug und die OneDrive-Hydrierung.
 #
 # WinZii konnte WLAN-Netze, Lesezeichen, Drucker und Netzlaufwerke bisher nur
 # herausschreiben. Nach dem Neuaufsetzen fehlte zu jedem Export das Gegenstück,
 # und der Techniker tippte alles von Hand nach. Hier liegt die andere Hälfte.
+
+# --- Dateiumzug ------------------------------------------------------------
+
+function Get-WzMigrationVolumes {
+    <#
+    .SYNOPSIS
+        Laufwerke, die als Ziel für einen Dateiumzug taugen.
+    .DESCRIPTION
+        Das Systemlaufwerk fällt heraus — eine Sicherung auf dieselbe Platte
+        überlebt weder eine Neuinstallation noch einen Plattendefekt. Der
+        WinZii-Datenträger bleibt in der Liste, wird aber gekennzeichnet: Auf
+        einem Technikerstick liegen bereits bis zu vier Gigabyte Office-Vorrat,
+        und Kundendaten haben dort nichts verloren.
+    #>
+    [CmdletBinding()]
+    param()
+
+    $systemLetter = ''
+    if ($env:SystemDrive -match '^([A-Za-z]):') { $systemLetter = "$($Matches[1]):" }
+    $ownLetter = ''
+    $own = Get-WzVolumeInfo
+    if ($own.DriveLetter) { $ownLetter = "$($own.DriveLetter):" }
+
+    $volumes = @()
+    try {
+        $query = 'SELECT DeviceID,DriveType,VolumeName,FreeSpace,Size,FileSystem FROM Win32_LogicalDisk WHERE DriveType=2 OR DriveType=3'
+        foreach ($disk in (Get-CimInstance -Query $query -ErrorAction Stop)) {
+            if ($disk.DeviceID -eq $systemLetter) { continue }
+            if (-not $disk.Size) { continue }
+            $volumes += [pscustomobject]@{
+                Letter      = $disk.DeviceID
+                Label       = $(if ($disk.VolumeName) { $disk.VolumeName } else { 'ohne Bezeichnung' })
+                FileSystem  = $disk.FileSystem
+                FreeBytes   = [int64]$disk.FreeSpace
+                SizeBytes   = [int64]$disk.Size
+                IsRemovable = ($disk.DriveType -eq 2)
+                IsWinZii    = ($disk.DeviceID -eq $ownLetter)
+                # FAT32 kann keine Datei über 4 GB — bei Videos und Archiven
+                # scheitert der Umzug sonst mitten im Lauf.
+                IsFat32     = ($disk.FileSystem -eq 'FAT32')
+            }
+        }
+    } catch {
+        Write-WzLog "Laufwerke nicht abfragbar: $($_.Exception.Message.Split([char]10)[0])" -Level Warn
+    }
+
+    return @($volumes | Sort-Object -Property @{ Expression = 'FreeBytes'; Descending = $true })
+}
+
+function New-WzMigrationJobs {
+    <#
+    .SYNOPSIS
+        Aus einem Benutzerprofil wird je persönlichem Ordner ein Kopierauftrag.
+    .PARAMETER UserProfile
+        Ein Eintrag aus Get-WzUserProfiles — dessen Folders sind bereits
+        vermessen, es wird nichts doppelt gezählt.
+    .NOTES
+        Der Parameter heißt bewusst nicht »Profile«: Das ist in PowerShell eine
+        eingebaute Variable, und ein Parameter gleichen Namens verdeckt sie
+        innerhalb der Funktion.
+    #>
+    param(
+        [Parameter(Mandatory = $true)]$UserProfile,
+        [Parameter(Mandatory = $true)][string]$Target
+    )
+
+    # Account steht als DOMÄNE\Benutzer da. Der Rechnername steht schon eine
+    # Ebene höher im Pfad — sonst hieße der Ordner PC\PC-Benutzer.
+    $accountName = $UserProfile.Account
+    if ($accountName -match '\\([^\\]+)$') { $accountName = $Matches[1] }
+    $safeAccount = ($accountName -replace '[\\/:*?"<>|]', '-')
+    $base = Join-Path (Join-Path $Target 'WinZii-Daten') (Join-Path $env:COMPUTERNAME $safeAccount)
+
+    return @($UserProfile.Folders | ForEach-Object {
+        [pscustomobject]@{
+            Name        = $_.Name
+            Source      = $_.Path
+            Destination = Join-Path $base $_.Name
+            Bytes       = $_.Bytes
+            Items       = $_.Items
+        }
+    })
+}
+
+function Invoke-WzFileMigration {
+    <#
+    .SYNOPSIS
+        Kopiert persönliche Ordner mit robocopy auf das Ziellaufwerk.
+    .DESCRIPTION
+        Bewusst kopieren statt verschieben: Weder /MOVE noch /MIR noch /PURGE
+        kommen vor, die Quelle bleibt vollständig erhalten. Wer löschen will,
+        tut das später selbst und sieht vorher, dass die Kopie angekommen ist.
+
+        Gezählt wird nicht über die Textausgabe von robocopy — die ist
+        übersetzt und bricht bei der nächsten Windows-Sprache. Stattdessen wird
+        das Ziel hinterher vermessen, und über Erfolg entscheidet der
+        Rückgabewert: bis 7 ist alles in Ordnung, ab 8 gab es echte Fehler.
+    #>
+    [CmdletBinding()]
+    param([Parameter(Mandatory = $true)][AllowEmptyCollection()][array]$Jobs)
+
+    $done = @()
+    $failed = @()
+    $copiedBytes = [int64]0
+    $index = 0
+
+    foreach ($job in $Jobs) {
+        $index++
+        if ($syncHash.DryRun) {
+            Write-WzLog "[Test] $($job.Name) würde nach $($job.Destination) kopiert ($(Format-WzBytes $job.Bytes))" -Level Test
+            continue
+        }
+        if ($syncHash.CurrentTask -and $syncHash.CurrentTask.Canceled) {
+            # Zwischen zwei Ordnern aussteigen statt mitten in einem: Ein
+            # halb kopierter Ordner sieht auf dem Ziel aus wie ein ganzer.
+            Write-WzLog 'Dateiumzug abgebrochen — bereits kopierte Ordner bleiben erhalten.' -Level Warn
+            break
+        }
+
+        Write-WzLog "Kopiere $($job.Name) ($index von $($Jobs.Count), $(Format-WzBytes $job.Bytes))..." -Level Info
+
+        # /XJ überspringt Verzweigungspunkte: In den Benutzerordnern liegen
+        # Kompatibilitätsverweise, die sonst im Kreis führen.
+        # /COPY:DAT ohne Berechtigungen — die passen auf einem anderen PC ohnehin nicht.
+        $arguments = '"{0}" "{1}" /E /COPY:DAT /DCOPY:DAT /XJ /R:1 /W:2 /NP /NFL /NDL /NJH /NJS' -f `
+            $job.Source.TrimEnd('\'), $job.Destination.TrimEnd('\')
+        $result = Invoke-WzProcess -FilePath 'robocopy.exe' -Arguments $arguments
+
+        $measure = Measure-WzPathSet -Paths @($job.Destination)
+        if ($result.ExitCode -ge 8 -or $null -eq $result.ExitCode) {
+            $failed += "$($job.Name) (Rückgabewert $($result.ExitCode))"
+            Write-WzLog "$($job.Name): Kopieren mit Fehlern beendet (Rückgabewert $($result.ExitCode))" -Level Err
+        } else {
+            $done += "$($job.Name) — $(Format-WzBytes $measure.Bytes) in $($measure.Items) Datei(en)"
+            $copiedBytes += $measure.Bytes
+            Write-WzLog "$($job.Name): $(Format-WzBytes $measure.Bytes) kopiert" -Level Ok
+        }
+    }
+
+    if ($done.Count -gt 0) {
+        Write-WzLog "Dateiumzug abgeschlossen: $(Format-WzBytes $copiedBytes) in $($done.Count) Ordner(n)" -Level Ok
+        Add-WzAction -Area 'Datensicherung' `
+            -Summary "$(Format-WzBytes $copiedBytes) persönliche Dateien kopiert" -Detail $done
+    }
+
+    return [pscustomobject]@{
+        Applied     = @($done)
+        Failed      = @($failed)
+        CopiedBytes = $copiedBytes
+    }
+}
+
+# --- OneDrive ---------------------------------------------------------------
+
+function Invoke-WzOneDriveHydration {
+    <#
+    .SYNOPSIS
+        Löst »Immer auf diesem Gerät behalten« aus und wartet auf den Abschluss.
+    .DESCRIPTION
+        Bisher warnte WinZii nur vor Platzhaltern. Der Griff dazu ist
+        attrib +P -U: Das setzt das Kennzeichen »angeheftet« und löscht
+        »nicht angeheftet«, woraufhin OneDrive die Dateien herunterlädt.
+
+        Das Herunterladen selbst macht OneDrive im eigenen Tempo — deshalb wird
+        anschließend gezählt, wie viele Platzhalter noch übrig sind, und ehrlich
+        gemeldet, wenn das Zeitbudget vor dem Abschluss abläuft. Ohne laufenden
+        OneDrive-Dienst passiert gar nichts; auch das steht im Ergebnis.
+    #>
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory = $true)][string]$Path,
+        [int]$TimeoutSeconds = 900
+    )
+
+    $result = [pscustomobject]@{
+        Path      = $Path
+        Started   = $false
+        Complete  = $false
+        Remaining = 0
+        Reason    = ''
+    }
+
+    if (-not (Test-Path -LiteralPath $Path)) {
+        $result.Reason = 'Der OneDrive-Ordner ist nicht mehr da.'
+        return $result
+    }
+    if (-not (Get-Process -Name 'OneDrive' -ErrorAction SilentlyContinue)) {
+        $result.Reason = 'OneDrive läuft nicht. Ohne den Dienst lädt nichts herunter — bitte OneDrive starten und anmelden.'
+        return $result
+    }
+    if ($syncHash.DryRun) {
+        Write-WzLog "[Test] $Path würde auf »Immer auf diesem Gerät behalten« gesetzt" -Level Test
+        $result.Reason = 'Testmodus — es wurde nichts angefordert.'
+        return $result
+    }
+
+    $before = Get-WzPlaceholderCount -Path $Path
+    if ($before -eq 0) {
+        $result.Started = $true
+        $result.Complete = $true
+        $result.Reason = 'Es lagen bereits alle Dateien auf der Platte.'
+        return $result
+    }
+
+    Write-WzLog "$before Platzhalter gefunden — fordere das Herunterladen an..." -Level Action
+    $attrib = Invoke-WzProcess -FilePath 'attrib.exe' -Arguments "+P -U /s /d `"$Path`"" -TimeoutSeconds 120
+    if ($attrib.ExitCode -ne 0) {
+        $result.Reason = "Das Kennzeichen ließ sich nicht setzen (Rückgabewert $($attrib.ExitCode))."
+        return $result
+    }
+    $result.Started = $true
+
+    # Warten und mitzählen. Bleibt die Zahl über mehrere Runden stehen, lädt
+    # nichts mehr — dann ist Warten sinnlos und Weiterlaufen eine Lüge.
+    $watch = [Diagnostics.Stopwatch]::StartNew()
+    $remaining = $before
+    $stalled = 0
+    while ($watch.Elapsed.TotalSeconds -lt $TimeoutSeconds) {
+        Start-Sleep -Seconds 10
+        if ($syncHash.CurrentTask -and $syncHash.CurrentTask.Canceled) {
+            $result.Reason = 'Abgebrochen. OneDrive lädt im Hintergrund weiter — das Kennzeichen bleibt gesetzt.'
+            break
+        }
+        $now = Get-WzPlaceholderCount -Path $Path
+        if ($now -eq 0) {
+            $result.Complete = $true
+            break
+        }
+        if ($now -ge $remaining) { $stalled++ } else { $stalled = 0 }
+        $remaining = $now
+        Write-WzLog "Noch $remaining Platzhalter — $(Format-WzNumber ($before - $remaining) 'Datei(en)' -Decimals 0) heruntergeladen" -Level Info
+
+        if ($stalled -ge 6) {
+            $result.Reason = 'Seit einer Minute kommt nichts mehr an. Bitte in OneDrive nachsehen, ob die Synchronisierung angehalten ist.'
+            break
+        }
+    }
+
+    $result.Remaining = if ($result.Complete) { 0 } else { Get-WzPlaceholderCount -Path $Path }
+    if ($result.Complete) {
+        Write-WzLog 'OneDrive: Alle Dateien liegen jetzt lokal vor.' -Level Ok
+        Add-WzAction -Area 'Datensicherung' -Summary "OneDrive vollständig heruntergeladen ($before Datei(en))"
+    } elseif (-not $result.Reason) {
+        $result.Reason = "Zeitbudget von $([int]($TimeoutSeconds / 60)) Minuten abgelaufen. OneDrive lädt im Hintergrund weiter."
+    }
+
+    return $result
+}
+
+function Get-WzPlaceholderCount {
+    <#
+    .SYNOPSIS
+        Zählt die Dateien, die nur in der Cloud liegen.
+    .NOTES
+        Dieselbe Erkennung wie in Get-WzOneDriveState: Offline oder
+        RECALL_ON_DATA_ACCESS (0x00400000).
+    #>
+    param([Parameter(Mandatory = $true)][string]$Path)
+
+    $recallOnDataAccess = 0x00400000
+    $count = 0
+    try {
+        foreach ($file in [IO.Directory]::EnumerateFiles($Path, '*', [IO.SearchOption]::AllDirectories)) {
+            try {
+                $attributes = [int][IO.File]::GetAttributes($file)
+                if (($attributes -band [int][IO.FileAttributes]::Offline) -ne 0 -or
+                    ($attributes -band $recallOnDataAccess) -ne 0) {
+                    $count++
+                }
+            } catch { }
+        }
+    } catch { }
+    return $count
+}
 
 function Get-WzBackupSources {
     <#

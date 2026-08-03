@@ -5,11 +5,13 @@ function Initialize-WzUserDataPage {
     $syncHash.DataBtnBookmarks.Add_Click({ Start-WzBookmarkExport })
     $syncHash.DataBtnWlan.Add_Click({ Start-WzWlanExport })
     $syncHash.DataBtnDevices.Add_Click({ Start-WzDeviceExport })
+    $syncHash.DataBtnHydrate.Add_Click({ Start-WzOneDriveHydration })
+    $syncHash.DataBtnMove.Add_Click({ Start-WzFileMigration })
     $syncHash.DataBtnBitLocker.Add_Click({ Start-WzBitLockerExport })
     $syncHash.DataBtnReport.Add_Click({ Start-WzUserDataReport })
 
     [void]$syncHash.DataNotices.Items.Add((New-WzNotice -Kind 'info' `
-        -Text 'Diese Seite liest nur. Die Exporte darunter schreiben einzelne Dateien auf den Datenträger und fragen jeweils vorher nach.'))
+        -Text 'Die Bestandsaufnahme liest nur. Die Knöpfe darunter schreiben — Exporte auf den Datenträger, der Dateiumzug auf ein zweites Laufwerk, das OneDrive-Herunterladen auf die Systemplatte. Jeder fragt vorher und sagt genau, was passiert. Gelöscht wird nie etwas.'))
 }
 
 function Update-WzUserDataPage {
@@ -44,6 +46,7 @@ function Write-WzUserDataOverview {
     Write-WzDataBrowsers -Browsers @($Overview.Browsers)
     Write-WzDataDevices -Printers @($Overview.Printers) -NetDrives @($Overview.NetDrives)
     Write-WzDataKeys -Overview $Overview
+    Write-WzDataMove -Profiles @($Overview.Profiles)
 
     $total = ($Overview.Profiles | Measure-Object -Property TotalBytes -Sum).Sum
     $syncHash.DataTitle.Text = "$(Format-WzBytes ([int64]$total)) in den persönlichen Ordnern"
@@ -131,6 +134,59 @@ function Write-WzDataOneDrive {
                 "$($folder.CloudOnly) Datei(en)$suffix" -Kind 'warn' -LabelWidth 250))
         }
     }
+
+    # Der Knopf gehört auch dann angeboten, wenn die Zählung abgebrochen wurde:
+    # Gerade dann weiß niemand, wie viele Platzhalter noch schlummern.
+    $syncHash.DataBtnHydrate.IsEnabled = ($cloudOnly -gt 0 -or $incomplete)
+}
+
+function Write-WzDataMove {
+    param([Parameter(Mandatory = $true)][AllowEmptyCollection()][array]$Profiles)
+
+    $container = $syncHash.DataMove
+    $container.Children.Clear()
+
+    # Nur Profile mit vermessenen Ordnern taugen als Quelle. Ein Konto ohne
+    # Zugriff hat keine Ordnerliste — dort wüsste robocopy nicht, was kopieren.
+    $usable = @($Profiles | Where-Object { @($_.Folders).Count -gt 0 })
+    $syncHash.DataMoveProfiles = $usable
+    $volumes = @(Get-WzMigrationVolumes)
+    $syncHash.DataMoveVolumes = $volumes
+
+    if ($usable.Count -eq 0) {
+        $syncHash.DataMoveTitle.Text = 'Keine Ordner zum Kopieren gefunden'
+        [void]$container.Children.Add((New-WzInfoRow 'Hinweis' `
+            'Ohne Zugriff auf die persönlichen Ordner lässt sich nichts kopieren. Mit Administratorrechten starten, dann sind auch fremde Konten lesbar.' `
+            -Kind 'warn' -LabelWidth 220))
+        $syncHash.DataBtnMove.IsEnabled = $false
+        return
+    }
+
+    $largest = ($usable | Measure-Object -Property TotalBytes -Maximum).Maximum
+    foreach ($volume in $volumes) {
+        $notes = @()
+        if ($volume.IsWinZii) { $notes += 'WinZii liegt hier — für Kundendaten ungeeignet' }
+        if ($volume.IsFat32) { $notes += 'FAT32: keine Datei über 4 GB' }
+        if ($volume.FreeBytes -lt $largest) { $notes += 'zu wenig Platz für das größte Konto' }
+        $kind = if ($notes.Count -gt 0) { 'warn' } elseif ($volume.IsRemovable) { 'ok' } else { 'normal' }
+
+        $text = "$(Format-WzBytes $volume.FreeBytes) frei von $(Format-WzBytes $volume.SizeBytes)"
+        if ($notes.Count -gt 0) { $text += ' · ' + ($notes -join ' · ') }
+        [void]$container.Children.Add((New-WzInfoRow "$($volume.Letter) $($volume.Label)" $text `
+            -Kind $kind -LabelWidth 220))
+    }
+
+    if ($volumes.Count -eq 0) {
+        $syncHash.DataMoveTitle.Text = 'Kein Ziellaufwerk vorhanden'
+        [void]$container.Children.Add((New-WzInfoRow 'Hinweis' `
+            'Außer dem Systemlaufwerk ist nichts angeschlossen. Eine Sicherung auf dieselbe Platte überlebt keine Neuinstallation — bitte eine externe Platte anstecken.' `
+            -Kind 'warn' -LabelWidth 220))
+        $syncHash.DataBtnMove.IsEnabled = $false
+        return
+    }
+
+    $syncHash.DataMoveTitle.Text = "$($usable.Count) Konto/Konten · $($volumes.Count) mögliche(s) Ziel(e)"
+    $syncHash.DataBtnMove.IsEnabled = $true
 }
 
 function Write-WzDataOutlook {
@@ -263,6 +319,112 @@ function Start-WzBookmarkExport {
             -Summary "Lesezeichen von $($result.Count) Browser-Profil(en) gesichert" -Detail @($result.Path)
         Show-WzInfo -Title 'Lesezeichen' `
             -Message "$($result.Count) Datei(en) gesichert." -Items @($result.Path)
+    }
+}
+
+function Start-WzOneDriveHydration {
+    $folders = @($syncHash.DataOverview.OneDrive.Folders)
+    if ($folders.Count -eq 0) { return }
+
+    $cloudOnly = ($folders | Measure-Object -Property CloudOnly -Sum).Sum
+    $running = [bool](Get-Process -Name 'OneDrive' -ErrorAction SilentlyContinue)
+
+    $message = 'OneDrive wird angewiesen, alle Dateien dauerhaft auf diesem PC zu behalten. Erst danach kopiert eine Sicherung echte Dateien statt leerer Platzhalter.' + "`n`n" +
+        'Das braucht Platz auf der Systemplatte und dauert je nach Menge und Leitung lange. WinZii wartet höchstens 15 Minuten mit und meldet dann ehrlich, ob es fertig wurde.'
+    if (-not $running) {
+        $message += "`n`nOneDrive läuft gerade nicht. Ohne den Dienst passiert nichts — bitte zuerst starten und anmelden."
+    }
+
+    $items = @($folders | ForEach-Object { "$($_.Path) — $($_.CloudOnly) Platzhalter" })
+    $answer = Show-WzConfirm -Title 'Alle Dateien herunterladen' -Message $message -Items $items `
+        -ConfirmText 'Herunterladen' -Danger
+    if (-not $answer.Confirmed) { return }
+
+    Invoke-WzTask -Name 'OneDrive herunterladen' -Cancelable -ArgumentList (, @($folders | ForEach-Object { $_.Path })) -ScriptBlock {
+        param($paths)
+        @($paths | ForEach-Object { Invoke-WzOneDriveHydration -Path $_ })
+    } -OnComplete {
+        param($results)
+        if (-not $results) { return }
+        $lines = @($results | ForEach-Object {
+            if ($_.Complete) { "$($_.Path): vollständig heruntergeladen" }
+            elseif ($_.Started) { "$($_.Path): noch $($_.Remaining) Platzhalter — $($_.Reason)" }
+            else { "$($_.Path): nicht gestartet — $($_.Reason)" }
+        })
+        $allDone = -not (@($results | Where-Object { -not $_.Complete }).Count -gt 0)
+        [void](Show-WzConfirm -Title 'OneDrive' -HideCancel -ConfirmText 'Verstanden' `
+            -Message $(if ($allDone) {
+                'Alle Dateien liegen jetzt auf der Platte. Eine Sicherung erfasst sie damit vollständig.'
+            } else {
+                'Noch nicht fertig. Erst kopieren, wenn keine Platzhalter mehr übrig sind — sonst landen leere Hüllen in der Sicherung.'
+            }) -Items $lines)
+        Start-WzUserDataScan
+    }
+}
+
+function Start-WzFileMigration {
+    $profiles = @($syncHash.DataMoveProfiles)
+    $volumes = @($syncHash.DataMoveVolumes)
+    if ($profiles.Count -eq 0 -or $volumes.Count -eq 0) { return }
+
+    $profileChoice = 0
+    if ($profiles.Count -gt 1) {
+        $answer = Show-WzConfirm -Title 'Konto wählen' `
+            -Message 'Von welchem Konto sollen die persönlichen Ordner kopiert werden?' `
+            -Choices @($profiles | ForEach-Object { "$($_.Account) — $(Format-WzBytes $_.TotalBytes)" }) `
+            -ChoiceLabel 'Konto' -ConfirmText 'Weiter'
+        if (-not $answer.Confirmed) { return }
+        $profileChoice = $answer.SelectedIndex
+    }
+    $selected = $profiles[$profileChoice]
+
+    $labels = @($volumes | ForEach-Object {
+        $note = if ($_.IsWinZii) { ' — WinZii-Datenträger' } elseif ($_.IsRemovable) { ' — Wechseldatenträger' } else { '' }
+        "$($_.Letter) $($_.Label) · $(Format-WzBytes $_.FreeBytes) frei$note"
+    })
+    $answer = Show-WzConfirm -Title 'Ziel wählen' `
+        -Message ("$($selected.Account) belegt $(Format-WzBytes $selected.TotalBytes). Wohin soll die Kopie?`n`n" +
+            'Eine externe Platte ist die richtige Wahl. Der Technikerstick nicht: Dort liegen bis zu vier Gigabyte Office-Vorrat, und Kundendaten gehören nicht auf ein Werkzeug, das am nächsten PC wieder steckt.') `
+        -Choices $labels -ChoiceLabel 'Ziel' -ConfirmText 'Weiter'
+    if (-not $answer.Confirmed) { return }
+    $target = $volumes[$answer.SelectedIndex]
+
+    $jobs = @(New-WzMigrationJobs -UserProfile $selected -Target "$($target.Letter)\")
+    if ($jobs.Count -eq 0) { return }
+
+    $warnings = @()
+    if ($target.FreeBytes -lt $selected.TotalBytes) {
+        $warnings += "Auf $($target.Letter) sind nur $(Format-WzBytes $target.FreeBytes) frei — das reicht nicht für $(Format-WzBytes $selected.TotalBytes)."
+    }
+    if ($target.IsFat32) {
+        $warnings += 'Das Ziel ist FAT32: Dateien über 4 GB scheitern einzeln, der Rest wird trotzdem kopiert.'
+    }
+    if ($target.IsWinZii) {
+        $warnings += 'Das Ziel ist der WinZii-Datenträger. Kundendaten haben darauf nichts verloren.'
+    }
+
+    $message = "Die Ordner werden nach $($target.Letter)\WinZii-Daten\$env:COMPUTERNAME\ kopiert. Die Quelle bleibt vollständig erhalten — WinZii löscht und verschiebt nichts."
+    if ($warnings.Count -gt 0) { $message += "`n`n" + ($warnings -join "`n") }
+
+    $answer = Show-WzConfirm -Title 'Dateien kopieren' -Message $message `
+        -Items @($jobs | ForEach-Object { "$($_.Name) — $(Format-WzBytes $_.Bytes) in $($_.Items) Datei(en)" }) `
+        -ConfirmText 'Kopieren' -Danger:($warnings.Count -gt 0)
+    if (-not $answer.Confirmed) { return }
+
+    Invoke-WzTask -Name 'Dateien kopieren' -Cancelable -ArgumentList (, $jobs) -ScriptBlock {
+        param($jobs)
+        Invoke-WzFileMigration -Jobs $jobs
+    } -OnComplete {
+        param($result)
+        if (-not $result) { return }
+        $lines = @($result.Applied) + @($result.Failed | ForEach-Object { "fehlgeschlagen: $_" })
+        if ($lines.Count -eq 0) { $lines = @('Es wurde nichts kopiert.') }
+        [void](Show-WzConfirm -Title 'Dateiumzug' -HideCancel -ConfirmText 'Verstanden' `
+            -Message $(if (@($result.Failed).Count -gt 0) {
+                'Ein Teil hat nicht geklappt. Die Gründe stehen im Protokoll. Die Quelle ist unverändert.'
+            } else {
+                "$(Format-WzBytes $result.CopiedBytes) kopiert. Bitte auf dem Ziel stichprobenartig nachsehen, bevor am Quell-PC etwas gelöscht wird."
+            }) -Items $lines)
     }
 }
 

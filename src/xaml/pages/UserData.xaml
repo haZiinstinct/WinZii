@@ -42,6 +42,21 @@
             <TextBlock Name="DataOneDriveTitle" Text="Noch nicht geprüft" Style="{DynamicResource WzCardTitle}" />
             <ItemsControl Name="DataOneDriveNotice" Margin="0,4,0,6" />
             <StackPanel Name="DataOneDrive" />
+            <Button Name="DataBtnHydrate" Style="{DynamicResource WzBtnSecondary}" Margin="0,10,0,0"
+                    HorizontalAlignment="Left" IsEnabled="False" Content="Alle Dateien herunterladen" />
+        </StackPanel>
+    </Border>
+
+    <!-- Dateiumzug -->
+    <Border Style="{DynamicResource WzCardStatic}" Margin="0,0,0,14">
+        <StackPanel>
+            <TextBlock Text="// DATEIUMZUG" Style="{DynamicResource WzEyebrow}" />
+            <TextBlock Name="DataMoveTitle" Text="Noch nicht geprüft" Style="{DynamicResource WzCardTitle}" />
+            <TextBlock Style="{DynamicResource WzHint}" Margin="0,0,0,10"
+                       Text="Kopiert die persönlichen Ordner eines Kontos auf ein anderes Laufwerk — auf eine externe Platte, nicht auf den Technikerstick. Die Quelle bleibt dabei unangetastet: WinZii kopiert und löscht nichts." />
+            <StackPanel Name="DataMove" />
+            <Button Name="DataBtnMove" Style="{DynamicResource WzBtnSecondary}" Margin="0,10,0,0"
+                    HorizontalAlignment="Left" IsEnabled="False" Content="Dateien kopieren" />
         </StackPanel>
     </Border>
 
