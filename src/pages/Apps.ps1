@@ -184,6 +184,8 @@ function Start-WzUninstallScan {
         Get-WzInstalledPrograms -Filter $needle
     } -OnComplete {
         param($programs)
+        # Ohne Fund kommt $null herein, und @($null) lehnt der Binder ab
+        if (-not $programs) { $programs = @() }
         Write-WzUninstallList -Programs @($programs)
     }
 }

@@ -3,6 +3,106 @@
 Alle nennenswerten Änderungen an WinZii. Die Fassungen folgen
 [Semantic Versioning](https://semver.org/lang/de/).
 
+## [0.3.0] — 2026-08-04
+
+Zwei Halbfertiges zu Ende gebaut. Zum einen war der Datenumzug nur zur Hälfte da:
+WLAN-Netze, Lesezeichen, Drucker und Netzlaufwerke wanderten heraus, aber zu keinem
+Export gab es ein Gegenstück. Zum anderen sammelte WinZii an mehreren Stellen Daten
+ein, die anschließend niemand las.
+
+### Neu
+
+- **Seite »Zurückspielen«** — die fehlende Hälfte. Sie findet die Sicherungen unter
+  `offline\daten`, richtet WLAN-Netze wieder ein, spielt Lesezeichen in das passende
+  Browser-Profil zurück, legt Drucker an und verbindet Netzlaufwerke. Auch die Sicherung
+  eines **anderen** Rechners lässt sich einspielen; sie ist in jedem Dialog ausdrücklich
+  als solche benannt.
+
+  Die Seite sagt vorher, was nicht gehen wird, statt es hinterher zu melden: fehlende
+  Druckertreiber, Browser-Profile, die es auf diesem PC nicht gibt, WLAN-Netze, die ohne
+  Schlüssel gesichert wurden, und ein laufender Browser, der zurückgespielte Lesezeichen
+  beim Beenden wieder überschreiben würde. Eine vorhandene Lesezeichen-Datei wird vor dem
+  Ersetzen als `.winzii-vorher` daneben gelegt.
+- **Geräteliste sichern** auf der Datenseite. Drucker und Netzlaufwerke wurden bisher nur
+  angezeigt — ohne diesen Export gab es zum Zurückspielen überhaupt keine Daten.
+- **Dateiumzug** — kopiert die persönlichen Ordner eines Kontos mit `robocopy` auf ein
+  anderes Laufwerk. Das Systemlaufwerk fällt als Ziel weg, denn eine Sicherung auf dieselbe
+  Platte überlebt weder eine Neuinstallation noch einen Plattendefekt. Gekennzeichnet wird,
+  was schiefgehen kann: zu wenig Platz, FAT32 mit seiner 4-GB-Grenze, und der
+  WinZii-Datenträger selbst, auf den Kundendaten nicht gehören. Weder `/MOVE` noch `/MIR`
+  noch `/PURGE` kommen vor — die Quelle bleibt vollständig erhalten.
+- **OneDrive herunterladen.** Bisher warnte WinZii nur vor Platzhaltern. Jetzt löst es
+  »Immer auf diesem Gerät behalten« aus und wartet auf den Abschluss. Ohne laufenden
+  OneDrive-Dienst passiert nichts, und genau das steht dann da; bleibt die Zahl der
+  Platzhalter eine Minute lang stehen, wird das gemeldet statt weiter gewartet.
+
+### Sichtbar gemacht, was schon gemessen wurde
+
+- **Das Dashboard kennt jetzt die eigenen Empfehlungen.** Platte über 90 % voll,
+  Virenschutz veraltet, Windows nicht aktiviert, Datenträger meldet einen Fehler,
+  Notebook unverschlüsselt, Akku verschlissen — diese Sätze entstanden bisher nur beim
+  Drucken des Übergabeblatts.
+- **Startdauer im Diagnosebericht**: Durchschnitt, die letzten Startvorgänge aufgeteilt in
+  Windows selbst und Autostart, und die Bremser mit Namen und Sekunden.
+- **Zuverlässigkeitsverlauf** — Abstürze, Programmfehler und Installationen als Zeitleiste.
+  Beantwortet die Frage, ob ein Problem mit einer Installation zusammenfällt. Die Funktion
+  dafür war fertig gebaut und hatte null Aufrufer.
+- **Einzelposten im Übergabeblatt**: nicht mehr nur »14 Programme entfernt«, sondern
+  welche.
+- **90-Tage-Aufteilung** bei jeder Bereinigungskategorie: »339 Datei(en), davon 125 älter
+  als 90 Tage (2,8 GB)«.
+- **Zuletzt benutzt** bei fremden Benutzerprofilen, ab einem Jahr als Warnung — damit keine
+  40 GB Karteileichen mitkopiert werden.
+- Kleinteile aus denselben Abfragen: MAC-Adresse im Geräteblatt, Druckertreiber neben dem
+  Anschluss, Gerätekategorie vor jedem Treiber (aus »irgendein Treiber ist neun Jahre alt«
+  wird »der **Grafik**treiber«), Balken für Akkuverschleiß und SSD-Abnutzung, und eine
+  Aufrüst-Empfehlung, wenn keine SSD verbaut ist oder weniger als 8 GB Arbeitsspeicher
+  stecken.
+
+### Behoben
+
+- **Kommazahlen erschienen mit Punkt.** »74.2 s« stand direkt neben »13,1 GB« — das sah
+  nach zwei verschiedenen Programmen aus. Betroffen waren Startdauer, Treiberalter,
+  BIOS-Alter, Bildschirmdiagonale, Betriebsstunden und die Dauer jeder Aufgabe.
+- **`Format-WzAgo` rechnete über verstrichene Stunden** und nannte gestern 23:50 Uhr
+  »heute«. Jetzt zählen Kalendertage.
+- **Der Seitentest führte eine fest eingetragene Liste** und übersprang die neue Seite
+  stillschweigend — er meldete weiter »alles in Ordnung«. Die Liste kommt jetzt aus dem
+  Verzeichnis, in der Reihenfolge der Navigation.
+- **Gerätekategorien standen in Großbuchstaben und auf Englisch** (`HIDCLASS`, `MEDIA`),
+  wie eine Registry-Ausgabe. Eine Tabelle übersetzt die geläufigen; Unbekanntes wird
+  durchgereicht statt geraten.
+- **README**: 41 statt 40 Eingriffe, 33/7/1 statt 34/6/1 (beide Sprachfassungen).
+
+### Vom Sandbox-Lauf und vom ausgepackten Archiv gefunden
+
+Diese drei standen nie im Quelltext auf, sondern erst beim Probieren auf einem fremden
+System und beim Start aus dem fertigen ZIP:
+
+- **Die Seite »Zurückspielen« lief auf einen Fehler, wenn noch nichts gesichert war** —
+  also beim allerersten Start von einem frisch ausgepackten Stick. `@($null)` ist ein
+  einelementiges Feld, aber PowerShell lehnt es an einem Pflichtparameter als NULL ab.
+  Dieselbe Falle steckte in der Programmseite, wenn kein Programm gefunden wurde.
+- **Drucker ließen sich nicht anlegen, wenn ihr Treiber noch nicht eingerichtet war** —
+  der Normalfall nach einer Neuinstallation. WinZii holt ihn jetzt aus dem Treiberspeicher
+  von Windows, bevor es aufgibt, und nennt bei einem Fehlschlag den Grund.
+- **`Add-PrinterPort` wurde auf Anschlüsse angesetzt, die sich gar nicht anlegen lassen.**
+  `USB001`, `PORTPROMPT:` oder `DOT4_001` entstehen mit dem Gerät, nicht auf Zuruf; der
+  Versuch endete in einer nichtssagenden Windows-Meldung. Netzwerkdrucker über eine
+  IP-Adresse legt WinZii vollständig an, alles andere wird übersprungen und im Ergebnis
+  ausdrücklich benannt. Scheitert das Anlegen danach doch, wird der eben erzeugte
+  Anschluss wieder entfernt statt als Karteileiche zurückzubleiben.
+
+### Aufgeräumt
+
+- `New-WzCard` war gebaut und hatte null Aufrufe — Optimierung, Bereinigung und Programme
+  bauten dieselbe Karte je von Hand.
+- Der Sandbox-Selbsttest prüft jetzt auch das Zurückspielen: Sicherung finden, WLAN-Profil
+  lesen, einen Netzwerkdrucker anlegen und beim zweiten Lauf nicht doppelt, einen
+  USB-Anschluss ehrlich ablehnen, und einen echten robocopy-Durchlauf samt Unterordnern.
+- `README.en.md` fehlte im Release-Archiv — wer das ZIP auspackte, fand nur die deutsche
+  Fassung.
+
 ## [0.2.2] — 2026-08-03
 
 Erster Testlauf in der Windows Sandbox — auf einem frisch aufgesetzten Windows, das

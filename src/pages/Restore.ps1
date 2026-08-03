@@ -27,6 +27,10 @@ function Start-WzRestoreScan {
         Get-WzBackupSources
     } -OnComplete {
         param($sources)
+        # Ohne Fund reicht Invoke-WzTask $null herein. @($null) ist zwar ein
+        # einelementiges Feld, der Binder lehnt es aber als NULL ab — genau der
+        # Fall auf einem frisch ausgepackten Stick, auf dem noch nichts liegt.
+        if (-not $sources) { $sources = @() }
         Write-WzRestoreSources -Sources @($sources)
     }
 }
@@ -253,8 +257,8 @@ function Start-WzWlanImport {
     } -OnComplete {
         param($result)
         if (-not $result) { return }
-        Show-WzRestoreResult -Title 'WLAN-Netze' -Result $result -ExtraKind 'WithoutKey' `
-            -ExtraText 'angelegt, aber ohne Schlüssel — hier muss das Kennwort noch einmal eingegeben werden'
+        Show-WzRestoreResult -Title 'WLAN-Netze' -Result $result -Extras @(
+            @{ Kind = 'WithoutKey'; Text = 'angelegt, aber ohne Schlüssel — hier muss das Kennwort noch einmal eingegeben werden' })
         Start-WzRestoreScan
     }
 }
@@ -283,8 +287,8 @@ function Start-WzBookmarkImport {
     } -OnComplete {
         param($result)
         if (-not $result) { return }
-        Show-WzRestoreResult -Title 'Lesezeichen' -Result $result -ExtraKind 'Blocked' `
-            -ExtraText 'übersprungen, weil der Browser noch lief'
+        Show-WzRestoreResult -Title 'Lesezeichen' -Result $result -Extras @(
+            @{ Kind = 'Blocked'; Text = 'übersprungen, weil der Browser noch lief' })
     }
 }
 
@@ -293,7 +297,8 @@ function Start-WzPrinterImport {
     if ($printers.Count -eq 0) { return }
 
     $answer = Show-WzConfirm -Title 'Drucker anlegen' `
-        -Message ('Diese Drucker werden neu eingerichtet. Bereits vorhandene bleiben unverändert. Fehlt ein Treiber, wird der Drucker übersprungen — WinZii lädt keine Treiber nach.' + (Get-WzRestoreForeignWarning)) `
+        -Message ('Diese Drucker werden neu eingerichtet. Bereits vorhandene bleiben unverändert. Ist der Treiber noch nicht eingerichtet, holt WinZii ihn aus dem Treiberspeicher von Windows — heruntergeladen wird nichts.' + "`n`n" +
+            'Ein USB-Anschluss wie USB001 lässt sich nicht von Hand anlegen — der entsteht erst, wenn der Drucker angesteckt wird. Solche Einträge werden übersprungen und hinterher benannt. Netzwerkdrucker über eine IP-Adresse legt WinZii vollständig an.' + (Get-WzRestoreForeignWarning)) `
         -Items @($printers | ForEach-Object { "$($_.name) an $($_.anschluss)" }) `
         -ConfirmText 'Anlegen'
     if (-not $answer.Confirmed) { return }
@@ -304,8 +309,9 @@ function Start-WzPrinterImport {
     } -OnComplete {
         param($result)
         if (-not $result) { return }
-        Show-WzRestoreResult -Title 'Drucker' -Result $result -ExtraKind 'MissingDriver' `
-            -ExtraText 'übersprungen, weil der Treiber auf diesem PC fehlt'
+        Show-WzRestoreResult -Title 'Drucker' -Result $result -Extras @(
+            @{ Kind = 'MissingDriver'; Text = 'übersprungen, weil sich der Treiber nicht einrichten ließ' }
+            @{ Kind = 'MissingPort'; Text = 'übersprungen, weil es den Anschluss hier nicht gibt — er entsteht erst mit dem angeschlossenen Gerät' })
     }
 }
 
@@ -338,13 +344,21 @@ function Show-WzRestoreResult {
     param(
         [Parameter(Mandatory = $true)][string]$Title,
         [Parameter(Mandatory = $true)]$Result,
-        [string]$ExtraKind,
-        [string]$ExtraText
+        # Je Eintrag ein Feldname aus dem Ergebnis und der Satz dazu. Mehrzahl,
+        # weil ein Drucker aus zwei verschiedenen Gründen ausfallen kann.
+        [hashtable[]]$Extras = @()
     )
 
     $applied = @($Result.Applied)
     $failed = @($Result.Failed)
-    $extra = if ($ExtraKind) { @($Result.$ExtraKind) } else { @() }
+    $extraLines = @()
+    $extraCount = 0
+    foreach ($entry in $Extras) {
+        $values = @($Result.($entry.Kind))
+        if ($values.Count -eq 0) { continue }
+        $extraCount += $values.Count
+        $extraLines += "$($values.Count) $($entry.Text): $($values -join ', ')"
+    }
 
     if ($syncHash.DryRun) {
         [void](Show-WzConfirm -Title $Title -HideCancel -ConfirmText 'Verstanden' `
@@ -354,13 +368,13 @@ function Show-WzRestoreResult {
 
     $lines = @()
     if ($applied.Count -gt 0) { $lines += "$($applied.Count) erledigt: $($applied -join ', ')" }
-    if ($extra.Count -gt 0) { $lines += "$($extra.Count) $ExtraText`: $($extra -join ', ')" }
+    $lines += $extraLines
     if ($failed.Count -gt 0) { $lines += "$($failed.Count) fehlgeschlagen: $($failed -join ', ')" }
     if ($lines.Count -eq 0) { $lines += 'Es gab nichts zu tun — alles war schon eingerichtet.' }
 
     $message = if ($failed.Count -gt 0) {
         'Ein Teil hat nicht geklappt. Die Gründe stehen einzeln im Protokoll.'
-    } elseif ($extra.Count -gt 0) {
+    } elseif ($extraCount -gt 0) {
         'Erledigt — mit Einschränkungen.'
     } else {
         'Erledigt.'

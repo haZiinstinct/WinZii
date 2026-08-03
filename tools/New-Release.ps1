@@ -25,7 +25,7 @@ $archive = Join-Path $OutputDir "WinZii-$version.zip"
 
 # Was auf den Stick gehört. Ordner werden vollständig übernommen.
 $includeFolders = @('src', 'data', 'assets')
-$includeFiles = @('Start.bat', 'LICENSE', 'README.md', 'CHANGELOG.md', 'SECURITY.md')
+$includeFiles = @('Start.bat', 'LICENSE', 'README.md', 'README.en.md', 'CHANGELOG.md', 'SECURITY.md')
 # Aus tools\ nur die Sandbox-Konfigurationen — die Prüfwerkzeuge sind Entwicklerkram.
 $includeToolPatterns = @('*.wsb')
 

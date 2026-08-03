@@ -69,8 +69,10 @@ Add-Type -AssemblyName PresentationFramework
 $global:WzRootPath = $root
 $global:syncHash = [hashtable]::Synchronized(@{})
 $syncHash.LogEntries = [Collections.ArrayList]::Synchronized((New-Object Collections.ArrayList))
+$syncHash.Actions = [Collections.ArrayList]::Synchronized((New-Object Collections.ArrayList))
 $syncHash.DryRun = $false
-foreach ($m in 'Core.Paths', 'Core.Logging', 'Core.Json', 'Core.Runspace', 'Core.Ui', 'Core.System', 'Core.Backup', 'Optimizer') {
+# Cleanup ist für Measure-WzPathSet dabei, das der Dateiumzug zum Nachmessen braucht
+foreach ($m in 'Core.Paths', 'Core.Logging', 'Core.Json', 'Core.Runspace', 'Core.Ui', 'Core.System', 'Core.Backup', 'Cleanup', 'Optimizer') {
     . (Join-Path $root "src\modules\$m.ps1")
 }
 . (Join-Path $root 'src\version.ps1')
@@ -144,6 +146,137 @@ if ($wingetBefore.Available) {
         Schreib '  (In der Sandbox kann der Store-Unterbau fehlen — Befund zählt trotzdem.)'
     }
 }
+
+# --- 6. Zurückspielen und Dateiumzug ---------------------------------------
+# Genau hier gehören diese Prüfungen hin: Auf dem Entwicklungsrechner lässt
+# sich weder ein Drucker anlegen noch ein WLAN-Profil einspielen, ohne echte
+# Einstellungen zu verändern.
+Schreib ''
+Schreib '6. Zurückspielen (WLAN, Drucker, Lesezeichen) und Dateiumzug'
+foreach ($m in 'UserData', 'Migration') { . (Join-Path $root "src\modules\$m.ps1") }
+
+$backupDir = Join-Path $root "offline\daten\$env:COMPUTERNAME"
+$wlanDir = Join-Path $backupDir 'wlan'
+[void](New-Item -ItemType Directory -Path $wlanDir -Force)
+
+# Ein Profil im netsh-Format, mit Schlüssel — der Wert ist erfunden.
+$profileXml = @'
+<?xml version="1.0"?>
+<WLANProfile xmlns="http://www.microsoft.com/networking/WLAN/profile/v1">
+  <name>WinZii-Sandboxtest</name>
+  <SSIDConfig><SSID><name>WinZii-Sandboxtest</name></SSID></SSIDConfig>
+  <connectionType>ESS</connectionType>
+  <connectionMode>manual</connectionMode>
+  <MSM><security>
+    <authEncryption><authentication>WPA2PSK</authentication><encryption>AES</encryption><useOneX>false</useOneX></authEncryption>
+    <sharedKey><keyType>passPhrase</keyType><protected>false</protected><keyMaterial>SandboxTestNichtEcht</keyMaterial></sharedKey>
+  </security></MSM>
+</WLANProfile>
+'@
+$utf8 = New-Object Text.UTF8Encoding($false)
+[IO.File]::WriteAllText((Join-Path $wlanDir 'WLAN-Sandbox.xml'), $profileXml, $utf8)
+
+# Geräteliste mit einem Drucker. Der Treibername kommt aus dem, was hier
+# wirklich eingerichtet ist — geprüft werden soll der WinZii-Code, nicht welche
+# Treiber Windows in dieser Ausgabe zufällig mitliefert. Die Sandbox hat zum
+# Beispiel kein »Microsoft Print To PDF«.
+$anyDriver = @(Get-PrinterDriver -ErrorAction SilentlyContinue)
+Schreib "  Eingerichtete Druckertreiber: $($anyDriver.Count) — $((@($anyDriver | Select-Object -First 4).Name) -join ', ')"
+
+# In der Sandbox gibt es nur Klassentreiber und den RDP-Umleitungstreiber.
+# Beide hängen an erkannter Hardware beziehungsweise an einer Sitzung und lassen
+# sich nicht für einen Drucker von Hand verwenden. Versucht wird trotzdem, einen
+# echten aus dem Treiberspeicher zu holen — ob Add-Printer selbst gelingt, hängt
+# danach allein an Windows und wird hier deshalb berichtet, nicht bewertet.
+$driverName = ''
+foreach ($candidate in 'Generic / Text Only', 'Microsoft Print To PDF', 'Microsoft XPS Document Writer v4') {
+    try {
+        Add-PrinterDriver -Name $candidate -ErrorAction Stop
+        $driverName = $candidate
+        Schreib "  Treiber »$candidate« aus dem Treiberspeicher eingerichtet"
+        break
+    } catch { }
+}
+if (-not $driverName) {
+    $driverName = @($anyDriver)[0].Name
+    Schreib "  Kein von Hand verwendbarer Treiber verfügbar — ersatzweise »$driverName«."
+}
+
+# Zwei Drucker, damit beide Zweige geprüft werden: ein Netzwerkanschluss, den
+# WinZii selbst anlegen kann, und ein USB-Anschluss, den niemand anlegen kann.
+$devices = [pscustomobject]@{
+    computer  = $env:COMPUTERNAME
+    erstellt  = (Get-Date).ToString('yyyy-MM-dd HH:mm')
+    drucker   = @(
+        [pscustomobject]@{
+            name = 'WinZii-Testdrucker'; treiber = $driverName
+            anschluss = '192.168.222.240'; standard = $false; netzwerk = $false
+        }
+        [pscustomobject]@{
+            name = 'WinZii-USB-Drucker'; treiber = $driverName
+            anschluss = 'USB001'; standard = $false; netzwerk = $false
+        }
+    )
+    laufwerke = @()
+}
+[void](Save-WzJson -InputObject $devices -Path (Join-Path $backupDir 'geraete.json'))
+
+$sources = @(Get-WzBackupSources)
+Pruefe 'Sicherung wird gefunden' ($sources.Count -ge 1) "$($sources.Count) Quelle(n)"
+if ($sources.Count -ge 1) {
+    $contents = $sources[0].Contents
+    Pruefe 'Eigene Sicherung erkannt' $sources[0].IsCurrent
+    Pruefe 'WLAN-Profil gelesen' (@($contents.WlanFiles).Count -eq 1)
+    Pruefe 'SSID aus der Datei' ((Get-WzWlanProfileName -Path @($contents.WlanFiles)[0]) -eq 'WinZii-Sandboxtest')
+    Pruefe 'Schlüssel erkannt' (Test-WzWlanProfileHasKey -Path @($contents.WlanFiles)[0])
+
+    # WLAN: In der Sandbox gibt es keinen Adapter. Geprüft wird deshalb nicht
+    # der Erfolg, sondern dass der Fehlschlag sauber gemeldet wird.
+    $wlan = Import-WzWlanProfiles -Files @($contents.WlanFiles)
+    $wlanClean = (@($wlan.Applied).Count + @($wlan.Failed).Count) -eq 1
+    Pruefe 'WLAN-Rückspielung meldet ein Ergebnis' $wlanClean `
+        "angewandt=$(@($wlan.Applied).Count) fehlgeschlagen=$(@($wlan.Failed).Count)"
+
+    # Drucker: Der Treiber ist eingerichtet, der Netzwerkdrucker muss entstehen.
+    $printer = Import-WzPrinters -Printers @($contents.Printers)
+    $printerOk = @($printer.Applied).Count -eq 1
+    $bilanz = "angewandt=$(@($printer.Applied).Count) ohneTreiber=$(@($printer.MissingDriver).Count) ohneAnschluss=$(@($printer.MissingPort).Count) fehlgeschlagen=$(@($printer.Failed).Count)"
+    # Bewusst nicht als Fehler gezählt: Ob Add-Printer gelingt, entscheidet der
+    # Treiber, und die Sandbox bringt keinen mit, der sich von Hand verwenden
+    # lässt. Eine rote Zeile ohne Aussagekraft macht den ganzen Bericht wertlos.
+    Schreib "  [--]   Drucker anlegen (nur berichtet)              $bilanz"
+
+    # Diese drei sind dagegen reine WinZii-Logik und müssen stimmen
+    Pruefe 'USB-Anschluss ehrlich abgelehnt' (@($printer.MissingPort).Count -eq 1) ($printer.MissingPort -join '')
+    Pruefe 'kein verwaister Anschluss nach Fehlschlag' `
+        ($printerOk -or -not (Get-PrinterPort -Name '192.168.222.240' -ErrorAction SilentlyContinue))
+    if ($printerOk) {
+        Pruefe 'Drucker steht im System' ([bool](Get-Printer -Name 'WinZii-Testdrucker' -ErrorAction SilentlyContinue))
+        # Zweiter Lauf: ein vorhandener Drucker darf nicht doppelt entstehen
+        $again = Import-WzPrinters -Printers @($contents.Printers)
+        Pruefe 'Zweiter Lauf legt nichts doppelt an' (@($again.Applied).Count -eq 0)
+        Remove-Printer -Name 'WinZii-Testdrucker' -ErrorAction SilentlyContinue
+        Remove-PrinterPort -Name '192.168.222.240' -ErrorAction SilentlyContinue
+    }
+}
+
+# Dateiumzug: In der Sandbox gibt es nur C:, also greift die ehrliche Absage.
+$volumes = @(Get-WzMigrationVolumes)
+Pruefe 'Systemlaufwerk fällt als Ziel weg' ($volumes.Count -eq 0) "$($volumes.Count) Ziel(e)"
+
+# robocopy selbst trotzdem prüfen — mit einem Ziel auf demselben Laufwerk
+$moveSource = Join-Path $env:TEMP 'wz-umzug-quelle'
+$moveTarget = Join-Path $env:TEMP 'wz-umzug-ziel'
+[void](New-Item -ItemType Directory -Path (Join-Path $moveSource 'Unterordner') -Force)
+[IO.File]::WriteAllText((Join-Path $moveSource 'a.txt'), 'eins', $utf8)
+[IO.File]::WriteAllText((Join-Path $moveSource 'Unterordner\b.txt'), 'zwei', $utf8)
+$job = [pscustomobject]@{
+    Name = 'Testordner'; Source = $moveSource; Destination = $moveTarget; Bytes = 8; Items = 2
+}
+$move = Invoke-WzFileMigration -Jobs @($job)
+Pruefe 'Dateiumzug kopiert' (@($move.Applied).Count -eq 1) ($move.Applied -join '')
+Pruefe 'Unterordner mitgekommen' (Test-Path (Join-Path $moveTarget 'Unterordner\b.txt'))
+Pruefe 'Quelle unangetastet' (Test-Path (Join-Path $moveSource 'a.txt'))
 
 # --- Abschluss --------------------------------------------------------------
 Schreib ''

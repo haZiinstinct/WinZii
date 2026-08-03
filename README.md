@@ -11,7 +11,7 @@ Vom USB-Stick starten, aufräumen, optimieren, einrichten — ohne Installation,
 
 <sub>A German-language Windows maintenance toolkit for IT technicians — English readme available, interface is German only.</sub>
 
-![Version](https://img.shields.io/badge/Version-0.2.2-00d4ff?labelColor=0a0a0f&style=flat-square)
+![Version](https://img.shields.io/badge/Version-0.3.0-00d4ff?labelColor=0a0a0f&style=flat-square)
 ![Windows](https://img.shields.io/badge/Windows-10%20%7C%2011-00d4ff?labelColor=0a0a0f&style=flat-square)
 ![PowerShell](https://img.shields.io/badge/PowerShell-5.1-00d4ff?labelColor=0a0a0f&style=flat-square)
 ![Installation](https://img.shields.io/badge/Installation-keine-00d4ff?labelColor=0a0a0f&style=flat-square)
@@ -53,7 +53,7 @@ Das war alles. WinZii braucht keine Installation, keine Laufzeitumgebung und kei
 > **Windows meldet sich mit einem blauen Hinweis?**
 > Auf »Weitere Informationen« und dann »Trotzdem ausführen« klicken. Der Hinweis erscheint bei jeder Datei aus dem Internet, die nicht kostenpflichtig signiert wurde. Zu jedem Release gehört eine SHA256-Prüfsumme — damit lässt sich das Archiv vor dem Entpacken abgleichen:
 > ```powershell
-> Get-FileHash .\WinZii-0.2.2.zip -Algorithm SHA256
+> Get-FileHash .\WinZii-0.3.0.zip -Algorithm SHA256
 > ```
 
 **Voraussetzungen:** Windows 10 oder 11 mit Administratorrechten. PowerShell 5.1 und .NET Framework sind in Windows enthalten.
@@ -92,9 +92,11 @@ Ehrlich gesagt, damit niemand böse überrascht wird: WinZii wurde auf **einem**
 | **Nicht-deutsches Windows** | Die Stellen, die Windows-Ausgaben auswerten, kennen Deutsch und Englisch; `takeown` fragt die Oberflächensprache ab. Geprüft wurde nur die deutsche Seite. |
 | **Akku, WLAN, BitLocker, OneDrive** | Die »nicht vorhanden«-Pfade sind geprüft und melden sauber. Der jeweilige Positiv-Fall ist mangels Hardware ungetestet. |
 | **Treibersicherung und Office** | Nur lesend geprüft, nie vollständig durchgeführt. |
+| **Drucker zurückspielen** | In der Sandbox vollständig durchlaufen: Treiber aus dem Treiberspeicher nachziehen, Netzwerkanschluss anlegen, Drucker einrichten, beim zweiten Lauf nichts doppeln. Ungeprüft bleibt ein Drucker an echter Hardware — USB-Anschlüsse entstehen erst mit dem Gerät und werden bewusst übersprungen. |
+| **WLAN zurückspielen** | Die Profildateien werden richtig gelesen und ein Fehlschlag sauber gemeldet. Ein Profil wirklich einzurichten konnte nie geprüft werden — weder der Entwicklungsrechner noch die Sandbox hat einen WLAN-Adapter. |
 | **Kleine Bildschirme** | Das Fenster braucht mindestens 1000 × 560 Punkte und verkleinert sich beim Start selbst auf die Arbeitsfläche. |
 
-**In der Windows Sandbox geprüft** (`tools\Test-Sandbox.wsb`, ein frisches Windows 11 24H2 ohne winget): Start über den Launcher, echte Optimierungen anwenden und wieder zurücknehmen, Netzwerk-Diagnose und die winget-Nachinstallation — alles auf einem System, das nichts von diesem Projekt weiß.
+**In der Windows Sandbox geprüft** (`tools\Test-Sandbox.wsb`, ein frisches Windows 11 24H2 ohne winget): Start über den Launcher, echte Optimierungen anwenden und wieder zurücknehmen, Netzwerk-Diagnose, die winget-Nachinstallation, das Finden und Lesen einer Sicherung, das Anlegen eines Netzwerkdruckers samt Treiber sowie ein echter Dateiumzug mit Unterordnern — alles auf einem System, das nichts von diesem Projekt weiß.
 
 Rückmeldungen von anderen Systemen sind ausdrücklich willkommen — besonders von Windows 10 und von nicht-deutschen Installationen.
 

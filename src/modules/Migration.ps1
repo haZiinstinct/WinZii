@@ -420,9 +420,12 @@ function Import-WzPrinters {
     .SYNOPSIS
         Legt gesicherte Drucker wieder an.
     .DESCRIPTION
-        Ohne passenden Treiber geht nichts — Add-Printer kann keinen Treiber
-        beschaffen. Fehlt er, sagt das Ergebnis genau das, statt einen nackten
-        Fehlercode zu melden.
+        Ohne passenden Treiber geht nichts — Add-Printer beschafft keinen.
+        Vorher wird aber versucht, ihn aus dem Treiberspeicher zu holen: Viele
+        Treiber liegen dort einsatzbereit, ohne installiert zu sein, darunter
+        die von Windows mitgelieferten. Genau das ist die Lage nach einer
+        Neuinstallation. Erst wenn auch das scheitert, wird der Drucker
+        übersprungen und im Ergebnis benannt.
     #>
     [CmdletBinding()]
     param([Parameter(Mandatory = $true)][AllowEmptyCollection()][array]$Printers)
@@ -430,6 +433,7 @@ function Import-WzPrinters {
     $applied = @()
     $failed = @()
     $missingDriver = @()
+    $missingPort = @()
 
     $installed = @()
     try { $installed = @(Get-PrinterDriver -ErrorAction Stop | ForEach-Object { $_.Name }) } catch { }
@@ -441,16 +445,31 @@ function Import-WzPrinters {
             Write-WzLog "Drucker $($printer.name) ist bereits eingerichtet — übersprungen" -Level Info
             continue
         }
-        if ($installed.Count -gt 0 -and $installed -notcontains $printer.treiber) {
-            $missingDriver += "$($printer.name) (Treiber »$($printer.treiber)«)"
-            continue
-        }
+        $driverMissing = ($installed.Count -gt 0 -and $installed -notcontains $printer.treiber)
 
         if ($syncHash.DryRun) {
-            Write-WzLog "[Test] Drucker $($printer.name) würde an $($printer.anschluss) angelegt" -Level Test
+            $note = if ($driverMissing) { ' — der Treiber müsste dafür erst eingerichtet werden' } else { '' }
+            Write-WzLog "[Test] Drucker $($printer.name) würde an $($printer.anschluss) angelegt$note" -Level Test
             continue
         }
 
+        if ($driverMissing) {
+            # Aus dem Treiberspeicher nachziehen, bevor aufgegeben wird
+            try {
+                Add-PrinterDriver -Name $printer.treiber -ErrorAction Stop
+                $installed += $printer.treiber
+                Write-WzLog "Treiber »$($printer.treiber)« aus dem Treiberspeicher eingerichtet" -Level Ok
+            } catch {
+                # Den Grund nennen statt nur »fehlt«: Ohne ihn weiß niemand, ob
+                # der Treiber nachinstalliert werden muss oder der Name nicht stimmt.
+                $reason = $_.Exception.Message.Split([char]10)[0].Trim()
+                Write-WzLog "Treiber »$($printer.treiber)« nicht verfügbar: $reason" -Level Warn
+                $missingDriver += "$($printer.name) (Treiber »$($printer.treiber)«)"
+                continue
+            }
+        }
+
+        $createdPort = $null
         try {
             # Netzwerkdrucker hängen an einem freigegebenen Pfad, lokale an einem
             # Anschluss — Add-Printer verlangt dafür verschiedene Parameter.
@@ -458,7 +477,23 @@ function Import-WzPrinters {
                 Add-Printer -ConnectionName $printer.anschluss -ErrorAction Stop
             } else {
                 if (-not (Get-PrinterPort -Name $printer.anschluss -ErrorAction SilentlyContinue)) {
-                    Add-PrinterPort -Name $printer.anschluss -ErrorAction Stop
+                    # Nur Netzwerkanschlüsse lassen sich anlegen. USB001,
+                    # PORTPROMPT: oder DOT4_001 entstehen erst, wenn das Gerät
+                    # angeschlossen wird beziehungsweise seine Software
+                    # installiert ist — Add-PrinterPort scheitert dort mit einer
+                    # nichtssagenden Meldung.
+                    # Oktette bewusst auf 0-255 geprüft: »10.0.0.300« sieht aus
+                    # wie eine Adresse, und Windows legte daraus sonst klaglos
+                    # einen Anschluss auf einen Rechnernamen an, den es nicht gibt.
+                    $octet = '(?:25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)'
+                    if ($printer.anschluss -match "^(?:IP_)?($octet(?:\.$octet){3})$") {
+                        Add-PrinterPort -Name $printer.anschluss -PrinterHostAddress $Matches[1] -ErrorAction Stop
+                        $createdPort = $printer.anschluss
+                        Write-WzLog "Netzwerkanschluss $($printer.anschluss) angelegt" -Level Ok
+                    } else {
+                        $missingPort += "$($printer.name) (Anschluss »$($printer.anschluss)«)"
+                        continue
+                    }
                 }
                 Add-Printer -Name $printer.name -DriverName $printer.treiber `
                     -PortName $printer.anschluss -ErrorAction Stop
@@ -467,6 +502,25 @@ function Import-WzPrinters {
         } catch {
             $failed += $printer.name
             Write-WzLog "Drucker $($printer.name) nicht angelegt: $($_.Exception.Message.Split([char]10)[0])" -Level Warn
+            # Den eben angelegten Anschluss wieder abräumen. Sonst bliebe nach
+            # einem gescheiterten Versuch ein verwaister Eintrag zurück, den
+            # später niemand mehr zuordnen kann. Der Spooler hält ihn direkt
+            # nach dem Fehlschlag noch kurz fest — deshalb ein zweiter Versuch.
+            if ($createdPort) {
+                $removed = $false
+                foreach ($attempt in 1, 2) {
+                    try {
+                        Remove-PrinterPort -Name $createdPort -ErrorAction Stop
+                        $removed = $true
+                        break
+                    } catch {
+                        if ($attempt -eq 1) { Start-Sleep -Seconds 2 }
+                    }
+                }
+                if (-not $removed) {
+                    Write-WzLog "Anschluss $createdPort blieb übrig — bitte in den Druckereinstellungen entfernen." -Level Warn
+                }
+            }
         }
     }
 
@@ -475,7 +529,12 @@ function Import-WzPrinters {
         Add-WzAction -Area 'Zurückspielen' -Summary "$($applied.Count) Drucker wieder eingerichtet" -Detail $applied
     }
 
-    return [pscustomobject]@{ Applied = @($applied); Failed = @($failed); MissingDriver = @($missingDriver) }
+    return [pscustomobject]@{
+        Applied       = @($applied)
+        Failed        = @($failed)
+        MissingDriver = @($missingDriver)
+        MissingPort   = @($missingPort)
+    }
 }
 
 function Import-WzMappedDrives {
