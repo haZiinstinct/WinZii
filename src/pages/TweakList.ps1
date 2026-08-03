@@ -31,16 +31,8 @@ function New-WzTweakList {
         $title = if ($meta) { $meta.name } else { $categoryId }
         $lead = if ($meta) { $meta.description } else { '' }
 
-        $card = New-Object Windows.Controls.Border
-        $card.Style = $syncHash.Window.FindResource('WzCardStatic')
-        $card.Margin = New-Object Windows.Thickness(0, 0, 0, 14)
-
-        $stack = New-Object Windows.Controls.StackPanel
-
-        $eyebrow = New-Object Windows.Controls.TextBlock
-        $eyebrow.Text = "// $($title.ToUpper())"
-        $eyebrow.Style = $syncHash.Window.FindResource('WzEyebrow')
-        [void]$stack.Children.Add($eyebrow)
+        $card = New-WzCard -Eyebrow "// $($title.ToUpper())" -Static
+        $stack = $card.Content
 
         $header = New-Object Windows.Controls.Grid
         $headerTitle = New-Object Windows.Controls.TextBlock
@@ -83,8 +75,7 @@ function New-WzTweakList {
             if ($OnSelectionChanged) { & $OnSelectionChanged }
         }.GetNewClosure())
 
-        $card.Child = $stack
-        [void]$Container.Children.Add($card)
+        [void]$Container.Children.Add($card.Card)
     }
 
     return $rows

@@ -28,7 +28,7 @@ Run it from a USB stick: clean up, optimize, set up — no installation, no acco
 | --- | --- |
 | **Dashboard** | Windows version, hardware, GPU, monitors, BIOS, RAM slots and battery wear, plus activation, BitLocker, antivirus, disks and network — everything at a glance when taking on a PC. |
 | **Diagnostics** | Reads the event logs and translates them into plain language: what happened, what it means, what to do. Plus bluescreen stop codes, disk health, and the sfc, DISM and chkdsk tools. |
-| **Optimization** | 40 tweaks for speed, telemetry, privacy and security. Each one explained, each one individually reversible. |
+| **Optimization** | 41 tweaks for speed, telemetry, privacy and security. Each one explained, each one individually reversible. |
 | **AI removal** | Finds Copilot, Recall and Click to Do — blocks them by policy or removes them entirely. The blocks also act preventively against feature updates. |
 | **Cleanup** | First shows where the space went (caches, update leftovers, browser caches, Windows.old), then deletes selectively. Personal files are excluded. |
 | **Programs** | 52 programs via winget, including bootstrapping winget itself on LTSC systems. Installers can be cached on the stick for offline use. A second section finds and uninstalls installed programs — silently where possible. |
@@ -87,7 +87,7 @@ To be blunt, so nobody gets surprised: WinZii was developed and tested on **one*
 
 | Area | Status |
 | --- | --- |
-| **Windows 10** | The version switch works (34 tweaks for both systems, 6 Windows-11-only, 1 Windows-10-only), but a full run never happened there. |
+| **Windows 10** | The version switch works (33 tweaks for both systems, 7 Windows-11-only, 1 Windows-10-only), but a full run never happened there. |
 | **Non-German Windows** | The code that parses Windows output knows German and English; `takeown` adapts to the UI language. Only the German side has been exercised. |
 | **Battery, Wi-Fi, BitLocker, OneDrive** | The "not present" paths are verified and report cleanly. The positive cases are untested for lack of hardware. |
 | **Driver backup, Office install** | Verified read-only, never executed end to end. |

@@ -32,16 +32,8 @@ function New-WzCleanupList {
         $groupCategories = @($categories | Where-Object { $_.group -eq $group.id })
         if ($groupCategories.Count -eq 0) { continue }
 
-        $card = New-Object Windows.Controls.Border
-        $card.Style = $syncHash.Window.FindResource('WzCardStatic')
-        $card.Margin = New-Object Windows.Thickness(0, 0, 0, 14)
-
-        $stack = New-Object Windows.Controls.StackPanel
-
-        $eyebrow = New-Object Windows.Controls.TextBlock
-        $eyebrow.Text = "// $($group.name.ToUpper())"
-        $eyebrow.Style = $syncHash.Window.FindResource('WzEyebrow')
-        [void]$stack.Children.Add($eyebrow)
+        $card = New-WzCard -Eyebrow "// $($group.name.ToUpper())" -Static
+        $stack = $card.Content
 
         $lead = New-Object Windows.Controls.TextBlock
         $lead.Text = $group.description
@@ -56,8 +48,7 @@ function New-WzCleanupList {
             [void]$rows.Add($row)
         }
 
-        $card.Child = $stack
-        [void]$container.Children.Add($card)
+        [void]$container.Children.Add($card.Card)
     }
 
     return $rows
@@ -117,6 +108,17 @@ function New-WzCleanupRow {
     $descriptionBlock.Margin = New-Object Windows.Thickness(0, 2, 12, 0)
     [void]$textStack.Children.Add($descriptionBlock)
 
+    # Die Altersaufteilung steht bewusst nicht im Hinweisblock: Sie ist keine
+    # Warnung, sondern die Auskunft, die vor dem Löschen Vertrauen schafft.
+    $ageBlock = New-Object Windows.Controls.TextBlock
+    $ageBlock.FontFamily = $syncHash.Window.FindResource('WzFontMono')
+    $ageBlock.FontSize = 10.5
+    $ageBlock.Foreground = $syncHash.Window.FindResource('WzTextFaint')
+    $ageBlock.TextWrapping = 'Wrap'
+    $ageBlock.Visibility = [Windows.Visibility]::Collapsed
+    $ageBlock.Margin = New-Object Windows.Thickness(0, 3, 12, 0)
+    [void]$textStack.Children.Add($ageBlock)
+
     $noteBlock = New-Object Windows.Controls.TextBlock
     $noteBlock.FontFamily = $syncHash.Window.FindResource('WzFontMono')
     $noteBlock.FontSize = 10.5
@@ -144,6 +146,7 @@ function New-WzCleanupRow {
         Row       = $grid
         CheckBox  = $checkBox
         SizeBlock = $sizeBlock
+        AgeBlock  = $ageBlock
         NoteBlock = $noteBlock
         Bytes     = [int64]0
     }
@@ -191,6 +194,13 @@ function Start-WzCleanupScan {
                 $syncHash.Window.FindResource('WzText')
             } else {
                 $syncHash.Window.FindResource('WzTextFaint')
+            }
+
+            if ($measure.AgeText) {
+                $entry.AgeBlock.Text = $measure.AgeText
+                $entry.AgeBlock.Visibility = [Windows.Visibility]::Visible
+            } else {
+                $entry.AgeBlock.Visibility = [Windows.Visibility]::Collapsed
             }
 
             $notes = @()

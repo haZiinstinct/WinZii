@@ -100,6 +100,12 @@ function Write-WzDashboardCards {
                        elseif ($Info.Battery.WearPercent -ge 40) { 'warn' }
                        else { 'ok' }
         [void]$rows.Children.Add((New-WzInfoRow 'Akku' $Info.Battery.Verdict -Kind $batteryKind))
+        # Derselbe Balken wie bei Arbeitsspeicher und Platte: »37 %« als Zahl
+        # sagt wenig, als Balken neben den anderen sieht man den Verschleiß.
+        if ($null -ne $Info.Battery.WearPercent) {
+            [void]$rows.Children.Add((New-WzMeter -Percent ([int]$Info.Battery.WearPercent) `
+                -Caption "$([int]$Info.Battery.WearPercent) % der Kapazität verloren"))
+        }
     }
 
     Write-WzDashboardDevices -Info $Info
@@ -189,7 +195,7 @@ function Write-WzDashboardDevices {
     $rows.Children.Clear()
     foreach ($monitor in $monitors) {
         $parts = @()
-        if ($monitor.Inches -gt 0) { $parts += "$($monitor.Inches)″" }
+        if ($monitor.Inches -gt 0) { $parts += "$(Format-WzNumber $monitor.Inches)″" }
         if ($monitor.Year -gt 0) { $parts += "Baujahr $($monitor.Year)" }
         $label = "$($monitor.Vendor) $($monitor.Name)".Trim()
         [void]$rows.Children.Add((New-WzInfoRow $label ($parts -join ' · ') -LabelWidth 140))
@@ -207,8 +213,8 @@ function Write-WzDashboardDevices {
     $rows = $syncHash.DashFirmwareRows
     $rows.Children.Clear()
     if ($Info.BiosDate) {
-        $years = [math]::Round(((Get-Date) - $Info.BiosDate).TotalDays / 365.25, 1)
-        [void]$rows.Children.Add((New-WzInfoRow 'Stand' "$($Info.BiosDate.ToString('dd.MM.yyyy')) · $years Jahre alt"))
+        $years = Format-WzNumber (((Get-Date) - $Info.BiosDate).TotalDays / 365.25) 'Jahre alt'
+        [void]$rows.Children.Add((New-WzInfoRow 'Stand' "$($Info.BiosDate.ToString('dd.MM.yyyy')) · $years"))
     }
     [void]$rows.Children.Add((New-WzInfoRow 'Hersteller' $Info.BiosVendor))
     [void]$rows.Children.Add((New-WzInfoRow 'Mainboard' $Info.BaseBoard))

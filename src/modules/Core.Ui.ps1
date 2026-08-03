@@ -872,21 +872,61 @@ function Format-WzBytes {
     return ('{0} {1}' -f [math]::Round($value, $decimals).ToString($culture), $units[$index])
 }
 
+function Format-WzNumber {
+    <#
+    .SYNOPSIS
+        Dezimalzahl mit Einheit im deutschen Zahlenformat, z. B. »74,2 s«.
+    .NOTES
+        Ohne feste Kultur schreibt PowerShell »74.2« mit Punkt — direkt neben
+        einem »13,1 GB« aus Format-WzBytes sieht das nach zwei Programmen aus.
+    #>
+    param(
+        [Parameter(Mandatory = $true, Position = 0)][double]$Value,
+        [Parameter(Position = 1)][string]$Unit,
+        [int]$Decimals = 1
+    )
+    $culture = [Globalization.CultureInfo]::GetCultureInfo('de-DE')
+    $text = [math]::Round($Value, $Decimals).ToString($culture)
+    if ($Unit) { return "$text $Unit" }
+    return $text
+}
+
 function Format-WzSeconds {
     <#
     .SYNOPSIS
         Sekundenangabe im deutschen Zahlenformat, z. B. »74,2 s«.
-    .NOTES
-        Ohne feste Kultur schreibt PowerShell »74.2« mit Punkt — direkt neben
-        einem »13,1 GB« aus Format-WzBytes sieht das nach zwei Programmen aus.
     #>
     param(
         [Parameter(Mandatory = $true)][double]$Seconds,
         [int]$Decimals = 1,
         [string]$Unit = 's'
     )
-    $culture = [Globalization.CultureInfo]::GetCultureInfo('de-DE')
-    $text = [math]::Round($Seconds, $Decimals).ToString($culture)
-    if ($Unit) { return "$text $Unit" }
-    return $text
+    return Format-WzNumber -Value $Seconds -Unit $Unit -Decimals $Decimals
+}
+
+function Format-WzAgo {
+    <#
+    .SYNOPSIS
+        Zeitpunkt als Abstand zu heute, z. B. »vor 3 Jahren (14.02.2022)«.
+    .NOTES
+        Ein nacktes Datum muss der Leser erst im Kopf verrechnen. Beim
+        Datenumzug ist genau diese Rechnung die Entscheidung: Ein Profil, das
+        seit drei Jahren niemand angefasst hat, muss nicht mitkopiert werden.
+    #>
+    param($Time)
+
+    if (-not $Time) { return '' }
+    try { $stamp = [datetime]$Time } catch { return '' }
+
+    $days = [int][math]::Floor(((Get-Date) - $stamp).TotalDays)
+    $span = if ($days -lt 0) { 'in der Zukunft' }
+        elseif ($days -eq 0) { 'heute' }
+        elseif ($days -eq 1) { 'gestern' }
+        elseif ($days -lt 30) { "vor $days Tagen" }
+        elseif ($days -lt 60) { 'vor einem Monat' }
+        elseif ($days -lt 365) { "vor $([int][math]::Floor($days / 30)) Monaten" }
+        elseif ($days -lt 730) { 'vor über einem Jahr' }
+        else { "vor über $([int][math]::Floor($days / 365)) Jahren" }
+
+    return "$span ($($stamp.ToString('dd.MM.yyyy')))"
 }

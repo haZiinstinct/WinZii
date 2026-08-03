@@ -28,7 +28,7 @@ Vom USB-Stick starten, aufräumen, optimieren, einrichten — ohne Installation,
 | --- | --- |
 | **Dashboard** | Windows-Version, Hardware, Grafik, Bildschirme, BIOS, RAM-Steckplätze und Akkuverschleiß, dazu Aktivierung, BitLocker, Virenschutz, Datenträger und Netzwerk — alles auf einen Blick beim Aufsetzen des PCs. |
 | **Diagnose** | Wertet die Ereignisprotokolle aus und übersetzt sie in Klartext: was passiert ist, was es bedeutet, was zu tun ist. Dazu Bluescreen-Stoppcodes, Datenträgerzustand und die Werkzeuge sfc, DISM und chkdsk. |
-| **Optimierung** | 40 Eingriffe für Geschwindigkeit, Telemetrie, Datenschutz und Sicherheit. Jeder mit Begründung, jeder einzeln zurücknehmbar. |
+| **Optimierung** | 41 Eingriffe für Geschwindigkeit, Telemetrie, Datenschutz und Sicherheit. Jeder mit Begründung, jeder einzeln zurücknehmbar. |
 | **KI-Entfernung** | Findet Copilot, Recall und Click to Do — sperrt sie per Richtlinie oder entfernt sie ganz. Die Sperren wirken auch vorbeugend gegen Funktionsupdates. |
 | **Bereinigung** | Zeigt erst, wo wie viel Platz liegt (Zwischenspeicher, Update-Reste, Browser-Caches, Windows.old), dann wird gezielt gelöscht. Persönliche Dateien sind ausgeschlossen. |
 | **Programme** | 52 Programme über winget, mit Nachinstallation von winget selbst für LTSC-Systeme. Installationsdateien lassen sich auf den Stick laden. Zweiter Bereich: installierte Programme suchen und entfernen, still wo möglich. |
@@ -87,7 +87,7 @@ Ehrlich gesagt, damit niemand böse überrascht wird: WinZii wurde auf **einem**
 
 | Bereich | Stand |
 | --- | --- |
-| **Windows 10** | Die Versionsweiche greift (34 Einträge für beide Systeme, 6 nur für Windows 11, 1 nur für Windows 10), aber es lief dort nie ein vollständiger Durchlauf. |
+| **Windows 10** | Die Versionsweiche greift (33 Einträge für beide Systeme, 7 nur für Windows 11, 1 nur für Windows 10), aber es lief dort nie ein vollständiger Durchlauf. |
 | **Nicht-deutsches Windows** | Die Stellen, die Windows-Ausgaben auswerten, kennen Deutsch und Englisch; `takeown` fragt die Oberflächensprache ab. Geprüft wurde nur die deutsche Seite. |
 | **Akku, WLAN, BitLocker, OneDrive** | Die »nicht vorhanden«-Pfade sind geprüft und melden sauber. Der jeweilige Positiv-Fall ist mangels Hardware ungetestet. |
 | **Treibersicherung und Office** | Nur lesend geprüft, nie vollständig durchgeführt. |

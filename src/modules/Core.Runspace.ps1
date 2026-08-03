@@ -129,7 +129,7 @@ function Invoke-WzTask {
         Set-WzBusy -Off
 
         if (-not $state.Silent -or $state.Canceled) {
-            $seconds = [math]::Round(((Get-Date) - $state.Started).TotalSeconds, 1)
+            $seconds = Format-WzNumber ((Get-Date) - $state.Started).TotalSeconds
             if ($state.Canceled) {
                 Write-WzLog "$($state.Name) abgebrochen ($seconds s)." -Level Warn
             } elseif ($failed) {

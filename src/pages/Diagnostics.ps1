@@ -196,7 +196,13 @@ function Write-WzDiagnosticsResult {
         [void]$container.Children.Add((New-WzInfoRow 'Zustand' $disk.Assessment -Kind $kind))
         if ($disk.PowerOnHours -ne 'n/v') { [void]$container.Children.Add((New-WzInfoRow 'Betriebszeit' $disk.PowerOnHours)) }
         if ($disk.Temperature -ne 'n/v') { [void]$container.Children.Add((New-WzInfoRow 'Temperatur' $disk.Temperature)) }
-        if ($disk.Wear -ne 'n/v') { [void]$container.Children.Add((New-WzInfoRow 'Abnutzung' $disk.Wear)) }
+        if ($disk.Wear -ne 'n/v') {
+            [void]$container.Children.Add((New-WzInfoRow 'Abnutzung' $disk.Wear))
+            if ($null -ne $disk.WearPercent) {
+                [void]$container.Children.Add((New-WzMeter -Percent $disk.WearPercent `
+                    -Caption "$($disk.WearPercent) % der Schreibzyklen verbraucht"))
+            }
+        }
     }
 
     $syncHash.DiagSummary.Text = "$($events.Count) Ereignisse · $($dumps.Count) Abstürze · $($problems.Count) Datenträgerhinweise"

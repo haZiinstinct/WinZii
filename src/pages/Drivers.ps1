@@ -107,10 +107,15 @@ function Write-WzDriverList {
 
     # Nur die ältesten zeigen — die vollständige Liste hilft am Bildschirm niemandem
     foreach ($driver in ($drivers | Select-Object -First 15)) {
-        $age = if ($null -ne $driver.AgeYears) { "$($driver.AgeYears) Jahre" } else { 'ohne Datum' }
+        $age = if ($null -ne $driver.AgeYears) { Format-WzNumber $driver.AgeYears 'Jahre' } else { 'ohne Datum' }
         $kind = if ($null -ne $driver.AgeYears -and $driver.AgeYears -ge 5 -and -not $driver.IsMicrosoft) { 'warn' } else { 'normal' }
+        # Die Kategorie davor macht aus »irgendein Treiber ist sieben Jahre alt«
+        # ein »der Grafiktreiber ist sieben Jahre alt« — erst das ist eine Aussage.
+        $parts = @()
+        if ($driver.Class) { $parts += $driver.Class }
+        $parts += @($driver.Provider, $driver.Version, $age)
         [void]$container.Children.Add((New-WzInfoRow $driver.Device `
-            "$($driver.Provider) · $($driver.Version) · $age" -Kind $kind -LabelWidth 250))
+            ($parts -join ' · ') -Kind $kind -LabelWidth 250))
     }
 
     if ($drivers.Count -gt 15) {

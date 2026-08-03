@@ -324,6 +324,7 @@ function Get-WzSmartStatus {
                 Temperature  = 'n/v'
                 PowerOnHours = 'n/v'
                 Wear         = 'n/v'
+                WearPercent  = $null
                 ReadErrors   = 'n/v'
                 Assessment   = ''
             }
@@ -344,10 +345,12 @@ function Get-WzSmartStatus {
                     $entry.Temperature = "$($counter.Temperature) °C"
                 }
                 if ($null -ne $counter.PowerOnHours) {
-                    $years = [math]::Round($counter.PowerOnHours / 8760, 1)
-                    $entry.PowerOnHours = "$($counter.PowerOnHours) h (rund $years Jahre)"
+                    $entry.PowerOnHours = "$($counter.PowerOnHours) h (rund $(Format-WzNumber ($counter.PowerOnHours / 8760) 'Jahre'))"
                 }
-                if ($null -ne $counter.Wear) { $entry.Wear = "$($counter.Wear) %" }
+                if ($null -ne $counter.Wear) {
+                    $entry.Wear = "$($counter.Wear) %"
+                    $entry.WearPercent = [int]$counter.Wear
+                }
                 if ($null -ne $counter.ReadErrorsUncorrected) { $entry.ReadErrors = [string]$counter.ReadErrorsUncorrected }
             }
 

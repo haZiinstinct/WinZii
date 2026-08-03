@@ -37,6 +37,35 @@ function Get-WzCleanupGroups {
     return @($catalog.groups)
 }
 
+function Format-WzPathSetAge {
+    <#
+    .SYNOPSIS
+        Formt die 90-Tage-Aufteilung einer Messung in einen Satz.
+    .NOTES
+        Measure-WzPathSet rechnet die Aufteilung ohnehin in jedem Durchlauf mit.
+        »12.480 Dateien, davon 11.900 älter als 90 Tage« beantwortet die Frage,
+        die vor dem Löschen wirklich zählt: Ist das hier Karteileiche oder etwas,
+        das gestern noch gebraucht wurde?
+    #>
+    param([Parameter(Mandatory = $true)]$Measure)
+
+    # Bei einer Handvoll Dateien ist die Aufteilung keine Auskunft, sondern eine
+    # Zeile mehr unter jeder Kategorie. Erst ab einer nennenswerten Menge — oder
+    # sobald überhaupt etwas Altes dabei ist — steht dort etwas Verwertbares.
+    if ($Measure.Items -lt 20 -and $Measure.OldItems -le 0) { return '' }
+
+    $culture = [Globalization.CultureInfo]::GetCultureInfo('de-DE')
+    $total = $Measure.Items.ToString('N0', $culture)
+    if ($Measure.OldItems -le 0) {
+        return "$total Datei(en), alle jünger als 90 Tage"
+    }
+    if ($Measure.OldItems -eq $Measure.Items) {
+        return "$total Datei(en), alle älter als 90 Tage"
+    }
+    $old = $Measure.OldItems.ToString('N0', $culture)
+    return "$total Datei(en), davon $old älter als 90 Tage ($(Format-WzBytes $Measure.OldBytes))"
+}
+
 function Measure-WzCleanupCategory {
     <#
     .SYNOPSIS
@@ -50,21 +79,17 @@ function Measure-WzCleanupCategory {
         Id      = $Category.id
         Bytes   = [int64]0
         Items   = 0
+        AgeText = ''
         Detail  = ''
         Blocked = $null
     }
 
     switch ($Category.method) {
-        'files' {
+        { $_ -in 'files', 'reportOnly' } {
             $measure = Measure-WzPathSet -Paths $Category.paths
             $result.Bytes = $measure.Bytes
             $result.Items = $measure.Items
-        }
-        'reportOnly' {
-            $measure = Measure-WzPathSet -Paths $Category.paths
-            $result.Bytes = $measure.Bytes
-            $result.Items = $measure.Items
-            $result.Detail = "$($measure.OldItems) Datei(en) älter als 90 Tage ($(Format-WzBytes $measure.OldBytes))"
+            $result.AgeText = Format-WzPathSetAge -Measure $measure
         }
         'recycleBin' {
             try {

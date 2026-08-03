@@ -3,6 +3,57 @@
 # Vor einer Neuinstallation ist die Treibersicherung die halbe Miete, gerade
 # bei Notebooks mit Sonderhardware, für die es keine Downloads mehr gibt.
 
+function Get-WzDeviceClassName {
+    <#
+    .SYNOPSIS
+        Übersetzt die Geräteklasse aus WMI in den Namen, den der Geräte-Manager
+        anzeigt.
+    .NOTES
+        Win32_PnPSignedDriver liefert sie in Großbuchstaben und auf Englisch
+        (»HIDCLASS«, »MEDIA«). So gedruckt sieht die Treiberliste aus wie eine
+        Registry-Ausgabe. Unbekanntes wird durchgereicht statt geraten — lieber
+        ein englischer Klassenname als ein falscher deutscher.
+    #>
+    param([string]$Class)
+
+    if (-not $Class) { return '' }
+
+    $names = @{
+        'display'          = 'Grafik'
+        'net'              = 'Netzwerk'
+        'media'            = 'Audio'
+        'audioendpoint'    = 'Audio'
+        'hidclass'         = 'Eingabegerät'
+        'mouse'            = 'Maus'
+        'keyboard'         = 'Tastatur'
+        'usb'              = 'USB'
+        'system'           = 'System'
+        'printer'          = 'Drucker'
+        'diskdrive'        = 'Datenträger'
+        'scsiadapter'      = 'Speicher-Controller'
+        'hdc'              = 'Speicher-Controller'
+        'bluetooth'        = 'Bluetooth'
+        'image'            = 'Bildverarbeitung'
+        'monitor'          = 'Bildschirm'
+        'firmware'         = 'Firmware'
+        'securitydevices'  = 'Sicherheit'
+        'battery'          = 'Akku'
+        'ports'            = 'Anschlüsse'
+        'smartcardreader'  = 'Kartenleser'
+        'camera'           = 'Kamera'
+        'volume'           = 'Laufwerk'
+        'computer'         = 'Computer'
+        'processor'        = 'Prozessor'
+        'sensor'           = 'Sensor'
+        'softwarecomponent' = 'Herstellersoftware'
+        'softwaredevice'   = 'Softwaregerät'
+    }
+
+    $key = $Class.ToLowerInvariant()
+    if ($names.ContainsKey($key)) { return $names[$key] }
+    return $Class
+}
+
 function Get-WzProblemDevices {
     <#
     .SYNOPSIS
@@ -41,7 +92,7 @@ function Get-WzProblemDevices {
             $info = $meanings[$code]
             $devices += [pscustomobject]@{
                 Name         = if ($device.Name) { $device.Name } else { 'Unbekanntes Gerät' }
-                Class        = if ($device.PNPClass) { $device.PNPClass } else { 'ohne Kategorie' }
+                Class        = if ($device.PNPClass) { Get-WzDeviceClassName $device.PNPClass } else { 'ohne Kategorie' }
                 Manufacturer = $device.Manufacturer
                 Code         = $code
                 Meaning      = if ($info) { $info.Text } else { "Fehlercode $code" }
@@ -92,7 +143,7 @@ function Get-WzDriverInventory {
                 Version     = $driver.DriverVersion
                 Date        = $date
                 AgeYears    = $ageYears
-                Class       = $driver.DeviceClass
+                Class       = Get-WzDeviceClassName $driver.DeviceClass
                 InfName     = $driver.InfName
                 IsMicrosoft = $isMicrosoft
             }

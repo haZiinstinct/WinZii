@@ -83,16 +83,8 @@ function New-WzAppList {
         $apps = @(Get-WzApps -Category $category.id)
         if ($apps.Count -eq 0) { continue }
 
-        $card = New-Object Windows.Controls.Border
-        $card.Style = $syncHash.Window.FindResource('WzCardStatic')
-        $card.Margin = New-Object Windows.Thickness(0, 0, 0, 14)
-
-        $stack = New-Object Windows.Controls.StackPanel
-
-        $eyebrow = New-Object Windows.Controls.TextBlock
-        $eyebrow.Text = "// $($category.name.ToUpper())"
-        $eyebrow.Style = $syncHash.Window.FindResource('WzEyebrow')
-        [void]$stack.Children.Add($eyebrow)
+        $card = New-WzCard -Eyebrow "// $($category.name.ToUpper())" -Static
+        $stack = $card.Content
 
         $lead = New-Object Windows.Controls.TextBlock
         $lead.Text = $category.description
@@ -107,8 +99,7 @@ function New-WzAppList {
             [void]$rows.Add([pscustomobject]@{ App = $app; CheckBox = $row.CheckBox })
         }
 
-        $card.Child = $stack
-        [void]$container.Children.Add($card)
+        [void]$container.Children.Add($card.Card)
     }
 
     return $rows

@@ -66,6 +66,16 @@ function Write-WzDataProfiles {
         [void]$container.Children.Add((New-WzInfoRow "$($profileEntry.Account)$suffix" `
             (Format-WzBytes $profileEntry.TotalBytes) -Kind 'ok' -LabelWidth 250))
 
+        # Ein Profil, an dem seit Jahren niemand angemeldet war, muss beim Umzug
+        # nicht mit — ohne diese Zeile wandern Karteileichen kommentarlos mit.
+        if (-not $profileEntry.IsCurrent -and $profileEntry.LastUse) {
+            $ago = Format-WzAgo $profileEntry.LastUse
+            $stale = ((Get-Date) - [datetime]$profileEntry.LastUse).TotalDays -ge 365
+            [void]$container.Children.Add((New-WzInfoRow '    zuletzt benutzt' `
+                $(if ($stale) { "$ago — vermutlich nicht mehr in Gebrauch" } else { $ago }) `
+                -Kind $(if ($stale) { 'warn' } else { 'normal' }) -LabelWidth 250))
+        }
+
         foreach ($folder in $profileEntry.Folders) {
             [void]$container.Children.Add((New-WzInfoRow "    $($folder.Name)" `
                 "$(Format-WzBytes $folder.Bytes) · $($folder.Items) Datei(en)" -LabelWidth 250))
@@ -180,7 +190,11 @@ function Write-WzDataDevices {
     $container = $syncHash.DataDevices
     foreach ($printer in $Printers) {
         $marker = if ($printer.IsDefault) { ' (Standard)' } else { '' }
-        [void]$container.Children.Add((New-WzInfoRow "$($printer.Name)$marker" $printer.Port -LabelWidth 220))
+        # Der Treibername gehört dazu: Nach einer Neuinstallation ist genau er
+        # die Antwort auf »welchen Treiber muss ich jetzt suchen?«.
+        $detail = @($printer.Port, $printer.Driver) | Where-Object { $_ }
+        [void]$container.Children.Add((New-WzInfoRow "$($printer.Name)$marker" `
+            ($detail -join ' · ') -LabelWidth 220))
     }
     foreach ($drive in $NetDrives) {
         [void]$container.Children.Add((New-WzInfoRow "Laufwerk $($drive.Letter)" $drive.Target -Kind 'ok' -LabelWidth 220))

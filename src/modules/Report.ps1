@@ -501,7 +501,14 @@ function New-WzHandoverReport {
     $deviceRows += "BIOS|$($after.BiosVersion)$(if ($after.BiosDate) { " vom $($after.BiosDate.ToString('dd.MM.yyyy'))" })"
     if ($after.SerialNumber) { $deviceRows += "Seriennummer|$($after.SerialNumber)" }
     if ($after.Battery.Present) { $deviceRows += "Akku|$($after.Battery.Verdict)" }
-    foreach ($adapter in $after.Network) { $deviceRows += "Netzwerk|$($adapter.Adapter): $($adapter.IPv4)" }
+    # Die MAC-Adresse steht schon in der Abfrage und wird nirgends gezeigt —
+    # dabei braucht sie jeder, der den PC in einem verwalteten Netz freischalten
+    # oder eine feste Adresse im Router hinterlegen soll.
+    foreach ($adapter in $after.Network) {
+        $line = "$($adapter.Adapter): $($adapter.IPv4)"
+        if ($adapter.Mac) { $line += " · MAC $($adapter.Mac)" }
+        $deviceRows += "Netzwerk|$line"
+    }
 
     $securityRows = @()
     if ($security) {
@@ -587,6 +594,23 @@ function Get-WzHandoverRecommendations {
 
     if ($Info.Battery.Present -and $null -ne $Info.Battery.WearPercent -and $Info.Battery.WearPercent -ge 40) {
         $result += @{ Kind = 'warn'; Text = "Der Akku hat $($Info.Battery.WearPercent) % seiner Kapazität verloren. Ein Austausch bringt die Laufzeit zurück." }
+    }
+
+    # Aufrüsten: Beide Zahlen liegen längst vor. Nur wenn gar keine SSD verbaut
+    # ist, läuft Windows sicher von einer Festplatte — eine zusätzliche Daten-HDD
+    # neben einer SSD ist völlig in Ordnung und darf hier nichts auslösen.
+    $disks = if ($Security) { @($Security.PhysicalDisks) } else { @() }
+    if ($disks.Count -gt 0 -and -not ($disks | Where-Object { $_.MediaType -eq 'SSD' })) {
+        $result += @{ Kind = 'info'; Text = 'In diesem PC steckt keine SSD. Der Umstieg von Festplatte auf SSD bringt beim Arbeitstempo mehr als jede andere einzelne Maßnahme.' }
+    }
+    if ($Info.RamTotalBytes -gt 0 -and $Info.RamTotalBytes -lt 8GB) {
+        $free = $Info.RamSlots - $Info.RamSlotsUsed
+        $where = if ($free -gt 0) {
+            "$free Steckplatz/Steckplätze sind noch frei"
+        } else {
+            "alle $($Info.RamSlots) Steckplätze sind belegt, die Riegel müssten getauscht werden"
+        }
+        $result += @{ Kind = 'info'; Text = "Mit $(Format-WzBytes $Info.RamTotalBytes) Arbeitsspeicher wird es bei mehreren offenen Programmen eng — $where." }
     }
 
     return @($result)
