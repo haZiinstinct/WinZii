@@ -55,6 +55,17 @@
         </StackPanel>
     </Border>
 
+    <!-- Zuverlässigkeitsverlauf -->
+    <Border Style="{DynamicResource WzCardStatic}" Margin="0,0,0,14">
+        <StackPanel>
+            <TextBlock Text="// ZUVERLÄSSIGKEIT" Style="{DynamicResource WzEyebrow}" />
+            <TextBlock Name="DiagReliabilityTitle" Text="Noch nicht analysiert" Style="{DynamicResource WzCardTitle}" />
+            <TextBlock Style="{DynamicResource WzHint}" Margin="0,0,0,10"
+                       Text="Abstürze, Programmfehler und Installationen in einer Zeitleiste. Hier zeigt sich, ob ein Problem mit einer Installation zusammenfällt — das sieht man in der Ereignisliste nicht." />
+            <StackPanel Name="DiagReliability" />
+        </StackPanel>
+    </Border>
+
     <!-- Bluescreens -->
     <Border Style="{DynamicResource WzCardStatic}" Margin="0,0,0,14">
         <StackPanel>

@@ -290,6 +290,68 @@ function New-WzDiagReport {
     $content += New-WzHtmlSection -Title 'Systemabstürze' `
         -Lead 'Bluescreens der letzten 90 Tage mit übersetztem Stoppcode.' -Body $dumpBody
 
+    # --- Startdauer -------------------------------------------------------
+    # Die Werte wurden schon immer erhoben und in den Bericht hineingereicht,
+    # kamen dort aber nie an. »74 s Start, davon 48 s Dropbox« ist das Argument,
+    # das den Kunden zum Aufräumen bewegt.
+    $boot = $Result.Boot
+    $bootBody = if (-not $boot -or @($boot.Runs).Count -eq 0) {
+        New-WzHtmlNote -Kind 'info' -Text $(if ($boot -and $boot.Hint) { $boot.Hint } else { 'Keine Startdaten verfügbar.' })
+    } else {
+        $bootKind = if ($boot.AverageSeconds -lt 30) { 'ok' } elseif ($boot.AverageSeconds -lt 60) { 'warn' } else { 'err' }
+        $bootHtml = New-WzHtmlNote -Kind $bootKind -Text "Durchschnittlich $(Format-WzSeconds $boot.AverageSeconds -Unit 'Sekunden') bis zum benutzbaren Desktop. $($boot.Hint)"
+
+        $bootRows = @(foreach ($run in @($boot.Runs)) {
+            [pscustomobject]@{
+                Zeit    = $run.Time.ToString('dd.MM.yy HH:mm')
+                Gesamt  = Format-WzSeconds $run.TotalSeconds
+                Windows = Format-WzSeconds ($run.MainPathMs / 1000)
+                Danach  = Format-WzSeconds ([int]$run.DegradedBy / 1000)
+            }
+        })
+        $bootHtml += New-WzHtmlTable -Data $bootRows -Columns @(
+            'Zeit|Startvorgang|num', 'Gesamt|Gesamt|num',
+            'Windows|davon Windows selbst|num', 'Danach|davon Autostart|num'
+        )
+
+        if (@($boot.Worst).Count -gt 0) {
+            $culpritRows = @(foreach ($culprit in @($boot.Worst)) {
+                [pscustomobject]@{
+                    Name       = $culprit.Name
+                    Verzoegert = Format-WzSeconds $culprit.DelaySeconds
+                    Zeit       = $culprit.Time.ToString('dd.MM.yy HH:mm')
+                }
+            })
+            $bootHtml += New-WzHtmlTable -Data $culpritRows -Columns @(
+                'Name|Bremst den Start', 'Verzoegert|Verzögerung|num', 'Zeit|Gemessen am|num'
+            )
+        }
+        $bootHtml
+    }
+    $content += New-WzHtmlSection -Title 'Startdauer' `
+        -Lead 'Wie lange der PC vom Einschalten bis zum benutzbaren Desktop braucht — und was ihn dabei aufhält.' `
+        -Body $bootBody
+
+    # --- Zuverlässigkeit --------------------------------------------------
+    # Beantwortet die Frage, die die Ereignisliste nicht beantworten kann:
+    # Was wurde an dem Tag installiert, an dem die Probleme anfingen?
+    $reliability = @($Result.Reliability)
+    if ($reliability.Count -gt 0) {
+        $reliabilityRows = @(foreach ($record in $reliability) {
+            [pscustomobject]@{
+                Zeit    = $record.Time.ToString('dd.MM.yy HH:mm')
+                Art     = $record.Type
+                Was     = $record.Source
+                Details = $record.Message
+            }
+        })
+        $content += New-WzHtmlSection -Title 'Zuverlässigkeitsverlauf' `
+            -Lead 'Abstürze, Programmfehler und Installationen der letzten 30 Tage in einer Zeitleiste — hier zeigt sich, ob ein Problem mit einer Installation zusammenfällt.' `
+            -Body (New-WzHtmlTable -Data $reliabilityRows -Columns @(
+                'Zeit|Zeitpunkt|num', 'Art|Art', 'Was|Quelle', 'Details|Einzelheiten'
+            ))
+    }
+
     # --- Datenträger ------------------------------------------------------
     $diskBody = if ($disks.Count -eq 0) {
         New-WzHtmlNote -Text 'Keine Datenträgerdaten verfügbar.' -Kind 'info'
@@ -375,13 +437,20 @@ function New-WzHandoverReport {
             $summaries = @($group.Group | ForEach-Object {
                 if ($_.IsTest) { "$($_.Summary) (nur Testlauf)" } else { $_.Summary }
             })
+            # Add-WzAction sammelt seit jeher die Einzelposten mit ein — bisher
+            # landeten sie nirgends. Der Kunde soll sehen, WELCHE Programme
+            # entfernt wurden, nicht nur wie viele.
+            $details = @($group.Group | ForEach-Object { $_.Detail } | Where-Object { $_ })
             [pscustomobject]@{
-                Bereich = $group.Name
-                Anzahl  = $group.Count
-                Was     = $summaries -join ' · '
+                Bereich    = $group.Name
+                Anzahl     = $group.Count
+                Was        = $summaries -join ' · '
+                Einzelnes  = if ($details.Count -gt 0) { $details -join ', ' } else { '—' }
             }
         })
-        New-WzHtmlTable -Data $rows -Columns @('Bereich|Bereich', 'Anzahl|Schritte|num', 'Was|Was gemacht wurde')
+        New-WzHtmlTable -Data $rows -Columns @(
+            'Bereich|Bereich', 'Anzahl|Schritte|num', 'Was|Was gemacht wurde', 'Einzelnes|Einzelposten'
+        )
     }
     $content += New-WzHtmlSection -Title 'Durchgeführte Arbeiten' `
         -Lead 'Alles, was in dieser Sitzung am PC verändert wurde.' -Body $workBody

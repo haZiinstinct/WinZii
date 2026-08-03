@@ -31,11 +31,15 @@ function Start-WzDiagnosticsScan {
     Invoke-WzTask -Name 'Diagnose' -ArgumentList @($days) -ScriptBlock {
         param($days)
         [pscustomobject]@{
-            Events = Get-WzEventSummary -Days $days
-            Dumps  = Get-WzMinidumps -Days 90
-            Disks  = Get-WzSmartStatus
-            Boot   = Get-WzBootPerformance
-            Days   = $days
+            Events      = Get-WzEventSummary -Days $days
+            Dumps       = Get-WzMinidumps -Days 90
+            Disks       = Get-WzSmartStatus
+            Boot        = Get-WzBootPerformance
+            # Die Zuverlässigkeitsüberwachung war fertig gebaut, wurde aber von
+            # niemandem aufgerufen. Sie stellt Abstürze und Installationen
+            # nebeneinander — das kann die Ereignisauswertung nicht.
+            Reliability = Get-WzReliabilityRecords -Days $days
+            Days        = $days
         }
     } -OnComplete {
         param($result)
@@ -43,6 +47,45 @@ function Start-WzDiagnosticsScan {
         $syncHash.DiagResult = $result
         Write-WzDiagnosticsResult -Result $result
         $syncHash.DiagBtnReport.IsEnabled = $true
+    }
+}
+
+function Write-WzDiagnosticsReliability {
+    <#
+    .SYNOPSIS
+        Füllt die Karte »Zuverlässigkeit«.
+    .NOTES
+        Get-WzReliabilityRecords war seit Phase 7 fertig gebaut und hatte
+        keinen einzigen Aufrufer.
+    #>
+    param([Parameter(Mandatory = $true)][AllowEmptyCollection()][array]$Records)
+
+    $container = $syncHash.DiagReliability
+    $container.Children.Clear()
+
+    $problems = @($Records | Where-Object { $_.Type -ne 'Ereignis' })
+    $syncHash.DiagReliabilityTitle.Text = if ($Records.Count -eq 0) {
+        'Keine Einträge — auf diesem PC ist die Zuverlässigkeitsüberwachung leer'
+    } elseif ($problems.Count -eq 0) {
+        "$($Records.Count) Einträge, keine Abstürze oder Programmfehler darunter"
+    } else {
+        "$($problems.Count) Absturz/Programmfehler unter $($Records.Count) Einträgen"
+    }
+
+    # Nur die jüngsten zeigen; die vollständige Liste steht im Bericht
+    foreach ($record in ($Records | Select-Object -First 12)) {
+        $kind = switch ($record.Type) {
+            'Absturz'       { 'error' }
+            'Programmfehler' { 'warn' }
+            default         { 'normal' }
+        }
+        [void]$container.Children.Add((New-WzInfoRow `
+            "$($record.Time.ToString('dd.MM.yy HH:mm'))  $($record.Type)" `
+            "$($record.Source) — $($record.Message)" -Kind $kind -LabelWidth 190))
+    }
+    if ($Records.Count -gt 12) {
+        [void]$container.Children.Add((New-WzInfoRow 'weitere' `
+            "$($Records.Count - 12) ältere Einträge stehen im Bericht" -LabelWidth 190))
     }
 }
 
@@ -79,23 +122,39 @@ function Write-WzDiagnosticsResult {
         $syncHash.DiagBootTitle.Text = 'Keine Startdaten verfügbar'
         [void]$container.Children.Add((New-WzInfoRow 'Hinweis' $(if ($boot) { $boot.Hint } else { 'nicht abfragbar' })))
     } else {
-        $syncHash.DiagBootTitle.Text = "Im Schnitt $($boot.AverageSeconds) Sekunden bis zum fertigen Desktop"
+        $syncHash.DiagBootTitle.Text = "Im Schnitt $(Format-WzSeconds $boot.AverageSeconds -Unit 'Sekunden') bis zum fertigen Desktop"
         $kind = if ($boot.AverageSeconds -lt 30) { 'ok' } elseif ($boot.AverageSeconds -lt 60) { 'warn' } else { 'error' }
         [void]$container.Children.Add((New-WzInfoRow 'Bewertung' $boot.Hint -Kind $kind))
 
         $latest = $boot.Runs[0]
+        # Die Aufteilung lag schon immer im Ergebnis und wurde nie gezeigt. Sie
+        # beantwortet die eigentliche Frage: liegt es an Windows oder am Autostart?
+        $windowsSeconds = $latest.MainPathMs / 1000
+        $afterSeconds = [int]$latest.DegradedBy / 1000
         [void]$container.Children.Add((New-WzInfoRow 'Letzter Start' `
-            "$($latest.Time.ToString('dd.MM.yyyy HH:mm')) · $($latest.TotalSeconds) s"))
+            "$($latest.Time.ToString('dd.MM.yyyy HH:mm')) · $(Format-WzSeconds $latest.TotalSeconds)"))
+        [void]$container.Children.Add((New-WzInfoRow '    davon Windows' (Format-WzSeconds $windowsSeconds)))
+        [void]$container.Children.Add((New-WzInfoRow '    davon Autostart' (Format-WzSeconds $afterSeconds) `
+            -Kind $(if ($afterSeconds -gt $windowsSeconds) { 'warn' } else { 'normal' })))
+
+        if ($boot.Runs.Count -gt 1) {
+            $oldest = $boot.Runs[$boot.Runs.Count - 1]
+            [void]$container.Children.Add((New-WzInfoRow 'Ältester Messwert' `
+                "$($oldest.Time.ToString('dd.MM.yyyy')) · $(Format-WzSeconds $oldest.TotalSeconds) — $($boot.Runs.Count) Startvorgänge ausgewertet"))
+        }
 
         if ($boot.Worst.Count -gt 0) {
             foreach ($culprit in $boot.Worst) {
                 [void]$container.Children.Add((New-WzInfoRow 'Bremst' `
-                    "$($culprit.Name) — $($culprit.DelaySeconds) s" -Kind 'warn'))
+                    "$($culprit.Name) — $(Format-WzSeconds $culprit.DelaySeconds)" -Kind 'warn'))
             }
         }
     }
 
-    # --- Abstürze ---------------------------------------------------------
+    # --- Zuverlässigkeitsverlauf ------------------------------------------
+    Write-WzDiagnosticsReliability -Records @($Result.Reliability)
+
+    # --- Abstürze (Fortsetzung nach der Zuverlässigkeit) ------------------
     $dumps = @($Result.Dumps)
     $syncHash.DiagDumpsTitle.Text = if ($dumps.Count -eq 0) {
         'Keine Bluescreens in den letzten 90 Tagen'

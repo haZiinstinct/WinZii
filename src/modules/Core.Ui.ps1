@@ -871,3 +871,22 @@ function Format-WzBytes {
     $culture = [Globalization.CultureInfo]::GetCultureInfo('de-DE')
     return ('{0} {1}' -f [math]::Round($value, $decimals).ToString($culture), $units[$index])
 }
+
+function Format-WzSeconds {
+    <#
+    .SYNOPSIS
+        Sekundenangabe im deutschen Zahlenformat, z. B. »74,2 s«.
+    .NOTES
+        Ohne feste Kultur schreibt PowerShell »74.2« mit Punkt — direkt neben
+        einem »13,1 GB« aus Format-WzBytes sieht das nach zwei Programmen aus.
+    #>
+    param(
+        [Parameter(Mandatory = $true)][double]$Seconds,
+        [int]$Decimals = 1,
+        [string]$Unit = 's'
+    )
+    $culture = [Globalization.CultureInfo]::GetCultureInfo('de-DE')
+    $text = [math]::Round($Seconds, $Decimals).ToString($culture)
+    if ($Unit) { return "$text $Unit" }
+    return $text
+}

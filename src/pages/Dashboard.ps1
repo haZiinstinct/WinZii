@@ -239,6 +239,11 @@ function Write-WzDashboardSecurity {
     [void]$rows.Children.Add((New-WzInfoRow 'Secure Boot' $Security.SecureBoot))
     [void]$rows.Children.Add((New-WzInfoRow 'TPM' $Security.Tpm))
 
+    # Die Hinweisleiste neu aufbauen: Erst jetzt sind Aktivierung, Virenschutz
+    # und Laufwerkszustand bekannt — genau die Befunde, aus denen die
+    # Empfehlungen entstehen.
+    if ($syncHash.SystemInfo) { Write-WzDashboardNotices -Info $syncHash.SystemInfo }
+
     # Laufwerkszustand an die Datenträgerkarte anhängen
     foreach ($disk in $Security.PhysicalDisks) {
         $health = if ($disk.Health -eq 'Healthy') { 'in Ordnung' } else { $disk.Health }
@@ -271,5 +276,19 @@ function Write-WzDashboardNotices {
     if ($syncHash.DryRun) {
         [void]$notices.Items.Add((New-WzNotice -Kind 'info' `
             -Text 'Testmodus ist aktiv: Änderungen werden nur protokolliert, nicht ausgeführt.'))
+    }
+
+    # Die Befunde, die bisher nur im gedruckten Übergabeblatt landeten, gehören
+    # auch hierher: Platte fast voll, Virenschutz veraltet, nicht aktiviert,
+    # Datenträger meldet Fehler, Akku verschlissen. Die Daten liegen zu diesem
+    # Zeitpunkt längst im Speicher — es kostet keine einzige neue Abfrage.
+    if ($syncHash.SecurityInfo) {
+        foreach ($recommendation in (Get-WzHandoverRecommendations -Info $Info `
+                -Security $syncHash.SecurityInfo -Actions (Get-WzActions))) {
+            # Zum Neustart steht oben schon eine Zeile — die nennt sogar den Grund
+            if ($recommendation.Text -like '*neu gestartet*') { continue }
+            $kind = if ($recommendation.Kind -eq 'err') { 'error' } else { $recommendation.Kind }
+            [void]$notices.Items.Add((New-WzNotice -Kind $kind -Text $recommendation.Text))
+        }
     }
 }
