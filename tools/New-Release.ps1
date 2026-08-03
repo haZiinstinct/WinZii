@@ -99,8 +99,14 @@ $hash = (Get-FileHash -LiteralPath $archive -Algorithm SHA256).Hash
 $checksumFile = "$archive.sha256"
 [IO.File]::WriteAllText($checksumFile, "$hash  $($info.Name)$([Environment]::NewLine)", (New-Object Text.UTF8Encoding($false)))
 
+# Kopie ohne Versionsnummer: hazii.org verlinkt releases/latest/download/WinZii.zip.
+# Beide Dateien gehören ins Release — sonst bricht der Link beim nächsten Tag.
+$stable = Join-Path $OutputDir 'WinZii.zip'
+Copy-Item -LiteralPath $archive -Destination $stable -Force
+
 Write-Host ''
 Write-Host "  Archiv:    $archive" -ForegroundColor Cyan
+Write-Host "  Stabil:    $stable  (fuer den Download-Link auf hazii.org)" -ForegroundColor Cyan
 Write-Host ("  Größe:     {0:N1} MB" -f ($info.Length / 1MB))
 Write-Host "  SHA256:    $hash"
 Write-Host "  Prüfsumme: $checksumFile"
