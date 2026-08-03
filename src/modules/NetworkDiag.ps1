@@ -114,14 +114,17 @@ function Invoke-WzNetworkDiagnosis {
         $ping.Dispose()
     } catch { }
 
-    if (-not $gatewayReply -or $gatewayReply.Status -ne 'Success') {
-        Add-Step 'Router (Gateway)' 'fail' "$gateway antwortet nicht"
-        return Complete-Diagnosis `
-            -Verdict "Der Router unter $gateway antwortet nicht." `
-            -Recommendation 'Router neu starten und Kabel prüfen. Bei WLAN kann auch schlechter Empfang die Ursache sein. Manche Router beantworten grundsätzlich keine Ping-Anfragen — dann trotzdem im Browser die Router-Oberfläche aufrufen.' `
-            -FixHint 'reset' -Ok $false
+    # Ein verweigerter Ping beendet die Kette nicht mehr: Manche Router und
+    # praktisch jedes Firmen- oder VM-Gateway blocken Ping grundsätzlich. Im
+    # Sandbox-Test meldete die Kette deshalb »Es hängt beim Router«, während
+    # nebenan Downloads liefen. Ob wirklich etwas klemmt, entscheiden erst
+    # Namensauflösung und Internetzugang.
+    $gatewayAnswered = ($gatewayReply -and $gatewayReply.Status -eq 'Success')
+    if ($gatewayAnswered) {
+        Add-Step 'Router (Gateway)' 'ok' "$gateway antwortet in $($gatewayReply.RoundtripTime) ms"
+    } else {
+        Add-Step 'Router (Gateway)' 'warn' "$gateway antwortet nicht auf Ping"
     }
-    Add-Step 'Router (Gateway)' 'ok' "$gateway antwortet in $($gatewayReply.RoundtripTime) ms"
 
     # --- 4. Namensauflösung ------------------------------------------------
     if ($dnsServers.Count -eq 0) {
@@ -143,6 +146,14 @@ function Invoke-WzNetworkDiagnosis {
 
     if (-not $dnsOk) {
         Add-Step 'Namensauflösung' 'fail' $dnsDetail
+        if (-not $gatewayAnswered) {
+            # Router stumm UND keine Namensauflösung: jetzt ist der Router der
+            # wahrscheinlichste Schuldige.
+            return Complete-Diagnosis `
+                -Verdict "Der Router unter $gateway antwortet nicht, und auch die Namensauflösung scheitert." `
+                -Recommendation 'Router neu starten und Kabel prüfen. Bei WLAN kann auch schlechter Empfang die Ursache sein.' `
+                -FixHint 'reset' -Ok $false
+        }
         return Complete-Diagnosis `
             -Verdict 'Der Router antwortet, aber Internetadressen lassen sich nicht in IP-Adressen übersetzen — das ist ein reines DNS-Problem.' `
             -Recommendation 'Unten auf »Cloudflare« oder »Quad9« umstellen. Das behebt es fast immer und ist jederzeit auf »zurück auf Router« umkehrbar.' `
@@ -156,8 +167,14 @@ function Invoke-WzNetworkDiagnosis {
 
     switch ($web.Kind) {
         'ok' {
+            $verdict = 'Das Netzwerk ist in Ordnung — Namensauflösung und Internetzugang antworten.'
+            if ($gatewayAnswered) {
+                $verdict = 'Das Netzwerk ist in Ordnung — Router, Namensauflösung und Internetzugang antworten alle.'
+            } else {
+                $verdict += " Der Router unter $gateway beantwortet dabei keine Ping-Anfragen — manche Geräte blocken das grundsätzlich, gestört ist dadurch nichts."
+            }
             return Complete-Diagnosis `
-                -Verdict 'Das Netzwerk ist in Ordnung — Router, Namensauflösung und Internetzugang antworten alle.' `
+                -Verdict $verdict `
                 -Recommendation 'Klagt der Kunde trotzdem über »kein Internet«, liegt es an einem einzelnen Programm: Virenscanner mit eigener Firewall, VPN-Software oder ein Proxy im Browser.' `
                 -FixHint '' -Ok $true
         }

@@ -1,4 +1,4 @@
-﻿$script:WzVersion = '0.2.1'
-$script:WzBuildDate = '2026-08-02'
+﻿$script:WzVersion = '0.2.2'
+$script:WzBuildDate = '2026-08-03'
 $script:WzProduct = 'WinZii'
 $script:WzUrl = 'https://hazii.org'

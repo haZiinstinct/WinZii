@@ -11,7 +11,7 @@ Run it from a USB stick: clean up, optimize, set up — no installation, no acco
 
 <sub>The interface, reports, and most documentation are **German only**. This readme exists so you can tell what the tool does before deciding whether that works for you.</sub>
 
-![Version](https://img.shields.io/badge/Version-0.2.1-00d4ff?labelColor=0a0a0f&style=flat-square)
+![Version](https://img.shields.io/badge/Version-0.2.2-00d4ff?labelColor=0a0a0f&style=flat-square)
 ![Windows](https://img.shields.io/badge/Windows-10%20%7C%2011-00d4ff?labelColor=0a0a0f&style=flat-square)
 ![PowerShell](https://img.shields.io/badge/PowerShell-5.1-00d4ff?labelColor=0a0a0f&style=flat-square)
 ![Install](https://img.shields.io/badge/Install-none-00d4ff?labelColor=0a0a0f&style=flat-square)
@@ -52,7 +52,7 @@ That is all. WinZii needs no installation, no runtime, no particular drive lette
 > **Windows shows a blue SmartScreen warning?**
 > Click "More info" and then "Run anyway". The warning appears for any unsigned file downloaded from the internet. Every release ships a SHA256 checksum so you can verify the archive before extracting:
 > ```powershell
-> Get-FileHash .\WinZii-0.2.1.zip -Algorithm SHA256
+> Get-FileHash .\WinZii-0.2.2.zip -Algorithm SHA256
 > ```
 
 **Requirements:** Windows 10 or 11 with administrator rights. PowerShell 5.1 and .NET Framework ship with Windows.
@@ -90,9 +90,10 @@ To be blunt, so nobody gets surprised: WinZii was developed and tested on **one*
 | **Windows 10** | The version switch works (34 tweaks for both systems, 6 Windows-11-only, 1 Windows-10-only), but a full run never happened there. |
 | **Non-German Windows** | The code that parses Windows output knows German and English; `takeown` adapts to the UI language. Only the German side has been exercised. |
 | **Battery, Wi-Fi, BitLocker, OneDrive** | The "not present" paths are verified and report cleanly. The positive cases are untested for lack of hardware. |
-| **Driver backup, Office install, winget bootstrap** | Verified read-only, never executed end to end. |
-| **Windows Sandbox** | The two `.wsb` files are untested. |
+| **Driver backup, Office install** | Verified read-only, never executed end to end. |
 | **Small screens** | The window needs at least 1000 × 560 device-independent pixels and shrinks itself to the working area. |
+
+**Verified in Windows Sandbox** (`tools\Test-Sandbox.wsb`, a pristine Windows 11 24H2 without winget): launcher startup, applying real tweaks and reverting them, network diagnosis, and the winget bootstrap — all on a system that knows nothing about this project.
 
 Feedback from other systems is very welcome — especially from Windows 10 and non-German installations.
 

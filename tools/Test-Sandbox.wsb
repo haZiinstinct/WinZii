@@ -1,0 +1,29 @@
+<Configuration>
+  <!--
+    Selbsttest in der Windows Sandbox: startet beim Anmelden automatisch
+    tools\Test-Sandbox.ps1 und legt die Ergebnisse (Textbericht + Abbild)
+    unter sandbox-ergebnis\<Zeit>\ im eingebundenen Ordner ab — sie überleben
+    also das Schließen der Sandbox.
+
+    Der Ordner ist absichtlich BESCHREIBBAR, denn der Test wendet echte
+    Eingriffe an und nimmt sie zurück. Alles davon passiert in der Sandbox;
+    auf den echten Ordner werden nur die Ergebnisdateien geschrieben.
+
+    HostFolder steht relativ zu dieser Datei — ".." ist der WinZii-Ordner.
+
+    Aufruf: Doppelklick (Windows Pro oder Enterprise, Feature
+    Containers-DisposableClientVM aktiv).
+  -->
+  <VGpu>Disable</VGpu>
+  <Networking>Enable</Networking>
+  <MappedFolders>
+    <MappedFolder>
+      <HostFolder>..</HostFolder>
+      <SandboxFolder>C:\WinZii</SandboxFolder>
+      <ReadOnly>false</ReadOnly>
+    </MappedFolder>
+  </MappedFolders>
+  <LogonCommand>
+    <Command>powershell.exe -NoProfile -NoExit -ExecutionPolicy Bypass -File C:\WinZii\tools\Test-Sandbox.ps1</Command>
+  </LogonCommand>
+</Configuration>

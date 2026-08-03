@@ -10,6 +10,9 @@
 # Gebaute Release-Archive (tools\New-Release.ps1)
 /dist/
 
+# Ergebnisse der Sandbox-Selbsttests (tools\Test-Sandbox.wsb)
+/sandbox-ergebnis/
+
 # Windows
 Thumbs.db
 desktop.ini

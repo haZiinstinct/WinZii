@@ -3,6 +3,33 @@
 Alle nennenswerten Änderungen an WinZii. Die Fassungen folgen
 [Semantic Versioning](https://semver.org/lang/de/).
 
+## [0.2.2] — 2026-08-03
+
+Erster Testlauf in der Windows Sandbox — auf einem frisch aufgesetzten Windows, das
+nichts von diesem Projekt weiß. Er hat auf Anhieb zwei echte Fehler gefunden.
+
+### Behoben
+
+- **Die winget-Nachinstallation scheiterte** — genau der Fall, für den sie da ist. Der
+  App Installer verlangt inzwischen zusätzlich die **WindowsAppRuntime**, die in der fest
+  eingetragenen Abhängigkeitsliste fehlte; die Installation brach mit `0x80073CF3` ab.
+  Die Abhängigkeiten kommen jetzt als versionsgleiches Paket aus demselben Release wie
+  der App Installer selbst und wachsen damit automatisch mit. Die alte Liste bleibt als
+  Rückfall. In der Sandbox nachgewiesen: winget v1.29.280 läuft danach.
+- **Die Netzwerk-Diagnose blieb am Router hängen**, wenn dieser keine Ping-Anfragen
+  beantwortet — bei Firmen-Gateways und virtuellen Netzen der Normalfall. Sie meldete
+  »Es hängt bei: Router«, während daneben Downloads liefen. Ein stummer Router ist jetzt
+  nur noch ein Hinweis; ob wirklich etwas klemmt, entscheiden Namensauflösung und
+  Internetzugang. Schlagen beide fehl, wird der Router weiterhin benannt.
+
+### Neu
+
+- **`tools\Test-Sandbox.wsb`** — Selbsttest, der beim Öffnen der Sandbox von selbst
+  losläuft: Smoke-Test, Start über den Launcher mit Bildschirmabbild, echte Optimierungen
+  anwenden, Registry nachlesen und zurücknehmen, Netzwerk-Diagnose und
+  winget-Nachinstallation. Bericht und Abbild landen unter `sandbox-ergebnis\<Zeit>\` und
+  überleben das Schließen der Sandbox.
+
 ## [0.2.1] — 2026-08-02
 
 Robustheit auf fremden Rechnern — die offenen Funde der Veröffentlichungs-Prüfung.

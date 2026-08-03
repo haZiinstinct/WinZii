@@ -62,12 +62,59 @@ function Install-WzWingetBootstrap {
         return $false
     }
 
+    # Abhängigkeiten bevorzugt als versionsgleiches Paket aus demselben
+    # GitHub-Release wie der App Installer selbst. Der Sandbox-Test hat
+    # gezeigt, warum die feste Liste nicht reicht: VCLibs und UI.Xaml liefen
+    # sauber durch, und dann fehlte die inzwischen zusätzlich verlangte
+    # WindowsAppRuntime. Jede künftige neue Abhängigkeit würde die Liste
+    # erneut veralten lassen — das Paket wächst automatisch mit.
+    $dependencyFiles = @()
+    if ($bootstrap.dependenciesZipUrl) {
+        $zipFile = Join-Path $cacheDir 'DesktopAppInstaller_Dependencies.zip'
+        if (-not (Test-Path -LiteralPath $zipFile)) {
+            Write-WzLog 'Lade Abhängigkeitspaket zum App Installer...' -Level Info
+            [void](Get-WzDownload -Url $bootstrap.dependenciesZipUrl -TargetPath $zipFile)
+        } else {
+            Write-WzLog 'Abhängigkeitspaket aus dem Zwischenspeicher auf dem Datenträger' -Level Info
+        }
+        if (Test-Path -LiteralPath $zipFile) {
+            $extractDir = Join-Path $cacheDir 'dependencies'
+            try {
+                if (Test-Path -LiteralPath $extractDir) {
+                    Remove-Item -LiteralPath $extractDir -Recurse -Force -ErrorAction Stop
+                }
+                Expand-Archive -Path $zipFile -DestinationPath $extractDir -Force -ErrorAction Stop
+                $arch = switch ($env:PROCESSOR_ARCHITECTURE) {
+                    'ARM64' { 'arm64' }
+                    'x86'   { 'x86' }
+                    default { 'x64' }
+                }
+                $archDir = Get-ChildItem -Path $extractDir -Recurse -Directory |
+                    Where-Object { $_.Name -eq $arch } | Select-Object -First 1
+                if ($archDir) {
+                    $dependencyFiles = @(Get-ChildItem -Path $archDir.FullName -Recurse -File |
+                        Where-Object { $_.Extension -in @('.appx', '.msix') })
+                }
+            } catch {
+                Write-WzLog "Abhängigkeitspaket nicht nutzbar: $($_.Exception.Message.Split([char]10)[0])" -Level Warn
+            }
+        }
+    }
+
     $packages = @()
-    foreach ($dependency in $bootstrap.dependencies) {
-        $packages += [pscustomobject]@{
-            Name = $dependency.name
-            Url  = $dependency.url
-            File = Join-Path $cacheDir "$($dependency.name).appx"
+    if ($dependencyFiles.Count -gt 0) {
+        Write-WzLog "$($dependencyFiles.Count) Abhängigkeit(en) aus dem versionsgleichen Paket" -Level Info
+        foreach ($file in $dependencyFiles) {
+            $packages += [pscustomobject]@{ Name = $file.BaseName; Url = ''; File = $file.FullName }
+        }
+    } else {
+        # Rückfall auf die feste Liste, falls das Paket nicht zu bekommen war
+        foreach ($dependency in $bootstrap.dependencies) {
+            $packages += [pscustomobject]@{
+                Name = $dependency.name
+                Url  = $dependency.url
+                File = Join-Path $cacheDir "$($dependency.name).appx"
+            }
         }
     }
     $packages += [pscustomobject]@{
@@ -78,12 +125,13 @@ function Install-WzWingetBootstrap {
 
     foreach ($package in $packages) {
         if (-not (Test-Path -LiteralPath $package.File)) {
+            if (-not $package.Url) { continue }
             Write-WzLog "Lade $($package.Name)..." -Level Info
             if (-not (Get-WzDownload -Url $package.Url -TargetPath $package.File)) {
                 Write-WzLog "$($package.Name) konnte nicht geladen werden — ohne Internet geht es hier nicht weiter." -Level Error
                 return $false
             }
-        } else {
+        } elseif ($package.Url) {
             Write-WzLog "$($package.Name) aus dem Zwischenspeicher auf dem Datenträger" -Level Info
         }
 

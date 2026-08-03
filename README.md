@@ -11,7 +11,7 @@ Vom USB-Stick starten, aufräumen, optimieren, einrichten — ohne Installation,
 
 <sub>A German-language Windows maintenance toolkit for IT technicians — English readme available, interface is German only.</sub>
 
-![Version](https://img.shields.io/badge/Version-0.2.1-00d4ff?labelColor=0a0a0f&style=flat-square)
+![Version](https://img.shields.io/badge/Version-0.2.2-00d4ff?labelColor=0a0a0f&style=flat-square)
 ![Windows](https://img.shields.io/badge/Windows-10%20%7C%2011-00d4ff?labelColor=0a0a0f&style=flat-square)
 ![PowerShell](https://img.shields.io/badge/PowerShell-5.1-00d4ff?labelColor=0a0a0f&style=flat-square)
 ![Installation](https://img.shields.io/badge/Installation-keine-00d4ff?labelColor=0a0a0f&style=flat-square)
@@ -52,7 +52,7 @@ Das war alles. WinZii braucht keine Installation, keine Laufzeitumgebung und kei
 > **Windows meldet sich mit einem blauen Hinweis?**
 > Auf »Weitere Informationen« und dann »Trotzdem ausführen« klicken. Der Hinweis erscheint bei jeder Datei aus dem Internet, die nicht kostenpflichtig signiert wurde. Zu jedem Release gehört eine SHA256-Prüfsumme — damit lässt sich das Archiv vor dem Entpacken abgleichen:
 > ```powershell
-> Get-FileHash .\WinZii-0.2.1.zip -Algorithm SHA256
+> Get-FileHash .\WinZii-0.2.2.zip -Algorithm SHA256
 > ```
 
 **Voraussetzungen:** Windows 10 oder 11 mit Administratorrechten. PowerShell 5.1 und .NET Framework sind in Windows enthalten.
@@ -90,9 +90,10 @@ Ehrlich gesagt, damit niemand böse überrascht wird: WinZii wurde auf **einem**
 | **Windows 10** | Die Versionsweiche greift (34 Einträge für beide Systeme, 6 nur für Windows 11, 1 nur für Windows 10), aber es lief dort nie ein vollständiger Durchlauf. |
 | **Nicht-deutsches Windows** | Die Stellen, die Windows-Ausgaben auswerten, kennen Deutsch und Englisch; `takeown` fragt die Oberflächensprache ab. Geprüft wurde nur die deutsche Seite. |
 | **Akku, WLAN, BitLocker, OneDrive** | Die »nicht vorhanden«-Pfade sind geprüft und melden sauber. Der jeweilige Positiv-Fall ist mangels Hardware ungetestet. |
-| **Treibersicherung, Office, winget-Nachinstallation** | Nur lesend geprüft, nie vollständig durchgeführt. |
-| **Windows Sandbox** | Die beiden `.wsb`-Dateien sind ungetestet. |
+| **Treibersicherung und Office** | Nur lesend geprüft, nie vollständig durchgeführt. |
 | **Kleine Bildschirme** | Das Fenster braucht mindestens 1000 × 560 Punkte und verkleinert sich beim Start selbst auf die Arbeitsfläche. |
+
+**In der Windows Sandbox geprüft** (`tools\Test-Sandbox.wsb`, ein frisches Windows 11 24H2 ohne winget): Start über den Launcher, echte Optimierungen anwenden und wieder zurücknehmen, Netzwerk-Diagnose und die winget-Nachinstallation — alles auf einem System, das nichts von diesem Projekt weiß.
 
 Rückmeldungen von anderen Systemen sind ausdrücklich willkommen — besonders von Windows 10 und von nicht-deutschen Installationen.
 
@@ -201,6 +202,7 @@ powershell -NoProfile -File tools\Test-Catalogs.ps1
 | `tools\New-Release.ps1` | Release-ZIP bauen und SHA256-Prüfsumme ausgeben |
 | `tools\WinZii.wsb` | Windows Sandbox zum gefahrlosen Ausprobieren (schreibgeschützt) |
 | `tools\WinZii-Schreibend.wsb` | Dasselbe mit Schreibrecht — für Treibersicherung und Berichte |
+| `tools\Test-Sandbox.wsb` | Selbsttest in der Sandbox: läuft automatisch los und legt Bericht und Abbild unter `sandbox-ergebnis\` ab |
 
 Die Sandbox muss einmalig freigeschaltet werden, danach ist ein Neustart nötig:
 
