@@ -1,7 +1,13 @@
 ﻿# WinZii — Hauptprogramm.
 # Wird über Start.bat und launcher.ps1 gestartet (eleviert, STA).
 [CmdletBinding()]
-param([switch]$DryRun)
+param(
+    [switch]$DryRun,
+    # Oberflächensprache erzwingen, z. B. -Language en. Ohne Angabe gilt die
+    # gemerkte Wahl, sonst die Windows-Sprache. Gedacht zum Prüfen: Auf einem
+    # deutschen Rechner bekommt man die englische Fassung sonst nie zu sehen.
+    [string]$Language
+)
 
 $ErrorActionPreference = 'Stop'
 
@@ -32,7 +38,7 @@ $syncHash.BuildDate = $script:WzBuildDate
 
 # --- Module laden ---------------------------------------------------------
 $moduleOrder = @(
-    'Core.Paths', 'Core.Logging', 'Core.Json', 'Core.Runspace', 'Core.Ui',
+    'Core.Paths', 'Core.I18n', 'Core.Logging', 'Core.Json', 'Core.Runspace', 'Core.Ui',
     'Core.System', 'Core.Backup',
     'Optimizer', 'AiRemoval', 'Cleanup', 'Apps', 'Office',
     'Diagnostics', 'NetworkDiag', 'Report', 'Autostart', 'Toolbox',
@@ -51,6 +57,11 @@ if (Test-Path -LiteralPath $pageDir) {
     }
 }
 
+# --- Sprache festlegen ----------------------------------------------------
+# Vor der Sitzung, damit auch die ersten Protokollzeilen schon übersetzt sind.
+$wantedLanguage = if ($Language) { $Language } else { $env:WZ_SELFTEST_LANG }
+[void](Initialize-WzLanguage -Preferred $wantedLanguage)
+
 # --- Sitzung starten ------------------------------------------------------
 [void](Start-WzSession)
 
@@ -63,7 +74,7 @@ try {
     $theme = [Windows.Markup.XamlReader]::Load($themeReader)
 } catch {
     [Windows.Forms.MessageBox]::Show(
-        "Das Design konnte nicht geladen werden:`n$($_.Exception.Message)",
+        "$(Get-WzText 'dialog.themeFailed')`n$($_.Exception.Message)",
         'WinZii', 'OK', 'Error')
     exit 1
 }
@@ -75,7 +86,7 @@ try {
     $window = [Windows.Markup.XamlReader]::Load($mainReader)
 } catch {
     [Windows.Forms.MessageBox]::Show(
-        "Das Hauptfenster konnte nicht geladen werden:`n$($_.Exception.Message)",
+        "$(Get-WzText 'dialog.windowFailed')`n$($_.Exception.Message)",
         'WinZii', 'OK', 'Error')
     exit 1
 }
@@ -83,6 +94,10 @@ try {
 $window.Resources.MergedDictionaries.Add($theme)
 $syncHash.Window = $window
 Register-WzNames -Root $window -Xml $mainXml
+
+# Sprachwörterbuch einhängen: Ab hier lösen alle {DynamicResource L.…} im XAML
+# auf, und ein späterer Tausch schaltet die ganze Oberfläche live um.
+Update-WzLanguageResources
 
 # --- Mitgelieferte Schriften einbinden ------------------------------------
 function Set-WzFonts {
@@ -97,7 +112,7 @@ function Set-WzFonts {
         if ($mono.GetTypefaces().Count -gt 0) { $syncHash.Window.Resources['WzFontMono'] = $mono }
         if ($sans.GetTypefaces().Count -gt 0) { $syncHash.Window.Resources['WzFontSans'] = $sans }
     } catch {
-        Write-WzLog 'Mitgelieferte Schriften nicht nutzbar, System-Schriften werden verwendet.' -Level Warn
+        Write-WzLog (Get-WzText 'start.fontsMissing') -Level Warn
     }
 }
 Set-WzFonts
@@ -157,9 +172,9 @@ $syncHash.BtnMaximize.Add_Click({
 })
 $syncHash.BtnClose.Add_Click({
     if ($syncHash.Busy) {
-        $answer = Show-WzConfirm -Title 'Vorgang läuft' `
-            -Message "'$($syncHash.BusyName)' ist noch aktiv. Ein Abbruch kann das System in einem halben Zustand hinterlassen." `
-            -ConfirmText 'Trotzdem beenden' -Danger
+        $answer = Show-WzConfirm -Title (Get-WzText 'dialog.busyTitle') `
+            -Message (Get-WzText 'dialog.busyMessage' @{ name = $syncHash.BusyName }) `
+            -ConfirmText (Get-WzText 'dialog.busyConfirm') -Danger
         if (-not $answer.Confirmed) { return }
     }
     $syncHash.Window.Close()
@@ -170,11 +185,11 @@ $syncHash.LogHeader.Add_MouseLeftButtonUp({
     if ($syncHash.LogConsole.Visibility -eq [Windows.Visibility]::Visible) {
         $syncHash.LogConsole.Visibility = [Windows.Visibility]::Collapsed
         $syncHash.LogChevron.Text = [char]0xE70E
-        $syncHash.LogHint.Text = 'eingeklappt'
+        $syncHash.LogHint.Text = Get-WzText 'shell.consoleCollapsed'
     } else {
         $syncHash.LogConsole.Visibility = [Windows.Visibility]::Visible
         $syncHash.LogChevron.Text = [char]0xE70D
-        $syncHash.LogHint.Text = 'Klicken zum Ein- oder Ausklappen'
+        $syncHash.LogHint.Text = Get-WzText 'shell.consoleHint'
     }
 })
 $syncHash.BtnClearLog.Add_Click({ Clear-WzConsole })
@@ -194,9 +209,31 @@ $syncHash.DryRunToggle.Add_Click({
         [Windows.Visibility]::Collapsed
     }
     if ($syncHash.DryRun) {
-        Write-WzLog 'Testmodus aktiv — Änderungen werden nur protokolliert.' -Level Test
+        Write-WzLog (Get-WzText 'start.dryRunOn') -Level Test
     } else {
-        Write-WzLog 'Testmodus aus — Änderungen werden wirklich ausgeführt.' -Level Warn
+        Write-WzLog (Get-WzText 'start.dryRunOff') -Level Warn
+    }
+})
+
+# --- Sprachwahl -----------------------------------------------------------
+# Nur die Sprachen anbieten, für die auch eine Datei da ist. Eine ausgegraute
+# Zeile »Español (noch nicht übersetzt)« hilft niemandem.
+foreach ($language in (Get-WzLanguageList | Where-Object { $_.Available })) {
+    $item = New-Object Windows.Controls.ComboBoxItem
+    $item.Content = $language.Name
+    $item.Tag = $language.Code
+    [void]$syncHash.LanguagePicker.Items.Add($item)
+    if ($language.Code -eq $syncHash.Language) { $syncHash.LanguagePicker.SelectedItem = $item }
+}
+$syncHash.LanguagePicker.Add_SelectionChanged({
+    $chosen = $syncHash.LanguagePicker.SelectedItem
+    if (-not $chosen -or $chosen.Tag -eq $syncHash.Language) { return }
+    $name = $chosen.Content
+    [void](Set-WzLanguage -Code $chosen.Tag)
+    Update-WzLanguageUi
+    Write-WzLog (Get-WzText 'start.languageChanged' @{ sprache = $name }) -Level Info
+    if (-not (Test-WzWritableRoot)) {
+        Write-WzLog (Get-WzText 'start.settingsReadOnly') -Level Warn
     }
 })
 
@@ -223,19 +260,19 @@ $syncHash.NavButtons = $navButtons
 
 # --- Start ----------------------------------------------------------------
 $window.Add_ContentRendered({
-    Write-WzLog "WinZii $($syncHash.Version) gestartet — $env:COMPUTERNAME" -Level Ok
-    Write-WzLog "Quelle: $(Get-WzRoot)" -Level Info
+    Write-WzLog (Get-WzText 'start.started' @{ version = $syncHash.Version; computer = $env:COMPUTERNAME }) -Level Ok
+    Write-WzLog (Get-WzText 'start.source' @{ pfad = (Get-WzRoot) }) -Level Info
     if ($syncHash.DryRun) {
-        Write-WzLog 'Testmodus ist aktiv. Es werden keine Änderungen vorgenommen.' -Level Test
+        Write-WzLog (Get-WzText 'start.dryRunActive') -Level Test
     }
     if (-not (Test-WzWritableRoot)) {
-        Write-WzLog 'Der Datenträger ist schreibgeschützt — Protokolle und Berichte können nicht gespeichert werden.' -Level Warn
+        Write-WzLog (Get-WzText 'start.readOnly') -Level Warn
     }
     Show-WzPage -Id 'Dashboard'
 })
 
 $window.Add_Closed({
-    Write-WzLog 'WinZii beendet.' -Level Info
+    Write-WzLog (Get-WzText 'start.closed') -Level Info
 })
 
 # --- Selbsttest (nur Entwicklung): rendern, abbilden, schließen -----------

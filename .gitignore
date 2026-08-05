@@ -3,6 +3,9 @@
 /backups/
 /reports/
 
+# Gemerkte Einstellungen (Sprachwahl) — reisen mit dem Stick, nicht mit dem Repo
+/einstellungen.json
+
 # Offline-Cache (Installer, ODT, Office-Payload) — kann mehrere GB werden
 /offline/*
 !/offline/.gitkeep

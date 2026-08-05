@@ -2,6 +2,8 @@
 [CmdletBinding()]
 param(
     [switch]$DryRun,
+    # Wird unverändert an main.ps1 durchgereicht (siehe dort)
+    [string]$Language,
     [switch]$NoElevate
 )
 
@@ -74,6 +76,7 @@ if (-not $isAdmin -and -not $NoElevate) {
         '-File', ('"{0}"' -f $mainScript)
     )
     if ($DryRun) { $argList += '-DryRun' }
+    if ($Language) { $argList += @('-Language', $Language) }
 
     try {
         Start-Process -FilePath (Get-Process -Id $PID).Path -Verb RunAs -ArgumentList $argList -ErrorAction Stop
@@ -90,6 +93,7 @@ if ([Threading.Thread]::CurrentThread.GetApartmentState() -ne 'STA') {
     Write-Boot 'Starte im STA-Modus neu...' 'DarkGray'
     $argList = @('-NoProfile', '-ExecutionPolicy', 'Bypass', '-STA', '-File', ('"{0}"' -f $mainScript))
     if ($DryRun) { $argList += '-DryRun' }
+    if ($Language) { $argList += @('-Language', $Language) }
     & (Get-Process -Id $PID).Path $argList
     exit $LASTEXITCODE
 }
@@ -102,5 +106,5 @@ if ([Threading.Thread]::CurrentThread.GetApartmentState() -ne 'STA') {
 # Cmdlet ... erkannt". Auffällig wurde das nie, weil der übliche Weg über die
 # Rechteanforderung geht und dort ohnehin ein neuer Prozess mit -File startet —
 # dieser Zweig greift nur, wenn WinZii bereits mit Administratorrechten läuft.
-. $mainScript -DryRun:$DryRun
+. $mainScript -DryRun:$DryRun -Language $Language
 exit $LASTEXITCODE

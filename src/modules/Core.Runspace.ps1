@@ -169,7 +169,7 @@ function Set-WzBusy {
 
     $action = [Action]{
         if ($syncHash.StatusText) {
-            $syncHash.StatusText.Text = if ($isBusy) { $Status } else { 'Bereit' }
+            $syncHash.StatusText.Text = if ($isBusy) { $Status } else { Get-WzText 'shell.statusReady' }
         }
         if ($syncHash.BtnCancelTask) {
             $syncHash.BtnCancelTask.Visibility = if ($canCancel) {

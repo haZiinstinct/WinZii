@@ -21,6 +21,17 @@ $onDisk = @(Get-ChildItem -LiteralPath (Join-Path $root 'src\xaml\pages') -Filte
 $pages = @($navOrder | Where-Object { $onDisk -contains $_ }) +
          @($onDisk | Where-Object { $navOrder -notcontains $_ })
 
+# Ohne diese Prüfung meldet der Test »alle 0 Seiten laden fehlerfrei« und endet
+# mit Erfolg, sobald sich am Aufbau der Navigationsknöpfe etwas ändert und der
+# Regex oben ins Leere greift. Ein grüner Test, der nichts geprüft hat, ist
+# schlimmer als gar keiner.
+if ($pages.Count -lt 10) {
+    Write-Host ''
+    Write-Host "  [FEHL] Nur $($pages.Count) Seite(n) gefunden — die Erkennung greift nicht mehr." -ForegroundColor Red
+    Write-Host '         Navigation in MainWindow.xaml oder src\xaml\pages\ prüfen.' -ForegroundColor DarkGray
+    exit 1
+}
+
 $failed = 0
 $shotDir = Join-Path $env:TEMP 'winzii-pages'
 if ($Screenshots -and -not (Test-Path $shotDir)) { [void](New-Item -ItemType Directory -Path $shotDir -Force) }

@@ -1,0 +1,67 @@
+{
+  "_meta": {
+    "code": "de",
+    "name": "Deutsch",
+    "culture": "de-DE"
+  },
+
+  "app": {
+    "subtitle": "portables Werkzeug",
+    "languageTip": "Sprache der Oberfläche"
+  },
+
+  "nav": {
+    "groupSystem": "// SYSTEM",
+    "groupOptimize": "// OPTIMIEREN",
+    "groupInstall": "// INSTALLIEREN",
+    "groupTakeover": "// ÜBERNEHMEN",
+    "groupTools": "// WERKZEUGE",
+    "dashboard": "Dashboard",
+    "diagnostics": "Diagnose",
+    "optimizer": "Optimierung",
+    "aiRemoval": "KI-Entfernung",
+    "cleanup": "Bereinigung",
+    "autostart": "Autostart",
+    "apps": "Programme",
+    "office": "Office",
+    "userData": "Daten",
+    "restore": "Zurückspielen",
+    "drivers": "Treiber",
+    "toolbox": "Reparatur",
+    "protocol": "Protokoll"
+  },
+
+  "shell": {
+    "dryRunBadge": "TESTMODUS",
+    "consoleEyebrow": "// KONSOLE",
+    "consoleHint": "Klicken zum Ein- oder Ausklappen",
+    "consoleCollapsed": "eingeklappt",
+    "consoleClear": "leeren",
+    "statusReady": "Bereit",
+    "cancel": "abbrechen",
+    "cancelTip": "Hält die laufende Bestandsaufnahme an. Eingriffe lassen sich nicht abbrechen.",
+    "dryRun": "Testmodus",
+    "dryRunTip": "Änderungen werden nur protokolliert, nicht ausgeführt."
+  },
+
+  "start": {
+    "started": "WinZii {version} gestartet — {computer}",
+    "source": "Quelle: {pfad}",
+    "dryRunActive": "Testmodus ist aktiv. Es werden keine Änderungen vorgenommen.",
+    "readOnly": "Der Datenträger ist schreibgeschützt — Protokolle und Berichte können nicht gespeichert werden.",
+    "settingsReadOnly": "Die Sprachwahl gilt nur für diese Sitzung — auf diesen Datenträger lässt sich nicht schreiben.",
+    "closed": "WinZii beendet.",
+    "dryRunOn": "Testmodus aktiv — Änderungen werden nur protokolliert.",
+    "dryRunOff": "Testmodus aus — Änderungen werden wirklich ausgeführt.",
+    "languageChanged": "Sprache auf {sprache} umgestellt.",
+    "fontsMissing": "Mitgelieferte Schriften nicht nutzbar, System-Schriften werden verwendet."
+  },
+
+  "dialog": {
+    "busyTitle": "Vorgang läuft",
+    "busyMessage": "'{name}' ist noch aktiv. Ein Abbruch kann das System in einem halben Zustand hinterlassen.",
+    "busyConfirm": "Trotzdem beenden",
+    "themeFailed": "Das Design konnte nicht geladen werden:",
+    "windowFailed": "Das Hauptfenster konnte nicht geladen werden:"
+  }
+}

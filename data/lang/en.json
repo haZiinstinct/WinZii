@@ -1,0 +1,67 @@
+{
+  "_meta": {
+    "code": "en",
+    "name": "English",
+    "culture": "en-GB"
+  },
+
+  "app": {
+    "subtitle": "portable toolkit",
+    "languageTip": "Interface language"
+  },
+
+  "nav": {
+    "groupSystem": "// SYSTEM",
+    "groupOptimize": "// OPTIMISE",
+    "groupInstall": "// INSTALL",
+    "groupTakeover": "// TAKE OVER",
+    "groupTools": "// TOOLS",
+    "dashboard": "Dashboard",
+    "diagnostics": "Diagnostics",
+    "optimizer": "Optimisation",
+    "aiRemoval": "AI removal",
+    "cleanup": "Cleanup",
+    "autostart": "Startup",
+    "apps": "Programs",
+    "office": "Office",
+    "userData": "Data",
+    "restore": "Restore",
+    "drivers": "Drivers",
+    "toolbox": "Repair",
+    "protocol": "Log"
+  },
+
+  "shell": {
+    "dryRunBadge": "DRY RUN",
+    "consoleEyebrow": "// CONSOLE",
+    "consoleHint": "Click to expand or collapse",
+    "consoleCollapsed": "collapsed",
+    "consoleClear": "clear",
+    "statusReady": "Ready",
+    "cancel": "cancel",
+    "cancelTip": "Stops the running survey. Changes to the system cannot be cancelled.",
+    "dryRun": "Dry run",
+    "dryRunTip": "Changes are only logged, never carried out."
+  },
+
+  "start": {
+    "started": "WinZii {version} started — {computer}",
+    "source": "Source: {pfad}",
+    "dryRunActive": "Dry run is active. Nothing will be changed.",
+    "readOnly": "This drive is write-protected — logs and reports cannot be saved.",
+    "settingsReadOnly": "The language choice applies to this session only — this drive cannot be written to.",
+    "closed": "WinZii closed.",
+    "dryRunOn": "Dry run on — changes are only logged.",
+    "dryRunOff": "Dry run off — changes are carried out for real.",
+    "languageChanged": "Language switched to {sprache}.",
+    "fontsMissing": "Bundled fonts unavailable, falling back to system fonts."
+  },
+
+  "dialog": {
+    "busyTitle": "Task running",
+    "busyMessage": "'{name}' is still running. Cancelling may leave the system half-changed.",
+    "busyConfirm": "Close anyway",
+    "themeFailed": "The theme could not be loaded:",
+    "windowFailed": "The main window could not be loaded:"
+  }
+}
