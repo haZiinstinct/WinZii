@@ -137,13 +137,14 @@
                 <!-- Fußzeile: Sprache, Version und haZii-Credit -->
                 <StackPanel Grid.Row="2" Margin="22,16,22,18">
                     <Border Height="1" Background="#14FFFFFF" Margin="0,0,0,14" />
-                    <StackPanel Orientation="Horizontal" Margin="0,0,0,12">
-                        <TextBlock Text="&#xE774;" FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets"
-                                   FontSize="12" Foreground="{DynamicResource WzTextFaint}"
-                                   VerticalAlignment="Center" Margin="0,0,8,0" />
-                        <ComboBox Name="LanguagePicker" Style="{DynamicResource WzComboBox}"
-                                  Width="164" ToolTip="{DynamicResource L.app.languageTip}" />
-                    </StackPanel>
+                    <!-- Bewusst ein Knopf statt eines Auswahlfelds: In der Fußzeile
+                         steht sonst kein einziges umrandetes Bedienelement, und ein
+                         Kasten neben dem Credit stört dessen Ruhe. Das Menü baut
+                         main.ps1 aus den vorhandenen Sprachdateien. -->
+                    <Button Name="LanguagePicker" Style="{DynamicResource WzBtnGhost}"
+                            HorizontalAlignment="Left" Margin="0,0,0,12"
+                            Padding="8,3,10,3" FontSize="11.5"
+                            ToolTip="{DynamicResource L.app.languageTip}" />
                     <TextBlock Name="SidebarVersion" Text="v0.3.0"
                                FontFamily="{DynamicResource WzFontMono}" FontSize="10.5"
                                Foreground="{DynamicResource WzTextFaint}" Margin="0,0,0,7" />

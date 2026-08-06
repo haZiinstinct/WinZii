@@ -300,6 +300,95 @@ function Update-WzLanguageResources {
     }
 }
 
+function Update-WzLanguageButton {
+    <#
+    .SYNOPSIS
+        Beschriftet den Sprachknopf mit Weltkugel und Eigenname der aktiven
+        Sprache — »🌐 Deutsch«, nicht »DE«.
+    .NOTES
+        Der Eigenname, weil ein englischsprachiger Anwender vor einer deutschen
+        Oberfläche nach »English« sucht und nicht nach »EN«.
+    #>
+    [CmdletBinding()]
+    param()
+
+    if (-not $syncHash.LanguagePicker) { return }
+    $current = @(Get-WzLanguageList | Where-Object { $_.Code -eq $syncHash.Language })
+    $name = if ($current.Count -gt 0) { $current[0].Name } else { $syncHash.Language }
+
+    # Zwei Textblöcke statt einer Zeichenkette: Das Weltkugel-Zeichen liegt im
+    # privaten Bereich von Segoe Fluent Icons. In der Textschrift des Knopfes
+    # (Inter) gibt es dort keine Glyphe, und der Rückfall zeichnet irgendetwas.
+    $row = New-Object Windows.Controls.StackPanel
+    $row.Orientation = 'Horizontal'
+
+    $icon = New-Object Windows.Controls.TextBlock
+    $icon.Text = [char]0xE774
+    $icon.FontFamily = New-Object Windows.Media.FontFamily('Segoe Fluent Icons, Segoe MDL2 Assets')
+    $icon.FontSize = 12
+    $icon.VerticalAlignment = 'Center'
+    $icon.Margin = New-Object Windows.Thickness(0, 0, 8, 0)
+    [void]$row.Children.Add($icon)
+
+    $label = New-Object Windows.Controls.TextBlock
+    $label.Text = $name
+    $label.VerticalAlignment = 'Center'
+    [void]$row.Children.Add($label)
+
+    $syncHash.LanguagePicker.Content = $row
+}
+
+function Show-WzLanguageChooser {
+    <#
+    .SYNOPSIS
+        Sprache über den gewohnten Bestätigungsdialog wählen.
+    .DESCRIPTION
+        Läuft gerade eine Hintergrundaufgabe, wird gar nicht erst gefragt: Der
+        Wechsel wirft den Seitenbaum weg, und die laufende Aufgabe schriebe ihr
+        Ergebnis danach in Elemente, die es nicht mehr gibt. Genau daran ist es
+        beim ersten Anlauf abgestürzt — der Anwender hatte umgeschaltet, während
+        die Systemabfrage des Dashboards noch lief.
+    #>
+    [CmdletBinding()]
+    param()
+
+    $languages = @(Get-WzLanguageList | Where-Object { $_.Available })
+    if ($languages.Count -lt 2) { return }
+
+    if ($syncHash.Busy) {
+        [void](Show-WzConfirm -Title (Get-WzText 'dialog.languageTitle') `
+            -Message (Get-WzText 'start.languageBusy' @{ name = $syncHash.BusyName }) `
+            -HideCancel -ConfirmText (Get-WzText 'dialog.understood'))
+        return
+    }
+
+    $current = [array]::IndexOf(@($languages | ForEach-Object { $_.Code }), $syncHash.Language)
+    $answer = Show-WzConfirm -Title (Get-WzText 'dialog.languageTitle') `
+        -Message (Get-WzText 'dialog.languageMessage') `
+        -Choices @($languages | ForEach-Object { $_.Name }) `
+        -ChoiceLabel (Get-WzText 'dialog.languageLabel') `
+        -ChoiceDefault ([math]::Max(0, $current)) `
+        -ConfirmText (Get-WzText 'dialog.languageConfirm')
+    if (-not $answer.Confirmed) { return }
+
+    $chosen = $languages[$answer.SelectedIndex]
+    if ($chosen.Code -eq $syncHash.Language) { return }
+
+    [void](Set-WzLanguage -Code $chosen.Code)
+    Update-WzLanguageButton
+    Write-WzLog (Get-WzText 'start.languageChanged' @{ sprache = $chosen.Name }) -Level Info
+    if (-not (Test-WzWritableRoot)) {
+        Write-WzLog (Get-WzText 'start.settingsReadOnly') -Level Warn
+    }
+
+    # Den Seitenneuaufbau dem Dispatcher überlassen, statt ihn im Klick-Ereignis
+    # zu erledigen: Sonst wird der Baum abgerissen, während der Dialog noch
+    # dabei ist, sich zu schließen.
+    [void]$syncHash.Window.Dispatcher.BeginInvoke(
+        [Windows.Threading.DispatcherPriority]::Background,
+        [action]{ Update-WzLanguageUi })
+}
+
 function Update-WzLanguageUi {
     <#
     .SYNOPSIS

@@ -54,6 +54,7 @@
     "dryRunOn": "Testmodus aktiv — Änderungen werden nur protokolliert.",
     "dryRunOff": "Testmodus aus — Änderungen werden wirklich ausgeführt.",
     "languageChanged": "Sprache auf {sprache} umgestellt.",
+    "languageBusy": "»{name}« läuft gerade. Die Sprache lässt sich erst danach wechseln — beim Wechsel wird die Seite neu aufgebaut, und das vertrüge sich nicht mit einer laufenden Abfrage.",
     "fontsMissing": "Mitgelieferte Schriften nicht nutzbar, System-Schriften werden verwendet."
   },
 
@@ -61,6 +62,11 @@
     "busyTitle": "Vorgang läuft",
     "busyMessage": "'{name}' ist noch aktiv. Ein Abbruch kann das System in einem halben Zustand hinterlassen.",
     "busyConfirm": "Trotzdem beenden",
+    "understood": "Verstanden",
+    "languageTitle": "Sprache wählen",
+    "languageMessage": "Die Oberfläche schaltet sofort um — ein Neustart ist nicht nötig. Bereits ermittelte Werte bleiben erhalten.",
+    "languageLabel": "Sprache",
+    "languageConfirm": "Umstellen",
     "themeFailed": "Das Design konnte nicht geladen werden:",
     "windowFailed": "Das Hauptfenster konnte nicht geladen werden:"
   }

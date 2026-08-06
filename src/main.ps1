@@ -216,26 +216,12 @@ $syncHash.DryRunToggle.Add_Click({
 })
 
 # --- Sprachwahl -----------------------------------------------------------
-# Nur die Sprachen anbieten, für die auch eine Datei da ist. Eine ausgegraute
-# Zeile »Español (noch nicht übersetzt)« hilft niemandem.
-foreach ($language in (Get-WzLanguageList | Where-Object { $_.Available })) {
-    $item = New-Object Windows.Controls.ComboBoxItem
-    $item.Content = $language.Name
-    $item.Tag = $language.Code
-    [void]$syncHash.LanguagePicker.Items.Add($item)
-    if ($language.Code -eq $syncHash.Language) { $syncHash.LanguagePicker.SelectedItem = $item }
-}
-$syncHash.LanguagePicker.Add_SelectionChanged({
-    $chosen = $syncHash.LanguagePicker.SelectedItem
-    if (-not $chosen -or $chosen.Tag -eq $syncHash.Language) { return }
-    $name = $chosen.Content
-    [void](Set-WzLanguage -Code $chosen.Tag)
-    Update-WzLanguageUi
-    Write-WzLog (Get-WzText 'start.languageChanged' @{ sprache = $name }) -Level Info
-    if (-not (Test-WzWritableRoot)) {
-        Write-WzLog (Get-WzText 'start.settingsReadOnly') -Level Warn
-    }
-})
+# Die Auswahl läuft über den Bestätigungsdialog, den WinZii überall sonst auch
+# benutzt: Er liegt im eigenen Design, ist über Test-Dialogs geprüft, und sein
+# Auswahlfeld ist dasselbe wie auf der Office-Seite. Ein aufklappendes Menü in
+# der Seitenleiste wäre ein zusätzlicher, ungeprüfter Sonderweg.
+Update-WzLanguageButton
+$syncHash.LanguagePicker.Add_Click({ Show-WzLanguageChooser })
 
 # --- haZii-Credit ---------------------------------------------------------
 $syncHash.HaziiBadge.Add_MouseLeftButtonUp({

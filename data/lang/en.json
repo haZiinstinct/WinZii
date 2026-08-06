@@ -54,6 +54,7 @@
     "dryRunOn": "Dry run on — changes are only logged.",
     "dryRunOff": "Dry run off — changes are carried out for real.",
     "languageChanged": "Language switched to {sprache}.",
+    "languageBusy": "'{name}' is still running. The language can only be changed afterwards — switching rebuilds the page, which would not sit well with a survey in progress.",
     "fontsMissing": "Bundled fonts unavailable, falling back to system fonts."
   },
 
@@ -61,6 +62,11 @@
     "busyTitle": "Task running",
     "busyMessage": "'{name}' is still running. Cancelling may leave the system half-changed.",
     "busyConfirm": "Close anyway",
+    "understood": "Understood",
+    "languageTitle": "Choose language",
+    "languageMessage": "The interface switches immediately — no restart needed. Values already measured are kept.",
+    "languageLabel": "Language",
+    "languageConfirm": "Switch",
     "themeFailed": "The theme could not be loaded:",
     "windowFailed": "The main window could not be loaded:"
   }
