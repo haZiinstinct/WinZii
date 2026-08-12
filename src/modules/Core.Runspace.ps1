@@ -250,6 +250,33 @@ function Invoke-WzDoEvents {
     }
 }
 
+function Stop-WzProcessTree {
+    <#
+    .SYNOPSIS
+        Beendet einen Prozess samt allem, was er selbst gestartet hat.
+    .NOTES
+        Über taskkill statt Kill(): Kill() trifft nur das gestartete Programm
+        selbst. Ein von ihm gestartetes Unterprogramm liefe weiter und hielte
+        die Ausgabeleitung offen — beim Bereitstellungswerkzeug für Office ist
+        genau das der Normalfall, setup.exe startet einen zweiten Prozess.
+    #>
+    param([Parameter(Mandatory = $true)][int]$ProcessId)
+
+    try {
+        $killer = New-Object Diagnostics.ProcessStartInfo
+        $killer.FileName = 'taskkill.exe'
+        $killer.Arguments = "/PID $ProcessId /T /F"
+        $killer.UseShellExecute = $false
+        $killer.CreateNoWindow = $true
+        [void][Diagnostics.Process]::Start($killer).WaitForExit(5000)
+    } catch { }
+
+    try {
+        $process = Get-Process -Id $ProcessId -ErrorAction Stop
+        if (-not $process.HasExited) { $process.Kill() }
+    } catch { }
+}
+
 function Invoke-WzProcess {
     <#
     .SYNOPSIS
@@ -278,7 +305,8 @@ function Invoke-WzProcess {
         [string]$Arguments = '',
         [switch]$LogOutput,
         [int]$TimeoutSeconds = 0,
-        [string]$WorkingDirectory
+        [string]$WorkingDirectory,
+        [switch]$KillOnCancel
     )
 
     $result = [pscustomobject]@{
@@ -286,6 +314,7 @@ function Invoke-WzProcess {
         StdOut   = ''
         StdErr   = ''
         TimedOut = $false
+        Canceled = $false
     }
 
     $process = $null
@@ -325,26 +354,33 @@ function Invoke-WzProcess {
         $outTask = $process.StandardOutput.ReadToEndAsync()
         $errTask = $process.StandardError.ReadToEndAsync()
 
-        if ($TimeoutSeconds -gt 0) {
-            if (-not $process.WaitForExit($TimeoutSeconds * 1000)) {
+        # Nicht in einem Zug warten, sondern in kurzen Schritten: Nur so lässt
+        # sich zwischendurch nachsehen, ob der Anwender abgebrochen hat.
+        $frist = if ($TimeoutSeconds -gt 0) { [int64]$TimeoutSeconds * 1000 } else { [int64]0 }
+        $uhr = [Diagnostics.Stopwatch]::StartNew()
+
+        while (-not $process.WaitForExit(200)) {
+            if ($frist -gt 0 -and $uhr.ElapsedMilliseconds -ge $frist) {
                 $result.TimedOut = $true
-                # Den ganzen Prozessbaum beenden: Kill() trifft nur das
-                # gestartete Programm selbst, ein von ihm gestartetes
-                # Unterprogramm liefe weiter und hielte die Ausgabeleitung offen.
-                try {
-                    $killer = New-Object Diagnostics.ProcessStartInfo
-                    $killer.FileName = 'taskkill.exe'
-                    $killer.Arguments = "/PID $($process.Id) /T /F"
-                    $killer.UseShellExecute = $false
-                    $killer.CreateNoWindow = $true
-                    [void][Diagnostics.Process]::Start($killer).WaitForExit(5000)
-                } catch { }
-                try { if (-not $process.HasExited) { $process.Kill() } } catch { }
+                Stop-WzProcessTree -ProcessId $process.Id
                 Write-WzLog "$([IO.Path]::GetFileName($FilePath)) nach $TimeoutSeconds s abgebrochen." -Level Warn
                 [void]$process.WaitForExit(5000)
+                break
             }
-        } else {
-            $process.WaitForExit()
+
+            # »Abbrechen« beendete bisher nur die PowerShell-Pipeline. Das
+            # gestartete Programm lief weiter — ein abgebrochener Download hing
+            # unsichtbar an der Leitung, und der Runspace blieb in »Stopping«,
+            # weil dieser Thread noch im Warten stand. Beendet wird nur, wo der
+            # Aufrufer es ausdrücklich erlaubt: Einen laufenden Deinstallierer
+            # mitten im Wort abzuschneiden wäre schlimmer als das Warten.
+            if ($KillOnCancel -and $syncHash -and $syncHash.CurrentTask -and $syncHash.CurrentTask.Canceled) {
+                $result.Canceled = $true
+                Stop-WzProcessTree -ProcessId $process.Id
+                Write-WzLog "$([IO.Path]::GetFileName($FilePath)) auf Wunsch abgebrochen." -Level Warn
+                [void]$process.WaitForExit(5000)
+                break
+            }
         }
 
         $result.ExitCode = $process.ExitCode

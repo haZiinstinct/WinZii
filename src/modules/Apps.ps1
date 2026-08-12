@@ -506,7 +506,9 @@ function Save-WzOfflineInstallers {
 
         $arguments = "download --id $($app.wingetId) --exact --source winget --accept-source-agreements " +
                      "--accept-package-agreements --disable-interactivity --download-directory `"$appDir`""
-        $result = Invoke-WzProcess -FilePath $wingetPath -Arguments $arguments -TimeoutSeconds 1800
+        # -KillOnCancel: Vorabladen ist ein reiner Download. Die Größenprüfung
+        # unten erkennt ein abgebrochenes Paket als unvollständig.
+        $result = Invoke-WzProcess -FilePath $wingetPath -Arguments $arguments -TimeoutSeconds 1800 -KillOnCancel
 
         # Der Rückgabewert allein genügt nicht: Bei einem leeren Ordner meldete
         # WinZii früher »gespeichert (0 B)«.

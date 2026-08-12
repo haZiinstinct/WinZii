@@ -55,6 +55,40 @@ $r = Invoke-WzProcess -FilePath 'gibtesnicht-winzii.exe' -Arguments '/x'
 Assert-Wz 'Fehlendes Programm faengt sauber ab' ($r.ExitCode -eq -1) "ExitCode=$($r.ExitCode)"
 
 Write-Host ''
+Write-Host '  Abbruch durch den Anwender' -ForegroundColor Cyan
+Write-Host ''
+
+# Der Abbruch setzt nur einen Merker in $syncHash.CurrentTask. Frueher stoppte
+# das allein die PowerShell-Pipeline, das gestartete Programm lief weiter --
+# ein abgebrochener Download hing unsichtbar an der Leitung.
+$syncHash.CurrentTask = [pscustomobject]@{ Cancelable = $true; Canceled = $false }
+
+# Ohne -KillOnCancel muss der Aufruf ungeruehrt zu Ende laufen: Ein laufender
+# Deinstallierer darf nicht mitten im Wort abgeschnitten werden.
+$syncHash.CurrentTask.Canceled = $true
+$start = Get-Date
+$r = Invoke-WzProcess -FilePath 'cmd.exe' -Arguments '/c ping -n 3 127.0.0.1 >nul' -TimeoutSeconds 60
+$dauer = (Get-Date) - $start
+Assert-Wz 'ohne Schalter laeuft es zu Ende' ($r.ExitCode -eq 0 -and -not $r.Canceled -and $dauer.TotalSeconds -ge 1.5) `
+    "$([math]::Round($dauer.TotalSeconds,1)) s, ExitCode=$($r.ExitCode)"
+
+# Mit -KillOnCancel muss derselbe Aufruf sofort abbrechen.
+$syncHash.CurrentTask.Canceled = $true
+$start = Get-Date
+$r = Invoke-WzProcess -FilePath 'cmd.exe' -Arguments '/c ping -n 30 127.0.0.1 >nul' -TimeoutSeconds 300 -KillOnCancel
+$dauer = (Get-Date) - $start
+Assert-Wz 'mit Schalter bricht es ab' ($r.Canceled -and $dauer.TotalSeconds -lt 10) `
+    "$([math]::Round($dauer.TotalSeconds,1)) s, Canceled=$($r.Canceled)"
+Assert-Wz 'kein ping mehr uebrig' (@(Get-Process ping -ErrorAction SilentlyContinue).Count -eq 0) `
+    'Prozessbaum mitbeendet'
+
+# Ohne Abbruchwunsch aendert der Schalter nichts.
+$syncHash.CurrentTask.Canceled = $false
+$r = Invoke-WzProcess -FilePath 'cmd.exe' -Arguments '/c exit 4' -TimeoutSeconds 60 -KillOnCancel
+Assert-Wz 'Schalter allein bricht nichts ab' ($r.ExitCode -eq 4 -and -not $r.Canceled) "ExitCode=$($r.ExitCode)"
+$syncHash.CurrentTask = $null
+
+Write-Host ''
 Write-Host '  Im Hintergrund-Runspace (so laeuft es im Betrieb)' -ForegroundColor Cyan
 Write-Host ''
 

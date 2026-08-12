@@ -302,8 +302,11 @@ function Invoke-WzOfficeDownload {
 
     Write-WzLog 'Office wird geladen — je nach Verbindung dauert das von zehn Minuten bis über eine Stunde...' -Level Action
     $started = Get-Date
+    # -KillOnCancel: Ein reiner Download darf mitten im Wort abgebrochen werden.
+    # Das Bereitstellungswerkzeug setzt beim nächsten Lauf auf dem Vorhandenen
+    # auf, und Test-WzOfficeCache erkennt einen unvollständigen Vorrat ohnehin.
     $result = Invoke-WzProcess -FilePath $setup -Arguments "/download `"$configFile`"" `
-        -WorkingDirectory (Split-Path -Parent $configFile) -TimeoutSeconds 7200
+        -WorkingDirectory (Split-Path -Parent $configFile) -TimeoutSeconds 7200 -KillOnCancel
 
     # Dem Rückgabewert allein wird nicht mehr geglaubt: Das Ergebnis muss
     # vollständig sein, sonst hilft es beim Kunden ohne Netz gar nichts.
