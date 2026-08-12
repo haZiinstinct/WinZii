@@ -1,4 +1,4 @@
-<div align="center">
+﻿<div align="center">
 
 <img src="docs/banner.svg" alt="WinZii" width="100%">
 
@@ -31,7 +31,7 @@ Vom USB-Stick starten, aufräumen, optimieren, einrichten — ohne Installation,
 | **Optimierung** | 41 Eingriffe für Geschwindigkeit, Telemetrie, Datenschutz und Sicherheit. Jeder mit Begründung, jeder einzeln zurücknehmbar. |
 | **KI-Entfernung** | Findet Copilot, Recall und Click to Do — sperrt sie per Richtlinie oder entfernt sie ganz. Die Sperren wirken auch vorbeugend gegen Funktionsupdates. |
 | **Bereinigung** | Zeigt erst, wo wie viel Platz liegt (Zwischenspeicher, Update-Reste, Browser-Caches, Windows.old), dann wird gezielt gelöscht. Persönliche Dateien sind ausgeschlossen. |
-| **Programme** | 52 Programme über winget, mit Nachinstallation von winget selbst für LTSC-Systeme. Installationsdateien lassen sich auf den Stick laden. Zweiter Bereich: installierte Programme suchen und entfernen, still wo möglich. |
+| **Programme** | 59 Programme über winget, darunter eine Rubrik **Sicherheit** (Zweitmeinung, Aufräumen nach einem Befall, Schutz danach), mit Nachinstallation von winget selbst für LTSC-Systeme. Installationsdateien lassen sich auf den Stick laden. Zweiter Bereich: installierte Programme suchen und entfernen, still wo möglich. |
 | **Office** | Microsoft 365, Office LTSC 2024 und 2021 über das offizielle Bereitstellungswerkzeug — auf Wunsch komplett offline vom Stick. Dazu LibreOffice. |
 | **Daten** | Beantwortet vor der Neuinstallation: Was muss gesichert werden? Profilgrößen je Konto, wann ein Konto zuletzt benutzt wurde, Outlook-Dateien, Browser-Profile, Drucker, Netzlaufwerke, Produktschlüssel. Warnt nicht nur vor OneDrive-Platzhaltern, die im Explorer wie Dateien aussehen und leer sind, sondern lädt sie auf Wunsch herunter und wartet auf den Abschluss. Exportiert Lesezeichen, WLAN-Zugänge, Geräteliste und BitLocker-Schlüssel — und kopiert die persönlichen Ordner mit robocopy auf eine externe Platte, ohne an der Quelle etwas zu löschen. |
 | **Zurückspielen** | Die andere Hälfte des Datenumzugs: WLAN-Netze, Lesezeichen, Drucker und Netzlaufwerke aus einer Sicherung wieder anlegen — auch aus der eines anderen Rechners. Zeigt vorher, was passt und was nicht: fehlende Druckertreiber, Browser-Profile, die es hier nicht gibt, und WLAN-Netze, die ohne Schlüssel gesichert wurden. |

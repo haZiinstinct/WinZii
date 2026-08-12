@@ -1,4 +1,4 @@
-<div align="center">
+﻿<div align="center">
 
 <img src="docs/banner.svg" alt="WinZii" width="100%">
 
@@ -31,7 +31,7 @@ Run it from a USB stick: clean up, optimize, set up — no installation, no acco
 | **Optimization** | 41 tweaks for speed, telemetry, privacy and security. Each one explained, each one individually reversible. |
 | **AI removal** | Finds Copilot, Recall and Click to Do — blocks them by policy or removes them entirely. The blocks also act preventively against feature updates. |
 | **Cleanup** | First shows where the space went (caches, update leftovers, browser caches, Windows.old), then deletes selectively. Personal files are excluded. |
-| **Programs** | 52 programs via winget, including bootstrapping winget itself on LTSC systems. Installers can be cached on the stick for offline use. A second section finds and uninstalls installed programs — silently where possible. |
+| **Programs** | 59 programs via winget, including a **security** section (second opinion, cleanup after an infection, protection afterwards), including bootstrapping winget itself on LTSC systems. Installers can be cached on the stick for offline use. A second section finds and uninstalls installed programs — silently where possible. |
 | **Office** | Microsoft 365, Office LTSC 2024 and 2021 via the official Deployment Tool — fully offline from the stick if you want. Plus LibreOffice. |
 | **Data** | Answers the question before every reinstall: what needs backing up? Profile sizes per account, when an account was last used, Outlook data files, browser profiles, printers, network drives, product keys. Does more than warn about OneDrive placeholders that look like files in Explorer but are empty — it can download them and wait for completion. Exports bookmarks, Wi-Fi credentials, the device list and BitLocker keys, and copies the personal folders to an external drive with robocopy, never deleting anything at the source. |
 | **Restore** | The other half of the data migration: re-create Wi-Fi networks, bookmarks, printers and network drives from a backup — including one taken on a different machine. Shows up front what fits and what does not: missing printer drivers, browser profiles that do not exist here, and Wi-Fi networks that were saved without their key. |

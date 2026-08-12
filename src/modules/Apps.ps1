@@ -48,15 +48,23 @@ function Test-WzWinget {
     # daran hängengeblieben und meldete »winget nicht erreichbar«.
     foreach ($path in $candidates) {
         try {
-            $version = (& $path --version 2>$null | Select-Object -First 1)
-            if ($LASTEXITCODE -eq 0 -and $version -match '\d') {
+            # KEIN »| Select-Object -First 1« an dieser Stelle: Die Auswahl
+            # beendet die Pipeline, sobald sie ihre eine Zeile hat, und reißt
+            # winget dabei mitten im Lauf ab. $LASTEXITCODE ist dann -1 statt 0,
+            # und zwar je nach Zeitverhalten mal so und mal so. Die Erkennung
+            # meldete deshalb sporadisch »winget nicht gefunden«, obwohl derselbe
+            # Aufruf eine Zeile weiter »v1.29.280« lieferte.
+            $output = @(& $path --version 2>$null)
+            $code = $LASTEXITCODE
+            $version = @($output | Where-Object { "$_" -match '\d' })[0]
+            if ($code -eq 0 -and $version) {
                 $result.Available = $true
                 $result.Path = $path
-                $result.Version = $version
+                $result.Version = "$version".Trim()
                 if ($syncHash) { $syncHash.WingetPath = $path }
                 return $result
             }
-            Write-WzLog "winget gefunden, antwortet aber nicht (Code $LASTEXITCODE): $path" -Level Info
+            Write-WzLog "winget gefunden, antwortet aber nicht (Code $code): $path" -Level Info
         } catch {
             Write-WzLog "winget nicht ausführbar: $($_.Exception.Message.Split([char]10)[0])" -Level Info
         }

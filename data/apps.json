@@ -9,6 +9,7 @@
     { "id": "basis", "name": "Grundausstattung", "description": "Gehört auf jeden frisch aufgesetzten PC." },
     { "id": "browser", "name": "Browser", "description": "Nur installieren, was der Kunde auch nutzt." },
     { "id": "technik", "name": "Techniker-Werkzeuge", "description": "Diagnose, Speicheranalyse, Hardware-Auslesen." },
+    { "id": "sicherheit", "name": "Sicherheit", "description": "Zweitmeinung, Aufräumen nach einem Befall, Schutz danach. Nichts davon ist vorausgewählt — was auf den Kundenrechner gehört, entscheidet der Fall, nicht eine Liste." },
     { "id": "fernwartung", "name": "Fernwartung und Netzwerk", "description": "Zugriff auf entfernte Rechner." },
     { "id": "rettung", "name": "Datenrettung und Sicherung", "description": "Wenn Daten weg sind — oder bevor sie es werden." },
     { "id": "belastung", "name": "Belastungstest", "description": "Bringt sporadische Abstürze zum Vorschein, indem es die Hardware unter Last setzt." },
@@ -73,7 +74,6 @@
       "description": "Mailprogramm ohne Office-Lizenz. Kann Outlook-Konten übernehmen.",
       "defaultChecked": false
     },
-
     {
       "id": "firefox",
       "name": "Mozilla Firefox",
@@ -98,7 +98,6 @@
       "description": "Chromium-Basis mit eingebautem Werbeblocker.",
       "defaultChecked": false
     },
-
     {
       "id": "treesize",
       "name": "TreeSize Free",
@@ -204,22 +203,77 @@
       "defaultChecked": false
     },
     {
-      "id": "malwarebytes",
-      "name": "Malwarebytes",
-      "category": "technik",
-      "wingetId": "Malwarebytes.Malwarebytes",
-      "description": "Zweitmeinung neben dem Windows-Defender. Findet Werbe- und Erpressersoftware, die dieser durchlässt.",
+      "id": "adwcleaner",
+      "name": "AdwCleaner",
+      "category": "sicherheit",
+      "wingetId": "Malwarebytes.AdwCleaner",
+      "description": "Räumt Werbesoftware, Browser-Symbolleisten und entführte Startseiten weg. Läuft ohne Installation, braucht keine Minute und ist bei »überall Werbung« der erste Griff.",
       "defaultChecked": false
     },
     {
-      "id": "adwcleaner",
-      "name": "AdwCleaner",
-      "category": "technik",
-      "wingetId": "Malwarebytes.AdwCleaner",
-      "description": "Räumt Werbesoftware, Browser-Symbolleisten und veränderte Startseiten weg.",
+      "id": "malwarebytes",
+      "name": "Malwarebytes",
+      "category": "sicherheit",
+      "wingetId": "Malwarebytes.Malwarebytes",
+      "description": "Zweitmeinung neben dem Windows-Defender. Achtung: Die kostenlose Fassung startet als Testversion der Premium-Variante mit Echtzeitschutz — nach 14 Tagen fällt sie auf reines Scannen zurück. Bis dahin laufen zwei Wächter nebeneinander.",
       "defaultChecked": false
     },
-
+    {
+      "id": "emsisoftkit",
+      "name": "Emsisoft Emergency Kit",
+      "category": "sicherheit",
+      "wingetId": "Emsisoft.EmergencyKit",
+      "description": "Tragbarer Scanner mit zweiter Erkennungsmaschine. Installiert nichts dauerhaft und lässt sich vom Stick aus auch dann starten, wenn der vorhandene Virenschutz schon abgeschaltet wurde.",
+      "defaultChecked": false
+    },
+    {
+      "id": "esetavremover",
+      "name": "ESET AV Remover",
+      "category": "sicherheit",
+      "wingetId": "ESET.AVRemover",
+      "description": "Entfernt Reste alter Virenscanner, die sich über die Systemsteuerung nicht mehr deinstallieren lassen. Genau die verhindern sonst, dass der neue Schutz sauber startet.",
+      "defaultChecked": false
+    },
+    {
+      "id": "osarmor",
+      "name": "OSArmor",
+      "category": "sicherheit",
+      "wingetId": "NoVirusThanks.OSArmor.Personal",
+      "description": "Verhaltenssperre: Blockiert verdächtige Startvorgänge (Skripte aus Office-Dokumenten, PowerShell aus dem Downloadordner), bevor eine Erkennung überhaupt greifen müsste. Braucht Nacharbeit — es hält auch harmlose Programme an, und die müssen von Hand freigegeben werden.",
+      "defaultChecked": false
+    },
+    {
+      "id": "defenderui",
+      "name": "DefenderUI",
+      "category": "sicherheit",
+      "wingetId": "VoodooSoft.DefenderUI",
+      "description": "Oberfläche für die Einstellungen des Windows-Defenders, die Microsoft nur über Gruppenrichtlinien anbietet. Drei fertige Stufen von »wie ab Werk« bis »streng«.",
+      "defaultChecked": false
+    },
+    {
+      "id": "firewallcontrol",
+      "name": "Windows Firewall Control",
+      "category": "sicherheit",
+      "wingetId": "BiniSoft.WindowsFirewallControl",
+      "description": "Fragt bei jeder ausgehenden Verbindung nach, statt sie stillschweigend zu erlauben. Die ersten Tage kommen viele Rückfragen — auf einem Kundenrechner nur mit Ansage.",
+      "defaultChecked": false
+    },
+    {
+      "id": "simplewall",
+      "name": "simplewall",
+      "category": "sicherheit",
+      "wingetId": "Henry++.simplewall",
+      "description": "Dasselbe in offen und ohne Hersteller im Rücken. Schlank, aber die Grundeinstellung blockiert erst einmal alles.",
+      "defaultChecked": false
+    },
+    {
+      "id": "veracrypt",
+      "name": "VeraCrypt",
+      "category": "sicherheit",
+      "wingetId": "IDRIX.VeraCrypt",
+      "description": "Verschlüsselte Behälter und ganze Laufwerke. Für Geräte ohne BitLocker — also für alles unterhalb von Windows Pro.",
+      "defaultChecked": false
+    },
     {
       "id": "anydesk",
       "name": "AnyDesk",
@@ -276,7 +330,6 @@
       "description": "Zeichnet den Netzwerkverkehr mit. Für Fälle, in denen die Verbindung steht, aber trotzdem nichts ankommt.",
       "defaultChecked": false
     },
-
     {
       "id": "recuva",
       "name": "Recuva",
@@ -309,7 +362,6 @@
       "description": "Verschlüsselte, geplante Sicherung auf externe Platte oder Cloud — als Dauerlösung für den Kunden.",
       "defaultChecked": false
     },
-
     {
       "id": "occt",
       "name": "OCCT",
@@ -342,7 +394,6 @@
       "description": "Temperaturen, Spannungen und Lüfterdrehzahlen im Blick, während der Test läuft.",
       "defaultChecked": false
     },
-
     {
       "id": "vlc",
       "name": "VLC media player",
@@ -383,7 +434,6 @@
       "description": "Wandelt Videos in gängige Formate um und schrumpft sie dabei.",
       "defaultChecked": false
     },
-
     {
       "id": "vcredist",
       "name": "Visual C++ Laufzeit 2015-2022",
@@ -408,7 +458,6 @@
       "description": "Zeigt Weboberflächen innerhalb anderer Programme an. Auf Windows 11 meist schon vorhanden.",
       "defaultChecked": false
     },
-
     {
       "id": "vscode",
       "name": "Visual Studio Code",

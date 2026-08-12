@@ -420,8 +420,26 @@ function Get-WzWingetCandidates {
 
     $candidates = New-Object Collections.ArrayList
 
+    # Ein Pfad, der sich schon als lauffähig erwiesen hat, steht vorn.
+    if ($syncHash -and $syncHash.WingetPath) { [void]$candidates.Add($syncHash.WingetPath) }
+
     $command = Get-Command winget.exe -ErrorAction SilentlyContinue
     if ($command) { [void]$candidates.Add($command.Source) }
+
+    # Die Alias-Ablage direkt, ohne Befehlssuche: Im Hintergrund-Runspace findet
+    # Get-Command winget.exe NICHTS — die Runspaces werden aus einem eigenen
+    # InitialSessionState aufgebaut, in dem die Suche nach ausführbaren Dateien
+    # ins Leere läuft. Die Oberfläche meldete deshalb »winget nicht gefunden«,
+    # während dasselbe Get-Command im Hauptthread den Pfad lieferte.
+    $bases = @($env:LOCALAPPDATA)
+    # Bei Elevierung mit einem Technikerkonto liegt der Alias im Profil des
+    # angemeldeten Anwenders, nicht im eigenen.
+    try { $bases += (Get-WzUserFolder -Kind 'LocalAppData') } catch { }
+    foreach ($base in $bases) {
+        if (-not $base) { continue }
+        $alias = Join-Path $base 'Microsoft\WindowsApps\winget.exe'
+        if (Test-Path -LiteralPath $alias) { [void]$candidates.Add($alias) }
+    }
 
     try {
         $package = Get-AppxPackage -Name 'Microsoft.DesktopAppInstaller' -AllUsers -ErrorAction Stop |

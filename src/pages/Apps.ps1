@@ -89,6 +89,9 @@ function New-WzAppList {
         $lead = New-Object Windows.Controls.TextBlock
         $lead.Text = $category.description
         $lead.Style = $syncHash.Window.FindResource('WzLabel')
+        # Ohne Umbruch lief der Satz rechts aus der Karte heraus und wurde
+        # abgeschnitten — auffällig erst bei den längeren Beschreibungen.
+        $lead.TextWrapping = 'Wrap'
         $lead.Margin = New-Object Windows.Thickness(0, 0, 0, 12)
         [void]$stack.Children.Add($lead)
 
