@@ -113,7 +113,23 @@ Der Eintrag **»Leistung am Netz, Ausdauer auf Akku«** legt einen eigenen Energ
 - **Zurücknehmen.** Der vorherige Plan muss wieder aktiv sein und die Kopie verschwunden.
 - Zweiter Durchlauf: es darf **keine** zweite Kopie entstehen.
 
-## 8. Akku, BitLocker, OneDrive
+## 8. Die Oberfläche auf dem kleinen Bildschirm
+
+Auf dem Entwicklungsrechner ist die Arbeitsfläche groß, das Fenster startet groß — die
+Anpassungen für niedrige Bildschirme laufen dort nie an. Auf einem 1366×768-Gerät bei
+125 % Skalierung sind es logisch 1092×614, knapp über dem Mindestmaß 1000×560.
+
+- **Startet die Konsole eingeklappt?** Unter 700 px Fensterhöhe soll sie das. Steht in
+  der Klappzeile »eingeklappt« und ist darüber die ganze Seite zu sehen — oder frisst
+  die Konsole die halbe Höhe?
+- **Ein Klick auf die Klappzeile** muss sie wieder aufziehen.
+- **Seitenleiste:** Auf »Protokoll« oder »Reparatur« wechseln. Ist der aktive Eintrag
+  sichtbar und markiert, oder bleibt die Leiste oben stehen?
+- **Dashboard:** Werden Wörter mitten durchtrennt (»Systemlaufwe rk«)? Fluchten die
+  Werte innerhalb einer Karte?
+- Fenster von Hand kleiner ziehen bis zum Mindestmaß — bleibt alles erreichbar?
+
+## 9. Akku, BitLocker, OneDrive
 
 Auf dem Entwicklungsrechner gibt es davon nichts, geprüft ist nur der »nicht vorhanden«-Fall:
 
