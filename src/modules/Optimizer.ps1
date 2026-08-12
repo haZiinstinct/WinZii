@@ -114,13 +114,19 @@ function Test-WzTweakState {
                 }
             }
             'powerplan' {
-                # Der Plan gilt als angewendet, wenn er der aktive ist. Gesucht
-                # wird nach dem Namen, den WinZii selbst vergeben hat — der ist
-                # auf jedem Gerät derselbe, anders als die Ausgabe von powercfg.
+                # Der Plan gilt als angewendet, wenn er der aktive ist.
+                # Verglichen werden GUIDs, nicht Namen: Der Name enthält ein
+                # »—«, das die Konsolen-Codepage nicht kennt — in der Ausgabe
+                # von powercfg steht dort ein schlichter Bindestrich. Der
+                # frühere Textvergleich traf deshalb nie zu, der Eintrag galt
+                # selbst unmittelbar nach dem Anwenden als »nicht angewendet«.
                 $checkable++
-                $aktiv = @{ exec = 'powercfg.exe'; args = '/getactivescheme'
-                            pattern = [regex]::Escape($action.planName) }
-                if (Test-WzCommandState -State ([pscustomobject]$aktiv)) { $matching++ }
+                $planGuid = Find-WzPowerScheme -Name $action.planName
+                if ($planGuid) {
+                    $aktiv = @{ exec = 'powercfg.exe'; args = '/getactivescheme'
+                                pattern = [regex]::Escape($planGuid) }
+                    if (Test-WzCommandState -State ([pscustomobject]$aktiv)) { $matching++ }
+                }
             }
             'feature' {
                 $checkable++
@@ -435,6 +441,56 @@ function Invoke-WzCommandAction {
     }
 }
 
+function Find-WzPowerScheme {
+    <#
+    .SYNOPSIS
+        GUID eines Energieplans anhand seines Namens, sonst $null.
+    .DESCRIPTION
+        Gesucht wird in der Registry, nicht in der Ausgabe von »powercfg /list«.
+        Zwei Gründe, beide auf dem Abnahme-Notebook nachgewiesen:
+
+        Erstens die Codierung. Der Planname enthält ein »—« (U+2014). Die
+        Ausgabe von powercfg wird mit der Konsolen-Codepage gelesen, und weder
+        850 noch 437 kennen dieses Zeichen — zurück kommt ein schlichter »-«.
+        Der Textvergleich mit dem Katalognamen traf deshalb nie zu: Jeder
+        Durchlauf hätte eine weitere Kopie angelegt, und der Eintrag galt
+        selbst unmittelbar nach dem Anwenden als »nicht angewendet«.
+
+        Zweitens die Vollständigkeit. »powercfg /list« zeigt auf demselben
+        Gerät nur »Ausbalanciert«, obwohl sieben Schemata eingetragen sind.
+        Die Registry zeigt alle und ist für Lesezugriffe nicht gesperrt.
+    .OUTPUTS
+        GUID als Zeichenkette, oder $null
+    #>
+    param([Parameter(Mandatory = $true)][string]$Name)
+
+    $schemePath = 'HKLM:\SYSTEM\CurrentControlSet\Control\Power\User\PowerSchemes'
+    try {
+        foreach ($key in @(Get-ChildItem -LiteralPath $schemePath -ErrorAction Stop)) {
+            $friendly = (Get-ItemProperty -LiteralPath $key.PSPath -Name 'FriendlyName' `
+                -ErrorAction SilentlyContinue).FriendlyName
+            if ($friendly -eq $Name) { return $key.PSChildName }
+        }
+        # Alle Schemata stehen unter diesem Schlüssel — was hier fehlt, gibt es
+        # nicht. Kein Ausweichweg über powercfg, der bei jedem Seitenaufbau
+        # einen Prozess starten würde.
+        return $null
+    } catch {
+        # Nur wenn der Schlüssel selbst nicht lesbar ist, bleibt die Textsuche.
+        # Für jedes Zeichen, das die Konsolen-Codepage nicht abbilden kann,
+        # steht dabei ein Platzhalter.
+        $muster = [regex]::Replace($Name, '[^\x20-\x7E]', '?')
+        $liste = Invoke-WzProcess -FilePath 'powercfg.exe' -Arguments '/list' -TimeoutSeconds 30
+        foreach ($zeile in ($liste.StdOut -split "`r?`n")) {
+            if ($zeile -notlike "*$muster*") { continue }
+            $treffer = [regex]::Match($zeile,
+                '[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}')
+            if ($treffer.Success) { return $treffer.Value }
+        }
+        return $null
+    }
+}
+
 function Invoke-WzPowerPlanAction {
     <#
     .SYNOPSIS
@@ -475,15 +531,8 @@ function Invoke-WzPowerPlanAction {
 
     # 2. Gibt es den Plan schon? Ohne diese Prüfung legt jeder weitere Durchlauf
     #    eine zusätzliche Kopie an, bis die Planliste zugemüllt ist.
-    $liste = Invoke-WzProcess -FilePath 'powercfg.exe' -Arguments '/list' -TimeoutSeconds 30
-    $planGuid = $null
+    $planGuid = Find-WzPowerScheme -Name $Action.planName
     $neuAngelegt = $false
-    foreach ($zeile in ($liste.StdOut -split "`r?`n")) {
-        if ($zeile -like "*$($Action.planName)*" -and $zeile -match $guidMuster) {
-            $planGuid = $Matches[0]
-            break
-        }
-    }
 
     if (-not $planGuid) {
         $kopie = Invoke-WzProcess -FilePath 'powercfg.exe' `
