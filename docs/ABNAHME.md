@@ -1,4 +1,4 @@
-# Abnahme auf fremder Hardware
+﻿# Abnahme auf fremder Hardware
 
 Diese Datei ist die Übergabe an die Claude-Code-Sitzung auf dem Laptop. Sie steht im
 Repo, damit dort ein `git pull` reicht.
@@ -13,6 +13,10 @@ prüfbar ist.
 Stand: **0.4.0**, Tag `v0.4.0`. Alle acht Prüfwerkzeuge grün, Sandbox-Lauf bestanden,
 Start aus sauberer Kopie mit leerem `offline\` geprüft.
 
+> **`main` ist weiter als der Tag.** Auf dem Entwicklungsrechner wird parallel gearbeitet.
+> Vor dem ersten Commit hier immer `git pull --rebase origin main` — sonst wird der Push
+> abgewiesen, und zwei Stände laufen auseinander.
+
 ---
 
 ## So anfangen
@@ -24,7 +28,7 @@ git clone git@github.com:haZiinstinct/WinZii.git
 Dann Claude Code im Ordner starten und diese Datei nennen. Vor dem ersten Eingriff:
 
 ```bash
-powershell -NoProfile -File tools\Test-Smoke.ps1
+powershell -NoProfile -File tools/Test-Smoke.ps1
 ```
 
 **Alles zuerst im Testmodus.** `Start.bat -DryRun` protokolliert jede Änderung, ohne sie
@@ -105,7 +109,9 @@ steht so in der Beschreibung.
 
 ## 7. Energieplan (neu in 0.4.0, auf einem Notebook noch nie gelaufen)
 
-Der Eintrag **»Leistung am Netz, Ausdauer auf Akku«** legt einen eigenen Energieplan an:
+Der Eintrag **»Leistung am Netz, Ausdauer auf Akku«** (`perf-power-profile`, Kategorie
+Geschwindigkeit) legt einen eigenen Energieplan an. Er ist **nicht vorausgewählt** — zum
+Prüfen von Hand anhaken:
 
 - Anwenden. Danach in den Windows-Energieoptionen nachsehen: gibt es den neuen Plan, ist
   er aktiv, und steht der vorherige unangetastet daneben?
@@ -129,7 +135,30 @@ Anpassungen für niedrige Bildschirme laufen dort nie an. Auf einem 1366×768-Ge
   Werte innerhalb einer Karte?
 - Fenster von Hand kleiner ziehen bis zum Mindestmaß — bleibt alles erreichbar?
 
-## 9. Akku, BitLocker, OneDrive
+## 9. Rubrik »Sicherheit« (neu in 0.4.0, nie installiert)
+
+Neun Einträge, alle nur auf ihre Paketkennung geprüft — installiert wurde keiner:
+
+- **AdwCleaner** und **Emsisoft Emergency Kit** sind harmlos und schnell: einmal
+  installieren, einmal starten, wieder deinstallieren.
+- **OSArmor** ist der heikle: eine Verhaltenssperre, die auch harmlose Programme anhält.
+  Nur auf einem Gerät ausprobieren, auf dem das egal ist — und die Beschreibung im
+  Katalog daran messen, ob sie ehrlich genug ist.
+- **ESET AV Remover** nur anfassen, wenn wirklich Reste eines alten Virenscanners da sind.
+- Bei **Windows Firewall Control** und **simplewall** gilt dasselbe: Sie blockieren erst
+  einmal alles. Nicht auf einem Gerät, das gleich beim Kunden steht.
+
+## 10. Sandbox mit dem Netzweg dieses Geräts
+
+`tools\Test-Sandbox.wsb` läuft auch hier — dann über die Verbindung des Laptops statt über
+die des Entwicklungsrechners. Das war im Plan ausdrücklich vorgesehen, weil der Sandbox-Lauf
+in diesem Projekt bisher sieben echte Fehler gefunden hat.
+
+Zwei Punkte sind dort **erwartet** und keine Fehler: Ein frisch registriertes
+App-Installer-Paket startet vor einer Neuanmeldung nicht (in der Sandbox unmöglich), und
+ohne WLAN-Dienst lässt sich kein WLAN-Profil einspielen. Beide stehen im Bericht als `[--]`.
+
+## 11. Akku, BitLocker, OneDrive
 
 Auf dem Entwicklungsrechner gibt es davon nichts, geprüft ist nur der »nicht vorhanden«-Fall:
 
@@ -146,7 +175,7 @@ Auf dem Entwicklungsrechner gibt es davon nichts, geprüft ist nur der »nicht v
 Gefundene Fehler nicht sammeln, sondern einzeln beheben und committen. Nach jeder Änderung:
 
 ```bash
-powershell -NoProfile -File tools\Repair-Encoding.ps1
+powershell -NoProfile -File tools/Repair-Encoding.ps1
 ```
 
 Dann die Prüfwerkzeuge: `Test-Smoke`, `Test-Catalogs`, `Test-Pages`, `Test-Language`,
