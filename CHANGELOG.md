@@ -6,7 +6,7 @@ Alle nennenswerten Änderungen an WinZii. Die Fassungen folgen
 ## [0.4.1] — 2026-08-12
 
 Der erste Abnahmelauf auf fremder Hardware, nach `docs/ABNAHME.md` — ein Notebook mit
-Akku und WLAN statt des Entwicklungsrechners. Fünf Befunde, alle aus derselben Familie
+Akku und WLAN statt des Entwicklungsrechners. Sechs Befunde, alle aus derselben Familie
 wie der Audit davor: Etwas wird gemeldet, das so nicht stimmt.
 
 ### Behoben
@@ -23,16 +23,26 @@ wie der Audit davor: Etwas wird gemeldet, das so nicht stimmt.
   weitere Kopie angelegt, und der Eintrag galt selbst direkt nach dem Anwenden als »nicht
   angewendet«. Gesucht wird jetzt über die Registry — verlustfrei und ungefiltert, denn
   `powercfg /list` zeigt auf demselben Gerät nur einen von sieben Plänen.
-- **»Abbrechen« beendete den Download nicht.** Es stoppte die PowerShell-Pipeline, während
-  das gestartete Programm weiterlief — ein abgebrochener Office-Download hing unsichtbar
-  an der Leitung, und die Anzeige blieb hängen. `Invoke-WzProcess` wartet jetzt in
-  Schritten und sieht dazwischen nach. Beendet wird nur, wo der Aufrufer es erlaubt: bei
-  den beiden reinen Downloads. Ein laufender Deinstallierer läuft weiter zu Ende.
-- **Der Energieplan meldete Erfolg, ohne etwas zu bewirken.** Was Netz und Akku
-  unterscheidet, sind Kühlungsrichtlinie und Turbo-Verhalten — beide auf dem Abnahmegerät
-  ausgeblendet und im Katalog als »optional« geführt. Übrig blieben Werte, die für beide
-  Betriebsarten gleich sind und die der bisherige Plan ohnehin hatte. Das steht jetzt als
-  Warnung im Protokoll, statt als Erfolg durchzugehen.
+- **Ein angefangener Office-Vorrat galt als vollständig.** Der Abnahmelauf brach einen
+  Download nach 75 Sekunden ab: Katalogdatei und Paket-Cabs lagen schon da,
+  `stream.x64.x-none.dat` hatte 0 Byte — und WinZii meldete 39 MB als »vollständig«. Beim
+  Kunden ohne Netz ist das die Installation, die nicht startet. Geprüft werden jetzt die
+  Dateien, die zuletzt kommen und die Masse ausmachen: die neutralen Programmdateien und
+  die der gewählten Sprache, dazu eine Untergrenze für den ganzen Satz.
+- **»Abbrechen« beendete das gestartete Programm nicht.** Es stoppte die
+  PowerShell-Pipeline, während der Prozess weiterlief und der Runspace in »Stopping«
+  hängen blieb. `Invoke-WzProcess` wartet jetzt in Schritten und sieht dazwischen nach.
+  Beendet wird nur, wo der Aufrufer es erlaubt: bei den beiden reinen Downloads. Ein
+  laufender Deinstallierer läuft weiter zu Ende.
+  **Für Office reicht das nicht**, und das steht jetzt auch so im Protokoll: `setup.exe`
+  ist nur die Vorderseite, geladen wird vom Click-to-Run-Dienst von Windows. Nach dem
+  Abbruch wuchs der Ordner von 39 MB auf 2,5 GB weiter.
+- **Der Energieplan meldet es, wenn er nichts bewirken kann.** Was Netz und Akku
+  unterscheidet, sind Kühlungsrichtlinie und Turbo-Verhalten. Lässt ein Gerät beide nicht
+  setzen, bleibt ein Plan übrig, der sich wie der bisherige verhält — das steht jetzt als
+  Warnung im Protokoll. Auf dem Abnahmegerät sind beide zwar aus der Energieoberfläche
+  ausgeblendet (`Attributes=1`), ließen sich aber setzen; die Warnung blieb dort deshalb
+  zu Recht stumm. `powercfg /query` zeigt sie danach trotzdem nicht an.
 - **Die dokumentierten Prüfbefehle liefen auf einem frischen Rechner nicht.** Windows 11
   liefert die ExecutionPolicy als »Restricted« aus; der allererste Befehl der
   Abnahme-Anleitung brach ab. `Start.bat` war nie betroffen, nur die Dokumentation ließ
@@ -42,6 +52,13 @@ wie der Audit davor: Etwas wird gemeldet, das so nicht stimmt.
 
 - Verbindungsprüfung und Internetzugang **über WLAN**, ohne Kabel im Gerät: fünf Schritte
   grün, kein Zertifikats-Fehlalarm.
+- **Energieplan von Hand durchgespielt**, eleviert: anlegen, aktivieren, vorheriger Plan
+  bleibt daneben stehen, zweiter Durchlauf legt keine zweite Kopie an, Rücknahme macht den
+  alten Plan wieder aktiv und die Kopie verschwindet.
+- **Startdauer gemessen** (Punkt 6): 57,5 s im Mittel über zehn Startvorgänge, größte
+  Bremsen `DuckDuckGo.exe` mit 39,3 s und der Virenscanner mit 33,5 s. Das ist der
+  Referenzwert, gegen den nach einer Optimierung gemessen wird.
+- **7-Zip wirklich installiert** und über `winget list` nachgewiesen.
 - winget-Erkennung fünfzehnmal hintereinander ohne einen einzigen Aussetzer.
 - BitLocker-Ausgabe gegen `manage-bde` gegengehalten.
 
@@ -51,6 +68,10 @@ wie der Audit davor: Etwas wird gemeldet, das so nicht stimmt.
   Geviertstrich an wie der echte Katalogeintrag. Vorher war es reines ASCII — deshalb
   blieb der Fehler unentdeckt, obwohl der Abschnitt den zweiten Durchlauf ausdrücklich
   prüft. `Test-Process` prüft den Abbruch in vier Fällen.
+- Neu: `tools\Test-Office.ps1` baut einen Office-Vorrat im TEMP-Ordner Schritt für Schritt
+  nach — von »gar nichts da« bis »vollständig« — und hält jeder Stufe das Urteil von
+  `Test-WzOfficeCache` entgegen. Die großen Dateien sind dünn besetzt: 2 GB logische
+  Größe, kein geschriebenes Byte.
 
 ## [0.4.0] — 2026-08-12
 

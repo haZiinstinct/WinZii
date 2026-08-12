@@ -247,10 +247,8 @@ function Test-WzOfficeCache {
         Measure-Object -Property Length -Sum).Sum
     $result.Bytes = [int64]$bytes
 
-    # Nicht die Größe raten: Ein abgebrochener Download mit 501 MB galt bisher
-    # als vollständig, und der Anwender bekam »kein Internet nötig« zu lesen —
-    # ein voller Satz hat aber 2 bis 4 GB. Entscheidend ist, ob die Datenablage
-    # samt Katalogdatei da ist, die ODT zum Installieren wirklich braucht.
+    # Reihenfolge der Prüfungen entspricht der Reihenfolge, in der ODT die
+    # Dateien anlegt — von »gleich zu Beginn da« bis »kommt zum Schluss«.
     $dataDir = Join-Path $path 'Office\Data'
     if (-not (Test-Path -LiteralPath $dataDir)) {
         $result.Detail = 'unvollständig — die Datenablage von Office fehlt'
@@ -259,6 +257,39 @@ function Test-WzOfficeCache {
     $cab = @(Get-ChildItem -LiteralPath $dataDir -Filter 'v*.cab' -File -ErrorAction SilentlyContinue)
     if ($cab.Count -eq 0) {
         $result.Detail = 'unvollständig — die Katalogdatei von Office fehlt'
+        return $result
+    }
+
+    # Bis hierher reichte die Prüfung bis 0.4.1 — und das war zu wenig. Im
+    # Abnahmelauf wurde ein Download nach 75 Sekunden abgebrochen: Katalogdatei
+    # und Paket-Cabs lagen längst da, `stream.x64.x-none.dat` hatte 0 Byte, und
+    # WinZii meldete 39 MB als »vollständig«. Beim Kunden ohne Netz ist das die
+    # Installation, die nicht startet.
+    #
+    # Die Masse steckt in den stream-Dateien: die neutrale mit rund 1,9 GB und
+    # die der Sprache mit einigen hundert MB. Beide wachsen bis zuletzt, also
+    # werden sie geprüft. Feste Untergrenzen bleiben eine Schätzung — sie sind
+    # bewusst so niedrig gewählt, dass ein vollständiger Satz sie nie reißt.
+    # Falsch abgelehnt heißt: noch einmal laden. Falsch angenommen heißt: beim
+    # Kunden stehen.
+    $streams = @(Get-ChildItem -LiteralPath $dataDir -Recurse -Filter 'stream.*.dat' -File -ErrorAction SilentlyContinue)
+    $neutral = @($streams | Where-Object { $_.Name -like '*x-none*' })
+    $inSprache = @($streams | Where-Object { $_.Name -like "*$Language*" })
+
+    if ($neutral.Count -eq 0) {
+        $result.Detail = 'unvollständig — die Programmdateien von Office fehlen'
+        return $result
+    }
+    if (($neutral | Measure-Object -Property Length -Maximum).Maximum -lt 1GB) {
+        $result.Detail = 'unvollständig — die Programmdateien sind erst angefangen'
+        return $result
+    }
+    if ($inSprache.Count -eq 0 -or ($inSprache | Measure-Object -Property Length -Maximum).Maximum -lt 50MB) {
+        $result.Detail = "unvollständig — die Sprachdateien für $Language fehlen"
+        return $result
+    }
+    if ($result.Bytes -lt 2GB) {
+        $result.Detail = 'unvollständig — der Vorrat ist zu klein für einen vollen Satz'
         return $result
     }
 
@@ -315,6 +346,18 @@ function Invoke-WzOfficeDownload {
 
     if ($result.TimedOut) {
         Write-WzLog 'Zeitüberschreitung nach zwei Stunden — der Vorgang wurde abgebrochen.' -Level Error
+        return $false
+    }
+    if ($result.Canceled) {
+        # Ein Abbruch ist kein Fehlschlag, und er ist auch kein sofortiges Ende:
+        # setup.exe ist nur die Vorderseite, geladen wird vom Click-to-Run-Dienst
+        # von Windows. Der lässt sich nicht mitbeenden. Im Abnahmelauf wuchs der
+        # Ordner nach dem Abbruch von 39 MB auf 2,5 GB weiter. Das gehört gesagt,
+        # sonst wundert sich der Techniker über den vollen Datenträger.
+        Write-WzLog 'Abgebrochen. Der Vorrat ist unvollständig; der nächste Lauf setzt darauf auf.' -Level Warn
+        Write-WzLog ('  Windows lädt im Hintergrund weiter — das Laden erledigt der Click-to-Run-Dienst, ' +
+            'nicht das Bereitstellungswerkzeug. Wer den Platz sofort braucht, löscht den Ordner von Hand: ' +
+            $cachePath) -Level Info
         return $false
     }
     if ($result.ExitCode -eq 0 -and $cache.Available) {
