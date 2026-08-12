@@ -93,17 +93,19 @@ function Update-WzTweakStates {
         [scriptblock]$OnDone
     )
 
-    $tweakIds = @($Rows | ForEach-Object { $_.Tweak.id })
-    if ($tweakIds.Count -eq 0) { return }
+    # Die Einträge selbst mitgeben statt nur ihre Kennungen: Der
+    # Hintergrund-Runspace las sonst den Katalog ein zweites Mal ein und lief
+    # dann über alle 41 Einträge, um die paar gesuchten herauszufiltern.
+    $tweaks = @($Rows | ForEach-Object { $_.Tweak })
+    if ($tweaks.Count -eq 0) { return }
 
     if ($HintTarget) { $HintTarget.Text = 'Zustand wird geprüft...' }
 
-    Invoke-WzTask -Name 'Zustand prüfen' -Silent -ArgumentList (, $tweakIds) -ScriptBlock {
-        param($ids)
+    Invoke-WzTask -Name 'Zustand prüfen' -Silent -ArgumentList (, $tweaks) -ScriptBlock {
+        param($tweaks)
         Clear-WzStateCache
         $states = @{}
-        foreach ($tweak in Get-WzTweaks) {
-            if ($ids -notcontains $tweak.id) { continue }
+        foreach ($tweak in $tweaks) {
             $states[$tweak.id] = Test-WzTweakState -Tweak $tweak
         }
         $states

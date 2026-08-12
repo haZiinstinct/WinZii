@@ -250,17 +250,6 @@ function Invoke-WzDoEvents {
     }
 }
 
-function Invoke-WzDispatcher {
-    <#
-    .SYNOPSIS
-        Führt einen Block sicher im UI-Thread aus.
-    #>
-    param([Parameter(Mandatory = $true)][scriptblock]$ScriptBlock)
-    if (-not $syncHash.Window) { return & $ScriptBlock }
-    if ($syncHash.Window.Dispatcher.CheckAccess()) { return & $ScriptBlock }
-    return $syncHash.Window.Dispatcher.Invoke([Func[object]]{ & $ScriptBlock })
-}
-
 function Invoke-WzProcess {
     <#
     .SYNOPSIS

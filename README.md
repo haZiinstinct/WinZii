@@ -178,7 +178,7 @@ Alle Inhalte stehen in `data/` als JSON. Für neue Einträge ist keine Zeile Cod
 }
 ```
 
-Aktionstypen: `registry`, `service`, `scheduledTask`, `feature`, `appx`, `capability`, `cbsPackage`, `command`.
+Aktionstypen: `registry`, `service`, `scheduledTask`, `feature`, `appx`, `capability`, `command`.
 
 **Ereignis deuten** (`data/eventmap.json`): Quelle, Kennung, Titel, Erklärung und Empfehlung eintragen — die Diagnose übernimmt den Rest.
 

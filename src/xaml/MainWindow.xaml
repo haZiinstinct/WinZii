@@ -35,7 +35,7 @@
                     </TextBlock>
                     <StackPanel Orientation="Horizontal" Margin="0,7,0,0">
                         <Ellipse Style="{DynamicResource WzPulseDot}" VerticalAlignment="Center" />
-                        <TextBlock Name="SidebarSubtitle" Text="{DynamicResource L.app.subtitle}" Margin="7,0,0,0"
+                        <TextBlock Text="{DynamicResource L.app.subtitle}" Margin="7,0,0,0"
                                    FontFamily="{DynamicResource WzFontMono}" FontSize="10.5"
                                    Foreground="#00D4FF" VerticalAlignment="Center" />
                     </StackPanel>

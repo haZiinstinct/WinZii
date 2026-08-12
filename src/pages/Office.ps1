@@ -131,11 +131,24 @@ function Show-WzOfficeXml {
         return
     }
 
-    $file = New-WzOfficeConfigXml -VariantId $choice.Variant.id -Language $choice.Language -IncludedApps $choice.Apps
+    # Bisher entstand hier eine Konfiguration ohne Quellpfad und ohne Bitness —
+    # also genau die, die beim Installieren NICHT verwendet wird. Wer sie las,
+    # sah etwas anderes, als später lief.
+    $cache = Test-WzOfficeCache -VariantId $choice.Variant.id -Language $choice.Language
+    $installed = Get-WzInstalledOffice
+    $edition = if ($installed.Installed -and $installed.Bitness) { $installed.Bitness } else { '64' }
+
+    $file = New-WzOfficeConfigXml -VariantId $choice.Variant.id -Language $choice.Language `
+        -IncludedApps $choice.Apps -SourcePath $(if ($cache.Available) { $cache.Path } else { $null }) `
+        -Edition $edition
     $content = [IO.File]::ReadAllText($file, [Text.Encoding]::UTF8)
 
+    # Der Lizenzschlüssel steht bewusst nicht darin: Er wird erst unmittelbar
+    # vor dem Start eingesetzt und danach wieder entfernt.
+    $hint = if ($choice.Key) { ' Der eingegebene Lizenzschlüssel wird erst beim Installieren eingesetzt und danach wieder entfernt — er steht deshalb nicht in der Vorschau.' } else { '' }
+
     Show-WzInfo -Title 'Konfiguration für das Bereitstellungswerkzeug' `
-        -Message "Diese Datei steuert die Installation. Sie liegt unter $file." `
+        -Message "Diese Datei steuert die Installation. Sie liegt unter $file.$hint" `
         -Items @($content -split "`r?`n")
 }
 
@@ -293,12 +306,14 @@ function Start-WzOfficeDownload {
     $choice = Get-WzOfficeChoice
     if ($choice.Apps.Count -eq 0) { return }
 
-    $volume = Get-WzVolumeInfo
-    if ($volume.IsFat32) {
-        Show-WzInfo -Title 'Dateisystem ungeeignet' `
-            -Message 'Der Datenträger ist mit FAT32 formatiert. Office-Pakete sind größer als die dort mögliche Dateigröße von 4 GB. Bitte den Stick mit exFAT oder NTFS formatieren.'
+    # Derselbe Satz wie im Modul — die Prüfung hier erspart nur den vergeblichen
+    # Start eines Vorgangs, der stundenlang laufen könnte.
+    $target = Test-WzOfficeTarget
+    if (-not $target.Ok) {
+        Show-WzInfo -Title 'Dateisystem ungeeignet' -Message $target.Message
         return
     }
+    $volume = $target.Volume
 
     $languageName = $syncHash.OffLanguage.SelectedItem.Content
     $answer = Show-WzConfirm -Title 'Office auf den Datenträger laden' `
@@ -312,10 +327,18 @@ function Start-WzOfficeDownload {
     } -OnComplete {
         param($ok)
         Update-WzOfficeSelection
+        if ($syncHash.DryRun) {
+            # Der Testmodus meldete bisher »Fertig«, als läge Office nun da.
+            Show-WzInfo -Title 'Testlauf beendet' `
+                -Message 'Es wurde nichts geladen. Im Protokoll steht, was passiert wäre.'
+            return
+        }
         if ($ok) {
+            Add-WzAction -Area 'Office' `
+                -Summary "$($choice.Variant.name) auf den Datenträger geladen ($($choice.Language))"
             Show-WzInfo -Title 'Fertig' -Message 'Office liegt jetzt auf dem Datenträger und lässt sich ohne Internet installieren.'
         }
-    }
+    }.GetNewClosure()
 }
 
 function Start-WzLibreOfficeInstall {

@@ -1,13 +1,9 @@
 {
   "schemaVersion": 1,
   "wingetBootstrap": {
-    "note": "Wird nur gebraucht, wenn winget fehlt (LTSC, ältere Windows-10-Stände, frisch aufgesetzte Systeme). Das Abhängigkeitspaket stammt aus demselben Release wie der App Installer und enthält alles, was dieser jeweils verlangt (inzwischen auch die WindowsAppRuntime). Die feste Liste darunter ist nur der Rückfall.",
+    "note": "Wird nur gebraucht, wenn winget fehlt (LTSC, ältere Windows-10-Stände, frisch aufgesetzte Systeme). Das Abhängigkeitspaket stammt aus demselben Release wie der App Installer und enthält alles, was dieser jeweils verlangt (inzwischen auch die WindowsAppRuntime).",
     "msixbundleUrl": "https://aka.ms/getwinget",
-    "dependenciesZipUrl": "https://github.com/microsoft/winget-cli/releases/latest/download/DesktopAppInstaller_Dependencies.zip",
-    "dependencies": [
-      { "name": "VCLibs", "url": "https://aka.ms/Microsoft.VCLibs.x64.14.00.Desktop.appx" },
-      { "name": "UI.Xaml", "url": "https://github.com/microsoft/microsoft-ui-xaml/releases/download/v2.8.6/Microsoft.UI.Xaml.2.8.x64.appx" }
-    ]
+    "dependenciesZipUrl": "https://github.com/microsoft/winget-cli/releases/latest/download/DesktopAppInstaller_Dependencies.zip"
   },
   "categories": [
     { "id": "basis", "name": "Grundausstattung", "description": "Gehört auf jeden frisch aufgesetzten PC." },

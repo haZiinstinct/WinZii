@@ -202,52 +202,6 @@ function Set-WzAppxEndOfLife {
     }
 }
 
-function Invoke-WzCbsAction {
-    <#
-    .SYNOPSIS
-        Entfernt Systempakete (Component Based Servicing) nach Mustern.
-        Das ist der tiefste Eingriff und lässt sich nur über ein
-        Funktionsupdate oder eine Neuinstallation rückgängig machen.
-    #>
-    param($Action, $Session, $Tweak)
-
-    $packages = @()
-    try {
-        $packages = @(Get-WindowsPackage -Online -ErrorAction Stop | Where-Object {
-            $name = $_.PackageName
-            @($Action.patterns | Where-Object { $name -like $_ }).Count -gt 0
-        })
-    } catch {
-        Write-WzLog "  Systempakete nicht abfragbar: $($_.Exception.Message)" -Level Warn
-        return
-    }
-
-    if ($packages.Count -eq 0) {
-        Write-WzLog "  keine passenden Systempakete vorhanden" -Level Info
-        return
-    }
-
-    if ($syncHash.DryRun) {
-        foreach ($package in $packages) { Write-WzLog "  [Test] Systempaket entfernen: $($package.PackageName)" -Level Test }
-        return
-    }
-
-    Save-WzUndoState -Session $Session -ItemId $Tweak.id -ItemName $Tweak.name -Action $Action -Previous @{
-        packages = @($packages | ForEach-Object { $_.PackageName })
-        note     = 'Systempakete kommen nur über ein Funktionsupdate zurück'
-    }
-
-    foreach ($package in $packages) {
-        try {
-            Remove-WindowsPackage -Online -PackageName $package.PackageName -NoRestart -ErrorAction Stop | Out-Null
-            Write-WzLog "  Systempaket entfernt: $($package.PackageName)" -Level Ok
-        } catch {
-            if ($Session) { $Session.ActionFailed = $true }
-            Write-WzLog "  Systempaket blieb bestehen: $($package.PackageName)" -Level Warn
-        }
-    }
-}
-
 function Invoke-WzCapabilityAction {
     <#
     .SYNOPSIS

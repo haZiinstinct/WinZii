@@ -157,6 +157,28 @@ function Get-WzOdtLogVerdict {
     return $result
 }
 
+function Test-WzOfficeTarget {
+    <#
+    .SYNOPSIS
+        Taugt der Datenträger für die Office-Dateien?
+    .NOTES
+        Seite und Modul prüften dasselbe mit zwei verschiedenen Wortlauten.
+        Jetzt steht der Satz an einer Stelle.
+    .OUTPUTS
+        PSCustomObject mit Ok, Message, Volume
+    #>
+    [CmdletBinding()]
+    param()
+
+    $volume = Get-WzVolumeInfo
+    $result = [pscustomobject]@{ Ok = $true; Message = ''; Volume = $volume }
+    if ($volume.IsFat32) {
+        $result.Ok = $false
+        $result.Message = 'Der Datenträger ist mit FAT32 formatiert. Die Office-Pakete überschreiten die dort mögliche Dateigröße von 4 GB — bitte den Datenträger mit exFAT oder NTFS formatieren.'
+    }
+    return $result
+}
+
 function Get-WzOdtSetup {
     <#
     .SYNOPSIS
@@ -165,13 +187,17 @@ function Get-WzOdtSetup {
         auf dem Datenträger.
     #>
     [CmdletBinding()]
-    param([switch]$Force)
+    param()
 
     $odtDir = New-WzDirectory (Join-Path (Get-WzOfflineDir) 'odt')
     $setupPath = Join-Path $odtDir 'setup.exe'
 
-    if ((Test-Path -LiteralPath $setupPath) -and -not $Force) {
-        return $setupPath
+    # Eine abgebrochene oder abgefangene Übertragung hinterließ hier bisher eine
+    # Datei, die für immer wiederverwendet wurde — setup.exe ist rund 7 MB groß.
+    if (Test-Path -LiteralPath $setupPath) {
+        if ((Get-Item -LiteralPath $setupPath).Length -gt 1MB) { return $setupPath }
+        Write-WzLog 'Die abgelegte setup.exe ist unbrauchbar klein — sie wird neu geladen.' -Level Warn
+        try { Remove-Item -LiteralPath $setupPath -Force -ErrorAction Stop } catch { }
     }
 
     if ($syncHash.DryRun) {
@@ -241,27 +267,6 @@ function Test-WzOfficeCache {
     return $result
 }
 
-function Get-WzOfficeBitness {
-    <#
-    .SYNOPSIS
-        32 oder 64 für eine vorhandene Click-to-Run-Installation, sonst $null.
-    .NOTES
-        Der Wert steht im selben Registry-Schlüssel wie alles andere und wurde
-        bisher nicht gelesen. Ohne ihn forderte WinZii immer 64 Bit an — auf
-        einem Laptop mit vorinstalliertem 32-Bit-Office bricht ODT dann ab,
-        ohne verlässlich einen Fehlercode zu liefern.
-    #>
-    [CmdletBinding()]
-    param()
-
-    try {
-        $config = Get-ItemProperty 'HKLM:\SOFTWARE\Microsoft\Office\ClickToRun\Configuration' -ErrorAction Stop
-        if ($config.Platform -eq 'x86') { return '32' }
-        if ($config.Platform -eq 'x64') { return '64' }
-    } catch { }
-    return $null
-}
-
 function Invoke-WzOfficeDownload {
     <#
     .SYNOPSIS
@@ -273,11 +278,12 @@ function Invoke-WzOfficeDownload {
         [Parameter(Mandatory = $true)][string[]]$IncludedApps
     )
 
-    $volume = Get-WzVolumeInfo
-    if ($volume.IsFat32) {
-        Write-WzLog 'Der Datenträger ist mit FAT32 formatiert. Office-Pakete überschreiten die dortige 4-GB-Dateigrenze — bitte exFAT oder NTFS verwenden.' -Level Error
+    $target = Test-WzOfficeTarget
+    if (-not $target.Ok) {
+        Write-WzLog $target.Message -Level Error
         return $false
     }
+    $volume = $target.Volume
     if ($volume.FreeBytes -gt 0 -and $volume.FreeBytes -lt 6GB) {
         Write-WzLog "Nur $(Format-WzBytes $volume.FreeBytes) frei. Für Office werden etwa 4 bis 6 GB gebraucht." -Level Warn
     }
@@ -613,13 +619,9 @@ function Install-WzLibreOffice {
     .SYNOPSIS
         Installiert LibreOffice über winget.
     #>
-    $catalog = Get-WzOfficeCatalog
-    $app = [pscustomobject]@{
-        id       = 'libreoffice'
-        name     = $catalog.libreOffice.name
-        wingetId = $catalog.libreOffice.wingetId
-    }
-    return Install-WzApps -Apps @($app)
+    # Der Katalogeintrag bringt id, name und wingetId schon mit — ein
+    # nachgebautes Objekt daneben lief nur Gefahr, auseinanderzulaufen.
+    return Install-WzApps -Apps @((Get-WzOfficeCatalog).libreOffice)
 }
 
 function Get-WzInstalledOffice {

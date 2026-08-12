@@ -3,7 +3,7 @@
 
     <TextBlock Text="// ÜBERSICHT" Style="{DynamicResource WzEyebrow}" />
     <TextBlock Text="Dashboard" Style="{DynamicResource WzPageTitle}" />
-    <TextBlock Name="DashLead" Style="{DynamicResource WzPageLead}"
+    <TextBlock Style="{DynamicResource WzPageLead}"
                Text="Zustand dieses PCs auf einen Blick — Ausgangspunkt für jede Wartung." />
 
     <!-- Hinweisleiste (Neustart ausstehend, FAT32 usw.) -->

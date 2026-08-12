@@ -319,6 +319,13 @@ function Start-WzWingetBootstrap {
         param($ok)
         $syncHash.AppsChecked = $false
         Update-WzAppsPage
+        if ($syncHash.DryRun) {
+            # Im Testmodus liefert der Vorgang immer $false — das las sich bisher
+            # wie ein Fehlschlag, obwohl gar nichts versucht wurde.
+            Show-WzInfo -Title 'Testlauf beendet' `
+                -Message 'Es wurde nichts eingerichtet. Im Protokoll steht, was passiert wäre.'
+            return
+        }
         if ($ok) {
             Show-WzInfo -Title 'winget eingerichtet' -Message 'Programme lassen sich jetzt installieren.'
         } else {

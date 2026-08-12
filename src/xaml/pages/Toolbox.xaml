@@ -19,7 +19,7 @@
                 <Button Name="ToolBtnNetDiag" Style="{DynamicResource WzBtnPrimary}"
                         HorizontalAlignment="Right" VerticalAlignment="Top" Content="Verbindung prüfen" />
             </Grid>
-            <TextBlock Name="NetDiagHint" Style="{DynamicResource WzHint}" Margin="0,0,0,10"
+            <TextBlock Style="{DynamicResource WzHint}" Margin="0,0,0,10"
                        Text="Prüft der Reihe nach Netzwerkkarte, IP-Adresse, Router, Namensauflösung und Internetzugang — und sagt, welcher der Knöpfe unten hilft." />
             <StackPanel Name="NetDiagSteps" />
             <ItemsControl Name="NetDiagVerdict" Margin="0,10,0,0" />

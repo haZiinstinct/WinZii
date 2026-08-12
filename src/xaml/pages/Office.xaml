@@ -6,8 +6,6 @@
     <TextBlock Style="{DynamicResource WzPageLead}"
                Text="Microsoft Office über das offizielle Bereitstellungswerkzeug — oder LibreOffice, wenn keine Lizenz vorhanden ist." />
 
-    <ItemsControl Name="OffNotices" Margin="0,0,0,14" />
-
     <!-- Vorhandene Installation -->
     <Border Style="{DynamicResource WzCardStatic}" Margin="0,0,0,16">
         <StackPanel>

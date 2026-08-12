@@ -56,7 +56,7 @@
     <Border Style="{DynamicResource WzCardStatic}" Margin="0,0,0,14">
         <StackPanel>
             <TextBlock Text="// SICHERUNG" Style="{DynamicResource WzEyebrow}" />
-            <TextBlock Name="DrvBackupTitle" Text="Treiber auf den Datenträger sichern" Style="{DynamicResource WzCardTitle}" />
+            <TextBlock Text="Treiber auf den Datenträger sichern" Style="{DynamicResource WzCardTitle}" />
             <TextBlock Style="{DynamicResource WzHint}" Margin="0,0,0,10"
                        Text="Die Sicherung landet neben WinZii unter offline\treiber und lässt sich nach dem Neuaufsetzen in einem Rutsch zurückspielen." />
             <StackPanel Name="DrvBackupInfo" />

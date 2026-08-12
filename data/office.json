@@ -57,6 +57,7 @@
     { "id": "Bing", "name": "Bing-Erweiterung für Edge", "defaultIncluded": false }
   ],
   "libreOffice": {
+    "id": "libreoffice",
     "wingetId": "TheDocumentFoundation.LibreOffice",
     "name": "LibreOffice",
     "description": "Kostenfreie Alternative ohne Lizenzkosten. Öffnet und speichert auch die Office-Formate."

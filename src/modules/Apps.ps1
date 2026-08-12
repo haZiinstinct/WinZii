@@ -119,14 +119,12 @@ function Install-WzWingetBootstrap {
             $packages += [pscustomobject]@{ Name = $file.BaseName; Url = ''; File = $file.FullName }
         }
     } else {
-        # Rückfall auf die feste Liste, falls das Paket nicht zu bekommen war
-        foreach ($dependency in $bootstrap.dependencies) {
-            $packages += [pscustomobject]@{
-                Name = $dependency.name
-                Url  = $dependency.url
-                File = Join-Path $cacheDir "$($dependency.name).appx"
-            }
-        }
+        # Früher stand hier eine feste Liste einzelner Adressen als Rückfall.
+        # Sie half nie: Wer das Sammelpaket nicht erreicht, erreicht auch die
+        # Einzeladressen nicht — beide liegen bei GitHub. Schaden konnte sie
+        # dagegen, weil die fest eingetragene UI.Xaml-Fassung mit der Zeit
+        # älter wird als die, die der App Installer verlangt.
+        Write-WzLog 'Keine Abhängigkeiten zur Hand. Sind sie auf diesem PC bereits vorhanden, klappt es trotzdem — sonst nennt die Fehlermeldung gleich das fehlende Paket.' -Level Warn
     }
     $packages += [pscustomobject]@{
         Name = 'App Installer'

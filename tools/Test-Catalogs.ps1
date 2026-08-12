@@ -38,7 +38,7 @@ $tweaks = Read-Catalog 'tweaks'
 if ($tweaks) {
     $categoryIds = @($tweaks.categories | ForEach-Object { $_.id })
     $seenIds = @{}
-    $validActions = @('registry', 'service', 'scheduledTask', 'appx', 'cbsPackage', 'capability', 'feature', 'command')
+    $validActions = @('registry', 'service', 'scheduledTask', 'appx', 'capability', 'feature', 'command')
 
     foreach ($tweak in $tweaks.tweaks) {
         $checked++
@@ -97,9 +97,6 @@ if ($tweaks) {
                 'appx' {
                     if (-not $action.patterns) { Add-Problem 'tweaks' "$label : appx ohne patterns" }
                     if (-not $action.undo) { Add-Problem 'tweaks' "$label : appx ohne Hinweis zum Zurückholen" }
-                }
-                'cbsPackage' {
-                    if (-not $action.patterns) { Add-Problem 'tweaks' "$label : cbsPackage ohne patterns" }
                 }
                 'capability' {
                     if (-not $action.patterns) { Add-Problem 'tweaks' "$label : capability ohne patterns" }

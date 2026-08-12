@@ -366,7 +366,7 @@ function Restore-WzUndoSession {
                     }
                 }
                 default {
-                    # appx, cbsPackage: nicht automatisch zurückholbar
+                    # appx, capability: nicht automatisch zurückholbar
                     $result.Skipped++
                     $hint = if ($action.undo -and $action.undo.hint) { $action.undo.hint } else { 'nicht automatisch wiederherstellbar' }
                     $note = "$($entry.itemName): $hint"
