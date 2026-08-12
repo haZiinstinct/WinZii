@@ -15,7 +15,7 @@ irgendwann zur Laufzeit an einer ganz anderen Stelle.
 Viele Editoren entfernen die BOM stillschweigend. Deshalb:
 
 ```powershell
-powershell -NoProfile -File tools\Repair-Encoding.ps1
+powershell -NoProfile -ExecutionPolicy Bypass -File tools\Repair-Encoding.ps1
 ```
 
 Das Skript setzt die BOM überall dort, wo sie hingehört. Es läuft gefahrlos beliebig oft.
@@ -28,10 +28,10 @@ Kataloge werden in `Core.Json.ps1` ausdrücklich als UTF-8 eingelesen.
 ## Vor jedem Commit
 
 ```powershell
-powershell -NoProfile -File tools\Repair-Encoding.ps1
-powershell -NoProfile -File tools\Test-Smoke.ps1
-powershell -NoProfile -STA -File tools\Test-Catalogs.ps1
-powershell -NoProfile -STA -File tools\Test-Pages.ps1
+powershell -NoProfile -ExecutionPolicy Bypass -File tools\Repair-Encoding.ps1
+powershell -NoProfile -ExecutionPolicy Bypass -File tools\Test-Smoke.ps1
+powershell -NoProfile -ExecutionPolicy Bypass -STA -File tools\Test-Catalogs.ps1
+powershell -NoProfile -ExecutionPolicy Bypass -STA -File tools\Test-Pages.ps1
 ```
 
 Die weiteren Prüfwerkzeuge lohnen sich, wenn du in dem jeweiligen Bereich gearbeitet hast:

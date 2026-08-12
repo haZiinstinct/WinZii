@@ -149,7 +149,7 @@ WinZii/
 All content lives in `data/` as JSON. New entries need zero lines of code — the file formats are documented in the German readme, the fields are self-explanatory. Validate after every change:
 
 ```powershell
-powershell -NoProfile -File tools\Test-Catalogs.ps1
+powershell -NoProfile -ExecutionPolicy Bypass -File tools\Test-Catalogs.ps1
 ```
 
 Contribution guidelines (including the **UTF-8 BOM requirement** for all `.ps1`/`.xaml` files — PowerShell 5.1 reads files without a BOM as ANSI and destroys non-ASCII text) are in [CONTRIBUTING.md](CONTRIBUTING.md) (German). Version history: [CHANGELOG.md](CHANGELOG.md) (German).

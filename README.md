@@ -185,7 +185,7 @@ Aktionstypen: `registry`, `service`, `scheduledTask`, `feature`, `appx`, `capabi
 Nach jeder Änderung prüfen:
 
 ```powershell
-powershell -NoProfile -File tools\Test-Catalogs.ps1
+powershell -NoProfile -ExecutionPolicy Bypass -File tools\Test-Catalogs.ps1
 ```
 
 ---

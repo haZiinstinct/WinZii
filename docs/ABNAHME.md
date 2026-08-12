@@ -28,7 +28,7 @@ git clone git@github.com:haZiinstinct/WinZii.git && cd WinZii
 Dann Claude Code in diesem Ordner starten und diese Datei nennen. Vor dem ersten Eingriff:
 
 ```bash
-powershell -NoProfile -File tools/Test-Smoke.ps1
+powershell -NoProfile -ExecutionPolicy Bypass -File tools/Test-Smoke.ps1
 ```
 
 **Alles zuerst im Testmodus.** `Start.bat -DryRun` protokolliert jede Änderung, ohne sie
@@ -189,7 +189,7 @@ Auf dem Entwicklungsrechner gibt es davon nichts, geprüft ist nur der »nicht v
 Gefundene Fehler nicht sammeln, sondern einzeln beheben und committen. Nach jeder Änderung:
 
 ```bash
-powershell -NoProfile -File tools/Repair-Encoding.ps1
+powershell -NoProfile -ExecutionPolicy Bypass -File tools/Repair-Encoding.ps1
 ```
 
 Dann die Prüfwerkzeuge: `Test-Smoke`, `Test-Catalogs`, `Test-Pages`, `Test-Language`,
