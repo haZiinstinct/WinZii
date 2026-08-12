@@ -11,7 +11,7 @@ Run it from a USB stick: clean up, optimize, set up — no installation, no acco
 
 <sub>The interface switches between **German and English** — the language button sits at the bottom of the sidebar and takes effect immediately. Measured values, dialogs, log messages and reports are still German only; that is being worked on step by step.</sub>
 
-![Version](https://img.shields.io/badge/Version-0.3.0-00d4ff?labelColor=0a0a0f&style=flat-square)
+![Version](https://img.shields.io/badge/Version-0.4.0-00d4ff?labelColor=0a0a0f&style=flat-square)
 ![Windows](https://img.shields.io/badge/Windows-10%20%7C%2011-00d4ff?labelColor=0a0a0f&style=flat-square)
 ![PowerShell](https://img.shields.io/badge/PowerShell-5.1-00d4ff?labelColor=0a0a0f&style=flat-square)
 ![Install](https://img.shields.io/badge/Install-none-00d4ff?labelColor=0a0a0f&style=flat-square)
@@ -53,7 +53,7 @@ That is all. WinZii needs no installation, no runtime, no particular drive lette
 > **Windows shows a blue SmartScreen warning?**
 > Click "More info" and then "Run anyway". The warning appears for any unsigned file downloaded from the internet. Every release ships a SHA256 checksum so you can verify the archive before extracting:
 > ```powershell
-> Get-FileHash .\WinZii-0.3.0.zip -Algorithm SHA256
+> Get-FileHash .\WinZii-0.4.0.zip -Algorithm SHA256
 > ```
 
 **Requirements:** Windows 10 or 11 with administrator rights. PowerShell 5.1 and .NET Framework ship with Windows.

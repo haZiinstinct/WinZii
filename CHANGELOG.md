@@ -1,9 +1,9 @@
-# Änderungen
+﻿# Änderungen
 
 Alle nennenswerten Änderungen an WinZii. Die Fassungen folgen
 [Semantic Versioning](https://semver.org/lang/de/).
 
-## [Unveröffentlicht]
+## [0.4.0] — 2026-08-12
 
 Ein vollständiger Audit, ausgelöst von drei Beobachtungen auf einem Laptop: Programme
 ließen sich nicht installieren, Office nicht einrichten, und nach der Optimierung fühlte
