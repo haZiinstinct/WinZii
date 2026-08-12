@@ -392,10 +392,11 @@ function Get-WzSecurityInfo {
     return [pscustomobject]$info
 }
 
-function Resolve-WzWingetPath {
+function Get-WzWingetCandidates {
     <#
     .SYNOPSIS
-        Vollständiger Pfad zu winget.exe oder $null.
+        Alle in Frage kommenden Pfade zu winget.exe, in der Reihenfolge, in der
+        sie ausprobiert werden sollen.
     .DESCRIPTION
         Drei Wege, weil jeder einzelne unter Elevierung ausfallen kann:
 
@@ -408,46 +409,61 @@ function Resolve-WzWingetPath {
         3. Ordnersuche als letzter Ausweg. Bewusst OHNE feste Architektur —
            »_x64__« traf auf ARM64-Geräten nie zu.
 
-        Das Ergebnis wird gemerkt: Die Auflösung lief bis zu fünfmal pro
-        Vorgang, jedes Mal mit einer Suche über einen Ordner, dessen Rechte
-        selbst Administratoren aussperren.
+        Es wird eine LISTE geliefert, nicht der erste Treffer: Der Sandbox-Lauf
+        hat gezeigt, dass Weg 1 direkt nach der Einrichtung einen Alias findet,
+        der noch gar nicht startet (Rückgabewert -1). Wer dort stehen bleibt,
+        meldet »winget nicht verfügbar«, obwohl das Paket daneben liegt und
+        einwandfrei läuft.
+    #>
+    [CmdletBinding()]
+    param()
+
+    $candidates = New-Object Collections.ArrayList
+
+    $command = Get-Command winget.exe -ErrorAction SilentlyContinue
+    if ($command) { [void]$candidates.Add($command.Source) }
+
+    try {
+        $package = Get-AppxPackage -Name 'Microsoft.DesktopAppInstaller' -AllUsers -ErrorAction Stop |
+            Sort-Object -Property Version -Descending | Select-Object -First 1
+        if ($package -and $package.InstallLocation) {
+            $candidate = Join-Path $package.InstallLocation 'winget.exe'
+            if (Test-Path -LiteralPath $candidate) { [void]$candidates.Add($candidate) }
+        }
+    } catch {
+        # -AllUsers verlangt Adminrechte; ohne sie bleibt Weg 3
+    }
+
+    $pattern = Join-Path $env:ProgramFiles 'WindowsApps\Microsoft.DesktopAppInstaller_*_8wekyb3d8bbwe'
+    try {
+        $candidate = Get-ChildItem -Path $pattern -Directory -ErrorAction Stop |
+            ForEach-Object { Join-Path $_.FullName 'winget.exe' } |
+            Where-Object { Test-Path -LiteralPath $_ } |
+            Sort-Object -Descending | Select-Object -First 1
+        if ($candidate) { [void]$candidates.Add($candidate) }
+    } catch {
+        # Der Ordner ist per Rechtevergabe auch für Administratoren gesperrt.
+        # Früher verschluckte -ErrorAction SilentlyContinue genau das und
+        # ließ winget als »nicht vorhanden« erscheinen.
+        Write-WzLog "WindowsApps nicht durchsuchbar: $($_.Exception.Message.Split([char]10)[0])" -Level Info
+    }
+
+    return @($candidates | Select-Object -Unique)
+}
+
+function Resolve-WzWingetPath {
+    <#
+    .SYNOPSIS
+        Vollständiger Pfad zu winget.exe oder $null.
+    .NOTES
+        Liefert den Pfad, der sich in Test-WzWinget als lauffähig erwiesen hat,
+        sonst den ersten Kandidaten. Das Ergebnis wird gemerkt: Die Auflösung
+        lief bis zu fünfmal pro Vorgang, jedes Mal mit einer Suche über einen
+        Ordner, dessen Rechte selbst Administratoren aussperren.
     #>
     if ($syncHash -and $syncHash.WingetPath) { return $syncHash.WingetPath }
 
-    $found = $null
-
-    $command = Get-Command winget.exe -ErrorAction SilentlyContinue
-    if ($command) { $found = $command.Source }
-
-    if (-not $found) {
-        try {
-            $package = Get-AppxPackage -Name 'Microsoft.DesktopAppInstaller' -AllUsers -ErrorAction Stop |
-                Sort-Object -Property Version -Descending | Select-Object -First 1
-            if ($package -and $package.InstallLocation) {
-                $candidate = Join-Path $package.InstallLocation 'winget.exe'
-                if (Test-Path -LiteralPath $candidate) { $found = $candidate }
-            }
-        } catch {
-            # -AllUsers verlangt Adminrechte; ohne sie bleibt Weg 3
-        }
-    }
-
-    if (-not $found) {
-        $pattern = Join-Path $env:ProgramFiles 'WindowsApps\Microsoft.DesktopAppInstaller_*_8wekyb3d8bbwe'
-        try {
-            $candidate = Get-ChildItem -Path $pattern -Directory -ErrorAction Stop |
-                ForEach-Object { Join-Path $_.FullName 'winget.exe' } |
-                Where-Object { Test-Path -LiteralPath $_ } |
-                Sort-Object -Descending | Select-Object -First 1
-            if ($candidate) { $found = $candidate }
-        } catch {
-            # Der Ordner ist per Rechtevergabe auch für Administratoren gesperrt.
-            # Früher verschluckte -ErrorAction SilentlyContinue genau das und
-            # ließ winget als »nicht vorhanden« erscheinen.
-            Write-WzLog "WindowsApps nicht durchsuchbar: $($_.Exception.Message.Split([char]10)[0])" -Level Info
-        }
-    }
-
+    $found = @(Get-WzWingetCandidates)[0]
     if ($found -and $syncHash) { $syncHash.WingetPath = $found }
     return $found
 }

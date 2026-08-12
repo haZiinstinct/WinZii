@@ -32,26 +32,37 @@ function Test-WzWinget {
     .OUTPUTS
         PSCustomObject mit Available, Path, Version
     #>
-    $path = Resolve-WzWingetPath
-    $result = [pscustomobject]@{ Available = $false; Path = $path; Version = $null }
-    if (-not $path) { return $result }
+    $candidates = @(Get-WzWingetCandidates)
+    $result = [pscustomobject]@{ Available = $false; Path = @($candidates)[0]; Version = $null }
+    if ($candidates.Count -eq 0) { return $result }
 
     # Der Rückgabewert MUSS geprüft werden: Native Programme werfen in
     # PowerShell keine Ausnahme. Startet nur der Alias-Stub, ohne dass das
     # Paket für dieses Konto registriert ist, kommt weder Ausgabe noch Fehler —
     # winget galt dann als »verfügbar«, die Oberfläche zeigte eine leere
     # Version, und jede folgende Installation lief ins Leere.
-    try {
-        $version = (& $path --version 2>$null | Select-Object -First 1)
-        if ($LASTEXITCODE -eq 0 -and $version -match '\d') {
-            $result.Available = $true
-            $result.Version = $version
-        } else {
-            Write-WzLog "winget gefunden, antwortet aber nicht (Code $LASTEXITCODE): $path" -Level Warn
+    #
+    # Und es wird jeder Kandidat probiert, nicht nur der erste: Direkt nach der
+    # Einrichtung liegt im Suchpfad ein Alias, der noch nicht startet (Code -1),
+    # während das Paket daneben einwandfrei läuft. Der Sandbox-Lauf ist genau
+    # daran hängengeblieben und meldete »winget nicht erreichbar«.
+    foreach ($path in $candidates) {
+        try {
+            $version = (& $path --version 2>$null | Select-Object -First 1)
+            if ($LASTEXITCODE -eq 0 -and $version -match '\d') {
+                $result.Available = $true
+                $result.Path = $path
+                $result.Version = $version
+                if ($syncHash) { $syncHash.WingetPath = $path }
+                return $result
+            }
+            Write-WzLog "winget gefunden, antwortet aber nicht (Code $LASTEXITCODE): $path" -Level Info
+        } catch {
+            Write-WzLog "winget nicht ausführbar: $($_.Exception.Message.Split([char]10)[0])" -Level Info
         }
-    } catch {
-        Write-WzLog "winget nicht ausführbar: $($_.Exception.Message.Split([char]10)[0])" -Level Warn
     }
+
+    Write-WzLog "Keiner der $($candidates.Count) gefundenen winget-Pfade antwortet." -Level Warn
     return $result
 }
 

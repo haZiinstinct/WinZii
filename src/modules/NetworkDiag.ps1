@@ -205,41 +205,84 @@ function Test-WzInternetAccess {
     .SYNOPSIS
         Ruft die Prüfseite von Microsoft ab und unterscheidet die Fälle:
         erreichbar, Anmeldeportal, Zertifikatsproblem, blockiert.
+    .DESCRIPTION
+        Zwei Schritte, weil zwei verschiedene Dinge geprüft werden müssen:
+
+        1. Die Prüfseite von Windows über KLARTEXT-HTTP. Genau dafür ist sie
+           gedacht — nur unverschlüsselt kann ein Anmeldeportal überhaupt
+           dazwischenfunken und sich zeigen.
+        2. Eine echte HTTPS-Adresse, weil jeder Download über HTTPS läuft.
+
+        Bis hierher lief Schritt 1 über HTTPS. Die Prüfseite beantwortet das
+        aber nicht verlässlich, und der Sandbox-Lauf hat gezeigt, wohin das
+        führt: »Sicherheitszertifikat abgelehnt«, obwohl unmittelbar danach
+        7 MB von Microsoft geladen wurden. Seit Etappe A hängt an dieser
+        Auskunft jede Installation — ein Fehlalarm blockiert also alles.
+    .OUTPUTS
+        PSCustomObject mit Kind (ok|portal|certificate|blocked), Status, Detail
     #>
     param([int]$TimeoutMs = 4000)
 
     $result = [pscustomobject]@{ Kind = 'blocked'; Status = 'fail'; Detail = '' }
 
-    try {
-        [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
-        $request = [Net.HttpWebRequest]::Create('https://www.msftconnecttest.com/connecttest.txt')
+    # Verodern statt Zuweisen: Eine Zuweisung würde ein bereits ausgehandeltes
+    # TLS 1.3 prozessweit wieder abschalten — auch für alle Downloads danach.
+    [Net.ServicePointManager]::SecurityProtocol =
+        [Net.ServicePointManager]::SecurityProtocol -bor [Net.SecurityProtocolType]::Tls12
+
+    $abrufen = {
+        param([string]$Url, [bool]$Redirects)
+        $request = [Net.HttpWebRequest]::Create($Url)
         $request.Timeout = $TimeoutMs
         $request.UserAgent = 'WinZii'
-        $request.AllowAutoRedirect = $false
-
+        $request.AllowAutoRedirect = $Redirects
         $response = $request.GetResponse()
-        $reader = New-Object IO.StreamReader($response.GetResponseStream())
-        $body = $reader.ReadToEnd()
-        $status = [int]$response.StatusCode
-        $reader.Close()
-        $response.Close()
+        try {
+            $reader = New-Object IO.StreamReader($response.GetResponseStream())
+            try { $body = $reader.ReadToEnd() } finally { $reader.Close() }
+            [pscustomobject]@{ Status = [int]$response.StatusCode; Body = $body }
+        } finally { $response.Close() }
+    }
 
-        if ($status -ge 300 -and $status -lt 400) {
+    # --- Schritt 1: Anmeldeportal? -----------------------------------------
+    try {
+        $probe = & $abrufen 'http://www.msftconnecttest.com/connecttest.txt' $false
+        if ($probe.Status -ge 300 -and $probe.Status -lt 400) {
             $result.Kind = 'portal'
             $result.Status = 'warn'
-            $result.Detail = "Umleitung auf eine Anmeldeseite (HTTP $status)"
-        } elseif ($body.Trim() -eq 'Microsoft Connect Test') {
-            $result.Kind = 'ok'
-            $result.Status = 'ok'
-            $result.Detail = 'Prüfseite korrekt abgerufen'
-        } else {
+            $result.Detail = "Umleitung auf eine Anmeldeseite (HTTP $($probe.Status))"
+            return $result
+        }
+        if ($probe.Body.Trim() -ne 'Microsoft Connect Test') {
             $result.Kind = 'portal'
             $result.Status = 'warn'
             $result.Detail = 'unerwartete Antwort — vermutlich ein Anmeldeportal'
+            return $result
         }
     } catch [Net.WebException] {
+        # Ein Fehlschlag hier ist noch kein Urteil: Manche Netze sperren gezielt
+        # die Prüfseite von Microsoft, während sonst alles erreichbar ist.
+        # Entschieden wird deshalb in Schritt 2.
+        $result.Detail = $_.Exception.Message.Split([char]10)[0]
+    } catch {
+        $result.Detail = $_.Exception.Message.Split([char]10)[0]
+    }
+
+    # --- Schritt 2: läuft HTTPS? -------------------------------------------
+    try {
+        [void](& $abrufen 'https://aka.ms/' $true)
+        $result.Kind = 'ok'
+        $result.Status = 'ok'
+        $result.Detail = 'Prüfseite und HTTPS erreichbar'
+    } catch [Net.WebException] {
         $message = $_.Exception.Message
-        if ($message -match 'SSL|TLS|Vertrauensstellung|Zertifikat|trust') {
+        if ($_.Exception.Status -eq 'ProtocolError') {
+            # Es kam eine HTTP-Antwort zurück — 404 oder 403 spielt keine Rolle,
+            # die verschlüsselte Verbindung stand. Genau darauf kommt es an.
+            $result.Kind = 'ok'
+            $result.Status = 'ok'
+            $result.Detail = 'HTTPS erreichbar'
+        } elseif ($message -match 'SSL|TLS|Vertrauensstellung|Zertifikat|trust') {
             $result.Kind = 'certificate'
             $result.Status = 'fail'
             $result.Detail = 'Sicherheitszertifikat abgelehnt'
@@ -253,6 +296,8 @@ function Test-WzInternetAccess {
             $result.Detail = $message.Split([char]10)[0]
         }
     } catch {
+        $result.Kind = 'blocked'
+        $result.Status = 'fail'
         $result.Detail = $_.Exception.Message.Split([char]10)[0]
     }
 

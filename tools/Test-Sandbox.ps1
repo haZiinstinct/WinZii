@@ -278,6 +278,106 @@ Pruefe 'Dateiumzug kopiert' (@($move.Applied).Count -eq 1) ($move.Applied -join 
 Pruefe 'Unterordner mitgekommen' (Test-Path (Join-Path $moveTarget 'Unterordner\b.txt'))
 Pruefe 'Quelle unangetastet' (Test-Path (Join-Path $moveSource 'a.txt'))
 
+# --- 7. Programme und Office: die Pfade, die auf dem Entwicklungsrechner
+#        nie durchlaufen werden, weil dort alles schon da ist ----------------
+Schreib ''
+Schreib '7. winget-Auffindung, Rückgabewerte, Office-Werkzeug'
+. (Join-Path $root 'src\modules\Office.ps1')
+
+# 7a. winget ohne Eintrag im Suchpfad. Genau so liegt der Fall bei Elevierung
+#     mit einem Technikerkonto: Get-Command findet nichts, und bis vor kurzem
+#     scheiterte der Rückfall lautlos an den Rechten auf WindowsApps.
+$pathBefore = $env:PATH
+$env:PATH = (@($env:PATH -split ';' | Where-Object { $_ -notlike '*WindowsApps*' }) -join ';')
+$syncHash.Remove('WingetPath')
+$foundWithoutPath = Resolve-WzWingetPath
+$env:PATH = $pathBefore
+$syncHash.Remove('WingetPath')
+$alleKandidaten = @(Get-WzWingetCandidates)
+Schreib "  Kandidaten mit Suchpfad: $($alleKandidaten.Count)"
+foreach ($k in $alleKandidaten) { Schreib "    $k" }
+if ($alleKandidaten.Count -gt 0) {
+    Pruefe 'winget auch ohne Suchpfad gefunden' ([bool]$foundWithoutPath) $foundWithoutPath
+} else {
+    Schreib '  [--]   winget ist hier gar nicht vorhanden — 7a/7b entfallen'
+}
+
+# 7b. Ein kleines Paket wirklich installieren und danach nachsehen, statt dem
+#     Rückgabewert zu glauben.
+$wingetCheck = Test-WzWinget
+Pruefe 'winget antwortet' $wingetCheck.Available "$($wingetCheck.Version) — $($wingetCheck.Path)"
+$netCheck = Test-WzInternetAccess
+Schreib "  Netzurteil: $($netCheck.Kind) — $($netCheck.Detail)"
+
+if ($wingetCheck.Available -and $netCheck.Kind -eq 'ok') {
+    $testApp = [pscustomobject]@{ id = '7zip'; name = '7-Zip'; wingetId = '7zip.7zip' }
+    Schreib '  Installiere 7-Zip über winget (kleines Paket, dauert ein bis zwei Minuten)...'
+    $appSummary = Install-WzApps -Apps @($testApp)
+    Pruefe 'Installation gemeldet' ($appSummary.Installed -eq 1 -or $appSummary.Skipped -eq 1) `
+        "installiert=$($appSummary.Installed) übersprungen=$($appSummary.Skipped) fehlgeschlagen=$($appSummary.Failed)"
+    Pruefe 'Nachprüfung findet das Paket' (Test-WzAppInstalled -WingetPath $wingetCheck.Path -Id '7zip.7zip')
+    foreach ($detail in @($appSummary.Details)) { Schreib "    $detail" }
+} else {
+    # Kein Fehler, sondern eine Voraussetzung, die hier fehlt — als roter
+    # Eintrag wäre der Bericht irreführend.
+    Schreib '  [--]   7-Zip-Installation übersprungen (winget oder Netz fehlt)'
+}
+
+# 7c. Die Rückgabewert-Tabelle. Bisher waren drei von rund vierzig Werten
+#     bekannt, alles andere galt als Fehlschlag — auch »Neustart erforderlich«.
+$codeCases = @(
+    @{ Code = 0;            Erwartet = 'ok' }
+    @{ Code = -1978335189;  Erwartet = 'skip' }
+    @{ Code = 3010;         Erwartet = 'reboot' }
+    @{ Code = -1978335216;  Erwartet = 'retry' }
+    @{ Code = 424242;       Erwartet = 'fail' }
+    @{ Code = $null;        Erwartet = 'fail' }
+)
+$codesOk = $true
+foreach ($case in $codeCases) {
+    $outcome = Get-WzWingetOutcome -ExitCode $case.Code
+    if ($outcome.Outcome -ne $case.Erwartet) {
+        $codesOk = $false
+        Schreib "    Code $($case.Code): $($outcome.Outcome) statt $($case.Erwartet)"
+    }
+}
+Pruefe 'Rückgabewerte richtig gedeutet' $codesOk "$($codeCases.Count) Fälle, auch erfundene"
+Pruefe 'Neustart zählt als Erfolg' ((Get-WzWingetOutcome -ExitCode 3010).RequiresReboot)
+
+# 7d. Das Bereitstellungswerkzeug wirklich holen. Auf dem Entwicklungsrechner
+#     liegt es längst im Vorrat, dieser Zweig lief dort nie.
+Schreib '  Lade das Office-Bereitstellungswerkzeug...'
+$odt = Get-WzOdtSetup
+Pruefe 'setup.exe geladen' ([bool]$odt -and (Test-Path -LiteralPath $odt)) $odt
+if ($odt -and (Test-Path -LiteralPath $odt)) {
+    $odtSize = (Get-Item -LiteralPath $odt).Length
+    Pruefe 'setup.exe hat plausible Größe' ($odtSize -gt 1MB) ("{0:N1} MB" -f ($odtSize / 1MB))
+}
+
+# 7e. Die erzeugte Konfiguration muss lesbares XML sein — samt Protokollpfad
+#     und der Sperre gegen stilles Nachladen.
+$configFile = New-WzOfficeConfigXml -VariantId 'office2021' -Language 'de-de' `
+    -IncludedApps @('Word', 'Excel') -SourcePath 'D:\Ablage & Test' -Edition '32'
+$configText = [IO.File]::ReadAllText($configFile, [Text.Encoding]::UTF8)
+$xmlOk = $true
+try { [void]([xml]$configText) } catch { $xmlOk = $false }
+Pruefe 'Konfiguration ist gültiges XML' $xmlOk
+Pruefe 'Kaufmanns-Und maskiert' ($configText -match 'Ablage &amp; Test')
+Pruefe 'Bitness übernommen' ($configText -match 'OfficeClientEdition="32"')
+Pruefe 'kein stilles Nachladen' ($configText -match 'AllowCdnFallback="False"')
+Pruefe 'Protokollierung eingeschaltet' ($configText -match '<Logging Level="Standard"')
+
+# 7f. Entfernen auf einem System ohne Office muss sauber »nichts zu tun« sagen
+#     statt in einen Fehler zu laufen.
+$officeBefore = Get-WzInstalledOffice
+if ($officeBefore.Installed) {
+    Schreib "  [--]   Office ist vorhanden ($($officeBefore.Name)) — Entfernen wird hier nicht ausgelöst"
+} else {
+    $removal = Remove-WzOffice
+    Pruefe 'Entfernen ohne Office meldet »nichts zu tun«' `
+        ($removal.Ok -and (@($removal.Details) -join ' ') -match 'nichts zu tun') (@($removal.Details) -join ' ')
+}
+
 # --- Abschluss --------------------------------------------------------------
 Schreib ''
 Schreib "Protokollzeilen aus dem Modul-Teil:"
