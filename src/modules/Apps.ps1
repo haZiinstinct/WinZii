@@ -360,8 +360,11 @@ function Install-WzApps {
     }
 
     # Ohne Internet scheitert jede einzelne Installation mit einer anderen,
-    # nichtssagenden Meldung. Einmal vorher fragen ist ehrlicher.
-    if (-not $syncHash.DryRun) {
+    # nichtssagenden Meldung. Einmal vorher fragen ist ehrlicher — aber nur,
+    # wenn überhaupt etwas aus dem Netz geholt werden muss. Liegt alles im
+    # Vorrat auf dem Stick, ist der Netzzugang gleichgültig.
+    $needsNet = @($Apps | Where-Object { -not (Get-WzOfflineInstallerPath -App $_) }).Count -gt 0
+    if (-not $syncHash.DryRun -and $needsNet) {
         $net = Test-WzInternetAccess
         if ($net.Kind -ne 'ok') {
             $reason = switch ($net.Kind) {
@@ -386,12 +389,23 @@ function Install-WzApps {
             continue
         }
 
-        # --source winget pinnt die Quelle: Ohne den Pin durchsucht winget auch
-        # den Store, dessen Quelle unter einem frisch elevierten Konto nicht
-        # eingerichtet ist und eine Rückfrage bräuchte — die --disable-interactivity
-        # gerade verbietet.
-        $base = "install --id $($app.wingetId) --exact --silent --source winget " +
-                '--accept-source-agreements --accept-package-agreements --disable-interactivity'
+        # Liegt das Programm im Stick-Vorrat, wird von dort installiert — genau
+        # das versprach die Oberfläche bisher, ohne dass ein Codepfad es je tat.
+        # »winget install --manifest« braucht das Manifest, das »winget download«
+        # neben die Installationsdatei legt.
+        $vault = Get-WzOfflineInstallerPath -App $app
+        if ($vault) {
+            Write-WzLog '  aus dem Vorrat auf dem Datenträger' -Level Info
+            $base = "install --manifest `"$vault`" --silent " +
+                    '--accept-package-agreements --disable-interactivity'
+        } else {
+            # --source winget pinnt die Quelle: Ohne den Pin durchsucht winget auch
+            # den Store, dessen Quelle unter einem frisch elevierten Konto nicht
+            # eingerichtet ist und eine Rückfrage bräuchte — die --disable-interactivity
+            # gerade verbietet.
+            $base = "install --id $($app.wingetId) --exact --silent --source winget " +
+                    '--accept-source-agreements --accept-package-agreements --disable-interactivity'
+        }
         $result = Invoke-WzProcess -FilePath $wingetPath -Arguments "$base --scope machine" -TimeoutSeconds 1800
         $outcome = Get-WzWingetOutcome -ExitCode $result.ExitCode
 
@@ -447,11 +461,18 @@ function Save-WzOfflineInstallers {
     #>
     param([Parameter(Mandatory = $true)]$Apps)
 
-    $summary = [pscustomobject]@{ Saved = 0; Failed = 0; Bytes = [int64]0 }
+    $summary = [pscustomobject]@{ Saved = 0; Failed = 0; Bytes = [int64]0; Details = @() }
 
     $wingetPath = Resolve-WzWingetPath
     if (-not $wingetPath) {
         Write-WzLog 'Ohne winget lassen sich keine Installationsdateien vorab laden.' -Level Error
+        $summary.Details += 'winget wurde auf diesem PC nicht gefunden.'
+        return $summary
+    }
+
+    if (-not $syncHash.DryRun -and -not (Test-WzWingetDownloadSupport -WingetPath $wingetPath)) {
+        Write-WzLog 'Dieses winget kennt den Befehl »download« noch nicht — er kam erst mit Fassung 1.6.' -Level Error
+        $summary.Details += 'winget ist zu alt für das Vorabladen. Über »winget einrichten« lässt sich eine neuere Fassung holen.'
         return $summary
     }
 
@@ -466,23 +487,73 @@ function Save-WzOfflineInstallers {
         $appDir = New-WzDirectory (Join-Path $targetRoot $app.id)
         Write-WzLog "Lade $($app.name)..." -Level Action
 
-        $arguments = "download --id $($app.wingetId) --exact --accept-source-agreements " +
+        $arguments = "download --id $($app.wingetId) --exact --source winget --accept-source-agreements " +
                      "--accept-package-agreements --disable-interactivity --download-directory `"$appDir`""
         $result = Invoke-WzProcess -FilePath $wingetPath -Arguments $arguments -TimeoutSeconds 1800
 
-        if ($result.ExitCode -eq 0) {
-            $size = (Get-ChildItem -LiteralPath $appDir -Recurse -File -ErrorAction SilentlyContinue |
-                Measure-Object -Property Length -Sum).Sum
+        # Der Rückgabewert allein genügt nicht: Bei einem leeren Ordner meldete
+        # WinZii früher »gespeichert (0 B)«.
+        $size = [int64](Get-ChildItem -LiteralPath $appDir -Recurse -File -ErrorAction SilentlyContinue |
+            Measure-Object -Property Length -Sum).Sum
+
+        if ($result.ExitCode -eq 0 -and $size -gt 0) {
             $summary.Saved++
-            $summary.Bytes += [int64]$size
+            $summary.Bytes += $size
             Write-WzLog "  gespeichert ($(Format-WzBytes $size))" -Level Ok
         } else {
             $summary.Failed++
-            Write-WzLog "  fehlgeschlagen (Code $($result.ExitCode))" -Level Warn
+            $outcome = Get-WzWingetOutcome -ExitCode $result.ExitCode
+            $reason = if ($result.ExitCode -eq 0) {
+                'winget meldete Erfolg, es kam aber keine Datei an'
+            } else {
+                $outcome.Text
+            }
+            $summary.Details += "$($app.name): $reason"
+            Write-WzLog "  $reason" -Level Warn
         }
     }
 
     return $summary
+}
+
+function Test-WzWingetDownloadSupport {
+    <#
+    .SYNOPSIS
+        Beherrscht das vorhandene winget den Befehl »download«?
+    .NOTES
+        Es gibt ihn erst ab winget 1.6. Ältere Fassungen antworten mit einem
+        Argumentfehler, den der Anwender bisher als nackte Zahl sah.
+    #>
+    param([Parameter(Mandatory = $true)][string]$WingetPath)
+
+    try {
+        $check = Invoke-WzProcess -FilePath $WingetPath -Arguments 'download --help' -TimeoutSeconds 60
+        return ($check.ExitCode -eq 0)
+    } catch {
+        return $false
+    }
+}
+
+function Get-WzOfflineInstallerPath {
+    <#
+    .SYNOPSIS
+        Ordner im Stick-Vorrat für ein Programm — oder $null.
+    .DESCRIPTION
+        »winget download« legt neben der Installationsdatei auch das Manifest
+        ab. Genau das braucht »winget install --manifest«, um ohne Internet zu
+        installieren. Ohne Manifest ist der Ordner unbrauchbar.
+    #>
+    param([Parameter(Mandatory = $true)]$App)
+
+    $dir = Join-Path (Join-Path (Get-WzOfflineDir) 'installers') $App.id
+    if (-not (Test-Path -LiteralPath $dir)) { return $null }
+
+    $manifest = @(Get-ChildItem -LiteralPath $dir -Filter '*.yaml' -File -ErrorAction SilentlyContinue)
+    $installer = @(Get-ChildItem -LiteralPath $dir -File -ErrorAction SilentlyContinue |
+        Where-Object { $_.Extension -in @('.exe', '.msi', '.msix', '.msixbundle', '.appx', '.appxbundle', '.zip') })
+    if ($manifest.Count -eq 0 -or $installer.Count -eq 0) { return $null }
+
+    return $dir
 }
 
 function Get-WzOfflineInstallerInfo {

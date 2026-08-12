@@ -122,11 +122,21 @@ function Start-WzAppInstall {
         return
     }
 
+    # Vorher sagen, was aus dem Vorrat kommt und was aus dem Netz — das
+    # entscheidet darüber, ob der Vorgang auch ohne Verbindung durchläuft.
+    $fromVault = @($selected | Where-Object { Get-WzOfflineInstallerPath -App $_ })
     $message = "$($selected.Count) Programm(e) werden über winget installiert. Das kann je nach Umfang und Verbindung einige Minuten dauern."
+    if ($fromVault.Count -eq $selected.Count) {
+        $message = "$($selected.Count) Programm(e) werden aus dem Vorrat auf dem Datenträger installiert — dafür wird kein Internet gebraucht."
+    } elseif ($fromVault.Count -gt 0) {
+        $message += " $($fromVault.Count) davon kommen aus dem Vorrat auf dem Datenträger, der Rest aus dem Netz."
+    }
     if ($syncHash.DryRun) { $message = "Testmodus: Es wird nur aufgelistet, was installiert würde. $message" }
 
     $answer = Show-WzConfirm -Title 'Programme installieren' -Message $message `
-        -Items @($selected | ForEach-Object { $_.name }) `
+        -Items @($selected | ForEach-Object {
+            if (Get-WzOfflineInstallerPath -App $_) { "$($_.name) — vom Datenträger" } else { $_.name }
+        }) `
         -ConfirmText $(if ($syncHash.DryRun) { 'Testlauf starten' } else { 'Installieren' })
     if (-not $answer.Confirmed) { return }
 
@@ -171,8 +181,14 @@ function Start-WzAppDownload {
     } -OnComplete {
         param($summary)
         if (-not $summary) { return }
-        Show-WzInfo -Title 'Ablage abgeschlossen' `
-            -Message "$($summary.Saved) Programm(e) gespeichert ($(Format-WzBytes $summary.Bytes)), $($summary.Failed) fehlgeschlagen."
+        $message = "$($summary.Saved) Programm(e) gespeichert ($(Format-WzBytes $summary.Bytes))"
+        if ($summary.Failed -gt 0) { $message += ", $($summary.Failed) fehlgeschlagen" }
+        if ($summary.Saved -gt 0) {
+            Add-WzAction -Area 'Programme' `
+                -Summary "$($summary.Saved) Installationsdatei(en) auf den Datenträger gelegt ($(Format-WzBytes $summary.Bytes))"
+        }
+        Show-WzInfo -Title $(if ($summary.Failed -gt 0) { 'Teilweise abgelegt' } else { 'Ablage abgeschlossen' }) `
+            -Message $message -Items @($summary.Details)
         $syncHash.AppsChecked = $false
         Update-WzAppsPage
     }
