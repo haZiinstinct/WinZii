@@ -84,13 +84,16 @@ Two exports intentionally write secrets in plain text to the stick, each behind 
 
 ## ⚠ Known limits
 
-To be blunt, so nobody gets surprised: WinZii was developed and tested on **one** machine — Windows 11 Enterprise, German locale, a desktop without battery, Wi-Fi, BitLocker or OneDrive.
+To be blunt, so nobody gets surprised: WinZii was developed on **one** machine — Windows 11 Enterprise, German locale, a desktop without battery, Wi-Fi, BitLocker or OneDrive. Since 0.4.1 a second device joins in: a notebook with a battery and Wi-Fi, where the acceptance run from [docs/ABNAHME.md](docs/ABNAHME.md) takes place. Whatever has been checked there is listed below as checked.
 
 | Area | Status |
 | --- | --- |
 | **Windows 10** | The version switch works (33 tweaks for both systems, 7 Windows-11-only, 1 Windows-10-only), but a full run never happened there. |
 | **Non-German Windows** | The code that parses Windows output knows German and English; `takeown` adapts to the UI language. Only the German side has been exercised. |
-| **Battery, Wi-Fi, BitLocker, OneDrive** | The "not present" paths are verified and report cleanly. The positive cases are untested for lack of hardware. |
+| **Battery** | Verified on the notebook: wear is measured and shown on the dashboard. Up to 0.4.0 that same device reported "no battery present", because detection hung on a single WMI class. |
+| **Wi-Fi** | Connection check and internet access verified over Wi-Fi, with no cable in the machine. Downloads over Wi-Fi are still pending. |
+| **BitLocker, OneDrive** | The "not present" path is verified and reports cleanly, on the notebook additionally cross-checked against `manage-bde`. An encrypted volume and a OneDrive with placeholders are still missing. |
+| **Power plan** | What separates mains from battery are the cooling policy and the turbo behaviour. If a vendor hides both — exactly the case on the acceptance notebook — what remains is a plan that behaves like the previous one. Since 0.4.1 WinZii says so in the log; it cannot do anything about it. |
 | **Driver backup, Office install** | Verified read-only, never executed end to end. |
 | **Restoring printers** | Fully exercised in the Sandbox: pulling the driver from the driver store, creating the network port, adding the printer, and not duplicating it on a second run. What remains untested is a printer on real hardware — USB ports only appear once the device is attached and are deliberately skipped. |
 | **Restoring Wi-Fi** | Profile files are read correctly and a failure is reported cleanly. Actually creating a profile could never be verified — neither the development machine nor the Sandbox has a Wi-Fi adapter. |

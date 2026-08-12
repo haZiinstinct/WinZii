@@ -3,6 +3,55 @@
 Alle nennenswerten Änderungen an WinZii. Die Fassungen folgen
 [Semantic Versioning](https://semver.org/lang/de/).
 
+## [0.4.1] — 2026-08-12
+
+Der erste Abnahmelauf auf fremder Hardware, nach `docs/ABNAHME.md` — ein Notebook mit
+Akku und WLAN statt des Entwicklungsrechners. Fünf Befunde, alle aus derselben Familie
+wie der Audit davor: Etwas wird gemeldet, das so nicht stimmt.
+
+### Behoben
+
+- **»kein Akku vorhanden« auf einem Notebook mit Akku.** Die Erkennung hing allein an der
+  WMI-Klasse `BatteryStaticData`, und die steigt auf dem Abnahmegerät mit einem
+  Providerfehler aus. Der `catch` verschluckte ihn, und weil das Dashboard die Akkuzeile
+  nur bei `Present` zeichnet, fiel sie ersatzlos weg. Jetzt entscheiden drei Quellen über
+  »vorhanden«; fehlt danach eine Kapazität, kommt sie aus dem powercfg-Akkubericht. Auf
+  dem Gerät: 80256 mWh Auslegung, 52121 mWh heute, **35 % Verschleiß**.
+- **Der Energieplan wurde nie wiedererkannt.** Sein Name enthält ein »—«, das die
+  Konsolen-Codepage nicht kennt; aus der Ausgabe von powercfg kommt ein schlichter
+  Bindestrich zurück. Der Namensvergleich traf deshalb nie: Jeder Durchlauf hätte eine
+  weitere Kopie angelegt, und der Eintrag galt selbst direkt nach dem Anwenden als »nicht
+  angewendet«. Gesucht wird jetzt über die Registry — verlustfrei und ungefiltert, denn
+  `powercfg /list` zeigt auf demselben Gerät nur einen von sieben Plänen.
+- **»Abbrechen« beendete den Download nicht.** Es stoppte die PowerShell-Pipeline, während
+  das gestartete Programm weiterlief — ein abgebrochener Office-Download hing unsichtbar
+  an der Leitung, und die Anzeige blieb hängen. `Invoke-WzProcess` wartet jetzt in
+  Schritten und sieht dazwischen nach. Beendet wird nur, wo der Aufrufer es erlaubt: bei
+  den beiden reinen Downloads. Ein laufender Deinstallierer läuft weiter zu Ende.
+- **Der Energieplan meldete Erfolg, ohne etwas zu bewirken.** Was Netz und Akku
+  unterscheidet, sind Kühlungsrichtlinie und Turbo-Verhalten — beide auf dem Abnahmegerät
+  ausgeblendet und im Katalog als »optional« geführt. Übrig blieben Werte, die für beide
+  Betriebsarten gleich sind und die der bisherige Plan ohnehin hatte. Das steht jetzt als
+  Warnung im Protokoll, statt als Erfolg durchzugehen.
+- **Die dokumentierten Prüfbefehle liefen auf einem frischen Rechner nicht.** Windows 11
+  liefert die ExecutionPolicy als »Restricted« aus; der allererste Befehl der
+  Abnahme-Anleitung brach ab. `Start.bat` war nie betroffen, nur die Dokumentation ließ
+  `-ExecutionPolicy Bypass` weg.
+
+### Geprüft
+
+- Verbindungsprüfung und Internetzugang **über WLAN**, ohne Kabel im Gerät: fünf Schritte
+  grün, kein Zertifikats-Fehlalarm.
+- winget-Erkennung fünfzehnmal hintereinander ohne einen einzigen Aussetzer.
+- BitLocker-Ausgabe gegen `manage-bde` gegengehalten.
+
+### Geändert
+
+- `Test-Undo` Abschnitt 7 legt seinen Wegwerf-Plan jetzt unter einem Namen mit demselben
+  Geviertstrich an wie der echte Katalogeintrag. Vorher war es reines ASCII — deshalb
+  blieb der Fehler unentdeckt, obwohl der Abschnitt den zweiten Durchlauf ausdrücklich
+  prüft. `Test-Process` prüft den Abbruch in vier Fällen.
+
 ## [0.4.0] — 2026-08-12
 
 Ein vollständiger Audit, ausgelöst von drei Beobachtungen auf einem Laptop: Programme

@@ -84,13 +84,16 @@ Zwei Ausgaben schreiben absichtlich Geheimnisse im Klartext auf den Datenträger
 
 ## ⚠ Bekannte Grenzen
 
-Ehrlich gesagt, damit niemand böse überrascht wird: WinZii wurde auf **einem** Rechner entwickelt und geprüft — Windows 11 Enterprise, deutschsprachig, Desktop ohne Akku, ohne WLAN, ohne BitLocker, ohne OneDrive.
+Ehrlich gesagt, damit niemand böse überrascht wird: WinZii wurde auf **einem** Rechner entwickelt — Windows 11 Enterprise, deutschsprachig, Desktop ohne Akku, ohne WLAN, ohne BitLocker, ohne OneDrive. Seit 0.4.1 kommt ein zweites Gerät dazu: ein Notebook mit Akku und WLAN, auf dem die Abnahme aus [docs/ABNAHME.md](docs/ABNAHME.md) läuft. Was dort geprüft ist, steht unten als geprüft.
 
 | Bereich | Stand |
 | --- | --- |
 | **Windows 10** | Die Versionsweiche greift (33 Einträge für beide Systeme, 7 nur für Windows 11, 1 nur für Windows 10), aber es lief dort nie ein vollständiger Durchlauf. |
 | **Nicht-deutsches Windows** | Die Stellen, die Windows-Ausgaben auswerten, kennen Deutsch und Englisch; `takeown` fragt die Oberflächensprache ab. Geprüft wurde nur die deutsche Seite. |
-| **Akku, WLAN, BitLocker, OneDrive** | Die »nicht vorhanden«-Pfade sind geprüft und melden sauber. Der jeweilige Positiv-Fall ist mangels Hardware ungetestet. |
+| **Akku** | Auf dem Notebook geprüft: Verschleiß wird gemessen und im Dashboard angezeigt. Bis 0.4.0 meldete dasselbe Gerät »kein Akku vorhanden«, weil die Erkennung an einer einzigen WMI-Klasse hing. |
+| **WLAN** | Verbindungsprüfung und Internetzugang über WLAN geprüft, ohne Kabel im Gerät. Downloads über WLAN stehen noch aus. |
+| **BitLocker, OneDrive** | Der »nicht vorhanden«-Pfad ist geprüft und meldet sauber, auf dem Notebook zusätzlich gegen `manage-bde` gegengehalten. Ein verschlüsselter Datenträger und ein OneDrive mit Platzhaltern fehlen weiterhin. |
+| **Energieplan** | Was Netz und Akku unterscheidet, sind Kühlungsrichtlinie und Turbo-Verhalten. Blendet ein Hersteller beide aus — auf dem Abnahme-Notebook ist genau das der Fall —, bleibt ein Plan übrig, der sich wie der bisherige verhält. WinZii sagt das seit 0.4.1 im Protokoll, ändern kann es daran nichts. |
 | **Treibersicherung und Office** | Nur lesend geprüft, nie vollständig durchgeführt. |
 | **Drucker zurückspielen** | In der Sandbox vollständig durchlaufen: Treiber aus dem Treiberspeicher nachziehen, Netzwerkanschluss anlegen, Drucker einrichten, beim zweiten Lauf nichts doppeln. Ungeprüft bleibt ein Drucker an echter Hardware — USB-Anschlüsse entstehen erst mit dem Gerät und werden bewusst übersprungen. |
 | **WLAN zurückspielen** | Die Profildateien werden richtig gelesen und ein Fehlschlag sauber gemeldet. Ein Profil wirklich einzurichten konnte nie geprüft werden — weder der Entwicklungsrechner noch die Sandbox hat einen WLAN-Adapter. |
