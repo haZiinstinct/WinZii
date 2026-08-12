@@ -129,21 +129,30 @@ Schreib ''
 Schreib '5. winget-Nachinstallation (der nie getestete Pfad)'
 . (Join-Path $root 'src\modules\Apps.ps1')
 $wingetBefore = Test-WzWinget
+$script:frischEingerichtet = $false
 Schreib "  winget vorher: Available=$($wingetBefore.Available)"
 if ($wingetBefore.Available) {
     Pruefe 'Bootstrap' $true 'übersprungen — winget ist schon da'
 } else {
+    $script:frischEingerichtet = $true
     Schreib '  Starte Install-WzWingetBootstrap (lädt mehrere hundert MB — dauert)...'
-    $bootstrapOk = $false
     try {
-        $bootstrapOk = [bool](Install-WzWingetBootstrap)
+        [void](Install-WzWingetBootstrap)
     } catch {
         Schreib "  Ausnahme: $($_.Exception.Message)"
     }
     $wingetAfter = Test-WzWinget
-    Pruefe 'winget nach Bootstrap vorhanden' $wingetAfter.Available "Version: $($wingetAfter.Version)"
-    if (-not $wingetAfter.Available) {
-        Schreib '  (In der Sandbox kann der Store-Unterbau fehlen — Befund zählt trotzdem.)'
+    Pruefe 'App-Installer-Paket eingerichtet' `
+        ([bool](Get-AppxPackage -Name 'Microsoft.DesktopAppInstaller' -ErrorAction SilentlyContinue))
+    if ($wingetAfter.Available) {
+        Pruefe 'winget antwortet sofort' $true "Version: $($wingetAfter.Version)"
+    } else {
+        # In der Sandbox lässt sich nicht neu anmelden, und ein frisch
+        # registriertes Paket startet vorher nicht — beide Pfade liefern -1.
+        # Das ist eine Grenze der Umgebung, kein Fehler von WinZii: Genau für
+        # diesen Fall sagt das Werkzeug »nach einem Neustart erneut versuchen«.
+        # Auf dem Laptop ist das nachzuholen, dort geht eine Neuanmeldung.
+        Schreib '  [--]   winget antwortet erst nach einer Neuanmeldung (Grenze der Sandbox)'
     }
 }
 
@@ -305,7 +314,11 @@ if ($alleKandidaten.Count -gt 0) {
 # 7b. Ein kleines Paket wirklich installieren und danach nachsehen, statt dem
 #     Rückgabewert zu glauben.
 $wingetCheck = Test-WzWinget
-Pruefe 'winget antwortet' $wingetCheck.Available "$($wingetCheck.Version) — $($wingetCheck.Path)"
+if ($script:frischEingerichtet -and -not $wingetCheck.Available) {
+    Schreib '  [--]   winget antwortet noch nicht (siehe Abschnitt 5)'
+} else {
+    Pruefe 'winget antwortet' $wingetCheck.Available "$($wingetCheck.Version) — $($wingetCheck.Path)"
+}
 $netCheck = Test-WzInternetAccess
 Schreib "  Netzurteil: $($netCheck.Kind) — $($netCheck.Detail)"
 

@@ -3,6 +3,114 @@
 Alle nennenswerten Änderungen an WinZii. Die Fassungen folgen
 [Semantic Versioning](https://semver.org/lang/de/).
 
+## [Unveröffentlicht]
+
+Ein vollständiger Audit, ausgelöst von drei Beobachtungen auf einem Laptop: Programme
+ließen sich nicht installieren, Office nicht einrichten, und nach der Optimierung fühlte
+sich das Gerät **langsamer** an. Alle drei haben dieselbe Wurzel — WinZii wurde auf genau
+einem Rechner entwickelt, auf dem alles schon vorhanden war. Der winget-Zwischenspeicher
+gefüllt, winget im Suchpfad, das elevierte Konto dasselbe wie das angemeldete. Jede
+`Test-Path`-Weiche trifft dort den bequemen Zweig; die eigentliche Download- und
+Installationslogik lief nie.
+
+### Behoben — Programme
+
+- **winget wurde unter fremder Elevierung nicht gefunden.** Die Auflösung kennt jetzt drei
+  Wege (Suchpfad, Appx-Paket über alle Benutzer, Ordnersuche ohne feste Architektur) und
+  probiert sie der Reihe nach durch, bis einer wirklich antwortet. Direkt nach der
+  Einrichtung liegt im Suchpfad ein Alias, der noch gar nicht startet — daran blieb die
+  Suche vorher hängen.
+- **»winget gefunden« ohne jede Prüfung.** `Test-WzWinget` setzte den Zustand, ohne den
+  Rückgabewert anzusehen. Native Programme werfen in PowerShell keine Ausnahme, der
+  `try/catch` allein prüfte also nichts.
+- **Rückgabewerte von winget** stehen jetzt als Katalog in `data\wingetcodes.json`: Erfolg,
+  »schon vorhanden«, »Neustart nötig« (**das ist Erfolg**, galt bisher als Fehlschlag),
+  Quellenfehler, Abbruch. Von rund vierzig Werten waren drei bekannt.
+- **Nach der Installation wird nachgesehen** (`winget list --id --exact`), statt dem
+  Rückgabewert zu glauben. Erst dann zählt ein Programm als installiert und erscheint im
+  Übergabeblatt.
+- **Klicks werden nicht mehr stumm verworfen.** Wer während des Startscans auf
+  »Installieren« drückte, bekam nur eine Protokollzeile. Jetzt sagt ein Dialog, was gerade
+  läuft — und die Knöpfe sind bis zum Ende des Scans deaktiviert.
+- **Der Download-Weg ist gehärtet**: Größenprüfung, Erkennung von HTML-Fehlerseiten,
+  Löschen der Teildatei bei Fehlschlag, Proxy-Anmeldung mit den Windows-Zugangsdaten.
+- **Der Kunde bekommt winget mit.** `Add-AppxPackage` richtet nur für das gerade angemeldete
+  Konto ein — nach der Übergabe stand der Kunde ohne da.
+
+### Behoben — Office
+
+- **Die Erfolgsmeldung war eine Behauptung.** Das Bereitstellungswerkzeug liefert notorisch
+  Rückgabewert 0, auch wenn nichts installiert wurde, und schreibt die Wahrheit nur ins
+  Protokoll — das nie gelesen wurde. Jetzt wird protokolliert (auf den Datenträger, nicht
+  in `%TEMP%` des elevierten Kontos), das Protokoll auf die bekannten Fehlernummern geprüft
+  und zusätzlich nachgesehen, ob Office wirklich da ist.
+- **Microsoft 365 Single/Family** als Variante ergänzt. Privatkunden konnten die bisher
+  installierte Unternehmensfassung **nie** aktivieren — Office blieb im Lesemodus. Das ist
+  der wahrscheinlichste Grund, warum Office »nicht funktionierte«, obwohl es installiert war.
+- **Bitness-Konflikt statt Abbruch.** Vorhandenes 32-Bit-OEM-Office blockiert eine
+  64-Bit-Installation. Die vorhandene Bitness wird jetzt gelesen, angezeigt, und der Dialog
+  bietet die Wahl: ebenfalls 32-Bit installieren oder das vorhandene zuerst entfernen.
+- **Office entfernen, gestuft** — neuer Knopf. Stufe 1 sanft über dasselbe
+  Bereitstellungswerkzeug (`<Remove All>` samt MSI-Altinstallationen), Stufe 2 brachial mit
+  Store-Fassung, Produktschlüsseln und Ordnerresten, mit Wiederherstellungspunkt und
+  doppelter Bestätigung.
+- **Volumenlizenz-Schlüssel** lässt sich eingeben. Er wird erst unmittelbar vor dem Start
+  eingesetzt und danach wieder aus der Datei entfernt — auf dem Datenträger bleibt er nicht.
+- **Der Vorrat wird ehrlich bewertet.** Bisher galt er ab 500 MB als vollständig; ein voller
+  Satz hat 2 bis 4 GB. Geprüft wird jetzt, ob die Datenablage von Office wirklich da ist.
+- Maskierung für XML-Sonderzeichen (ein `&` im Pfad erzeugte unlesbares XML),
+  `AllowCdnFallback="False"` gegen stilles Nachladen, Platzprüfung auf dem Systemlaufwerk,
+  und die winget-Verfügbarkeit wird **vor** dem LibreOffice-Dialog geprüft.
+
+### Behoben — die Optimierung, die bremste
+
+- **Zwei vorausgewählte Einträge machten den Rechner langsamer** und galten als »geringes
+  Risiko«. Beide sind jetzt abgewählt, als mittleres Risiko eingestuft und benennen ihren
+  Preis: Ohne Schnellstart dauert jeder Kaltstart zehn bis dreißig Sekunden länger; ohne die
+  Autostart-Verzögerung startet auf schwacher Hardware alles gleichzeitig mit dem Desktop.
+- **Erfolg wurde behauptet, wo nichts geschah.** Drei Handler fangen ihre Fehler selbst ab —
+  ein Eintrag, bei dem kein einziges Paket entfernt wurde, erschien trotzdem als erledigt.
+- **Ohne `.reg`-Sicherung im Technikerfall.** Bei Elevierung mit einem fremden Konto lieferte
+  die Pfadumschreibung `$null`, und der Export stieg kommentarlos aus — für **jeden**
+  HKCU-Wert entstand keine Sicherung, während die Seite das Gegenteil versprach.
+- `perf-animations-off` schrieb »Benutzerdefiniert« statt »Beste Leistung« und meldete
+  trotzdem AKTIV. `Stop-Service` lief ohne Erfolgsprüfung. `requiresReboot` wurde auch bei
+  fehlgeschlagenen Einträgen gesetzt.
+- **Der Wiederherstellungspunkt sagt jetzt, was er kostet**: Ist der Systemschutz aus — auf
+  OEM-Geräten der Normalfall —, schaltet WinZii ihn dauerhaft ein.
+- Der Bestätigungsdialog zeigt, **welche** Werte und Dienste angefasst werden.
+
+### Behoben — Netzwerkprüfung
+
+- **Ein Fehlalarm blockierte jede Installation.** Die Internetprüfung lief über HTTPS gegen
+  die Prüfseite von Windows, die für Klartext-HTTP gedacht ist. Ergebnis: »Sicherheitszertifikat
+  abgelehnt«, während im selben Lauf Dateien von Microsoft geladen wurden. Jetzt zwei Schritte:
+  HTTP für die Erkennung von Anmeldeportalen, HTTPS für das, was Downloads brauchen.
+
+### Zweisprachig
+
+- **Die Oberfläche schaltet zwischen Deutsch und Englisch um**, sofort und ohne Neustart.
+  Der Sprachknopf sitzt unten in der Seitenleiste; die Wahl liegt auf dem Datenträger, nicht
+  im Benutzerprofil. Rahmen und alle dreizehn Seiten sind übersetzt — Messwerte, Dialoge und
+  Protokoll folgen. Sieben weitere Sprachen sind vorbereitet.
+
+### Schlanker
+
+- Der nie benutzte Aktionstyp `cbsPackage` samt Handler, die feste
+  Abhängigkeitsliste im winget-Bootstrap, drei tote Funktionen und vier XAML-Namen ohne
+  Verweis sind entfernt. Die FAT32-Prüfung, die XML-Erzeugung und der Katalogzugriff standen
+  doppelt da und sind zusammengelegt.
+
+### Prüfwerkzeuge
+
+- **`tools\Test-Undo.ps1`** spielt Sicherung und Rücknahme an einem eigenen
+  Registry-Schlüssel durch — setzen, `.reg`-Sicherung, `undo.json`, zurücknehmen,
+  Ausgangszustand. 30 Prüfungen.
+- **Der Sandbox-Test** deckt fünf weitere Wege ab: winget-Auffindung ohne Suchpfad, echte
+  Installation samt Nachprüfung, die Rückgabewert-Tabelle gegen erfundene Codes, das Laden
+  des Office-Bereitstellungswerkzeugs, und die Office-Entfernung auf einem System ohne
+  Office. Er hat in diesem Durchgang zwei Fehler gefunden, die kein Standbild zeigt.
+
 ## [0.3.0] — 2026-08-04
 
 Zwei Halbfertiges zu Ende gebaut. Zum einen war der Datenumzug nur zur Hälfte da:
