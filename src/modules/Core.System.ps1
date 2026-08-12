@@ -291,6 +291,14 @@ function Get-WzBatteryHealth {
         Verschleiß = 1 - (heutige volle Ladung / Auslegungskapazität). Der
         powercfg-Bericht enthält dieselbe Angabe, aber vergraben in mehreren
         Bildschirmseiten HTML.
+
+        Gefragt werden drei Quellen, weil keine für sich verlässlich ist:
+        BatteryStaticData steigt auf diesem MSI-Notebook mit einem
+        WMI-Providerfehler aus (»Allgemeiner Fehler«), Win32_Battery lässt
+        DesignCapacity dort leer, und BatteryFullChargedCapacity kennt die
+        Auslegung gar nicht. Bis 0.4.0 hing die ganze Erkennung allein an
+        BatteryStaticData: Ein Notebook mit gesundem Akku meldete »kein Akku
+        vorhanden«, und die Akkuzeile des Dashboards fiel ersatzlos weg.
     #>
     $result = [pscustomobject]@{
         Present      = $false
@@ -301,39 +309,121 @@ function Get-WzBatteryHealth {
         Verdict      = 'kein Akku vorhanden'
     }
 
+    $static = @()
+    $full = @()
+    try { $static = @(Get-CimInstance -Namespace root\wmi -ClassName BatteryStaticData -ErrorAction Stop) } catch { }
+    try { $full = @(Get-CimInstance -Namespace root\wmi -ClassName BatteryFullChargedCapacity -ErrorAction Stop) } catch { }
+
+    $battery = $null
     try {
-        $static = @(Get-CimInstance -Namespace root\wmi -ClassName BatteryStaticData -ErrorAction Stop)
-        $full = @(Get-CimInstance -Namespace root\wmi -ClassName BatteryFullChargedCapacity -ErrorAction SilentlyContinue)
-        if ($static.Count -eq 0) { return $result }
-
-        $result.Present = $true
-        $result.DesignmWh = [int]($static | Measure-Object -Property DesignedCapacity -Sum).Sum
-        $result.FullmWh = [int]($full | Measure-Object -Property FullChargedCapacity -Sum).Sum
-
-        if ($result.DesignmWh -gt 0 -and $result.FullmWh -gt 0) {
-            # Neue Akkus melden gern mehr als die Auslegungskapazität — ein
-            # negativer Verschleiß wäre Unsinn, also bei 0 abschneiden.
-            $result.WearPercent = [math]::Max(0, [math]::Round((1 - ($result.FullmWh / $result.DesignmWh)) * 100))
-            $result.Verdict = if ($result.WearPercent -lt 20) {
-                "$($result.WearPercent) % Verschleiß — der Akku ist in Ordnung"
-            } elseif ($result.WearPercent -lt 40) {
-                "$($result.WearPercent) % Verschleiß — merklich schwächer, aber brauchbar"
-            } else {
-                "$($result.WearPercent) % Verschleiß — ein Austausch lohnt sich"
-            }
-        } else {
-            $result.Verdict = 'Akku vorhanden, aber ohne Kapazitätsangaben'
-        }
-    } catch {
-        return $result
-    }
-
-    try {
-        $battery = Get-CimInstance -Query 'SELECT EstimatedChargeRemaining FROM Win32_Battery' -ErrorAction Stop | Select-Object -First 1
-        if ($battery) { $result.ChargePercent = [int]$battery.EstimatedChargeRemaining }
+        $battery = Get-CimInstance -Query 'SELECT EstimatedChargeRemaining FROM Win32_Battery' -ErrorAction Stop |
+            Select-Object -First 1
     } catch { }
 
+    # Kein Akku ist nur dann kein Akku, wenn ihn keine der drei Quellen kennt.
+    if ($static.Count -eq 0 -and $full.Count -eq 0 -and -not $battery) { return $result }
+
+    $result.Present = $true
+    if ($battery) { $result.ChargePercent = [int]$battery.EstimatedChargeRemaining }
+    if ($static.Count -gt 0) { $result.DesignmWh = [int]($static | Measure-Object -Property DesignedCapacity -Sum).Sum }
+    if ($full.Count -gt 0) { $result.FullmWh = [int]($full | Measure-Object -Property FullChargedCapacity -Sum).Sum }
+
+    # Fehlt eine der beiden Zahlen, steht sie im powercfg-Bericht.
+    if ($result.DesignmWh -le 0 -or $result.FullmWh -le 0) {
+        $report = Get-WzBatteryReportCapacities
+        if ($report) {
+            if ($result.DesignmWh -le 0) { $result.DesignmWh = $report.DesignmWh }
+            if ($result.FullmWh -le 0) { $result.FullmWh = $report.FullmWh }
+        }
+    }
+
+    if ($result.DesignmWh -gt 0 -and $result.FullmWh -gt 0) {
+        # Neue Akkus melden gern mehr als die Auslegungskapazität — ein
+        # negativer Verschleiß wäre Unsinn, also bei 0 abschneiden.
+        $result.WearPercent = [math]::Max(0, [math]::Round((1 - ($result.FullmWh / $result.DesignmWh)) * 100))
+        $result.Verdict = if ($result.WearPercent -lt 20) {
+            "$($result.WearPercent) % Verschleiß — der Akku ist in Ordnung"
+        } elseif ($result.WearPercent -lt 40) {
+            "$($result.WearPercent) % Verschleiß — merklich schwächer, aber brauchbar"
+        } else {
+            "$($result.WearPercent) % Verschleiß — ein Austausch lohnt sich"
+        }
+    } else {
+        $result.Verdict = 'Akku vorhanden, aber ohne Kapazitätsangaben'
+    }
+
     return $result
+}
+
+function Get-WzBatteryReportCapacities {
+    <#
+    .SYNOPSIS
+        Auslegungs- und Ladekapazität aus dem powercfg-Akkubericht.
+    .NOTES
+        Ausweichweg für Geräte, deren WMI die Auslegungskapazität verschweigt.
+        Der Bericht kostet eine knappe Sekunde, wird aber vom Dashboard und vom
+        Übergabeblatt angefordert — deshalb einmal je Sitzung.
+    .OUTPUTS
+        PSCustomObject mit DesignmWh und FullmWh, oder $null
+    #>
+    if ($script:WzBatteryReportChecked) { return $script:WzBatteryReportCapacities }
+    $script:WzBatteryReportChecked = $true
+    $script:WzBatteryReportCapacities = $null
+
+    $file = Join-Path ([IO.Path]::GetTempPath()) "winzii-akku-$PID.html"
+    try {
+        $run = Invoke-WzProcess -FilePath 'powercfg.exe' `
+            -Arguments "/batteryreport /output `"$file`"" -TimeoutSeconds 30
+        if ($run.ExitCode -ne 0 -or -not (Test-Path -LiteralPath $file)) { return $null }
+
+        $html = [IO.File]::ReadAllText($file, [Text.Encoding]::UTF8)
+        $design = Read-WzBatteryReportValue -Html $html -Labels @(
+            'DESIGN CAPACITY', 'KONSTRUKTIONSKAPAZITÄT', 'ENTWURFSKAPAZITÄT')
+        $charged = Read-WzBatteryReportValue -Html $html -Labels @(
+            'FULL CHARGE CAPACITY', 'VOLLLADUNGSKAPAZITÄT')
+
+        if ($design -gt 0 -or $charged -gt 0) {
+            $script:WzBatteryReportCapacities = [pscustomobject]@{
+                DesignmWh = $design
+                FullmWh   = $charged
+            }
+        }
+    } catch {
+        Write-WzLog "Akkubericht nicht auswertbar: $($_.Exception.Message.Split([char]10)[0])" -Level Info
+    } finally {
+        Remove-Item -LiteralPath $file -Force -ErrorAction SilentlyContinue
+    }
+
+    return $script:WzBatteryReportCapacities
+}
+
+function Read-WzBatteryReportValue {
+    <#
+    .SYNOPSIS
+        Eine Kapazitätsangabe aus dem HTML des Akkuberichts.
+    .NOTES
+        Die Beschriftung ist je nach Windows-Sprache deutsch oder englisch, die
+        Zahl je nach Kultur mit Punkt oder Komma gruppiert (»80.256 mWh«) —
+        deshalb bleibt vom Zellinhalt nur die Ziffernfolge übrig.
+
+        Der Anker <span class="label"> ist wichtig: Dieselben Wörter stehen
+        weiter unten noch einmal als Spaltenüberschriften der Verlaufstabelle,
+        dort aber ohne diese Auszeichnung.
+    #>
+    param(
+        [Parameter(Mandatory = $true)][string]$Html,
+        [Parameter(Mandatory = $true)][string[]]$Labels
+    )
+
+    foreach ($label in $Labels) {
+        $pattern = '<span class="label">\s*' + [regex]::Escape($label) + '\s*</span>\s*</td>\s*<td[^>]*>([^<]*)'
+        $match = [regex]::Match($Html, $pattern, [Text.RegularExpressions.RegexOptions]::IgnoreCase)
+        if (-not $match.Success) { continue }
+
+        $digits = $match.Groups[1].Value -replace '[^\d]', ''
+        if ($digits) { return [int]$digits }
+    }
+    return 0
 }
 
 function Get-WzSecurityInfo {
