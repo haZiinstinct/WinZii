@@ -329,7 +329,7 @@ function Start-WzOneDriveHydration {
     $cloudOnly = ($folders | Measure-Object -Property CloudOnly -Sum).Sum
     $running = [bool](Get-Process -Name 'OneDrive' -ErrorAction SilentlyContinue)
 
-    $message = 'OneDrive wird angewiesen, alle Dateien dauerhaft auf diesem PC zu behalten. Erst danach kopiert eine Sicherung echte Dateien statt leerer Platzhalter.' + "`n`n" +
+    $message = "OneDrive wird angewiesen, alle Dateien dauerhaft auf diesem PC zu behalten. Erst danach kopiert eine Sicherung echte Dateien statt leerer Platzhalter — hier sind es $cloudOnly Stück." + "`n`n" +
         'Das braucht Platz auf der Systemplatte und dauert je nach Menge und Leitung lange. WinZii wartet höchstens 15 Minuten mit und meldet dann ehrlich, ob es fertig wurde.'
     if (-not $running) {
         $message += "`n`nOneDrive läuft gerade nicht. Ohne den Dienst passiert nichts — bitte zuerst starten und anmelden."

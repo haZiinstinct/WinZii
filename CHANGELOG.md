@@ -176,6 +176,14 @@ Programmseite meldete deshalb sporadisch, winget sei nicht vorhanden, obwohl es 
   Installation samt Nachprüfung, die Rückgabewert-Tabelle gegen erfundene Codes, das Laden
   des Office-Bereitstellungswerkzeugs, und die Office-Entfernung auf einem System ohne
   Office. Er hat in diesem Durchgang zwei Fehler gefunden, die kein Standbild zeigt.
+- **`tools\Invoke-Analyzer.ps1`** lief zum ersten Mal — bis dahin fehlte PSScriptAnalyzer,
+  und ein Werkzeug, das nie läuft, prüft nichts. Ergebnis über den ganzen Bestand: **0 Fehler**,
+  keine Syntax, die auf PowerShell 5.1 scheitern würde. Die Warnungen sind bis auf eine
+  `PSAvoidGlobalVars` und treffen damit das bewusste Muster für die Hintergrund-Runspaces.
+  Die eine Ausnahme: Auf der Datenseite wurde die Gesamtzahl der OneDrive-Platzhalter
+  berechnet und dann nie verwendet — sie steht jetzt im Bestätigungsdialog, wo sie hingehört.
+  Wer vor einem Download steht, der eine Viertelstunde dauern kann, sollte vorher wissen,
+  um wie viele Dateien es geht.
 
 ## [0.3.0] — 2026-08-04
 
