@@ -13,7 +13,7 @@
 # und am Ende in jedem Fall wiederhergestellt, der Wegwerf-Plan gelöscht. Ohne
 # Administratorrechte wird der Abschnitt übersprungen.
 #
-# Aufruf:  powershell -NoProfile -File tools\Test-Undo.ps1
+# Aufruf:  powershell -NoProfile -ExecutionPolicy Bypass -File tools\Test-Undo.ps1
 [CmdletBinding()]
 param()
 
@@ -233,8 +233,26 @@ Remove-Item -LiteralPath $marke -Force -ErrorAction SilentlyContinue
 Write-Host ''
 Write-Host '7. Energieplan: anlegen, aktivieren, zurücknehmen' -ForegroundColor White
 
-$planName = 'WinZii-Selbsttest-Wegwerfplan'
+# Der Name trägt bewusst denselben Geviertstrich wie der echte Katalogeintrag.
+# Vorher stand hier ein reiner ASCII-Name — deshalb blieb unentdeckt, dass die
+# Textausgabe von powercfg das Zeichen zu einem schlichten »-« verschluckt und
+# die Wiedererkennung des Plans daran scheitert.
+$planName = 'WinZii — Selbsttest-Wegwerfplan'
 $guidMuster = '[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}'
+
+function Get-WzTestSchemeCount {
+    # Zählt über die Registry statt über »powercfg /list«: verlustfrei, und
+    # ungefiltert — auf manchen Notebooks zeigt /list nur einen von sieben Plänen.
+    param([string]$Name)
+    $pfad = 'HKLM:\SYSTEM\CurrentControlSet\Control\Power\User\PowerSchemes'
+    $treffer = 0
+    foreach ($key in @(Get-ChildItem -LiteralPath $pfad -ErrorAction SilentlyContinue)) {
+        $freundlich = (Get-ItemProperty -LiteralPath $key.PSPath -Name 'FriendlyName' `
+            -ErrorAction SilentlyContinue).FriendlyName
+        if ($freundlich -eq $Name) { $treffer++ }
+    }
+    return $treffer
+}
 $istAdmin = ([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole(
     [Security.Principal.WindowsBuiltInRole]::Administrator)
 
@@ -268,20 +286,23 @@ if (-not $istAdmin) {
     $syncHash.DryRun = $true
     [void](Invoke-WzTweaks -Tweaks @($planTweak) -Scope 'selbsttest-plan-trocken')
     $syncHash.DryRun = $false
-    $nachTrocken = Invoke-WzProcess -FilePath 'powercfg.exe' -Arguments '/list' -TimeoutSeconds 30
-    Write-Check 'Testmodus legt keinen Plan an' ($nachTrocken.StdOut -notlike "*$planName*")
+    Write-Check 'Testmodus legt keinen Plan an' ((Get-WzTestSchemeCount -Name $planName) -eq 0)
 
     $planLauf = Invoke-WzTweaks -Tweaks @($planTweak) -Scope 'selbsttest-plan'
     Write-Check 'Eintrag angewendet' ($planLauf.Applied -eq 1 -and $planLauf.Failed -eq 0) "Applied=$($planLauf.Applied) Failed=$($planLauf.Failed)"
 
+    # Verglichen werden GUIDs, nicht Namen: In der Ausgabe von powercfg steht
+    # statt des Geviertstrichs ein »-«, ein Textvergleich träfe nie zu.
+    $planGuid = Find-WzPowerScheme -Name $planName
+    Write-Check 'Plan ist eingetragen' ([bool]$planGuid) "GUID: $planGuid"
+
     $nachLauf = Invoke-WzProcess -FilePath 'powercfg.exe' -Arguments '/getactivescheme' -TimeoutSeconds 30
-    Write-Check 'Plan ist aktiv' ($nachLauf.StdOut -like "*$planName*")
+    Write-Check 'Plan ist aktiv' ($planGuid -and $nachLauf.StdOut -match [regex]::Escape($planGuid))
 
     # Zweiter Durchlauf darf keinen weiteren Plan anlegen — sonst wächst die
     # Planliste mit jedem Technikereinsatz.
     [void](Invoke-WzTweaks -Tweaks @($planTweak) -Scope 'selbsttest-plan-zweitlauf')
-    $liste = Invoke-WzProcess -FilePath 'powercfg.exe' -Arguments '/list' -TimeoutSeconds 30
-    $anzahl = @([regex]::Matches($liste.StdOut, [regex]::Escape($planName))).Count
+    $anzahl = Get-WzTestSchemeCount -Name $planName
     Write-Check 'zweiter Durchlauf legt keine Kopie an' ($anzahl -eq 1) "gefunden: $anzahl"
 
     if ($planLauf.UndoFile) {
@@ -291,8 +312,7 @@ if (-not $istAdmin) {
         $nachUndo = Invoke-WzProcess -FilePath 'powercfg.exe' -Arguments '/getactivescheme' -TimeoutSeconds 30
         Write-Check 'vorheriger Plan wieder aktiv' ($nachUndo.StdOut -match [regex]::Escape($planVorher))
 
-        $listeDanach = Invoke-WzProcess -FilePath 'powercfg.exe' -Arguments '/list' -TimeoutSeconds 30
-        Write-Check 'Wegwerf-Plan wurde entfernt' ($listeDanach.StdOut -notlike "*$planName*")
+        Write-Check 'Wegwerf-Plan wurde entfernt' ((Get-WzTestSchemeCount -Name $planName) -eq 0)
     } else {
         Write-Check 'Sicherungsdatei geschrieben' $false 'keine undo.json'
     }
@@ -300,11 +320,12 @@ if (-not $istAdmin) {
     # Sicherheitsnetz: Bricht oben etwas ab, bleibt weder ein fremder Plan aktiv
     # noch der Wegwerf-Plan liegen.
     [void](Invoke-WzProcess -FilePath 'powercfg.exe' -Arguments "/setactive $planVorher" -TimeoutSeconds 30)
-    $rest = Invoke-WzProcess -FilePath 'powercfg.exe' -Arguments '/list' -TimeoutSeconds 30
-    foreach ($zeile in ($rest.StdOut -split "`r?`n")) {
-        if ($zeile -like "*$planName*" -and $zeile -match $guidMuster) {
-            [void](Invoke-WzProcess -FilePath 'powercfg.exe' -Arguments "/delete $($Matches[0])" -TimeoutSeconds 30)
-        }
+    # Begrenzt, damit ein Plan, der sich nicht löschen lässt, den Selbsttest
+    # nicht in eine Endlosschleife schickt.
+    for ($versuch = 0; $versuch -lt 5; $versuch++) {
+        $uebrig = Find-WzPowerScheme -Name $planName
+        if (-not $uebrig) { break }
+        [void](Invoke-WzProcess -FilePath 'powercfg.exe' -Arguments "/delete $uebrig" -TimeoutSeconds 30)
     }
 }
 

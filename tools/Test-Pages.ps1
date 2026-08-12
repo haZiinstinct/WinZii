@@ -1,6 +1,6 @@
 ﻿# Dev-Werkzeug: öffnet nacheinander jede Seite und meldet Fehler.
 # Erkennt Verdrahtungsfehler, die der reine Syntax-Test nicht sieht.
-# Aufruf:  powershell -NoProfile -STA -File tools\Test-Pages.ps1
+# Aufruf:  powershell -NoProfile -ExecutionPolicy Bypass -STA -File tools\Test-Pages.ps1
 [CmdletBinding()]
 param([switch]$Screenshots)
 

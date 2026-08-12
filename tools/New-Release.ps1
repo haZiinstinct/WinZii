@@ -6,7 +6,7 @@
 # Entwicklungsrechners. Eine schwarze Liste würde bei jedem neuen Ordner erneut
 # vergessen werden.
 #
-# Aufruf:  powershell -NoProfile -File tools\New-Release.ps1
+# Aufruf:  powershell -NoProfile -ExecutionPolicy Bypass -File tools\New-Release.ps1
 [CmdletBinding()]
 param(
     [string]$OutputDir,

@@ -4,7 +4,7 @@
 # der Grund, warum 100 Schlüssel über neun Sprachen konsistent bleiben. Bei
 # WinZii sind es deutlich mehr, entsprechend weniger geht ohne ihn.
 #
-# Aufruf:  powershell -NoProfile -File tools\Test-Language.ps1
+# Aufruf:  powershell -NoProfile -ExecutionPolicy Bypass -File tools\Test-Language.ps1
 [CmdletBinding()]
 param([switch]$All)
 

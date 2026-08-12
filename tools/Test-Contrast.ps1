@@ -6,7 +6,7 @@
 #
 # Schwellen:  Text ab 4,5:1   ·   große Schrift ab 3:1   ·   Bedienelemente ab 3:1
 #
-# Aufruf:  powershell -NoProfile -File tools\Test-Contrast.ps1
+# Aufruf:  powershell -NoProfile -ExecutionPolicy Bypass -File tools\Test-Contrast.ps1
 [CmdletBinding()]
 param([switch]$All)
 

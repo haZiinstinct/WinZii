@@ -4,7 +4,7 @@
 # schließen lässt — Escape, Klick auf die Abdunklung daneben, Schließkreuz.
 # Von jeder Variante entsteht ein Abbild zur Sichtprüfung.
 #
-# Aufruf:  powershell -NoProfile -STA -File tools\Test-Dialogs.ps1
+# Aufruf:  powershell -NoProfile -ExecutionPolicy Bypass -STA -File tools\Test-Dialogs.ps1
 [CmdletBinding()]
 param([switch]$KeepImages)
 

@@ -3,7 +3,7 @@
 #   2. XAML-Dateien parsebar
 #   3. JSON-Kataloge gültig
 #   4. Encoding (UTF-8 mit BOM)
-# Aufruf:  powershell -NoProfile -STA -File tools\Test-Smoke.ps1
+# Aufruf:  powershell -NoProfile -ExecutionPolicy Bypass -STA -File tools\Test-Smoke.ps1
 [CmdletBinding()]
 param()
 
