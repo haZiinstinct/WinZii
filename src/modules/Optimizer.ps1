@@ -565,7 +565,15 @@ function Invoke-WzPowerPlanAction {
     Save-WzUndoState -Session $Session -ItemId $Tweak.id -ItemName $Tweak.name -Action $Action -Previous $previous
 
     # 4. Werte je Betriebsart setzen.
+    # Mitgezählt wird, wie viele der Werte, die Netz und Akku überhaupt
+    # unterscheiden, wirklich angekommen sind — siehe Schritt 6.
+    $unterschiedGewollt = 0
+    $unterschiedGesetzt = 0
     foreach ($setting in $Action.settings) {
+        $trenntBetriebsarten = ("$($setting.ac)" -ne "$($setting.dc)")
+        if ($trenntBetriebsarten) { $unterschiedGewollt++ }
+        $beideSeitenOk = $true
+
         $seiten = @(
             @{ Schalter = '/setacvalueindex'; Wert = $setting.ac; Betrieb = 'Netz' },
             @{ Schalter = '/setdcvalueindex'; Wert = $setting.dc; Betrieb = 'Akku' }
@@ -575,6 +583,7 @@ function Invoke-WzPowerPlanAction {
                 -Arguments "$($seite.Schalter) $planGuid $($setting.subgroup) $($setting.setting) $($seite.Wert)" `
                 -TimeoutSeconds 30
             if ($gesetzt.ExitCode -eq 0) { continue }
+            $beideSeitenOk = $false
 
             # Nicht jedes Gerät bietet jede Einstellung an — Kühlungsrichtlinie
             # und Turbo-Verhalten sind auf manchen Notebooks ausgeblendet. Als
@@ -587,6 +596,7 @@ function Invoke-WzPowerPlanAction {
                 $Session.ActionFailed = $true
             }
         }
+        if ($trenntBetriebsarten -and $beideSeitenOk) { $unterschiedGesetzt++ }
     }
 
     # 5. Aktivieren.
@@ -596,6 +606,17 @@ function Invoke-WzPowerPlanAction {
     } else {
         Write-WzLog "  Energieplan ließ sich nicht aktivieren (Code $($aktivieren.ExitCode))." -Level Error
         $Session.ActionFailed = $true
+    }
+
+    # 6. Und hat es etwas gebracht? Auf dem Abnahme-Notebook sind SYSCOOLPOL und
+    #    PERFBOOSTMODE ausgeblendet (Attributes=1). Beide sind »optional«, also
+    #    scheitert nichts — übrig bleiben aber nur Werte, die für Netz und Akku
+    #    gleich sind. Der Plan wäre dann eine Kopie des bisherigen, während der
+    #    Eintrag getrennte Betriebsarten verspricht. Das gehört ins Protokoll,
+    #    statt es als Erfolg durchgehen zu lassen.
+    if ($unterschiedGewollt -gt 0 -and $unterschiedGesetzt -eq 0) {
+        Write-WzLog ('  Hinweis: Dieses Gerät bietet keinen der Werte an, die Netz und Akku ' +
+            'unterscheiden. Der Plan verhält sich wie der bisherige — der Eintrag bringt hier nichts.') -Level Warn
     }
 }
 
