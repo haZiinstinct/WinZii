@@ -22,10 +22,10 @@ Start aus sauberer Kopie mit leerem `offline\` geprüft.
 ## So anfangen
 
 ```bash
-git clone git@github.com:haZiinstinct/WinZii.git
+git clone git@github.com:haZiinstinct/WinZii.git && cd WinZii
 ```
 
-Dann Claude Code im Ordner starten und diese Datei nennen. Vor dem ersten Eingriff:
+Dann Claude Code in diesem Ordner starten und diese Datei nennen. Vor dem ersten Eingriff:
 
 ```bash
 powershell -NoProfile -File tools/Test-Smoke.ps1
@@ -60,7 +60,8 @@ Bildschirm angemeldet ist:
 - Werden die Benutzereinstellungen für den **angemeldeten** Anwender gesetzt? Das Protokoll
   sagt es: »Angemeldet ist '…', WinZii läuft als '…'«.
 - Nach einer Optimierung nachsehen, ob unter `backups\<Rechner>\<Zeit>\` `.reg`-Dateien
-  liegen. Bis 0.4.0 entstand dort für **keinen** HKCU-Wert eine Sicherung.
+  liegen. In 0.3.0 entstand dort für **keinen** HKCU-Wert eine Sicherung — behoben in
+  0.4.0, aber nur auf diesem Rechner nachgestellt, nie unter echter fremder Elevierung.
 - Seite **Daten**: werden die Profilgrößen des richtigen Kontos gemessen?
 
 ## 3. WLAN statt Kabel
@@ -154,9 +155,22 @@ Neun Einträge, alle nur auf ihre Paketkennung geprüft — installiert wurde ke
 die des Entwicklungsrechners. Das war im Plan ausdrücklich vorgesehen, weil der Sandbox-Lauf
 in diesem Projekt bisher sieben echte Fehler gefunden hat.
 
-Zwei Punkte sind dort **erwartet** und keine Fehler: Ein frisch registriertes
-App-Installer-Paket startet vor einer Neuanmeldung nicht (in der Sandbox unmöglich), und
-ohne WLAN-Dienst lässt sich kein WLAN-Profil einspielen. Beide stehen im Bericht als `[--]`.
+Vier Zeilen sind dort **erwartet** und keine Fehler. Sie stehen als `[--]` im Bericht,
+werden also berichtet statt bewertet:
+
+| Zeile | Warum |
+| --- | --- |
+| `winget antwortet erst nach einer Neuanmeldung` | Ein frisch registriertes Paket startet vorher nicht, und in der Sandbox lässt sich nicht neu anmelden. |
+| `winget antwortet noch nicht (siehe Abschnitt 5)` | Dieselbe Ursache, im späteren Abschnitt nochmals vermerkt. |
+| `7-Zip-Installation übersprungen` | Folgt aus den beiden darüber. |
+| `Drucker anlegen (nur berichtet)` | Ob `Add-Printer` gelingt, entscheidet der Treiber; die Sandbox bringt keinen mit, der sich von Hand verwenden lässt. |
+
+Der WLAN-Punkt ist dagegen ein **bestandener** Test: In der Sandbox läuft kein
+WLAN-Dienst, und geprüft wird genau, dass WinZii den Fehlschlag sauber meldet statt
+abzustürzen — `[ok] WLAN-Rückspielung meldet ein Ergebnis`.
+
+Auf dem Laptop können die winget-Zeilen anders ausfallen, wenn dort vorher schon ein
+App Installer eingerichtet war. Dann ist es ein `[ok]` — auch gut.
 
 ## 11. Akku, BitLocker, OneDrive
 
