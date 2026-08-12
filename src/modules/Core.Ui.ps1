@@ -51,7 +51,16 @@ function Register-WzNames {
         $name = $node.GetAttribute('Name')
         if (-not $name) { continue }
         $element = $Root.FindName($name)
-        if ($element) { $syncHash[$name] = $element }
+        if (-not $element) { continue }
+        $syncHash[$name] = $element
+
+        # Behälter für Infozeilen bekommen einen gemeinsamen Größenbereich:
+        # Damit richten sich die Beschriftungen EINER Karte nach der längsten
+        # unter ihnen, statt jede Zeile für sich zu rechnen — und schmale
+        # Karten bekommen trotzdem eine schmale Spalte. Siehe New-WzInfoRow.
+        if ($name -like '*Rows') {
+            [Windows.Controls.Grid]::SetIsSharedSizeScope($element, $true)
+        }
     }
 }
 
@@ -98,12 +107,60 @@ function Update-WzNavState {
         Markiert den aktiven Eintrag in der Seitenleiste.
     #>
     param([string]$ActiveId)
+    $active = $null
     foreach ($button in $syncHash.NavButtons) {
         $isActive = ($button.Tag -eq $ActiveId)
         $button.Style = if ($isActive) {
             $syncHash.Window.FindResource('WzNavButtonActive')
         } else {
             $syncHash.Window.FindResource('WzNavButton')
+        }
+        if ($isActive) { $active = $button }
+    }
+
+    # Auf einem niedrigen Bildschirm passen nicht alle dreizehn Einträge
+    # untereinander. Wer über einen Schnellstart-Knopf auf eine der unteren
+    # Seiten sprang, sah die Markierung gar nicht — die Leiste blieb oben
+    # stehen, und es sah aus, als sei nichts passiert.
+    #
+    # Erst nach dem Layoutlauf: Direkt aufgerufen kennt der Bildlauf die
+    # endgültigen Positionen noch nicht und bleibt auf halbem Weg stehen.
+    if ($active -and $syncHash.Window) {
+        [void]$syncHash.Window.Dispatcher.BeginInvoke(
+            [Windows.Threading.DispatcherPriority]::Loaded,
+            [action]{ try { $active.BringIntoView() } catch { } }.GetNewClosure())
+    }
+}
+
+function Set-WzConsoleCollapsed {
+    <#
+    .SYNOPSIS
+        Klappt die Protokollkonsole ein oder aus.
+    .NOTES
+        Eine Stelle für beide Aufrufer: den Klick auf die Kopfzeile und den
+        Start auf einem niedrigen Bildschirm.
+    #>
+    [CmdletBinding()]
+    param([Parameter(Mandatory = $true)][bool]$Collapsed)
+
+    if (-not $syncHash.LogConsole) { return }
+    $syncHash.LogConsole.Visibility = if ($Collapsed) {
+        [Windows.Visibility]::Collapsed
+    } else {
+        [Windows.Visibility]::Visible
+    }
+    if ($syncHash.LogChevron) {
+        $syncHash.LogChevron.Text = if ($Collapsed) { [char]0xE70E } else { [char]0xE70D }
+    }
+    # Zwei ausgeschriebene Aufrufe statt eines mit Bedingung darin: Test-Language
+    # gleicht benutzte gegen definierte Schlüssel ab und sucht nach
+    # »Get-WzText '<schlüssel>'«. Steht der Schlüssel in einer Variablen, hält
+    # der Abgleich ihn für tot — und ein Tippfehler fiele nicht mehr auf.
+    if ($syncHash.LogHint) {
+        $syncHash.LogHint.Text = if ($Collapsed) {
+            Get-WzText 'shell.consoleCollapsed'
+        } else {
+            Get-WzText 'shell.consoleHint'
         }
     }
 }
@@ -552,6 +609,9 @@ function New-WzCard {
     $card.Margin = New-Object Windows.Thickness(0, 0, 0, 14)
 
     $stack = New-Object Windows.Controls.StackPanel
+    # Wie bei den XAML-Karten: Die Beschriftungen einer Karte richten sich
+    # gemeinsam aus, nicht seitenweit (siehe New-WzInfoRow).
+    [Windows.Controls.Grid]::SetIsSharedSizeScope($stack, $true)
 
     if ($Eyebrow) {
         $eyebrowBlock = New-Object Windows.Controls.TextBlock
@@ -649,9 +709,9 @@ function New-WzInfoRow {
     .PARAMETER Kind
         normal | ok | warn | error — färbt den Wert ein.
     .PARAMETER LabelWidth
-        Breite der linken Spalte. Die Vorgabe reicht für kurze Bezeichnungen;
-        Listen mit Geräte- oder Kontonamen brauchen deutlich mehr, sonst
-        bricht jeder zweite Name um.
+        HÖCHSTbreite der linken Spalte. Die Vorgabe reicht für kurze
+        Bezeichnungen; Listen mit Geräte- oder Kontonamen brauchen deutlich
+        mehr, sonst bricht jeder zweite Name um.
     #>
     param(
         [Parameter(Mandatory = $true, Position = 0)][AllowEmptyString()][string]$Label,
@@ -663,7 +723,18 @@ function New-WzInfoRow {
     $grid = New-Object Windows.Controls.Grid
     $grid.Margin = New-Object Windows.Thickness(0, 3, 0, 3)
     $labelColumn = New-Object Windows.Controls.ColumnDefinition
-    $labelColumn.Width = New-Object Windows.GridLength($LabelWidth)
+    # Auto statt fester Breite: »Version« braucht keine 112 px. Auf einem
+    # 1366er-Laptop ist eine Dashboard-Karte gut 210 px breit — blieben davon
+    # feste 112 px für die Bezeichnung, hatte der Wert unter 100 px, und WPF
+    # trennte mitten im Wort: »Systemlaufwe rk nicht verschlüssel t«.
+    # Die Obergrenze verhindert, dass eine lange Bezeichnung die Spalte sprengt.
+    $labelColumn.Width = 'Auto'
+    $labelColumn.MaxWidth = $LabelWidth
+    # Jede Zeile ist ein eigenes Grid. Ohne gemeinsamen Größenbereich rechnete
+    # jede für sich, und die Werte einer Karte begännen an verschiedenen
+    # Stellen. Der Bereich gilt je Behälter (siehe Register-WzNames), also
+    # innerhalb einer Karte — nicht über die ganze Seite.
+    $labelColumn.SharedSizeGroup = 'WzInfoLabel'
     $valueColumn = New-Object Windows.Controls.ColumnDefinition
     $valueColumn.Width = '*'
     [void]$grid.ColumnDefinitions.Add($labelColumn)

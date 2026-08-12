@@ -182,16 +182,17 @@ $syncHash.BtnClose.Add_Click({
 
 # --- Log-Konsole ein- und ausklappen --------------------------------------
 $syncHash.LogHeader.Add_MouseLeftButtonUp({
-    if ($syncHash.LogConsole.Visibility -eq [Windows.Visibility]::Visible) {
-        $syncHash.LogConsole.Visibility = [Windows.Visibility]::Collapsed
-        $syncHash.LogChevron.Text = [char]0xE70E
-        $syncHash.LogHint.Text = Get-WzText 'shell.consoleCollapsed'
-    } else {
-        $syncHash.LogConsole.Visibility = [Windows.Visibility]::Visible
-        $syncHash.LogChevron.Text = [char]0xE70D
-        $syncHash.LogHint.Text = Get-WzText 'shell.consoleHint'
-    }
+    Set-WzConsoleCollapsed -Collapsed ($syncHash.LogConsole.Visibility -eq [Windows.Visibility]::Visible)
 })
+
+# Auf einem niedrigen Bildschirm bleibt für den Seiteninhalt sonst kaum etwas
+# übrig: 150 px Konsole, 52 px Kopfleiste, Klappzeile und Statusleiste sind bei
+# 614 px Fensterhöhe zusammen die Hälfte — von jeder Seite waren nur die
+# Überschrift und die erste Karte zu sehen. Die Kopfzeile der Konsole bleibt
+# stehen, ein Klick zieht sie wieder auf.
+if ($window.Height -lt 700) {
+    Set-WzConsoleCollapsed -Collapsed $true
+}
 $syncHash.BtnClearLog.Add_Click({ Clear-WzConsole })
 
 # --- Testmodus ------------------------------------------------------------
