@@ -55,6 +55,29 @@ if (Test-Path $fontDir) {
     } catch { }
 }
 
+function global:Find-WzCloseButton {
+    <#
+    .SYNOPSIS
+        Sucht das Schließkreuz im Dialogbaum (Knopf mit dem Schließen-Zeichen).
+    .NOTES
+        Muss global sein: GetNewClosure() bindet den Zeitgeber-Block an ein
+        eigenes dynamisches Modul, aus dem heraus Funktionen des Skripts nicht
+        sichtbar sind. Vorher flog beim Fall »CloseBtn« eine Ausnahme, der
+        Dialog schloss sich als Nebenwirkung — und der Test meldete trotzdem
+        bestanden, ohne je das Kreuz gedrückt zu haben.
+    #>
+    param($Element)
+    if ($Element -is [Windows.Controls.Button] -and "$($Element.Content)" -eq [string][char]0xE8BB) {
+        return $Element
+    }
+    $count = [Windows.Media.VisualTreeHelper]::GetChildrenCount($Element)
+    for ($i = 0; $i -lt $count; $i++) {
+        $found = Find-WzCloseButton ([Windows.Media.VisualTreeHelper]::GetChild($Element, $i))
+        if ($found) { return $found }
+    }
+    return $null
+}
+
 # --- Prüffälle -------------------------------------------------------------
 $longText = 1..40 | ForEach-Object { "Eintrag $_ mit einer absichtlich langen Beschreibung, damit der Inhalt überläuft" }
 
@@ -70,6 +93,7 @@ $cases = @(
 # Script-Gültigkeitsbereich, weil die Auswertung im Ereignishandler läuft
 $script:results = New-Object Collections.ArrayList
 $script:failed = 0
+$script:noCloseButton = $false
 
 Write-Host ''
 Write-Host '  WinZii Dialogtest' -ForegroundColor Cyan
@@ -126,6 +150,16 @@ $window.Add_ContentRendered({
                     if ($button) {
                         $button.RaiseEvent((New-Object Windows.RoutedEventArgs(
                             [Windows.Controls.Primitives.ButtonBase]::ClickEvent)))
+                    } else {
+                        # Ohne Kreuz bliebe der Dialog stehen und der Lauf hinge.
+                        # Also über Escape schließen und den Fall als Fehlschlag merken.
+                        $script:noCloseButton = $true
+                        $keyArgs = New-Object Windows.Input.KeyEventArgs(
+                            [Windows.Input.Keyboard]::PrimaryDevice,
+                            [Windows.PresentationSource]::FromVisual($dialog),
+                            0, [Windows.Input.Key]::Escape)
+                        $keyArgs.RoutedEvent = [Windows.Input.Keyboard]::PreviewKeyDownEvent
+                        $dialog.RaiseEvent($keyArgs)
                     }
                 }
             }
@@ -139,6 +173,7 @@ $window.Add_ContentRendered({
         $shotOk = Test-Path $shotPath
         $stillOpen = ($null -ne $syncHash.ActiveDialog)
         $ok = ($closed -and -not $stillOpen -and -not $answer.Confirmed -and $shotOk)
+        if ($mode -eq 'CloseBtn' -and $script:noCloseButton) { $ok = $false }
 
         [void]$script:results.Add([pscustomobject]@{
             Name = $case.Name
@@ -153,23 +188,6 @@ $window.Add_ContentRendered({
 
     $window.Close()
 })
-
-function Find-WzCloseButton {
-    <#
-    .SYNOPSIS
-        Sucht das Schließkreuz im Dialogbaum (Knopf mit dem Schließen-Zeichen).
-    #>
-    param($Element)
-    if ($Element -is [Windows.Controls.Button] -and "$($Element.Content)" -eq [string][char]0xE8BB) {
-        return $Element
-    }
-    $count = [Windows.Media.VisualTreeHelper]::GetChildrenCount($Element)
-    for ($i = 0; $i -lt $count; $i++) {
-        $found = Find-WzCloseButton ([Windows.Media.VisualTreeHelper]::GetChild($Element, $i))
-        if ($found) { return $found }
-    }
-    return $null
-}
 
 [void]$window.ShowDialog()
 

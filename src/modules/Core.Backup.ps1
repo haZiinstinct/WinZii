@@ -23,6 +23,12 @@ function New-WzUndoSession {
         Created      = Get-Date
         Entries      = New-Object Collections.ArrayList
         ExportedKeys = New-Object Collections.ArrayList
+        # Handler, die ihre Fehler selbst abfangen (Appx, Systempakete,
+        # Funktionen), melden hier zurück. Ohne das galt ein Eintrag als
+        # erledigt, bei dem kein einziges Paket entfernt werden konnte.
+        ActionFailed = $false
+        # Ein Dienst, der sich nicht anhalten ließ, wirkt erst nach einem Neustart
+        NeedsReboot  = $false
     }
 }
 
@@ -116,12 +122,52 @@ function Export-WzRegistryKey {
     }
 }
 
+function Test-WzSystemProtectionOn {
+    <#
+    .SYNOPSIS
+        Ist der Systemschutz für das Systemlaufwerk eingeschaltet?
+    .NOTES
+        Auf Windows-11-OEM-Geräten ist er häufig aus. Ein Wiederherstellungspunkt
+        schaltet ihn dann dauerhaft ein — das gehört in den Dialog, nicht nur
+        hinterher ins Protokoll.
+    #>
+    [CmdletBinding()]
+    param()
+
+    try {
+        $config = Get-ItemProperty 'HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\SystemRestore' -ErrorAction Stop
+        return ([int]$config.RPSessionInterval -ne 0)
+    } catch {
+        return $false
+    }
+}
+
 function ConvertTo-WzRegExePath {
     <#
     .SYNOPSIS
         Wandelt einen PowerShell-Pfad (HKLM:\...) in die Schreibweise von reg.exe um.
     #>
     param([string]$Path)
+    if (-not $Path) { return $null }
+
+    # Bei Elevierung mit einem fremden Konto löst Resolve-WzRegistryPath auf
+    # »Registry::HKEY_USERS\<SID>\...« auf. Diese Schreibweise stand nicht in
+    # der Tabelle, die Funktion lieferte $null, und Export-WzRegistryKey stieg
+    # kommentarlos aus — für JEDEN HKCU-Wert entstand also keine .reg-Sicherung,
+    # während die Oberfläche versprach, jeder Schlüssel werde gesichert.
+    $providerMap = @{
+        'Registry::HKEY_LOCAL_MACHINE' = 'HKLM'
+        'Registry::HKEY_CURRENT_USER'  = 'HKCU'
+        'Registry::HKEY_CLASSES_ROOT'  = 'HKCR'
+        'Registry::HKEY_USERS'         = 'HKU'
+        'Registry::HKEY_CURRENT_CONFIG' = 'HKCC'
+    }
+    foreach ($prefix in $providerMap.Keys) {
+        if ($Path -like "$prefix\*") {
+            return $Path -replace "^$([regex]::Escape($prefix))", $providerMap[$prefix]
+        }
+    }
+
     $map = @{
         'HKLM:'  = 'HKLM'
         'HKCU:'  = 'HKCU'

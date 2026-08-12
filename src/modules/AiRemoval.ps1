@@ -162,6 +162,10 @@ function Invoke-WzAppxAction {
             Remove-AppxPackage -Package $package.PackageFullName -AllUsers -ErrorAction Stop
             Write-WzLog "  entfernt: $($package.Name)" -Level Ok
         } catch {
+            # Der Fehler wird hier abgefangen, damit die Reihe weiterläuft —
+            # aber er muss zurückgemeldet werden, sonst zählt der Eintrag als
+            # erledigt, obwohl nichts entfernt wurde.
+            if ($Session) { $Session.ActionFailed = $true }
             Write-WzLog "  konnte nicht entfernt werden: $($package.Name) — $($_.Exception.Message)" -Level Warn
         }
     }
@@ -238,6 +242,7 @@ function Invoke-WzCbsAction {
             Remove-WindowsPackage -Online -PackageName $package.PackageName -NoRestart -ErrorAction Stop | Out-Null
             Write-WzLog "  Systempaket entfernt: $($package.PackageName)" -Level Ok
         } catch {
+            if ($Session) { $Session.ActionFailed = $true }
             Write-WzLog "  Systempaket blieb bestehen: $($package.PackageName)" -Level Warn
         }
     }
@@ -281,6 +286,7 @@ function Invoke-WzCapabilityAction {
             Remove-WindowsCapability -Online -Name $capability.Name -ErrorAction Stop | Out-Null
             Write-WzLog "  Funktion entfernt: $($capability.Name)" -Level Ok
         } catch {
+            if ($Session) { $Session.ActionFailed = $true }
             Write-WzLog "  Funktion blieb bestehen: $($capability.Name)" -Level Warn
         }
     }

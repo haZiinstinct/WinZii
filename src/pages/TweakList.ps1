@@ -173,9 +173,13 @@ function Invoke-WzTweakSelection {
     $riskyCount = @($selected | Where-Object { $_.risk -in @('medium', 'high') }).Count
     $rebootCount = @($selected | Where-Object { $_.requiresReboot }).Count
 
+    # Statt nur der Namen auch, WAS jeder Eintrag anfasst. Get-WzTweakActionSummary
+    # war dafür gebaut und wurde nie aufgerufen — der Anwender bestätigte bisher
+    # eine Liste von Überschriften.
     $items = foreach ($tweak in $selected) {
         $suffix = if ($tweak.risk -ne 'low') { " [$($tweak.risk)]" } else { '' }
-        "$($tweak.name)$suffix"
+        $what = Get-WzTweakActionSummary -Tweak $tweak
+        if ($what) { "$($tweak.name)$suffix — $what" } else { "$($tweak.name)$suffix" }
     }
 
     $message = "$($selected.Count) Änderung(en) werden angewendet."
@@ -183,8 +187,16 @@ function Invoke-WzTweakSelection {
     if ($rebootCount -gt 0) { $message += " $rebootCount davon wirken erst nach einem Neustart." }
     if ($syncHash.DryRun) { $message = "Testmodus: Es wird nur protokolliert, was passieren würde. $message" }
 
+    # War der Systemschutz aus, bleibt er nach dem Wiederherstellungspunkt an —
+    # sonst wäre der Punkt sofort wieder weg. Das kostet dauerhaft Platz und
+    # Hintergrundarbeit und ist damit selbst eine Bremse. Also vorher sagen.
+    $optionText = 'Vorher einen Systemwiederherstellungspunkt anlegen (empfohlen)'
+    if (-not (Test-WzSystemProtectionOn)) {
+        $optionText += ' — der Systemschutz ist aus und bleibt danach eingeschaltet'
+    }
+
     $answer = Show-WzConfirm -Title $Title -Message $message -Items $items `
-        -OptionText 'Vorher einen Systemwiederherstellungspunkt anlegen (empfohlen)' `
+        -OptionText $optionText `
         -OptionDefault (-not $syncHash.DryRun) `
         -ConfirmText $(if ($syncHash.DryRun) { 'Testlauf starten' } else { 'Anwenden' }) `
         -Danger:($riskyCount -gt 0)

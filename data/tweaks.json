@@ -37,10 +37,10 @@
       "id": "perf-fast-startup-off",
       "category": "performance",
       "level": "soft",
-      "risk": "low",
+      "risk": "medium",
       "name": "Schnellstart abschalten",
-      "description": "Der Schnellstart fährt Windows nur scheinbar herunter. Das verursacht Probleme mit Treibern, Updates und Dual-Boot — und Neustarts helfen dann nicht mehr bei der Fehlersuche.",
-      "defaultChecked": true,
+      "description": "Der Schnellstart fährt Windows nur scheinbar herunter. Das verursacht Probleme mit Treibern, Updates und Dual-Boot — und Neustarts helfen dann nicht mehr bei der Fehlersuche. Der Preis: Ohne Schnellstart dauert jeder Kaltstart zehn bis dreißig Sekunden länger. Bei Treiber- oder Update-Problemen und bei Dual-Boot lohnt sich das — sonst besser eingeschaltet lassen.",
+      "defaultChecked": false,
       "appliesTo": "all",
       "requiresReboot": false,
       "actions": [
@@ -57,12 +57,12 @@
       "id": "perf-startup-delay",
       "category": "performance",
       "level": "soft",
-      "risk": "low",
+      "risk": "medium",
       "name": "Verzögerung der Autostart-Programme entfernen",
-      "description": "Windows wartet nach der Anmeldung künstlich etwa zehn Sekunden, bevor Autostart-Programme laufen. Auf schnellen PCs ist das unnötig.",
-      "defaultChecked": true,
+      "description": "Windows wartet nach der Anmeldung künstlich etwa zehn Sekunden, bevor Autostart-Programme laufen. Auf schnellen PCs ist das unnötig. Auf schwacher Hardware dagegen kontraproduktiv: Alle Autostart-Programme starten dann gleichzeitig mit dem Desktop, und die erste Minute nach der Anmeldung fühlt sich zäher an. Wirkt ab der nächsten Anmeldung.",
+      "defaultChecked": false,
       "appliesTo": "all",
-      "requiresReboot": false,
+      "requiresReboot": true,
       "actions": [
         {
           "type": "registry",
@@ -163,7 +163,7 @@
           "path": "HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\VisualEffects",
           "name": "VisualFXSetting",
           "valueType": "DWord",
-          "value": 3
+          "value": 2
         },
         {
           "type": "registry",
@@ -222,7 +222,6 @@
         }
       ]
     },
-
     {
       "id": "tele-allowtelemetry",
       "category": "telemetry",
@@ -270,7 +269,7 @@
       "level": "soft",
       "risk": "low",
       "name": "Telemetriedienste abschalten",
-      "description": "Beendet die Dienste, die Nutzungsdaten sammeln und übertragen (DiagTrack und dmwappushservice).",
+      "description": "Beendet die Dienste, die Nutzungsdaten sammeln und übertragen (DiagTrack und dmwappushservice). Nebenwirkung: Feedback-Hub und Windows-Insider arbeiten danach nicht mehr, und auf verwalteten Geräten bricht die Synchronisierung mit Intune oder einer anderen Geräteverwaltung.",
       "defaultChecked": true,
       "appliesTo": "all",
       "requiresReboot": false,
@@ -434,7 +433,6 @@
         }
       ]
     },
-
     {
       "id": "priv-advertising-id",
       "category": "privacy",
@@ -700,7 +698,7 @@
       "level": "soft",
       "risk": "low",
       "name": "Empfehlungen im Startmenü abschalten",
-      "description": "Blendet die von Microsoft eingespielten Empfehlungen und Werbeeinträge im Startmenü aus.",
+      "description": "Blendet die von Microsoft eingespielten Empfehlungen und Werbeeinträge im Startmenü aus. Der Bereich »Empfohlen« selbst verschwindet nur auf Enterprise und Education; auf Home und Pro bleibt er stehen, nur die Werbung darin ist weg.",
       "defaultChecked": true,
       "appliesTo": "win11",
       "requiresReboot": true,
@@ -755,7 +753,6 @@
         }
       ]
     },
-
     {
       "id": "sec-smb1-off",
       "category": "security",
@@ -828,7 +825,7 @@
       "description": "Ohne sichtbare Endung sieht »Rechnung.pdf.exe« im Explorer aus wie ein PDF. Das ist der häufigste Trick bei E-Mail-Anhängen.",
       "defaultChecked": true,
       "appliesTo": "all",
-      "requiresReboot": false,
+      "requiresReboot": true,
       "actions": [
         {
           "type": "registry",
@@ -926,7 +923,6 @@
         }
       ]
     },
-
     {
       "id": "ai-copilot-policy",
       "category": "ai-policy",
@@ -1193,14 +1189,13 @@
         }
       ]
     },
-
     {
       "id": "ai-appx-remove",
       "category": "ai-remove",
       "level": "hard",
       "risk": "medium",
       "name": "Copilot-Apps entfernen",
-      "description": "Löscht die Copilot-App-Pakete für alle Benutzer und entfernt sie aus der Bereitstellung für neue Konten. Nach großen Funktionsupdates können sie zurückkehren — dann erneut ausführen.",
+      "description": "Löscht die Copilot-App-Pakete für alle Benutzer und entfernt sie aus der Bereitstellung für neue Konten. Nach großen Funktionsupdates können sie zurückkehren — dann erneut ausführen. Windows richtet nach dem Entfernen bei der nächsten Anmeldung Teile neu ein — das kostet einmalig ein paar Minuten Rechenzeit.",
       "defaultChecked": true,
       "appliesTo": "all",
       "requiresReboot": false,
@@ -1242,7 +1237,9 @@
         },
         {
           "type": "capability",
-          "patterns": ["*Recall*"],
+          "patterns": [
+            "*Recall*"
+          ],
           "undo": {
             "hint": "Über Einstellungen > System > Optionale Features wieder installierbar"
           }

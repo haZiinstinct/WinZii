@@ -160,15 +160,27 @@ function Invoke-WzTweaks {
                     Write-WzLog "  Unbekannter Aktionstyp: $($action.type)" -Level Warn
                     continue
                 }
+                # Handler, die ihre Fehler selbst abfangen, melden über die
+                # Sitzung zurück. Der Merker wird je Aktion zurückgesetzt.
+                $session.ActionFailed = $false
                 & $handler -Action $action -Session $session -Tweak $tweak
+                if ($session.ActionFailed) { $tweakFailed = $true }
             } catch {
                 $tweakFailed = $true
                 Write-WzLog "  Fehler: $($_.Exception.Message)" -Level Error
             }
         }
 
-        if ($tweakFailed) { $summary.Failed++ } else { $summary.Applied++ }
-        if ($tweak.requiresReboot) { $summary.RebootRequired = $true }
+        if ($tweakFailed) {
+            $summary.Failed++
+        } else {
+            $summary.Applied++
+            # Ein Neustart ist nur nötig, wenn der Eintrag auch wirklich
+            # angewendet wurde — bisher erschien die Meldung selbst dann, wenn
+            # alles fehlgeschlagen war, und verlor dadurch ihre Aussage.
+            if ($tweak.requiresReboot) { $summary.RebootRequired = $true }
+        }
+        if ($session.NeedsReboot) { $summary.RebootRequired = $true }
     }
 
     if (-not $syncHash.DryRun) {
@@ -244,7 +256,16 @@ function Invoke-WzServiceAction {
     }
 
     if ($Action.stop -and $service.Status -eq 'Running') {
+        # Bisher ohne jede Prüfung: Blieb der Dienst laufen, galt der Eintrag
+        # trotzdem als erledigt — und weil requiresReboot bei beiden
+        # Dienst-Einträgen false ist, erfuhr der Anwender nicht einmal, dass
+        # ein Neustart nötig wäre, damit die Änderung greift.
         Stop-Service -Name $Action.serviceName -Force -ErrorAction SilentlyContinue
+        $after = Get-Service -Name $Action.serviceName -ErrorAction SilentlyContinue
+        if ($after -and $after.Status -eq 'Running') {
+            Write-WzLog "  Dienst $($Action.serviceName) läuft weiter — die Änderung greift nach einem Neustart." -Level Warn
+            if ($Session) { $Session.NeedsReboot = $true }
+        }
     }
     # Set-Service kann bei geschützten Diensten scheitern, dann direkt in die Registry
     try {
