@@ -3,12 +3,20 @@
   "odtSetupUrl": "https://officecdn.microsoft.com/pr/wsus/setup.exe",
   "variants": [
     {
+      "id": "m365home",
+      "name": "Microsoft 365 Single / Family",
+      "productId": "O365HomePremRetail",
+      "channel": "Current",
+      "description": "Die Abo-Version für Privatkunden. Passend zu »Microsoft 365 Single« und »Family« aus dem Handel.",
+      "note": "Für Privatkunden die richtige Wahl. Die Geschäftsfassung darunter lässt sich mit einem privaten Abo nicht freischalten."
+    },
+    {
       "id": "m365",
-      "name": "Microsoft 365 Apps",
+      "name": "Microsoft 365 Apps (Geschäft)",
       "productId": "O365ProPlusRetail",
       "channel": "Current",
-      "description": "Abo-Version. Die Anmeldung mit dem Microsoft-365-Konto schaltet die Lizenz frei.",
-      "note": "Ohne gültiges Abo läuft Office nur im Lesemodus."
+      "description": "Abo-Version für Unternehmen. Die Anmeldung mit dem Microsoft-365-Geschäftskonto schaltet die Lizenz frei.",
+      "note": "Nur mit einem Geschäfts- oder Schulabo. Mit einem privaten »Microsoft 365 Single« bleibt Office im Lesemodus — dafür ist die Variante darüber gedacht."
     },
     {
       "id": "office2024",

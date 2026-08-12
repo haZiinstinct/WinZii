@@ -31,7 +31,8 @@ function New-WzOfficeConfigXml {
         [Parameter(Mandatory = $true)][string]$Language,
         [Parameter(Mandatory = $true)][string[]]$IncludedApps,
         [string]$SourcePath,
-        [string]$OutFile
+        [string]$ProductKey,
+        [ValidateSet('32', '64')][string]$Edition = '64'
     )
 
     $catalog = Get-WzOfficeCatalog
@@ -43,13 +44,21 @@ function New-WzOfficeConfigXml {
     $lines = New-Object Collections.ArrayList
     [void]$lines.Add('<Configuration>')
 
-    $addAttributes = "OfficeClientEdition=`"64`" Channel=`"$($variant.channel)`""
-    if ($SourcePath) { $addAttributes += " SourcePath=`"$SourcePath`"" }
+    # Alles maskieren, was in die XML wandert: Ein & im Stickpfad erzeugte
+    # bisher eine Datei, die ODT nicht lesen konnte — mit einer Fehlermeldung,
+    # die auf alles Mögliche hindeutete, nur nicht auf den Pfad.
+    $addAttributes = "OfficeClientEdition=`"$Edition`" Channel=`"$(ConvertTo-WzXmlText $variant.channel)`""
+    if ($SourcePath) {
+        $addAttributes += " SourcePath=`"$(ConvertTo-WzXmlText $SourcePath)`""
+        # Ohne diese Sperre lädt ODT bei Lücken im Vorrat still aus dem Netz
+        # nach — obwohl der Anwender »kein Internet nötig« gelesen hat.
+        $addAttributes += ' AllowCdnFallback="False"'
+    }
     [void]$lines.Add("  <Add $addAttributes>")
-    [void]$lines.Add("    <Product ID=`"$($variant.productId)`">")
-    [void]$lines.Add("      <Language ID=`"$Language`" />")
+    [void]$lines.Add("    <Product ID=`"$(ConvertTo-WzXmlText $variant.productId)`">")
+    [void]$lines.Add("      <Language ID=`"$(ConvertTo-WzXmlText $Language)`" />")
     foreach ($app in $excluded) {
-        [void]$lines.Add("      <ExcludeApp ID=`"$app`" />")
+        [void]$lines.Add("      <ExcludeApp ID=`"$(ConvertTo-WzXmlText $app)`" />")
     }
     [void]$lines.Add('    </Product>')
     [void]$lines.Add('  </Add>')
@@ -59,17 +68,93 @@ function New-WzOfficeConfigXml {
     [void]$lines.Add('  <Property Name="SharedComputerLicensing" Value="0" />')
     [void]$lines.Add('  <Updates Enabled="TRUE" />')
     [void]$lines.Add('  <RemoveMSI />')
-    [void]$lines.Add('  <Display Level="Full" AcceptEULA="TRUE" />')
+    # Level="None" statt "Full": Bei einem Fehler blieb sonst ein Office-Dialog
+    # stehen und wartete auf einen Klick, während WinZii bis zum Zeitlimit
+    # gesperrt war. AcceptEULA wirkt laut Microsoft ohnehin nur bei None.
+    [void]$lines.Add('  <Display Level="None" AcceptEULA="TRUE" />')
+    # Ohne Logging schreibt ODT seine Fehlernummern nach %TEMP% des elevierten
+    # Kontos — unauffindbar. Auf dem Datenträger sind sie auswertbar.
+    [void]$lines.Add("  <Logging Level=`"Standard`" Path=`"$(ConvertTo-WzXmlText (Get-WzOfficeLogDir))`" />")
     [void]$lines.Add('</Configuration>')
 
-    if (-not $OutFile) {
-        $workDir = New-WzDirectory (Join-Path (Get-WzOfflineDir) 'odt')
-        $OutFile = Join-Path $workDir "configuration-$VariantId-$Language.xml"
+    $workDir = New-WzDirectory (Join-Path (Get-WzOfflineDir) 'odt')
+    $outFile = Join-Path $workDir "configuration-$VariantId-$Language.xml"
+
+    # Der Lizenzschlüssel gehört NICHT in die Datei auf dem Stick: Sie bleibt
+    # dort liegen. Er wird nach dem Schreiben eingesetzt und die Datei
+    # anschließend wieder bereinigt (siehe Invoke-WzOfficeInstall).
+    if ($ProductKey) {
+        $marker = "      <PIDKEY Value=`"$(ConvertTo-WzXmlText $ProductKey)`" />"
+        $index = $lines.IndexOf("      <Language ID=`"$(ConvertTo-WzXmlText $Language)`" />")
+        if ($index -ge 0) { [void]$lines.Insert($index, $marker) }
     }
 
     $utf8NoBom = New-Object Text.UTF8Encoding($false)
-    [IO.File]::WriteAllText($OutFile, ($lines -join [Environment]::NewLine), $utf8NoBom)
-    return $OutFile
+    [IO.File]::WriteAllText($outFile, ($lines -join [Environment]::NewLine), $utf8NoBom)
+    return $outFile
+}
+
+function ConvertTo-WzXmlText {
+    <#
+    .SYNOPSIS
+        Maskiert einen Wert für ein XML-Attribut.
+    #>
+    param([AllowNull()][string]$Text)
+    if (-not $Text) { return '' }
+    return $Text.Replace('&', '&amp;').Replace('<', '&lt;').Replace('>', '&gt;').Replace('"', '&quot;').Replace("'", '&apos;')
+}
+
+function Get-WzOfficeLogDir {
+    <#
+    .SYNOPSIS
+        Ablage für die Protokolle des Bereitstellungswerkzeugs.
+    #>
+    New-WzDirectory (Join-Path (Get-WzOfflineDir) 'odt\logs')
+}
+
+function Get-WzOdtLogVerdict {
+    <#
+    .SYNOPSIS
+        Liest die zuletzt geschriebenen ODT-Protokolle und sucht nach echten
+        Fehlern.
+    .DESCRIPTION
+        Das Bereitstellungswerkzeug liefert notorisch den Rückgabewert 0, auch
+        wenn die Installation abgebrochen ist — die Wahrheit steht nur im Log.
+        Genau deshalb meldete WinZii »Office wurde installiert«, ohne dass
+        Office da war.
+
+        Gesucht wird nach den Fehlernummern der Bauart 30015-1039, nicht nach
+        übersetztem Text: Die Nummern sind sprachunabhängig.
+    .OUTPUTS
+        PSCustomObject mit HasError, Codes, LogFile
+    #>
+    [CmdletBinding()]
+    param([datetime]$Since = ([datetime]::Now.AddHours(-3)))
+
+    $result = [pscustomobject]@{ HasError = $false; Codes = @(); LogFile = $null }
+    $dir = Get-WzOfficeLogDir
+    if (-not (Test-Path -LiteralPath $dir)) { return $result }
+
+    $log = @(Get-ChildItem -LiteralPath $dir -Filter '*.log' -File -ErrorAction SilentlyContinue |
+        Where-Object { $_.LastWriteTime -ge $Since } |
+        Sort-Object -Property LastWriteTime -Descending | Select-Object -First 1)
+    if ($log.Count -eq 0) { return $result }
+
+    $result.LogFile = $log[0].FullName
+    try {
+        $text = [IO.File]::ReadAllText($log[0].FullName)
+    } catch {
+        return $result
+    }
+
+    # ODT-Fehlernummern: fünf Ziffern, Bindestrich, vier Ziffern
+    $codes = @([regex]::Matches($text, '\b(30\d{3}-\d{4})\b') |
+        ForEach-Object { $_.Groups[1].Value } | Sort-Object -Unique)
+    if ($codes.Count -gt 0) {
+        $result.HasError = $true
+        $result.Codes = $codes
+    }
+    return $result
 }
 
 function Get-WzOdtSetup {
@@ -126,15 +211,55 @@ function Test-WzOfficeCache {
     )
 
     $path = Get-WzOfficeCachePath -VariantId $VariantId -Language $Language
-    $result = [pscustomobject]@{ Available = $false; Path = $path; Bytes = [int64]0 }
-    if (-not (Test-Path -LiteralPath $path)) { return $result }
+    $result = [pscustomobject]@{ Available = $false; Path = $path; Bytes = [int64]0; Detail = '' }
+    if (-not (Test-Path -LiteralPath $path)) {
+        $result.Detail = 'noch nichts geladen'
+        return $result
+    }
 
     $bytes = (Get-ChildItem -LiteralPath $path -Recurse -File -ErrorAction SilentlyContinue |
         Measure-Object -Property Length -Sum).Sum
     $result.Bytes = [int64]$bytes
-    # Ein vollständiger Satz liegt deutlich über einem Gigabyte
-    $result.Available = ($bytes -gt 500MB)
+
+    # Nicht die Größe raten: Ein abgebrochener Download mit 501 MB galt bisher
+    # als vollständig, und der Anwender bekam »kein Internet nötig« zu lesen —
+    # ein voller Satz hat aber 2 bis 4 GB. Entscheidend ist, ob die Datenablage
+    # samt Katalogdatei da ist, die ODT zum Installieren wirklich braucht.
+    $dataDir = Join-Path $path 'Office\Data'
+    if (-not (Test-Path -LiteralPath $dataDir)) {
+        $result.Detail = 'unvollständig — die Datenablage von Office fehlt'
+        return $result
+    }
+    $cab = @(Get-ChildItem -LiteralPath $dataDir -Filter 'v*.cab' -File -ErrorAction SilentlyContinue)
+    if ($cab.Count -eq 0) {
+        $result.Detail = 'unvollständig — die Katalogdatei von Office fehlt'
+        return $result
+    }
+
+    $result.Available = $true
+    $result.Detail = 'vollständig'
     return $result
+}
+
+function Get-WzOfficeBitness {
+    <#
+    .SYNOPSIS
+        32 oder 64 für eine vorhandene Click-to-Run-Installation, sonst $null.
+    .NOTES
+        Der Wert steht im selben Registry-Schlüssel wie alles andere und wurde
+        bisher nicht gelesen. Ohne ihn forderte WinZii immer 64 Bit an — auf
+        einem Laptop mit vorinstalliertem 32-Bit-Office bricht ODT dann ab,
+        ohne verlässlich einen Fehlercode zu liefern.
+    #>
+    [CmdletBinding()]
+    param()
+
+    try {
+        $config = Get-ItemProperty 'HKLM:\SOFTWARE\Microsoft\Office\ClickToRun\Configuration' -ErrorAction Stop
+        if ($config.Platform -eq 'x86') { return '32' }
+        if ($config.Platform -eq 'x64') { return '64' }
+    } catch { }
+    return $null
 }
 
 function Invoke-WzOfficeDownload {
@@ -169,16 +294,34 @@ function Invoke-WzOfficeDownload {
         return $true
     }
 
-    Write-WzLog 'Office wird geladen — das dauert je nach Verbindung 10 bis 30 Minuten...' -Level Action
+    Write-WzLog 'Office wird geladen — je nach Verbindung dauert das von zehn Minuten bis über eine Stunde...' -Level Action
+    $started = Get-Date
     $result = Invoke-WzProcess -FilePath $setup -Arguments "/download `"$configFile`"" `
         -WorkingDirectory (Split-Path -Parent $configFile) -TimeoutSeconds 7200
 
-    if ($result.ExitCode -eq 0) {
-        $cache = Test-WzOfficeCache -VariantId $VariantId -Language $Language
-        Write-WzLog "Office liegt jetzt auf dem Datenträger ($(Format-WzBytes $cache.Bytes))" -Level Ok
+    # Dem Rückgabewert allein wird nicht mehr geglaubt: Das Ergebnis muss
+    # vollständig sein, sonst hilft es beim Kunden ohne Netz gar nichts.
+    $cache = Test-WzOfficeCache -VariantId $VariantId -Language $Language
+    $log = Get-WzOdtLogVerdict -Since $started
+
+    if ($result.TimedOut) {
+        Write-WzLog 'Zeitüberschreitung nach zwei Stunden — der Vorgang wurde abgebrochen.' -Level Error
+        return $false
+    }
+    if ($result.ExitCode -eq 0 -and $cache.Available) {
+        Write-WzLog "Office liegt jetzt vollständig auf dem Datenträger ($(Format-WzBytes $cache.Bytes))" -Level Ok
         return $true
     }
-    Write-WzLog "Herunterladen fehlgeschlagen (Code $($result.ExitCode))" -Level Error
+    if ($result.ExitCode -eq 0) {
+        # Früher wurde hier »Office liegt jetzt auf dem Datenträger (0 B)«
+        # gemeldet — der Cache wurde berechnet, aber nie abgefragt.
+        Write-WzLog "Das Bereitstellungswerkzeug meldete Erfolg, der Vorrat ist aber $($cache.Detail) ($(Format-WzBytes $cache.Bytes))." -Level Error
+    } else {
+        Write-WzLog "Herunterladen fehlgeschlagen (Rückgabewert $($result.ExitCode))" -Level Error
+    }
+    if ($log.HasError) {
+        Write-WzLog "Das Bereitstellungswerkzeug meldet: $($log.Codes -join ', ') — Protokoll: $($log.LogFile)" -Level Error
+    }
     return $false
 }
 
@@ -191,39 +334,278 @@ function Invoke-WzOfficeInstall {
     param(
         [Parameter(Mandatory = $true)][string]$VariantId,
         [Parameter(Mandatory = $true)][string]$Language,
-        [Parameter(Mandatory = $true)][string[]]$IncludedApps
+        [Parameter(Mandatory = $true)][string[]]$IncludedApps,
+        [string]$ProductKey,
+        [ValidateSet('32', '64')][string]$Edition = '64'
     )
 
     $setup = Get-WzOdtSetup
     if (-not $setup) { return $false }
+
+    # Auf dem Systemlaufwerk braucht Office rund 4 GB. Bisher wurde nur der
+    # Platz auf dem Stick geprüft — der ist beim Installieren gleichgültig.
+    try {
+        $system = Get-CimInstance -ClassName Win32_LogicalDisk -Filter "DeviceID='$env:SystemDrive'" -ErrorAction Stop
+        if ([int64]$system.FreeSpace -lt 5GB) {
+            Write-WzLog "Auf $env:SystemDrive sind nur $(Format-WzBytes ([int64]$system.FreeSpace)) frei. Office braucht etwa 4 GB." -Level Warn
+        }
+    } catch { }
 
     $cache = Test-WzOfficeCache -VariantId $VariantId -Language $Language
     $sourcePath = if ($cache.Available) { $cache.Path } else { $null }
 
     if ($sourcePath) {
         Write-WzLog "Installation vom Datenträger ($(Format-WzBytes $cache.Bytes)) — kein Internet nötig." -Level Info
+    } elseif ($cache.Bytes -gt 0) {
+        Write-WzLog "Der Vorrat auf dem Datenträger ist $($cache.Detail) — Office wird von Microsoft geladen." -Level Warn
     } else {
         Write-WzLog 'Keine Dateien auf dem Datenträger — Office wird direkt von Microsoft geladen.' -Level Info
     }
 
     $configFile = New-WzOfficeConfigXml -VariantId $VariantId -Language $Language `
-        -IncludedApps $IncludedApps -SourcePath $sourcePath
+        -IncludedApps $IncludedApps -SourcePath $sourcePath -ProductKey $ProductKey -Edition $Edition
 
     if ($syncHash.DryRun) {
         Write-WzLog "[Test] setup.exe /configure `"$configFile`"" -Level Test
-        return $true
+        if ($ProductKey) { Remove-WzOfficeKeyFromConfig -Path $configFile }
+        return $false
     }
 
     Write-WzLog 'Office wird installiert — das dauert einige Minuten...' -Level Action
-    $result = Invoke-WzProcess -FilePath $setup -Arguments "/configure `"$configFile`"" `
-        -WorkingDirectory (Split-Path -Parent $configFile) -TimeoutSeconds 7200
+    $started = Get-Date
+    try {
+        $result = Invoke-WzProcess -FilePath $setup -Arguments "/configure `"$configFile`"" `
+            -WorkingDirectory (Split-Path -Parent $configFile) -TimeoutSeconds 7200
+    } finally {
+        # Der Lizenzschlüssel darf nicht auf dem Stick liegen bleiben
+        if ($ProductKey) { Remove-WzOfficeKeyFromConfig -Path $configFile }
+    }
 
-    if ($result.ExitCode -eq 0) {
-        Write-WzLog 'Office wurde installiert' -Level Ok
+    if ($result.TimedOut) {
+        Write-WzLog 'Zeitüberschreitung nach zwei Stunden. Die Installation kann halb fertig sein — bitte vor einem neuen Versuch entfernen.' -Level Error
+        return $false
+    }
+
+    # Der Rückgabewert allein genügt nicht: Das Bereitstellungswerkzeug liefert
+    # notorisch 0, auch wenn nichts installiert wurde, und schreibt die Wahrheit
+    # nur ins Protokoll. Genau deshalb meldete WinZii Erfolg ohne Wirkung.
+    $log = Get-WzOdtLogVerdict -Since $started
+    $installed = Get-WzInstalledOffice
+    $reallyThere = ($installed -and $installed.Installed)
+
+    if ($result.ExitCode -eq 0 -and $reallyThere -and -not $log.HasError) {
+        Write-WzLog "Office wurde installiert: $($installed.Name)" -Level Ok
         return $true
     }
-    Write-WzLog "Installation fehlgeschlagen (Code $($result.ExitCode))" -Level Error
+
+    if ($result.ExitCode -ne 0) {
+        Write-WzLog "Installation fehlgeschlagen (Rückgabewert $($result.ExitCode))" -Level Error
+    } elseif (-not $reallyThere) {
+        Write-WzLog 'Das Bereitstellungswerkzeug meldete Erfolg, es ist aber kein Office auffindbar.' -Level Error
+    }
+    if ($log.HasError) {
+        Write-WzLog "Das Bereitstellungswerkzeug meldet: $($log.Codes -join ', ') — Protokoll: $($log.LogFile)" -Level Error
+    }
     return $false
+}
+
+function Remove-WzOfficeKeyFromConfig {
+    <#
+    .SYNOPSIS
+        Entfernt den Lizenzschlüssel wieder aus der Konfigurationsdatei.
+    .NOTES
+        Die Datei bleibt auf dem Datenträger liegen und reist mit zum nächsten
+        Kunden. Ein fremder Volumenlizenz-Schlüssel hat darauf nichts zu suchen.
+    #>
+    param([Parameter(Mandatory = $true)][string]$Path)
+
+    try {
+        if (-not (Test-Path -LiteralPath $Path)) { return }
+        $text = [IO.File]::ReadAllText($Path)
+        $clean = [regex]::Replace($text, '(?m)^\s*<PIDKEY[^>]*/>\s*\r?\n', '')
+        [IO.File]::WriteAllText($Path, $clean, (New-Object Text.UTF8Encoding($false)))
+    } catch { }
+}
+
+function Get-WzOfficeChannelName {
+    <#
+    .SYNOPSIS
+        Übersetzt die Kanal-GUID aus der Registry in einen lesbaren Namen.
+    #>
+    param([AllowNull()][string]$CdnBaseUrl)
+
+    if (-not $CdnBaseUrl) { return 'Kanal unbekannt' }
+    $guid = ($CdnBaseUrl -replace '.*/', '')
+    $names = @{
+        '492350f6-3a01-4f97-b9c0-c7c6ddf67d60' = 'Aktueller Kanal'
+        '7ffbc6bf-bc32-4f92-8982-f9dd17fd3114' = 'Halbjährlicher Kanal (Unternehmen)'
+        'b8f9b850-328d-4355-9145-c59439a0c4cf' = 'Aktueller Kanal (Vorschau)'
+        '55336b82-a18d-4dd6-b5f6-9e5095c314a6' = 'Monatlicher Unternehmenskanal'
+        '5030841d-c919-4594-8d2d-84ae4f96e58e' = 'Halbjährlicher Kanal (Vorschau)'
+        '2e148de9-61c8-4051-b103-4af54baffbb4' = 'Beta-Kanal'
+        'f2e724c1-748f-4b47-8fb8-8e0d210e9208' = 'LTSC 2019'
+        '5462eee5-1e97-495b-9370-853cd873bb07' = 'LTSC 2021'
+        '7983bac0-e531-40cf-be00-fd24fe66619c' = 'LTSC 2024'
+    }
+    if ($names.ContainsKey($guid)) { return $names[$guid] }
+    return 'Kanal unbekannt'
+}
+
+function Get-WzOfficeRemnants {
+    <#
+    .SYNOPSIS
+        Was von Office bleibt, wenn das Bereitstellungswerkzeug fertig ist.
+    .DESCRIPTION
+        Nur lesen und aufzählen — entfernt wird erst in Stufe 2, und auch dann
+        nur, was hier gefunden wurde. So sieht der Techniker vorher, worauf er
+        sich einlässt.
+    #>
+    [CmdletBinding()]
+    param()
+
+    $result = [pscustomobject]@{ StoreApps = @(); Folders = @(); Items = @() }
+
+    # Die Store-Fassung von Office kennt das Bereitstellungswerkzeug nicht
+    try {
+        $result.StoreApps = @(Get-AppxPackage -AllUsers -ErrorAction Stop |
+            Where-Object { $_.Name -like 'Microsoft.Office.Desktop*' -or $_.Name -eq 'Microsoft.MicrosoftOfficeHub' })
+    } catch { }
+
+    foreach ($folder in @(
+        (Join-Path $env:ProgramFiles 'Microsoft Office'),
+        (Join-Path $env:ProgramFiles 'Microsoft Office 15'),
+        (Join-Path ${env:ProgramFiles(x86)} 'Microsoft Office'),
+        (Join-Path $env:ProgramData 'Microsoft\ClickToRun')
+    )) {
+        if ($folder -and (Test-Path -LiteralPath $folder)) { $result.Folders += $folder }
+    }
+
+    foreach ($app in $result.StoreApps) { $result.Items += "Store-Fassung: $($app.Name)" }
+    foreach ($folder in $result.Folders) { $result.Items += "Ordner: $folder" }
+    return $result
+}
+
+function Remove-WzOffice {
+    <#
+    .SYNOPSIS
+        Entfernt Office — gestuft.
+    .DESCRIPTION
+        Stufe 1 (sanft): über dasselbe Bereitstellungswerkzeug, das auch
+        installiert, mit <Remove All="TRUE" />. Das erfasst Click-to-Run und
+        über <RemoveMSI /> auch ältere MSI-Installationen. Umkehrbar durch eine
+        neue Installation.
+
+        Stufe 2 (gründlich): zusätzlich die Store-Fassung und die Ordnerreste,
+        die das Werkzeug stehen lässt. Nicht umkehrbar — der Aufrufer muss das
+        ausdrücklich bestätigt haben.
+
+        Gedacht vor allem für den Fall, der die Installation sonst blockiert:
+        ein vorinstalliertes OEM-Office in der falschen Bitness.
+    .OUTPUTS
+        PSCustomObject mit Ok, Steps, Details
+    #>
+    [CmdletBinding()]
+    param([switch]$Thorough)
+
+    $summary = [pscustomobject]@{ Ok = $false; Steps = @(); Details = @() }
+
+    $before = Get-WzInstalledOffice
+    $remnants = Get-WzOfficeRemnants
+    if (-not $before.Installed -and $remnants.Items.Count -eq 0) {
+        $summary.Ok = $true
+        $summary.Details += 'Es ist kein Office installiert — nichts zu tun.'
+        Write-WzLog 'Kein Office gefunden, nichts zu entfernen.' -Level Info
+        return $summary
+    }
+
+    if ($syncHash.DryRun) {
+        Write-WzLog "[Test] Office würde entfernt: $($before.Name)" -Level Test
+        foreach ($item in $remnants.Items) { Write-WzLog "[Test] $item würde entfernt" -Level Test }
+        $summary.Details += 'Testmodus — es wurde nichts verändert.'
+        return $summary
+    }
+
+    # --- Stufe 1: das offizielle Werkzeug ---------------------------------
+    if ($before.Installed) {
+        $setup = Get-WzOdtSetup
+        if (-not $setup) {
+            $summary.Details += 'Das Bereitstellungswerkzeug ließ sich nicht holen.'
+            return $summary
+        }
+
+        $workDir = New-WzDirectory (Join-Path (Get-WzOfflineDir) 'odt')
+        $configFile = Join-Path $workDir 'remove-all.xml'
+        $lines = @(
+            '<Configuration>'
+            '  <Remove All="TRUE" />'
+            '  <Property Name="FORCEAPPSHUTDOWN" Value="TRUE" />'
+            '  <RemoveMSI />'
+            '  <Display Level="None" AcceptEULA="TRUE" />'
+            "  <Logging Level=`"Standard`" Path=`"$(ConvertTo-WzXmlText (Get-WzOfficeLogDir))`" />"
+            '</Configuration>'
+        )
+        [IO.File]::WriteAllText($configFile, ($lines -join [Environment]::NewLine), (New-Object Text.UTF8Encoding($false)))
+
+        Write-WzLog "Entferne $($before.Name) — das dauert einige Minuten..." -Level Action
+        $started = Get-Date
+        $result = Invoke-WzProcess -FilePath $setup -Arguments "/configure `"$configFile`"" `
+            -WorkingDirectory $workDir -TimeoutSeconds 3600
+
+        if ($result.TimedOut) {
+            $summary.Details += 'Zeitüberschreitung beim Entfernen.'
+            Write-WzLog 'Zeitüberschreitung beim Entfernen.' -Level Error
+            return $summary
+        }
+        $log = Get-WzOdtLogVerdict -Since $started
+        if ($log.HasError) {
+            Write-WzLog "Das Bereitstellungswerkzeug meldet: $($log.Codes -join ', ')" -Level Warn
+        }
+        $summary.Steps += "Office entfernt: $($before.Name)"
+        Write-WzLog 'Das Bereitstellungswerkzeug ist durchgelaufen.' -Level Ok
+    }
+
+    # --- Stufe 2: die Reste ------------------------------------------------
+    if ($Thorough) {
+        # Frisch nachsehen: Stufe 1 hat das meiste schon abgeräumt. Die Liste
+        # von vorhin würde Ordner löschen wollen, die es nicht mehr gibt — und
+        # schlimmer: welche, die inzwischen zu etwas anderem gehören.
+        $remnants = Get-WzOfficeRemnants
+        foreach ($app in $remnants.StoreApps) {
+            try {
+                Remove-AppxPackage -Package $app.PackageFullName -AllUsers -ErrorAction Stop
+                $summary.Steps += "Store-Fassung entfernt: $($app.Name)"
+                Write-WzLog "Store-Fassung entfernt: $($app.Name)" -Level Ok
+            } catch {
+                $summary.Details += "$($app.Name): $($_.Exception.Message.Split([char]10)[0])"
+                Write-WzLog "$($app.Name) ließ sich nicht entfernen: $($_.Exception.Message.Split([char]10)[0])" -Level Warn
+            }
+        }
+        foreach ($folder in $remnants.Folders) {
+            try {
+                Remove-Item -LiteralPath $folder -Recurse -Force -ErrorAction Stop
+                $summary.Steps += "Ordner entfernt: $folder"
+                Write-WzLog "Ordner entfernt: $folder" -Level Ok
+            } catch {
+                $summary.Details += "$folder blieb liegen: $($_.Exception.Message.Split([char]10)[0])"
+                Write-WzLog "$folder ließ sich nicht entfernen — meist noch in Benutzung." -Level Warn
+            }
+        }
+    }
+
+    # Nachprüfen statt glauben
+    $after = Get-WzInstalledOffice
+    $summary.Ok = -not $after.Installed
+    if ($summary.Ok) {
+        Write-WzLog 'Office ist entfernt.' -Level Ok
+        if ($summary.Steps.Count -gt 0) {
+            Add-WzAction -Area 'Office' -Summary "Office entfernt: $($before.Name)" `
+                -Detail $summary.Steps -RebootRequired
+        }
+    } else {
+        $summary.Details += "Es ist weiterhin Office auffindbar: $($after.Name)"
+        Write-WzLog "Nach dem Entfernen ist weiterhin Office auffindbar: $($after.Name)" -Level Warn
+    }
+    return $summary
 }
 
 function Install-WzLibreOffice {
@@ -245,11 +627,15 @@ function Get-WzInstalledOffice {
     .SYNOPSIS
         Welche Office-Version ist bereits installiert?
     #>
-    $result = [pscustomobject]@{ Installed = $false; Name = 'nicht installiert'; Version = ''; Details = '' }
+    $result = [pscustomobject]@{
+        Installed = $false; Name = 'nicht installiert'; Version = ''; Details = ''
+        Bitness = $null; IsClickToRun = $false
+    }
 
     try {
         $config = Get-ItemProperty 'HKLM:\SOFTWARE\Microsoft\Office\ClickToRun\Configuration' -ErrorAction Stop
         $result.Installed = $true
+        $result.IsClickToRun = $true
         $result.Version = $config.VersionToReport
         $productIds = $config.ProductReleaseIds
         $result.Name = switch -Wildcard ($productIds) {
@@ -266,7 +652,12 @@ function Get-WzInstalledOffice {
             '*Personal*'        { 'Microsoft 365 Single'; break }
             default             { "Office ($productIds)" }
         }
-        $result.Details = "$($config.ClientCulture) · Kanal $($config.CDNBaseUrl -replace '.*/', '')"
+        # Bitness gehört dazu: Sie entscheidet, ob sich eine neue Installation
+        # überhaupt darüberlegen lässt.
+        $result.Bitness = if ($config.Platform -eq 'x86') { '32' } elseif ($config.Platform -eq 'x64') { '64' } else { $null }
+        $bits = if ($result.Bitness) { "$($result.Bitness)-Bit · " } else { '' }
+        # Der Kanal stand bisher als nackte GUID da — die sagt niemandem etwas.
+        $result.Details = "$bits$($config.ClientCulture) · $(Get-WzOfficeChannelName $config.CDNBaseUrl)"
         return $result
     } catch { }
 

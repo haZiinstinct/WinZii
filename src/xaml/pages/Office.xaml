@@ -37,6 +37,13 @@
                 <TextBlock Text="Sprache" Style="{DynamicResource WzLabel}" Margin="0,14,0,4" />
                 <ComboBox Name="OffLanguage" Style="{DynamicResource WzComboBox}" />
 
+                <StackPanel Name="OffKeyPanel" Visibility="Collapsed" Margin="0,14,0,0">
+                    <TextBlock Text="Volumenlizenz-Schlüssel" Style="{DynamicResource WzLabel}" Margin="0,0,0,4" />
+                    <TextBox Name="OffKey" Style="{DynamicResource WzTextBox}" />
+                    <TextBlock Style="{DynamicResource WzHint}" Margin="0,4,0,0" TextWrapping="Wrap"
+                               Text="Ohne Schlüssel wird zwar installiert, aber nicht aktiviert. Der Schlüssel wird nicht auf dem Datenträger gespeichert." />
+                </StackPanel>
+
                 <TextBlock Name="OffCacheHint" Style="{DynamicResource WzHint}" Margin="0,14,0,0" />
             </StackPanel>
         </Border>
@@ -57,6 +64,8 @@
             <TextBlock Text="// AKTION" Style="{DynamicResource WzEyebrow}" />
             <TextBlock Text="Microsoft Office" Style="{DynamicResource WzCardTitle}" />
             <WrapPanel>
+                <Button Name="OffBtnRemove" Style="{DynamicResource WzBtnSecondary}" Margin="0,0,10,8"
+                        Content="Office entfernen" />
                 <Button Name="OffBtnInstall" Style="{DynamicResource WzBtnPrimary}" Margin="0,0,10,8"
                         Content="Office installieren" />
                 <Button Name="OffBtnDownload" Style="{DynamicResource WzBtnSecondary}" Margin="0,0,10,8"
