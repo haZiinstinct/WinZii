@@ -80,6 +80,28 @@ Installationslogik lief nie.
   OEM-Geräten der Normalfall —, schaltet WinZii ihn dauerhaft ein.
 - Der Bestätigungsdialog zeigt, **welche** Werte und Dienste angefasst werden.
 
+### Neu — Rubrik »Sicherheit« im Programmkatalog
+
+Neun Einträge, jede Paketkennung gegen die winget-Quellen geprüft: **AdwCleaner**
+und **Malwarebytes** (aus den Techniker-Werkzeugen herübergezogen), **Emsisoft
+Emergency Kit** als tragbarer Zweitscanner, **ESET AV Remover** für die Reste alter
+Virenscanner, **OSArmor** als Verhaltenssperre, **DefenderUI** für die
+Defender-Einstellungen hinter den Gruppenrichtlinien, **Windows Firewall Control**
+und **simplewall** für ausgehende Verbindungen, **VeraCrypt** für Geräte ohne
+BitLocker.
+
+Nichts davon ist vorausgewählt, und jede Beschreibung nennt den Preis: dass
+Malwarebytes als Premium-Testversion startet und 14 Tage lang ein zweiter Wächter
+mitläuft, dass OSArmor auch harmlose Programme anhält, dass die Firewall-Werkzeuge
+erst einmal alles blockieren.
+
+### Behoben — sporadisch »winget nicht gefunden«
+
+`Test-WzWinget` hängte `| Select-Object -First 1` an den Versionsaufruf. Die Auswahl
+beendet die Pipeline, sobald sie ihre Zeile hat, und reißt winget mitten im Lauf ab —
+der Rückgabewert ist dann -1 statt 0, je nach Zeitverhalten mal so und mal so. Die
+Programmseite meldete deshalb sporadisch, winget sei nicht vorhanden, obwohl es lief.
+
 ### Behoben — Netzwerkprüfung
 
 - **Ein Fehlalarm blockierte jede Installation.** Die Internetprüfung lief über HTTPS gegen
