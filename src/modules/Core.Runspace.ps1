@@ -58,7 +58,15 @@ function Invoke-WzTask {
     )
 
     if ($syncHash.Busy) {
+        # Früher nur eine Protokollzeile: Wer während des Startscans auf
+        # »Installieren« klickte, bestätigte den Dialog und sah dann — nichts.
+        # Der Auftrag verschwand lautlos. Jetzt sagt es der Aufrufer.
         Write-WzLog "Es läuft bereits ein Vorgang ($($syncHash.BusyName)). Bitte abwarten." -Level Warn
+        if (-not $Silent) {
+            Show-WzInfo -Title 'Es läuft schon etwas' `
+                -Message "»$($syncHash.BusyName)« ist noch nicht fertig. Bitte warten, bis der Vorgang durch ist — dann noch einmal versuchen." `
+                -Items @("Angefordert: $Name")
+        }
         return
     }
 

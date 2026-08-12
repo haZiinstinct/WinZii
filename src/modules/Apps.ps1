@@ -36,11 +36,22 @@ function Test-WzWinget {
     $result = [pscustomobject]@{ Available = $false; Path = $path; Version = $null }
     if (-not $path) { return $result }
 
+    # Der Rückgabewert MUSS geprüft werden: Native Programme werfen in
+    # PowerShell keine Ausnahme. Startet nur der Alias-Stub, ohne dass das
+    # Paket für dieses Konto registriert ist, kommt weder Ausgabe noch Fehler —
+    # winget galt dann als »verfügbar«, die Oberfläche zeigte eine leere
+    # Version, und jede folgende Installation lief ins Leere.
     try {
-        $version = & $path --version 2>$null
-        $result.Available = $true
-        $result.Version = ($version | Select-Object -First 1)
-    } catch { }
+        $version = (& $path --version 2>$null | Select-Object -First 1)
+        if ($LASTEXITCODE -eq 0 -and $version -match '\d') {
+            $result.Available = $true
+            $result.Version = $version
+        } else {
+            Write-WzLog "winget gefunden, antwortet aber nicht (Code $LASTEXITCODE): $path" -Level Warn
+        }
+    } catch {
+        Write-WzLog "winget nicht ausführbar: $($_.Exception.Message.Split([char]10)[0])" -Level Warn
+    }
     return $result
 }
 
@@ -139,8 +150,27 @@ function Install-WzWingetBootstrap {
             Add-AppxPackage -Path $package.File -ErrorAction Stop
             Write-WzLog "$($package.Name) eingerichtet" -Level Ok
         } catch {
-            # Bereits vorhandene oder neuere Versionen sind kein Fehler
-            Write-WzLog "$($package.Name): $($_.Exception.Message)" -Level Warn
+            # »Schon vorhanden« und »kaputtes Paket« sahen bisher gleich aus.
+            # 0x80073D06 heißt: dieselbe oder eine neuere Fassung ist da.
+            $message = $_.Exception.Message.Split([char]10)[0]
+            if ($message -match '0x80073D06|höhere Version|higher version|already installed') {
+                Write-WzLog "$($package.Name) war bereits vorhanden" -Level Info
+            } else {
+                Write-WzLog "$($package.Name) ließ sich nicht einrichten: $message" -Level Error
+            }
+        }
+
+        # Add-AppxPackage richtet NUR für das gerade angemeldete Konto ein —
+        # bei Elevierung mit einem Technikerkonto also nicht für den Kunden.
+        # Nach dem Abziehen des Sticks hätte der Kunde kein winget. Die
+        # Bereitstellung sorgt dafür, dass jedes Konto es bekommt.
+        if ($package.File -like '*.msixbundle') {
+            try {
+                Add-AppxProvisionedPackage -Online -PackagePath $package.File -SkipLicense -ErrorAction Stop | Out-Null
+                Write-WzLog 'App Installer für alle Benutzer dieses PCs bereitgestellt' -Level Ok
+            } catch {
+                Write-WzLog "Bereitstellung für alle Benutzer nicht möglich: $($_.Exception.Message.Split([char]10)[0])" -Level Warn
+            }
         }
     }
 
@@ -161,40 +191,144 @@ function Get-WzDownload {
     #>
     param(
         [Parameter(Mandatory = $true)][string]$Url,
-        [Parameter(Mandatory = $true)][string]$TargetPath
+        [Parameter(Mandatory = $true)][string]$TargetPath,
+        [int]$MinimumBytes = 4096
     )
 
+    $client = $null
     try {
-        [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
+        # Verodern statt Zuweisen: Eine Zuweisung würde ein bereits aktives
+        # TLS 1.3 wieder abschalten.
+        [Net.ServicePointManager]::SecurityProtocol =
+            [Net.ServicePointManager]::SecurityProtocol -bor [Net.SecurityProtocolType]::Tls12
+
         $client = New-Object Net.WebClient
         $client.Headers.Add('User-Agent', 'WinZii')
+        # In Firmennetzen mit anmeldepflichtigem Proxy endete der Download sonst
+        # in einem 407, den niemand zuordnen konnte.
+        if ($client.Proxy) { $client.Proxy.Credentials = [Net.CredentialCache]::DefaultCredentials }
         $client.DownloadFile($Url, $TargetPath)
-        $client.Dispose()
-        return $true
     } catch {
-        Write-WzLog "Download fehlgeschlagen: $($_.Exception.Message)" -Level Error
-        if (Test-Path -LiteralPath $TargetPath) {
-            Remove-Item -LiteralPath $TargetPath -Force -ErrorAction SilentlyContinue
-        }
+        Write-WzLog "Download fehlgeschlagen: $($_.Exception.Message.Split([char]10)[0])" -Level Error
+        Remove-WzFailedDownload -Path $TargetPath
+        return $false
+    } finally {
+        if ($client) { $client.Dispose() }
+    }
+
+    # Ein Anmeldeportal antwortet mit HTTP 200 und einer HTML-Seite — ohne
+    # Ausnahme. Ungeprüft landete die als »AppInstaller.msixbundle« im
+    # Zwischenspeicher und blockierte jeden weiteren Versuch dauerhaft, weil
+    # der Code danach nur noch Test-Path fragt.
+    if (-not (Test-Path -LiteralPath $TargetPath)) {
+        Write-WzLog 'Download beendet, aber es kam keine Datei an.' -Level Error
+        return $false
+    }
+    $file = Get-Item -LiteralPath $TargetPath
+    if ($file.Length -lt $MinimumBytes) {
+        Write-WzLog "Die geladene Datei ist mit $(Format-WzBytes $file.Length) zu klein — vermutlich eine Fehlerseite statt des Pakets." -Level Error
+        Remove-WzFailedDownload -Path $TargetPath
+        return $false
+    }
+    if (Test-WzHtmlFile -Path $TargetPath) {
+        Write-WzLog 'Es kam eine Webseite statt der Datei an — meist ein Anmeldeportal im WLAN.' -Level Error
+        Remove-WzFailedDownload -Path $TargetPath
+        return $false
+    }
+    return $true
+}
+
+function Remove-WzFailedDownload {
+    <#
+    .SYNOPSIS
+        Räumt eine unbrauchbare Teildatei weg, damit der nächste Versuch neu lädt.
+    #>
+    param([Parameter(Mandatory = $true)][string]$Path)
+    if (Test-Path -LiteralPath $Path) {
+        Remove-Item -LiteralPath $Path -Force -ErrorAction SilentlyContinue
+    }
+}
+
+function Test-WzHtmlFile {
+    <#
+    .SYNOPSIS
+        Beginnt die Datei wie eine HTML-Seite? Erkennt Anmeldeportale, die eine
+        Fehlerseite mit HTTP 200 ausliefern.
+    #>
+    param([Parameter(Mandatory = $true)][string]$Path)
+
+    try {
+        $stream = [IO.File]::OpenRead($Path)
+        try {
+            $buffer = New-Object byte[] 512
+            $read = $stream.Read($buffer, 0, $buffer.Length)
+        } finally { $stream.Close() }
+        if ($read -le 0) { return $false }
+        $head = [Text.Encoding]::ASCII.GetString($buffer, 0, $read).TrimStart([char]0xEF, [char]0xBB, [char]0xBF, ' ', "`t", "`r", "`n")
+        return ($head -match '^(?i)<(!doctype\s+html|html|head|meta)\b')
+    } catch {
         return $false
     }
 }
 
-function Get-WzInstalledAppIds {
+function Get-WzWingetOutcome {
     <#
     .SYNOPSIS
-        Liste der bereits über winget installierten Kennungen.
-        Ein einziger Aufruf statt einer Abfrage pro Programm.
+        Übersetzt einen winget-Rückgabewert in Klartext und eine Wertung.
+    .DESCRIPTION
+        Bis dahin kannte der Code drei von rund vierzig Werten. Alles andere
+        galt als Fehlschlag — auch »Neustart erforderlich«, was der normale
+        Ausgang vieler MSI-Installationen ist. Deshalb meldete WinZii
+        »lief nicht durch«, obwohl das Programm längst installiert war.
+    .OUTPUTS
+        PSCustomObject mit Outcome (ok|skip|reboot|retry|fail), Text, RequiresReboot
     #>
-    $wingetPath = Resolve-WzWingetPath
-    if (-not $wingetPath) { return @() }
+    param([Parameter(Mandatory = $true)][AllowNull()]$ExitCode)
+
+    $result = [pscustomobject]@{
+        Outcome        = 'fail'
+        Text           = "unbekannter Rückgabewert $ExitCode"
+        RequiresReboot = $false
+    }
+    if ($null -eq $ExitCode) {
+        $result.Text = 'der Vorgang lieferte kein Ergebnis'
+        return $result
+    }
 
     try {
-        $output = & $wingetPath list --accept-source-agreements --disable-interactivity 2>$null
-        return @($output)
+        $catalog = Get-WzCatalog -Name 'wingetcodes'
+        $entry = @($catalog.codes | Where-Object { [int]$_.code -eq [int]$ExitCode })[0]
+        if ($entry) {
+            $result.Outcome = $entry.outcome
+            $result.Text = $entry.text
+            $result.RequiresReboot = [bool]$entry.requiresReboot
+        }
     } catch {
-        return @()
+        # Ohne Katalog bleibt die Zahl — besser als ein Absturz
     }
+    return $result
+}
+
+function Test-WzAppInstalled {
+    <#
+    .SYNOPSIS
+        Ist das Programm nach dem Lauf wirklich da?
+    .DESCRIPTION
+        Der Rückgabewert allein genügt nicht: Auf Geräten mit Gruppenrichtlinie
+        oder gesperrtem Store meldete winget Erfolg, ohne etwas zu installieren.
+        »winget list« fragt den tatsächlichen Zustand ab.
+    #>
+    param(
+        [Parameter(Mandatory = $true)][string]$WingetPath,
+        [Parameter(Mandatory = $true)][string]$Id
+    )
+
+    $result = Invoke-WzProcess -FilePath $WingetPath `
+        -Arguments "list --id $Id --exact --accept-source-agreements --disable-interactivity" `
+        -TimeoutSeconds 120
+    # winget liefert 0, wenn etwas gefunden wurde, und -1978335212 wenn nicht.
+    # Die Textausgabe wird bewusst nicht gelesen — sie ist übersetzt.
+    return ($result.ExitCode -eq 0)
 }
 
 function Install-WzApps {
@@ -208,16 +342,37 @@ function Install-WzApps {
     param([Parameter(Mandatory = $true)]$Apps)
 
     $summary = [pscustomobject]@{
-        Installed = 0
-        Skipped   = 0
-        Failed    = 0
-        Details   = @()
+        Installed      = 0
+        Skipped        = 0
+        Failed         = 0
+        Details        = @()
+        # Namen der wirklich eingerichteten Programme — das Übergabeblatt trug
+        # bisher alle ausgewählten ein, auch die gescheiterten.
+        InstalledNames = @()
+        RebootRequired = $false
     }
 
     $wingetPath = Resolve-WzWingetPath
     if (-not $wingetPath -and -not $syncHash.DryRun) {
         Write-WzLog 'winget ist nicht verfügbar. Bitte zuerst nachinstallieren.' -Level Error
+        $summary.Details += 'winget wurde auf diesem PC nicht gefunden.'
         return $summary
+    }
+
+    # Ohne Internet scheitert jede einzelne Installation mit einer anderen,
+    # nichtssagenden Meldung. Einmal vorher fragen ist ehrlicher.
+    if (-not $syncHash.DryRun) {
+        $net = Test-WzInternetAccess
+        if ($net.Kind -ne 'ok') {
+            $reason = switch ($net.Kind) {
+                'portal'      { 'Das Netz verlangt eine Anmeldung im Browser (Hotel- oder Gäste-WLAN).' }
+                'certificate' { 'Das Sicherheitszertifikat wird abgelehnt — meist ein Firmen-Proxy oder eine falsche Systemuhr.' }
+                default       { 'Kein Internetzugang.' }
+            }
+            Write-WzLog "$reason ($($net.Detail))" -Level Error
+            $summary.Details += $reason
+            return $summary
+        }
     }
 
     $index = 0
@@ -231,36 +386,52 @@ function Install-WzApps {
             continue
         }
 
-        $arguments = "install --id $($app.wingetId) --exact --silent --accept-source-agreements " +
-                     '--accept-package-agreements --disable-interactivity --scope machine'
-        $result = Invoke-WzProcess -FilePath $wingetPath -Arguments $arguments -TimeoutSeconds 1800
+        # --source winget pinnt die Quelle: Ohne den Pin durchsucht winget auch
+        # den Store, dessen Quelle unter einem frisch elevierten Konto nicht
+        # eingerichtet ist und eine Rückfrage bräuchte — die --disable-interactivity
+        # gerade verbietet.
+        $base = "install --id $($app.wingetId) --exact --silent --source winget " +
+                '--accept-source-agreements --accept-package-agreements --disable-interactivity'
+        $result = Invoke-WzProcess -FilePath $wingetPath -Arguments "$base --scope machine" -TimeoutSeconds 1800
+        $outcome = Get-WzWingetOutcome -ExitCode $result.ExitCode
 
-        # Manche Programme lassen sich nicht systemweit installieren
-        if ($result.ExitCode -ne 0 -and $result.StdOut -match 'scope|Bereich') {
-            Write-WzLog '  systemweite Installation nicht möglich, versuche benutzerbezogen...' -Level Info
-            $arguments = $arguments -replace ' --scope machine', ''
-            $result = Invoke-WzProcess -FilePath $wingetPath -Arguments $arguments -TimeoutSeconds 1800
+        # Nicht jedes Programm lässt sich systemweit einrichten. Früher hing
+        # dieser Rückfall an der Textausgabe ('scope|Bereich') — winget schreibt
+        # dort aber »kein anwendbares Installationsprogramm«, der Rückfall griff
+        # also nie. Jetzt entscheidet der Rückgabewert.
+        if ($outcome.Outcome -eq 'retry') {
+            Write-WzLog '  systemweit nicht möglich, versuche benutzerbezogen...' -Level Info
+            $result = Invoke-WzProcess -FilePath $wingetPath -Arguments $base -TimeoutSeconds 1800
+            $outcome = Get-WzWingetOutcome -ExitCode $result.ExitCode
         }
 
-        switch ($result.ExitCode) {
-            0 {
+        switch ($outcome.Outcome) {
+            'ok' {
+                # Dem Rückgabewert allein wird nicht mehr geglaubt
+                if (Test-WzAppInstalled -WingetPath $wingetPath -Id $app.wingetId) {
+                    $summary.Installed++
+                    $summary.InstalledNames += $app.name
+                    Write-WzLog '  installiert' -Level Ok
+                } else {
+                    $summary.Failed++
+                    $summary.Details += "$($app.name): winget meldete Erfolg, das Programm ist aber nicht auffindbar"
+                    Write-WzLog '  winget meldete Erfolg — das Programm ist trotzdem nicht da' -Level Warn
+                }
+            }
+            'reboot' {
                 $summary.Installed++
-                Write-WzLog "  installiert" -Level Ok
+                $summary.InstalledNames += $app.name
+                $summary.RebootRequired = $true
+                Write-WzLog "  $($outcome.Text)" -Level Ok
             }
-            -1978335189 {
-                # Bereits in aktueller Version vorhanden
+            'skip' {
                 $summary.Skipped++
-                Write-WzLog '  bereits installiert' -Level Info
-            }
-            -1978335212 {
-                $summary.Failed++
-                $summary.Details += "$($app.name): im Katalog von winget nicht gefunden"
-                Write-WzLog '  in den winget-Quellen nicht gefunden' -Level Warn
+                Write-WzLog "  $($outcome.Text)" -Level Info
             }
             default {
                 $summary.Failed++
-                $summary.Details += "$($app.name): Fehlercode $($result.ExitCode)"
-                Write-WzLog "  fehlgeschlagen (Code $($result.ExitCode))" -Level Warn
+                $summary.Details += "$($app.name): $($outcome.Text)"
+                Write-WzLog "  $($outcome.Text)" -Level Warn
             }
         }
     }

@@ -140,12 +140,18 @@ function Start-WzAppInstall {
         $lines = @("$($summary.Installed) installiert")
         if ($summary.Skipped -gt 0) { $lines += "$($summary.Skipped) übersprungen (bereits vorhanden)" }
         if ($summary.Failed -gt 0) { $lines += "$($summary.Failed) fehlgeschlagen" }
+        if ($summary.RebootRequired) { $lines += 'ein Neustart schließt die Einrichtung ab' }
 
-        Add-WzAction -Area 'Programme' `
-            -Summary "$($summary.Installed) Programm(e) installiert$(if ($summary.Failed -gt 0) { ", $($summary.Failed) ohne Erfolg" })" `
-            -Detail @($selected | ForEach-Object { $_.name })
+        # Nur festhalten, was wirklich angekommen ist — vorher wanderte die
+        # ganze Auswahl ins Übergabeblatt, auch die gescheiterten Programme.
+        if ($summary.Installed -gt 0) {
+            Add-WzAction -Area 'Programme' `
+                -Summary "$($summary.Installed) Programm(e) installiert$(if ($summary.Failed -gt 0) { ", $($summary.Failed) ohne Erfolg" })" `
+                -Detail @($summary.InstalledNames) -RebootRequired:$summary.RebootRequired
+        }
 
-        Show-WzInfo -Title 'Installation abgeschlossen' -Message ($lines -join ' · ') -Items @($summary.Details)
+        Show-WzInfo -Title $(if ($summary.Failed -gt 0) { 'Teilweise abgeschlossen' } else { 'Installation abgeschlossen' }) `
+            -Message ($lines -join ' · ') -Items @($summary.Details)
     }.GetNewClosure()
 }
 
@@ -275,8 +281,19 @@ function Start-WzUninstallSelected {
 }
 
 function Start-WzWingetBootstrap {
+    # Ehrliche Mengenangabe: Liegen die Pakete schon auf dem Stick, geht es in
+    # Sekunden. Beim ersten Mal sind es rund 315 MB — das darf nicht als
+    # »drei Pakete« verharmlost werden, wenn jemand im Hotel-WLAN sitzt.
+    $cached = Test-Path -LiteralPath (Join-Path (Join-Path (Get-WzOfflineDir) 'winget') 'AppInstaller.msixbundle')
+    $sizeNote = if ($cached) {
+        'Die Pakete liegen bereits auf dem Datenträger — es wird nichts geladen und es dauert nur Sekunden.'
+    } else {
+        'Beim ersten Mal werden dafür rund 315 MB geladen. Über WLAN kann das einige Minuten dauern; das Fenster ist so lange gesperrt und lässt sich nicht abbrechen.'
+    }
+
     $answer = Show-WzConfirm -Title 'winget nachinstallieren' `
-        -Message 'WinZii richtet den App-Installer von Microsoft ein. Dafür werden drei Pakete benötigt; sie werden auf dem Datenträger abgelegt und stehen beim nächsten PC ohne Internet bereit.' `
+        -Message "WinZii richtet den App-Installer von Microsoft ein. $sizeNote Danach liegen die Pakete auf dem Datenträger und stehen beim nächsten PC ohne Internet bereit." `
+        -Items @('App Installer (winget)', 'Abhängigkeitspaket von Microsoft') `
         -ConfirmText 'Einrichten'
     if (-not $answer.Confirmed) { return }
 

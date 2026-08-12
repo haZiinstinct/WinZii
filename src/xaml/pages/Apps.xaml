@@ -24,9 +24,9 @@
             </Grid>
             <WrapPanel Margin="0,16,0,0">
                 <Button Name="AppsBtnInstall" Style="{DynamicResource WzBtnPrimary}" Margin="0,0,10,0"
-                        Content="Auswahl installieren" />
+                        IsEnabled="False" Content="Auswahl installieren" />
                 <Button Name="AppsBtnDownload" Style="{DynamicResource WzBtnSecondary}" Margin="0,0,10,0"
-                        Content="Auf Datenträger laden" />
+                        IsEnabled="False" Content="Auf Datenträger laden" />
                 <Button Name="AppsBtnWinget" Style="{DynamicResource WzBtnSecondary}"
                         Content="winget nachinstallieren" Visibility="Collapsed" />
             </WrapPanel>
