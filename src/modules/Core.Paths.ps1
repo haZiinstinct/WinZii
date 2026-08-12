@@ -2,6 +2,10 @@
 # Der Laufwerksbuchstabe des Sticks ändert sich von PC zu PC, deshalb wird
 # niemals ein absoluter Pfad hart verdrahtet.
 
+# Beim Einlesen festgehalten: $PSScriptRoot zeigt hier verlässlich auf
+# src\modules, gleich wer die Datei später einbindet.
+$script:WzPathsDir = $PSScriptRoot
+
 function Get-WzRoot {
     <#
     .SYNOPSIS
@@ -10,7 +14,17 @@ function Get-WzRoot {
         Hintergrund-Runspaces den Pfad kennen ($PSCommandPath ist dort leer).
     #>
     if ($global:WzRootPath) { return $global:WzRootPath }
-    $global:WzRootPath = Split-Path -Parent (Split-Path -Parent $PSCommandPath)
+
+    # Notnagel, wenn main.ps1 die Variable nicht gesetzt hat — etwa weil ein
+    # Testwerkzeug nur einzelne Module einbindet. Maßgeblich ist der Ort dieser
+    # Datei, nicht $PSCommandPath: das zeigt auf das gerade laufende Skript und
+    # landet je nach Aufrufer eine Ebene daneben, worauf die Kataloge dann unter
+    # src\data\ gesucht werden.
+    if ($script:WzPathsDir) {
+        $global:WzRootPath = Split-Path -Parent (Split-Path -Parent $script:WzPathsDir)
+    } else {
+        $global:WzRootPath = Split-Path -Parent (Split-Path -Parent $PSCommandPath)
+    }
     return $global:WzRootPath
 }
 

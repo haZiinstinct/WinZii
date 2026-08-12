@@ -68,6 +68,38 @@ Installationslogik lief nie.
   Risiko«. Beide sind jetzt abgewählt, als mittleres Risiko eingestuft und benennen ihren
   Preis: Ohne Schnellstart dauert jeder Kaltstart zehn bis dreißig Sekunden länger; ohne die
   Autostart-Verzögerung startet auf schwacher Hardware alles gleichzeitig mit dem Desktop.
+- **Die Energieeinstellung kannte keinen Unterschied zwischen Netzteil und Akku.**
+  `perf-power-high` schaltete stur auf »Höchstleistung«, und zwar für beide Betriebsarten
+  gemeinsam — auf einem Notebook kostet das Laufzeit, weshalb der Eintrag abgewählt blieb und
+  praktisch nie zum Einsatz kam. Dazu scheiterte er ausgerechnet dort, wo er gebraucht wird:
+  Er rief `powercfg /setactive` auf eine GUID auf, die `powercfg /list` auf vielen Geräten gar
+  nicht aufführt. Auf dem Testgerät liegt der Höchstleistungsplan zwar in der Registry, wählbar
+  ist aber nur »Ausbalanciert«. Der Hinweis schob den Fehlschlag auf modernen Standby; dort
+  traf das nicht zu, `powercfg /a` meldet klassisches S3.
+
+  An seine Stelle tritt **»Leistung am Netz, Ausdauer auf Akku«** mit dem neuen Aktionstyp
+  `powerplan`. WinZii legt einen eigenen Energieplan an und setzt darin getrennte Werte je
+  Betriebsart: Am Netzteil darf der Lüfter hochdrehen, statt den Takt zu senken, und der Turbo
+  greift ohne Zurückhaltung; auf Akku umgekehrt. Der vorhandene Plan wird nicht angefasst — die
+  Rücknahme schaltet zurück und löscht die Kopie, in dieser Reihenfolge, weil sich ein aktiver
+  Plan nicht löschen lässt. Ein zweiter Durchlauf erkennt den Plan am Namen wieder, statt eine
+  weitere Kopie anzulegen. Alles läuft über GUIDs und einen selbst vergebenen Namen, damit
+  nichts an der übersetzten powercfg-Ausgabe hängt: »Wechselstromeinstellung« hier,
+  »AC Power Setting Index« auf einem englischen Kundengerät. Was der Eintrag **nicht** tut,
+  steht ebenfalls in seiner Beschreibung — der Spitzentakt am Netz steigt nicht, der war nie
+  gedeckelt.
+- **Kommando-Aktionen hatten keinen ablesbaren Zustand.** `Test-WzTweakState` kannte den Typ
+  `command` nicht, die Zahl prüfbarer Aktionen blieb null und die Seite meldete »unbekannt«.
+  Der Katalog kann jetzt eine Prüfvorschrift (`state`) nennen, deren Ausgabe gegen ein Muster
+  gehalten wird; fehlt sie, bleibt der Zustand offen, statt einen zu behaupten, der nie
+  gemessen wurde. Dieselbe Prüfung trägt den neuen Energieplan-Eintrag. Kommando-Aktionen
+  kennen außerdem einen `fallback`, der nach einem Fehlschlag die fehlende Voraussetzung
+  schafft und den Befehl ein zweites Mal versucht.
+- **Ein vorausgewählter Eintrag stand dauerhaft auf »teilweise«.** Bei `ai-copilot-policy`
+  stimmten fünf von sechs Werten; den sechsten, `CopilotDisabledReason`, schreibt Windows mit
+  seinem eigenen Grund um. Der Eintrag wirkte, sah in der Oberfläche aber nach halber Arbeit
+  aus. Solche Werte lassen sich jetzt mit `verify: false` kennzeichnen: gesetzt werden sie
+  weiterhin, als Nachweis taugen sie nicht.
 - **Erfolg wurde behauptet, wo nichts geschah.** Drei Handler fangen ihre Fehler selbst ab —
   ein Eintrag, bei dem kein einziges Paket entfernt wurde, erschien trotzdem als erledigt.
 - **Ohne `.reg`-Sicherung im Technikerfall.** Bei Elevierung mit einem fremden Konto lieferte
@@ -76,6 +108,11 @@ Installationslogik lief nie.
 - `perf-animations-off` schrieb »Benutzerdefiniert« statt »Beste Leistung« und meldete
   trotzdem AKTIV. `Stop-Service` lief ohne Erfolgsprüfung. `requiresReboot` wurde auch bei
   fehlgeschlagenen Einträgen gesetzt.
+- `Get-WzRoot` griff im Notfall eine Ebene zu tief und suchte die Kataloge unter `src\data\`,
+  sobald ein Prüfwerkzeug einzelne Module einbindet statt `main.ps1` zu starten — maßgeblich
+  ist jetzt der Ort der Moduldatei. Die Zustandsprüfung für App-Pakete zählt nur noch mit,
+  wenn `Get-WzAppxMatches` überhaupt geladen ist, statt hart zu scheitern. `Test-Undo.ps1`
+  lässt keinen leeren Ordner mit dem Rechnernamen mehr zurück.
 - **Der Wiederherstellungspunkt sagt jetzt, was er kostet**: Ist der Systemschutz aus — auf
   OEM-Geräten der Normalfall —, schaltet WinZii ihn dauerhaft ein.
 - Der Bestätigungsdialog zeigt, **welche** Werte und Dienste angefasst werden.
@@ -127,7 +164,14 @@ Programmseite meldete deshalb sporadisch, winget sei nicht vorhanden, obwohl es 
 
 - **`tools\Test-Undo.ps1`** spielt Sicherung und Rücknahme an einem eigenen
   Registry-Schlüssel durch — setzen, `.reg`-Sicherung, `undo.json`, zurücknehmen,
-  Ausgangszustand. 30 Prüfungen.
+  Ausgangszustand. Dazu die Kommando-Aktionen an einer Wegwerfdatei statt an einer
+  Systemeinstellung: Der Hauptbefehl gelingt nur, wenn der Fallback vorher die Marke
+  angelegt hat — und ohne Fallback bleibt ein Fehlschlag ein Fehlschlag, damit der neue
+  Zweig keine echten Fehler verschluckt. Zuletzt der Energieplan, als einziger Abschnitt mit
+  einem echten Eingriff: anlegen, aktivieren, ein zweiter Durchlauf ohne weitere Kopie,
+  zurücknehmen — und der vorherige Plan muss wieder aktiv, die Kopie verschwunden sein. Ohne
+  Administratorrechte wird dieser Teil übersprungen statt zu scheitern. 45 Prüfungen, davon
+  sieben nur mit Administratorrechten.
 - **Der Sandbox-Test** deckt fünf weitere Wege ab: winget-Auffindung ohne Suchpfad, echte
   Installation samt Nachprüfung, die Rückgabewert-Tabelle gegen erfundene Codes, das Laden
   des Office-Bereitstellungswerkzeugs, und die Office-Entfernung auf einem System ohne

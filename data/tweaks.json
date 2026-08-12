@@ -175,31 +175,49 @@
       ]
     },
     {
-      "id": "perf-power-high",
+      "id": "perf-power-profile",
       "category": "performance",
       "level": "soft",
       "risk": "low",
-      "name": "Energiesparplan auf Höchstleistung",
-      "description": "Verhindert, dass der Prozessor im Leerlauf zu stark heruntertaktet. Bei Notebooks im Akkubetrieb sinkt dadurch die Laufzeit.",
+      "name": "Leistung am Netz, Ausdauer auf Akku",
+      "description": "Legt einen eigenen Energieplan an, der zwischen Netzbetrieb und Akku unterscheidet. Am Netzteil darf der Lüfter hochdrehen, statt den Takt zu senken, und der Turbo greift ohne Zurückhaltung. Auf Akku wird der Turbo nur genutzt, wo er sich lohnt, und die Kühlung senkt lieber den Takt, als laut zu werden. Der Spitzentakt am Netz steigt dadurch nicht — der ist ohnehin nicht gedeckelt; was sich ändert, sind Ansprechverhalten und Verhalten unter Dauerlast. Der Gewinn liegt vor allem auf der Akkuseite. Der bisherige Energieplan wird nicht angefasst und ist beim Zurücknehmen sofort wieder aktiv.",
       "defaultChecked": false,
       "appliesTo": "all",
       "requiresReboot": false,
       "actions": [
         {
-          "type": "command",
-          "exec": "powercfg.exe",
-          "args": "/setactive 8c5e7fda-e8bf-4a96-9a85-a6e23a8c635c",
-          "undoCapture": {
-            "exec": "powercfg.exe",
-            "args": "/getactivescheme",
-            "pattern": "([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12})",
-            "argsFormat": "/setactive {0}"
-          },
-          "failHint": "Der Höchstleistungsplan ist auf diesem Gerät nicht vorhanden — auf Notebooks mit modernem Standby ist das normal, die Einstellung ist dort gegenstandslos.",
-          "undo": {
-            "exec": "powercfg.exe",
-            "args": "/setactive 381b4222-f694-41f0-9685-ff5bb260df2e"
-          }
+          "type": "powerplan",
+          "planName": "WinZii — Netz voll, Akku sparsam",
+          "planDescription": "Von WinZii angelegt: volle Leistung am Netzteil, sparsam auf Akku.",
+          "baseScheme": "381b4222-f694-41f0-9685-ff5bb260df2e",
+          "settings": [
+            {
+              "subgroup": "SUB_PROCESSOR",
+              "setting": "PROCTHROTTLEMIN",
+              "ac": 5,
+              "dc": 5
+            },
+            {
+              "subgroup": "SUB_PROCESSOR",
+              "setting": "PROCTHROTTLEMAX",
+              "ac": 100,
+              "dc": 100
+            },
+            {
+              "subgroup": "SUB_PROCESSOR",
+              "setting": "SYSCOOLPOL",
+              "ac": 1,
+              "dc": 0,
+              "optional": true
+            },
+            {
+              "subgroup": "SUB_PROCESSOR",
+              "setting": "PERFBOOSTMODE",
+              "ac": 2,
+              "dc": 3,
+              "optional": true
+            }
+          ]
         }
       ]
     },
@@ -975,7 +993,8 @@
           "path": "HKCU:\\Software\\Microsoft\\Windows\\Shell\\Copilot",
           "name": "CopilotDisabledReason",
           "valueType": "String",
-          "value": "IsEnabledForGeographicRegionFailed"
+          "value": "IsEnabledForGeographicRegionFailed",
+          "verify": false
         }
       ]
     },

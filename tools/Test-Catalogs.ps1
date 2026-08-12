@@ -38,7 +38,7 @@ $tweaks = Read-Catalog 'tweaks'
 if ($tweaks) {
     $categoryIds = @($tweaks.categories | ForEach-Object { $_.id })
     $seenIds = @{}
-    $validActions = @('registry', 'service', 'scheduledTask', 'appx', 'capability', 'feature', 'command')
+    $validActions = @('registry', 'service', 'scheduledTask', 'appx', 'capability', 'feature', 'command', 'powerplan')
 
     foreach ($tweak in $tweaks.tweaks) {
         $checked++
@@ -103,6 +103,30 @@ if ($tweaks) {
                 }
                 'feature' {
                     if (-not $action.featureName) { Add-Problem 'tweaks' "$label : feature ohne featureName" }
+                }
+                'powerplan' {
+                    foreach ($field in @('planName', 'baseScheme')) {
+                        if (-not $action.$field) { Add-Problem 'tweaks' "$label : powerplan ohne '$field'" }
+                    }
+                    if ($action.baseScheme -and $action.baseScheme -notmatch '^[0-9a-fA-F]{8}-([0-9a-fA-F]{4}-){3}[0-9a-fA-F]{12}$') {
+                        Add-Problem 'tweaks' "$label : baseScheme ist keine GUID ($($action.baseScheme))"
+                    }
+                    if (-not $action.settings -or @($action.settings).Count -eq 0) {
+                        Add-Problem 'tweaks' "$label : powerplan ohne Einstellungen"
+                    }
+                    foreach ($setting in $action.settings) {
+                        foreach ($field in @('subgroup', 'setting')) {
+                            if (-not $setting.$field) { Add-Problem 'tweaks' "$label : Einstellung ohne '$field'" }
+                        }
+                        # Auf $null prüfen, nicht auf Wahrheitswert: Der Wert 0 ist
+                        # gültig (passive Kühlung, Turbo aus) und würde sonst als
+                        # fehlend gemeldet.
+                        foreach ($field in @('ac', 'dc')) {
+                            if ($null -eq $setting.$field) {
+                                Add-Problem 'tweaks' "$label : $($setting.setting) ohne Wert für '$field'"
+                            }
+                        }
+                    }
                 }
             }
         }

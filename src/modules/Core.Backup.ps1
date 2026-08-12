@@ -365,6 +365,29 @@ function Restore-WzUndoSession {
                         $result.Notes += "$($entry.itemName): kein Rückgängig-Befehl hinterlegt"
                     }
                 }
+                'powerplan' {
+                    # Die Reihenfolge ist zwingend: Ein aktiver Energieplan lässt
+                    # sich nicht löschen. Erst auf den vorherigen zurückschalten,
+                    # dann die Kopie entfernen.
+                    $vorherigerPlan = $null
+                    if ($entry.previous) { $vorherigerPlan = $entry.previous.previousScheme }
+
+                    if ($vorherigerPlan) {
+                        $zurueck = Invoke-WzProcess -FilePath 'powercfg.exe' -Arguments "/setactive $vorherigerPlan"
+                        if ($zurueck.ExitCode -eq 0) { $result.Restored++ } else { $result.Failed++ }
+                    } else {
+                        $result.Skipped++
+                        $result.Notes += "$($entry.itemName): kein vorheriger Energieplan vermerkt"
+                    }
+
+                    # Entfernt wird nur, was WinZii in diesem Lauf selbst angelegt
+                    # hat. War der Plan schon vorher da, gehört er dem Anwender.
+                    $eigeneKopie = $null
+                    if ($entry.previous) { $eigeneKopie = $entry.previous.createdScheme }
+                    if ($eigeneKopie -and $vorherigerPlan) {
+                        [void](Invoke-WzProcess -FilePath 'powercfg.exe' -Arguments "/delete $eigeneKopie")
+                    }
+                }
                 default {
                     # appx, capability: nicht automatisch zurückholbar
                     $result.Skipped++

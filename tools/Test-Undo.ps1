@@ -1,9 +1,17 @@
 ﻿# Dev-Werkzeug: prüft Sicherung und Rücknahme der Tweak-Engine.
 #
-# Angefasst wird ausschließlich ein eigener Schlüssel unter
-# HKCU:\Software\WinZii-Selbsttest — keine einzige Windows-Einstellung.
-# Geprüft wird die Kette, auf die sich der Anwender verlässt:
+# Angefasst wird ein eigener Schlüssel unter HKCU:\Software\WinZii-Selbsttest
+# und eine Wegwerfdatei im TEMP-Ordner. Geprüft wird die Kette, auf die sich der
+# Anwender verlässt:
 #   Wert setzen -> .reg-Sicherung -> undo.json -> zurücknehmen -> Ausgangszustand.
+# Dazu die Kommando-Aktionen: Fallback bei fehlender Voraussetzung und die
+# Zustandsprüfung, die ohne Registrywert auskommen muss.
+#
+# Einzige Ausnahme ist Abschnitt 7: Er legt einen Energieplan mit eindeutigem
+# Wegwerf-Namen an und aktiviert ihn kurz, weil sich der Undo-Pfad dafür nicht
+# glaubwürdig trockentesten lässt. Der vorherige Plan wird vorab festgehalten
+# und am Ende in jedem Fall wiederhergestellt, der Wegwerf-Plan gelöscht. Ohne
+# Administratorrechte wird der Abschnitt übersprungen.
 #
 # Aufruf:  powershell -NoProfile -File tools\Test-Undo.ps1
 [CmdletBinding()]
@@ -158,12 +166,162 @@ $syncHash.DryRun = $false
 Write-Check 'Wert unverändert' ((Get-ItemProperty -LiteralPath $testKey).Vorhanden -eq $vorher)
 Write-Check 'keine Sicherungsdatei' ($null -eq $trocken.UndoFile)
 
+# --- 6. Kommando-Aktionen ---------------------------------------------------
+# Ein Befehl hinterlässt keinen Registrywert, an dem man ablesen könnte, ob er
+# gewirkt hat. Beide Mechanismen dafür werden hier geprüft, ohne eine echte
+# Systemeinstellung anzufassen: Der Hauptbefehl gelingt nur, wenn eine Marke im
+# TEMP-Ordner liegt, und angelegt wird sie vom Fallback.
+Write-Host ''
+Write-Host '6. Kommando-Aktionen: Fallback und Zustandsprüfung' -ForegroundColor White
+
+$marke = Join-Path $env:TEMP 'winzii-selbsttest-marke.txt'
+$prueft = "/c if exist `"$marke`" (exit 0) else (exit 1)"
+if (Test-Path -LiteralPath $marke) { Remove-Item -LiteralPath $marke -Force }
+
+$mitFallback = [pscustomobject]@{
+    id             = 'selbsttest-fallback'
+    name           = 'Selbsttest Fallback'
+    requiresReboot = $false
+    actions        = @(
+        [pscustomobject]@{
+            type     = 'command'
+            exec     = 'cmd.exe'
+            args     = $prueft
+            fallback = [pscustomobject]@{ exec = 'cmd.exe'; args = "/c echo da> `"$marke`"" }
+        }
+    )
+}
+$fallbackSummary = Invoke-WzTweaks -Tweaks @($mitFallback) -Scope 'selbsttest-fallback'
+Write-Check 'Fallback schafft die Voraussetzung' (Test-Path -LiteralPath $marke)
+Write-Check 'zweiter Versuch gelingt' ($fallbackSummary.Applied -eq 1 -and $fallbackSummary.Failed -eq 0) "Applied=$($fallbackSummary.Applied) Failed=$($fallbackSummary.Failed)"
+
+# Ohne Fallback muss ein fehlschlagender Befehl weiterhin fehlschlagen —
+# sonst würde der neue Zweig echte Fehler verschlucken.
+Remove-Item -LiteralPath $marke -Force -ErrorAction SilentlyContinue
+$ohneFallback = [pscustomobject]@{
+    id             = 'selbsttest-ohne-fallback'
+    name           = 'Selbsttest ohne Fallback'
+    requiresReboot = $false
+    actions        = @(
+        [pscustomobject]@{ type = 'command'; exec = 'cmd.exe'; args = $prueft; failHint = 'Voraussetzung fehlt.' }
+    )
+}
+$ohneSummary = Invoke-WzTweaks -Tweaks @($ohneFallback) -Scope 'selbsttest-ohne-fallback'
+Write-Check 'ohne Fallback bleibt es ein Fehlschlag' ($ohneSummary.Failed -eq 1) "Applied=$($ohneSummary.Applied) Failed=$($ohneSummary.Failed)"
+
+Write-Check 'Zustand: Muster trifft' (Test-WzCommandState -State ([pscustomobject]@{
+    exec = 'cmd.exe'; args = '/c echo zustand-aktiv'; pattern = 'zustand-aktiv' }))
+Write-Check 'Zustand: Muster trifft nicht' (-not (Test-WzCommandState -State ([pscustomobject]@{
+    exec = 'cmd.exe'; args = '/c echo etwas-anderes'; pattern = 'zustand-aktiv' })))
+
+# Ohne Prüfvorschrift darf kein Zustand behauptet werden.
+Clear-WzStateCache
+$ohnePruefung = [pscustomobject]@{
+    id      = 'selbsttest-ohne-state'
+    actions = @([pscustomobject]@{ type = 'command'; exec = 'cmd.exe'; args = '/c exit 0' })
+}
+Write-Check 'ohne Prüfvorschrift bleibt der Zustand offen' ((Test-WzTweakState -Tweak $ohnePruefung) -eq 'Unknown')
+
+Remove-Item -LiteralPath $marke -Force -ErrorAction SilentlyContinue
+
+# --- 7. Energieplan-Aktion --------------------------------------------------
+# Der einzige Abschnitt, der kurzzeitig eine echte Windows-Einstellung anfasst:
+# Er legt einen Wegwerf-Plan mit eindeutigem Namen an, aktiviert ihn und nimmt
+# beides über den Undo-Pfad zurück — genau die Kette, auf die sich der Techniker
+# beim Zurücknehmen verlässt. Der vorherige Plan wird vorab festgehalten und am
+# Ende in jedem Fall wiederhergestellt.
+Write-Host ''
+Write-Host '7. Energieplan: anlegen, aktivieren, zurücknehmen' -ForegroundColor White
+
+$planName = 'WinZii-Selbsttest-Wegwerfplan'
+$guidMuster = '[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}'
+$istAdmin = ([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole(
+    [Security.Principal.WindowsBuiltInRole]::Administrator)
+
+$planVorher = $null
+$aktivAusgabe = Invoke-WzProcess -FilePath 'powercfg.exe' -Arguments '/getactivescheme' -TimeoutSeconds 30
+if ($aktivAusgabe.ExitCode -eq 0 -and $aktivAusgabe.StdOut -match $guidMuster) { $planVorher = $Matches[0] }
+
+if (-not $istAdmin) {
+    Write-Host '  [--]   übersprungen: Energiepläne ändern verlangt Administratorrechte' -ForegroundColor DarkGray
+} elseif (-not $planVorher) {
+    Write-Host '  [--]   übersprungen: aktiver Energieplan nicht auslesbar' -ForegroundColor DarkGray
+} else {
+    $planTweak = [pscustomobject]@{
+        id             = 'selbsttest-powerplan'
+        name           = 'Selbsttest Energieplan'
+        requiresReboot = $false
+        actions        = @(
+            [pscustomobject]@{
+                type            = 'powerplan'
+                planName        = $planName
+                planDescription = 'Wegwerf-Plan des WinZii-Selbsttests.'
+                baseScheme      = '381b4222-f694-41f0-9685-ff5bb260df2e'
+                settings        = @(
+                    [pscustomobject]@{ subgroup = 'SUB_PROCESSOR'; setting = 'PROCTHROTTLEMIN'; ac = 10; dc = 5 }
+                )
+            }
+        )
+    }
+
+    # Testmodus zuerst — er darf nichts anlegen.
+    $syncHash.DryRun = $true
+    [void](Invoke-WzTweaks -Tweaks @($planTweak) -Scope 'selbsttest-plan-trocken')
+    $syncHash.DryRun = $false
+    $nachTrocken = Invoke-WzProcess -FilePath 'powercfg.exe' -Arguments '/list' -TimeoutSeconds 30
+    Write-Check 'Testmodus legt keinen Plan an' ($nachTrocken.StdOut -notlike "*$planName*")
+
+    $planLauf = Invoke-WzTweaks -Tweaks @($planTweak) -Scope 'selbsttest-plan'
+    Write-Check 'Eintrag angewendet' ($planLauf.Applied -eq 1 -and $planLauf.Failed -eq 0) "Applied=$($planLauf.Applied) Failed=$($planLauf.Failed)"
+
+    $nachLauf = Invoke-WzProcess -FilePath 'powercfg.exe' -Arguments '/getactivescheme' -TimeoutSeconds 30
+    Write-Check 'Plan ist aktiv' ($nachLauf.StdOut -like "*$planName*")
+
+    # Zweiter Durchlauf darf keinen weiteren Plan anlegen — sonst wächst die
+    # Planliste mit jedem Technikereinsatz.
+    [void](Invoke-WzTweaks -Tweaks @($planTweak) -Scope 'selbsttest-plan-zweitlauf')
+    $liste = Invoke-WzProcess -FilePath 'powercfg.exe' -Arguments '/list' -TimeoutSeconds 30
+    $anzahl = @([regex]::Matches($liste.StdOut, [regex]::Escape($planName))).Count
+    Write-Check 'zweiter Durchlauf legt keine Kopie an' ($anzahl -eq 1) "gefunden: $anzahl"
+
+    if ($planLauf.UndoFile) {
+        $planRestore = Restore-WzUndoSession -UndoFile $planLauf.UndoFile
+        Write-Check 'Rücknahme meldet Erfolg' ($planRestore.Failed -eq 0) "Restored=$($planRestore.Restored) Failed=$($planRestore.Failed)"
+
+        $nachUndo = Invoke-WzProcess -FilePath 'powercfg.exe' -Arguments '/getactivescheme' -TimeoutSeconds 30
+        Write-Check 'vorheriger Plan wieder aktiv' ($nachUndo.StdOut -match [regex]::Escape($planVorher))
+
+        $listeDanach = Invoke-WzProcess -FilePath 'powercfg.exe' -Arguments '/list' -TimeoutSeconds 30
+        Write-Check 'Wegwerf-Plan wurde entfernt' ($listeDanach.StdOut -notlike "*$planName*")
+    } else {
+        Write-Check 'Sicherungsdatei geschrieben' $false 'keine undo.json'
+    }
+
+    # Sicherheitsnetz: Bricht oben etwas ab, bleibt weder ein fremder Plan aktiv
+    # noch der Wegwerf-Plan liegen.
+    [void](Invoke-WzProcess -FilePath 'powercfg.exe' -Arguments "/setactive $planVorher" -TimeoutSeconds 30)
+    $rest = Invoke-WzProcess -FilePath 'powercfg.exe' -Arguments '/list' -TimeoutSeconds 30
+    foreach ($zeile in ($rest.StdOut -split "`r?`n")) {
+        if ($zeile -like "*$planName*" -and $zeile -match $guidMuster) {
+            [void](Invoke-WzProcess -FilePath 'powercfg.exe' -Arguments "/delete $($Matches[0])" -TimeoutSeconds 30)
+        }
+    }
+}
+
 # --- Aufräumen --------------------------------------------------------------
 try { Remove-Item -LiteralPath $testKey -Recurse -Force -ErrorAction Stop } catch { }
 $backupRoot = Get-WzBackupRoot
 if (Test-Path -LiteralPath $backupRoot) {
     Get-ChildItem -LiteralPath $backupRoot -Directory -Filter '*-selbsttest*' -ErrorAction SilentlyContinue |
         ForEach-Object { try { Remove-Item -LiteralPath $_.FullName -Recurse -Force -ErrorAction Stop } catch { } }
+
+    # Bleibt danach nichts übrig, verschwindet auch der Ordner mit dem
+    # Rechnernamen — sonst hinterlässt jeder Testlauf auf einem sauberen Gerät
+    # einen leeren Ordner. Entfernt wird ausschließlich, was wirklich leer ist:
+    # echte Sicherungen bleiben unangetastet.
+    if (-not (Get-ChildItem -LiteralPath $backupRoot -Force -ErrorAction SilentlyContinue)) {
+        try { Remove-Item -LiteralPath $backupRoot -Force -ErrorAction Stop } catch { }
+    }
 }
 
 Write-Host ''

@@ -56,9 +56,19 @@ function Test-WzTweakState {
     foreach ($action in $Tweak.actions) {
         switch ($action.type) {
             'registry' {
-                $checkable++
-                $current = Get-WzRegistryValue -Path $action.path -Name $action.name
-                if ($current.Exists -and "$($current.Value)" -eq "$($action.value)") { $matching++ }
+                # Manche Werte schreibt Windows selbst um — CopilotDisabledReason
+                # etwa trägt seinen eigenen Grund ein. Sie werden weiterhin
+                # gesetzt, taugen aber nicht als Nachweis: Sonst stünde der
+                # Eintrag dauerhaft auf »teilweise«, obwohl er wirkt. Bewusst
+                # eine if-Bedingung statt break — ein break bräche nur aus dem
+                # switch aus, nicht aus der Schleife über die Aktionen.
+                $pruefbar = $true
+                if ($action.PSObject.Properties['verify']) { $pruefbar = [bool]$action.verify }
+                if ($pruefbar) {
+                    $checkable++
+                    $current = Get-WzRegistryValue -Path $action.path -Name $action.name
+                    if ($current.Exists -and "$($current.Value)" -eq "$($action.value)") { $matching++ }
+                }
             }
             'service' {
                 $checkable++
@@ -83,8 +93,34 @@ function Test-WzTweakState {
                 }
             }
             'appx' {
+                # Get-WzAppxMatches steht in AiRemoval.ps1. Im Betrieb lädt
+                # main.ps1 alle Module; wird zum Prüfen nur der Optimizer
+                # geladen, fehlt sie — dann ist der Zustand nicht messbar und
+                # darf auch nicht mitgezählt werden.
+                if (Get-Command Get-WzAppxMatches -ErrorAction SilentlyContinue) {
+                    $checkable++
+                    if (-not (Get-WzAppxMatches -Patterns $action.patterns)) { $matching++ }
+                }
+            }
+            'command' {
+                # Ein Befehl hinterlässt keinen Wert, den man nachschlagen
+                # könnte. Nennt der Katalog eine Prüfung, wird sie ausgeführt und
+                # ihre Ausgabe gegen das Muster gehalten. Ohne Prüfung bleibt die
+                # Aktion ununterscheidbar — sie zählt dann nicht mit, statt einen
+                # Zustand zu behaupten, der nie gemessen wurde.
+                if ($action.state) {
+                    $checkable++
+                    if (Test-WzCommandState -State $action.state) { $matching++ }
+                }
+            }
+            'powerplan' {
+                # Der Plan gilt als angewendet, wenn er der aktive ist. Gesucht
+                # wird nach dem Namen, den WinZii selbst vergeben hat — der ist
+                # auf jedem Gerät derselbe, anders als die Ausgabe von powercfg.
                 $checkable++
-                if (-not (Get-WzAppxMatches -Patterns $action.patterns)) { $matching++ }
+                $aktiv = @{ exec = 'powercfg.exe'; args = '/getactivescheme'
+                            pattern = [regex]::Escape($action.planName) }
+                if (Test-WzCommandState -State ([pscustomobject]$aktiv)) { $matching++ }
             }
             'feature' {
                 $checkable++
@@ -153,6 +189,7 @@ function Invoke-WzTweaks {
                     'capability'    { 'Invoke-WzCapabilityAction' }
                     'feature'       { 'Invoke-WzFeatureAction' }
                     'command'       { 'Invoke-WzCommandAction' }
+                    'powerplan'     { 'Invoke-WzPowerPlanAction' }
                     default         { $null }
                 }
                 if (-not $handler) {
@@ -371,6 +408,23 @@ function Invoke-WzCommandAction {
     Save-WzUndoState -Session $Session -ItemId $Tweak.id -ItemName $Tweak.name -Action $Action -Previous $previous
 
     $result = Invoke-WzProcess -FilePath $Action.exec -Arguments $Action.args -TimeoutSeconds 120
+
+    # Ein Fehlschlag heißt nicht immer, dass die Einstellung unmöglich wäre —
+    # manchmal fehlt nur die Voraussetzung. Der Höchstleistungsplan etwa ist auf
+    # vielen Geräten gar nicht angelegt, »/setactive« scheitert dann an einer
+    # GUID, die es nicht gibt. Der Fallback schafft die Voraussetzung, danach
+    # bekommt der Hauptbefehl einen zweiten Versuch. Er läuft ausschließlich nach
+    # einem Fehlschlag: »-duplicatescheme« würde sonst bei jedem Durchgang eine
+    # weitere Kopie des Plans anlegen.
+    if ($result.ExitCode -ne 0 -and $Action.fallback) {
+        Write-WzLog "  Voraussetzung fehlt — versuche $($Action.fallback.exec) $($Action.fallback.args)" -Level Info
+        $prepare = Invoke-WzProcess -FilePath $Action.fallback.exec `
+            -Arguments $Action.fallback.args -TimeoutSeconds 120
+        if ($prepare.ExitCode -eq 0) {
+            $result = Invoke-WzProcess -FilePath $Action.exec -Arguments $Action.args -TimeoutSeconds 120
+        }
+    }
+
     if ($result.ExitCode -eq 0) {
         Write-WzLog "  ausgeführt: $($Action.exec) $($Action.args)" -Level Ok
     } elseif ($Action.failHint) {
@@ -378,6 +432,116 @@ function Invoke-WzCommandAction {
         throw [string]$Action.failHint
     } else {
         throw "$($Action.exec) endete mit Code $($result.ExitCode)"
+    }
+}
+
+function Invoke-WzPowerPlanAction {
+    <#
+    .SYNOPSIS
+        Legt einen eigenen Energieplan mit getrennten Netz- und Akkuwerten an
+        und aktiviert ihn.
+    .DESCRIPTION
+        Bewusst ein eigener Plan statt Werte im vorhandenen: Der bisherige Plan
+        bleibt unangetastet, und die Rücknahme ist ein Umschalten plus Löschen
+        der Kopie — ohne die alten Werte einzeln sichern zu müssen.
+
+        Alles läuft über GUIDs und über den Namen, den WinZii selbst vergibt.
+        Die Textausgabe von powercfg ist übersetzt: »Wechselstromeinstellung«
+        hier, »AC Power Setting Index« auf einem englischen Kundengerät. Ein
+        Vergleich darauf würde dort scheitern, eine GUID nie.
+    #>
+    param($Action, $Session, $Tweak)
+
+    if ($syncHash.DryRun) {
+        Write-WzLog "  [Test] Energieplan »$($Action.planName)« anlegen und aktivieren" -Level Test
+        foreach ($setting in $Action.settings) {
+            Write-WzLog "  [Test]   $($setting.setting): Netz=$($setting.ac) Akku=$($setting.dc)" -Level Test
+        }
+        return
+    }
+
+    $guidMuster = '[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}'
+
+    # 1. Den aktiven Plan festhalten. Ohne ihn gäbe es keinen Weg zurück, also
+    #    wird hier abgebrochen statt blind weiterzumachen.
+    $aktiv = Invoke-WzProcess -FilePath 'powercfg.exe' -Arguments '/getactivescheme' -TimeoutSeconds 30
+    $vorher = $null
+    if ($aktiv.ExitCode -eq 0 -and $aktiv.StdOut -match $guidMuster) { $vorher = $Matches[0] }
+    if (-not $vorher) {
+        Write-WzLog '  Aktiver Energieplan nicht auslesbar — ohne ihn gäbe es keine Rücknahme.' -Level Error
+        $Session.ActionFailed = $true
+        return
+    }
+
+    # 2. Gibt es den Plan schon? Ohne diese Prüfung legt jeder weitere Durchlauf
+    #    eine zusätzliche Kopie an, bis die Planliste zugemüllt ist.
+    $liste = Invoke-WzProcess -FilePath 'powercfg.exe' -Arguments '/list' -TimeoutSeconds 30
+    $planGuid = $null
+    $neuAngelegt = $false
+    foreach ($zeile in ($liste.StdOut -split "`r?`n")) {
+        if ($zeile -like "*$($Action.planName)*" -and $zeile -match $guidMuster) {
+            $planGuid = $Matches[0]
+            break
+        }
+    }
+
+    if (-not $planGuid) {
+        $kopie = Invoke-WzProcess -FilePath 'powercfg.exe' `
+            -Arguments "-duplicatescheme $($Action.baseScheme)" -TimeoutSeconds 60
+        if ($kopie.ExitCode -ne 0 -or $kopie.StdOut -notmatch $guidMuster) {
+            Write-WzLog "  Energieplan ließ sich nicht anlegen (Vorlage $($Action.baseScheme))." -Level Error
+            $Session.ActionFailed = $true
+            return
+        }
+        $planGuid = $Matches[0]
+        $neuAngelegt = $true
+
+        $beschreibung = if ($Action.planDescription) { $Action.planDescription } else { 'Von WinZii angelegt.' }
+        [void](Invoke-WzProcess -FilePath 'powercfg.exe' `
+            -Arguments "-changename $planGuid `"$($Action.planName)`" `"$beschreibung`"" -TimeoutSeconds 30)
+        Write-WzLog "  Energieplan angelegt: $($Action.planName)" -Level Ok
+    } else {
+        Write-WzLog "  Energieplan »$($Action.planName)« ist bereits vorhanden — er wird aktualisiert." -Level Info
+    }
+
+    # 3. Erst sichern, dann verändern. Bricht etwas danach ab, lässt sich die
+    #    angelegte Kopie trotzdem über die Rücknahme entfernen.
+    $previous = @{ note = "Energieplan »$($Action.planName)«"; previousScheme = $vorher }
+    if ($neuAngelegt) { $previous.createdScheme = $planGuid }
+    Save-WzUndoState -Session $Session -ItemId $Tweak.id -ItemName $Tweak.name -Action $Action -Previous $previous
+
+    # 4. Werte je Betriebsart setzen.
+    foreach ($setting in $Action.settings) {
+        $seiten = @(
+            @{ Schalter = '/setacvalueindex'; Wert = $setting.ac; Betrieb = 'Netz' },
+            @{ Schalter = '/setdcvalueindex'; Wert = $setting.dc; Betrieb = 'Akku' }
+        )
+        foreach ($seite in $seiten) {
+            $gesetzt = Invoke-WzProcess -FilePath 'powercfg.exe' `
+                -Arguments "$($seite.Schalter) $planGuid $($setting.subgroup) $($setting.setting) $($seite.Wert)" `
+                -TimeoutSeconds 30
+            if ($gesetzt.ExitCode -eq 0) { continue }
+
+            # Nicht jedes Gerät bietet jede Einstellung an — Kühlungsrichtlinie
+            # und Turbo-Verhalten sind auf manchen Notebooks ausgeblendet. Als
+            # »optional« gekennzeichnete Werte dürfen den Eintrag deshalb nicht
+            # scheitern lassen, die tragenden schon.
+            if ($setting.optional) {
+                Write-WzLog "  $($setting.setting) ($($seite.Betrieb)): von diesem Gerät nicht angeboten, übersprungen." -Level Info
+            } else {
+                Write-WzLog "  $($setting.setting) ($($seite.Betrieb)) ließ sich nicht setzen (Code $($gesetzt.ExitCode))." -Level Warn
+                $Session.ActionFailed = $true
+            }
+        }
+    }
+
+    # 5. Aktivieren.
+    $aktivieren = Invoke-WzProcess -FilePath 'powercfg.exe' -Arguments "/setactive $planGuid" -TimeoutSeconds 30
+    if ($aktivieren.ExitCode -eq 0) {
+        Write-WzLog "  Energieplan aktiv: $($Action.planName)" -Level Ok
+    } else {
+        Write-WzLog "  Energieplan ließ sich nicht aktivieren (Code $($aktivieren.ExitCode))." -Level Error
+        $Session.ActionFailed = $true
     }
 }
 
@@ -432,6 +596,35 @@ function Get-WzCachedTask {
     return $null
 }
 
+function Test-WzCommandState {
+    <#
+    .SYNOPSIS
+        Prüft über einen lesenden Befehl, ob eine Kommando-Aktion bereits greift.
+    .DESCRIPTION
+        Die Ausgabe wird zwischengespeichert. Die Optimierungsseite ermittelt den
+        Zustand beim Aufbau für jeden Eintrag, und ein eigener Prozessaufruf je
+        Eintrag wäre als Verzögerung sichtbar.
+    #>
+    param([Parameter(Mandatory = $true)]$State)
+
+    if (-not $script:WzCommandCache) { $script:WzCommandCache = @{} }
+    $key = "$($State.exec) $($State.args)"
+
+    if (-not $script:WzCommandCache.ContainsKey($key)) {
+        $output = ''
+        try {
+            $run = Invoke-WzProcess -FilePath $State.exec -Arguments $State.args -TimeoutSeconds 20
+            if ($run.ExitCode -eq 0) { $output = [string]$run.StdOut }
+        } catch {
+            Write-WzLog "Zustand nicht abfragbar ($key): $($_.Exception.Message)" -Level Warn
+        }
+        $script:WzCommandCache[$key] = $output
+    }
+
+    if (-not $script:WzCommandCache[$key]) { return $false }
+    return [bool]($script:WzCommandCache[$key] -match $State.pattern)
+}
+
 function Clear-WzStateCache {
     <#
     .SYNOPSIS
@@ -440,6 +633,7 @@ function Clear-WzStateCache {
     $script:WzFeatureCache = $null
     $script:WzTaskCache = $null
     $script:WzAppxCache = $null
+    $script:WzCommandCache = $null
 }
 
 function Resolve-WzRegistryPath {
@@ -566,6 +760,10 @@ function Get-WzTweakActionSummary {
             'capability'    { "Systemfunktion entfernen: $($action.patterns -join ', ')" }
             'feature'       { "Windows-Funktion $($action.featureName) -> $($action.state)" }
             'command'       { "Befehl: $($action.exec) $($action.args)" }
+            'powerplan'     {
+                $werte = foreach ($s in $action.settings) { "$($s.setting) Netz=$($s.ac) Akku=$($s.dc)" }
+                "Energieplan »$($action.planName)« anlegen und aktivieren: $($werte -join ', ')"
+            }
             default         { $action.type }
         }
     }
