@@ -488,12 +488,17 @@ function Invoke-WzPowerPlanAction {
     if (-not $planGuid) {
         $kopie = Invoke-WzProcess -FilePath 'powercfg.exe' `
             -Arguments "-duplicatescheme $($Action.baseScheme)" -TimeoutSeconds 60
-        if ($kopie.ExitCode -ne 0 -or $kopie.StdOut -notmatch $guidMuster) {
+        # Bewusst [regex]::Match statt -match: Der Treffer wird hier außerhalb
+        # der Bedingung gebraucht, und $Matches trägt bei verkürzter Auswertung
+        # noch den Wert des vorherigen Vergleichs — man bekäme stillschweigend
+        # die falsche GUID statt eines Fehlers.
+        $neueGuid = [regex]::Match([string]$kopie.StdOut, $guidMuster)
+        if ($kopie.ExitCode -ne 0 -or -not $neueGuid.Success) {
             Write-WzLog "  Energieplan ließ sich nicht anlegen (Vorlage $($Action.baseScheme))." -Level Error
             $Session.ActionFailed = $true
             return
         }
-        $planGuid = $Matches[0]
+        $planGuid = $neueGuid.Value
         $neuAngelegt = $true
 
         $beschreibung = if ($Action.planDescription) { $Action.planDescription } else { 'Von WinZii angelegt.' }
