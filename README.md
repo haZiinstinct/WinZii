@@ -9,7 +9,7 @@ Vom USB-Stick starten, aufräumen, optimieren, einrichten — ohne Installation,
 
 **Deutsch** · [English](README.en.md)
 
-<sub>A German-language Windows maintenance toolkit for IT technicians — English readme available, interface is German only.</sub>
+<sub>A Windows maintenance toolkit for IT technicians. Interface switchable between German and English; measured values, dialogs and log stay German for now.</sub>
 
 ![Version](https://img.shields.io/badge/Version-0.3.0-00d4ff?labelColor=0a0a0f&style=flat-square)
 ![Windows](https://img.shields.io/badge/Windows-10%20%7C%2011-00d4ff?labelColor=0a0a0f&style=flat-square)

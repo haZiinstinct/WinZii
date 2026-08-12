@@ -1,10 +1,10 @@
 ﻿<StackPanel xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
 
-    <TextBlock Text="// AUFRÄUMEN" Style="{DynamicResource WzEyebrow}" />
-    <TextBlock Text="Speicherplatz freimachen" Style="{DynamicResource WzPageTitle}" />
+    <TextBlock Text="{DynamicResource L.clean.eyebrow}" Style="{DynamicResource WzEyebrow}" />
+    <TextBlock Text="{DynamicResource L.clean.title}" Style="{DynamicResource WzPageTitle}" />
     <TextBlock Style="{DynamicResource WzPageLead}"
-               Text="Erst analysieren, dann gezielt auswählen. WinZii löscht ausschließlich Zwischenspeicher und Systemreste — niemals eigene Dateien." />
+               Text="{DynamicResource L.clean.lead}" />
 
     <ItemsControl Name="CleanNotices" Margin="0,0,0,14" />
 
@@ -16,20 +16,20 @@
                 <ColumnDefinition Width="Auto" />
             </Grid.ColumnDefinitions>
             <StackPanel Grid.Column="0">
-                <TextBlock Text="// ERGEBNIS" Style="{DynamicResource WzEyebrow}" />
-                <TextBlock Name="CleanTotal" Text="noch nicht analysiert" Style="{DynamicResource WzValueBig}" />
+                <TextBlock Text="{DynamicResource L.clean.resultEyebrow}" Style="{DynamicResource WzEyebrow}" />
+                <TextBlock Name="CleanTotal" Text="{DynamicResource L.clean.resultTitle}" Style="{DynamicResource WzValueBig}" />
                 <TextBlock Name="CleanTotalHint" Style="{DynamicResource WzLabel}" Margin="0,4,0,0"
-                           Text="Klicke auf »Analysieren«, um den belegten Platz zu ermitteln." />
+                           Text="{DynamicResource L.clean.resultHint}" />
                 <TextBlock Name="CleanSelectionInfo" Style="{DynamicResource WzLabel}" Margin="0,10,0,0"
                            Foreground="{DynamicResource WzCyan}" Text="" />
             </StackPanel>
             <StackPanel Grid.Column="1" VerticalAlignment="Center">
                 <Button Name="CleanBtnAnalyze" Style="{DynamicResource WzBtnPrimary}" Margin="0,0,0,8"
-                        Content="Analysieren" MinWidth="180" />
+                        Content="{DynamicResource L.clean.btnAnalyse}" MinWidth="180" />
                 <Button Name="CleanBtnClean" Style="{DynamicResource WzBtnDanger}" Margin="0,0,0,8"
-                        Content="Auswahl löschen" MinWidth="180" IsEnabled="False" />
+                        Content="{DynamicResource L.clean.btnDelete}" MinWidth="180" IsEnabled="False" />
                 <Button Name="CleanBtnRecommended" Style="{DynamicResource WzBtnGhost}"
-                        Content="empfohlene Auswahl" />
+                        Content="{DynamicResource L.clean.btnRecommended}" />
             </StackPanel>
         </Grid>
     </Border>

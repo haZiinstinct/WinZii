@@ -1,10 +1,10 @@
 ﻿<StackPanel xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
 
-    <TextBlock Text="// ÜBERSICHT" Style="{DynamicResource WzEyebrow}" />
-    <TextBlock Text="Dashboard" Style="{DynamicResource WzPageTitle}" />
+    <TextBlock Text="{DynamicResource L.dash.eyebrow}" Style="{DynamicResource WzEyebrow}" />
+    <TextBlock Text="{DynamicResource L.dash.title}" Style="{DynamicResource WzPageTitle}" />
     <TextBlock Style="{DynamicResource WzPageLead}"
-               Text="Zustand dieses PCs auf einen Blick — Ausgangspunkt für jede Wartung." />
+               Text="{DynamicResource L.dash.lead}" />
 
     <!-- Hinweisleiste (Neustart ausstehend, FAT32 usw.) -->
     <ItemsControl Name="DashNotices" Margin="0,0,0,14" />
@@ -25,72 +25,72 @@
 
         <Border Grid.Row="0" Grid.Column="0" Style="{DynamicResource WzCard}" Margin="0,0,0,14">
             <StackPanel>
-                <TextBlock Text="// WINDOWS" Style="{DynamicResource WzEyebrow}" />
-                <TextBlock Name="DashOsTitle" Text="wird geladen" Style="{DynamicResource WzCardTitle}" TextWrapping="Wrap" />
+                <TextBlock Text="{DynamicResource L.dash.windowsEyebrow}" Style="{DynamicResource WzEyebrow}" />
+                <TextBlock Name="DashOsTitle" Text="{DynamicResource L.dash.loading}" Style="{DynamicResource WzCardTitle}" TextWrapping="Wrap" />
                 <StackPanel Name="DashOsRows" />
             </StackPanel>
         </Border>
 
         <Border Grid.Row="0" Grid.Column="2" Style="{DynamicResource WzCard}" Margin="0,0,0,14">
             <StackPanel>
-                <TextBlock Text="// HARDWARE" Style="{DynamicResource WzEyebrow}" />
-                <TextBlock Name="DashHwTitle" Text="wird geladen" Style="{DynamicResource WzCardTitle}" TextWrapping="Wrap" />
+                <TextBlock Text="{DynamicResource L.dash.hardwareEyebrow}" Style="{DynamicResource WzEyebrow}" />
+                <TextBlock Name="DashHwTitle" Text="{DynamicResource L.dash.loading}" Style="{DynamicResource WzCardTitle}" TextWrapping="Wrap" />
                 <StackPanel Name="DashHwRows" />
             </StackPanel>
         </Border>
 
         <Border Grid.Row="0" Grid.Column="4" Style="{DynamicResource WzCard}" Margin="0,0,0,14">
             <StackPanel>
-                <TextBlock Text="// SICHERHEIT" Style="{DynamicResource WzEyebrow}" />
-                <TextBlock Name="DashSecTitle" Text="wird geladen" Style="{DynamicResource WzCardTitle}" TextWrapping="Wrap" />
+                <TextBlock Text="{DynamicResource L.dash.securityEyebrow}" Style="{DynamicResource WzEyebrow}" />
+                <TextBlock Name="DashSecTitle" Text="{DynamicResource L.dash.loading}" Style="{DynamicResource WzCardTitle}" TextWrapping="Wrap" />
                 <StackPanel Name="DashSecRows" />
             </StackPanel>
         </Border>
 
         <Border Grid.Row="1" Grid.Column="0" Style="{DynamicResource WzCard}" Margin="0,0,0,14">
             <StackPanel>
-                <TextBlock Text="// DATENTRÄGER" Style="{DynamicResource WzEyebrow}" />
-                <TextBlock Text="Speicherplatz" Style="{DynamicResource WzCardTitle}" />
+                <TextBlock Text="{DynamicResource L.dash.diskEyebrow}" Style="{DynamicResource WzEyebrow}" />
+                <TextBlock Text="{DynamicResource L.dash.diskTitle}" Style="{DynamicResource WzCardTitle}" />
                 <StackPanel Name="DashDiskRows" />
             </StackPanel>
         </Border>
 
         <Border Grid.Row="1" Grid.Column="2" Style="{DynamicResource WzCard}" Margin="0,0,0,14">
             <StackPanel>
-                <TextBlock Text="// NETZWERK" Style="{DynamicResource WzEyebrow}" />
-                <TextBlock Text="Verbindungen" Style="{DynamicResource WzCardTitle}" />
+                <TextBlock Text="{DynamicResource L.dash.networkEyebrow}" Style="{DynamicResource WzEyebrow}" />
+                <TextBlock Text="{DynamicResource L.dash.networkTitle}" Style="{DynamicResource WzCardTitle}" />
                 <StackPanel Name="DashNetRows" />
             </StackPanel>
         </Border>
 
         <Border Grid.Row="1" Grid.Column="4" Style="{DynamicResource WzCard}" Margin="0,0,0,14">
             <StackPanel>
-                <TextBlock Text="// SITZUNG" Style="{DynamicResource WzEyebrow}" />
-                <TextBlock Text="Laufzeit und Umgebung" Style="{DynamicResource WzCardTitle}" />
+                <TextBlock Text="{DynamicResource L.dash.sessionEyebrow}" Style="{DynamicResource WzEyebrow}" />
+                <TextBlock Text="{DynamicResource L.dash.sessionTitle}" Style="{DynamicResource WzCardTitle}" />
                 <StackPanel Name="DashSessionRows" />
             </StackPanel>
         </Border>
 
         <Border Grid.Row="2" Grid.Column="0" Style="{DynamicResource WzCard}" Margin="0,0,0,14">
             <StackPanel>
-                <TextBlock Text="// GRAFIK" Style="{DynamicResource WzEyebrow}" />
-                <TextBlock Name="DashGpuTitle" Text="wird geladen" Style="{DynamicResource WzCardTitle}" TextWrapping="Wrap" />
+                <TextBlock Text="{DynamicResource L.dash.gpuEyebrow}" Style="{DynamicResource WzEyebrow}" />
+                <TextBlock Name="DashGpuTitle" Text="{DynamicResource L.dash.loading}" Style="{DynamicResource WzCardTitle}" TextWrapping="Wrap" />
                 <StackPanel Name="DashGpuRows" />
             </StackPanel>
         </Border>
 
         <Border Grid.Row="2" Grid.Column="2" Style="{DynamicResource WzCard}" Margin="0,0,0,14">
             <StackPanel>
-                <TextBlock Text="// ANZEIGE" Style="{DynamicResource WzEyebrow}" />
-                <TextBlock Name="DashMonitorTitle" Text="wird geladen" Style="{DynamicResource WzCardTitle}" TextWrapping="Wrap" />
+                <TextBlock Text="{DynamicResource L.dash.displayEyebrow}" Style="{DynamicResource WzEyebrow}" />
+                <TextBlock Name="DashMonitorTitle" Text="{DynamicResource L.dash.loading}" Style="{DynamicResource WzCardTitle}" TextWrapping="Wrap" />
                 <StackPanel Name="DashMonitorRows" />
             </StackPanel>
         </Border>
 
         <Border Grid.Row="2" Grid.Column="4" Style="{DynamicResource WzCard}" Margin="0,0,0,14">
             <StackPanel>
-                <TextBlock Text="// FIRMWARE" Style="{DynamicResource WzEyebrow}" />
-                <TextBlock Name="DashFirmwareTitle" Text="wird geladen" Style="{DynamicResource WzCardTitle}" TextWrapping="Wrap" />
+                <TextBlock Text="{DynamicResource L.dash.firmwareEyebrow}" Style="{DynamicResource WzEyebrow}" />
+                <TextBlock Name="DashFirmwareTitle" Text="{DynamicResource L.dash.loading}" Style="{DynamicResource WzCardTitle}" TextWrapping="Wrap" />
                 <StackPanel Name="DashFirmwareRows" />
             </StackPanel>
         </Border>
@@ -99,19 +99,19 @@
     <!-- Schnellaktionen -->
     <Border Style="{DynamicResource WzCardStatic}" Margin="0,4,0,0">
         <StackPanel>
-            <TextBlock Text="// SCHNELLSTART" Style="{DynamicResource WzEyebrow}" />
-            <TextBlock Text="Typische Arbeitsschritte" Style="{DynamicResource WzCardTitle}" />
+            <TextBlock Text="{DynamicResource L.dash.quickEyebrow}" Style="{DynamicResource WzEyebrow}" />
+            <TextBlock Text="{DynamicResource L.dash.quickTitle}" Style="{DynamicResource WzCardTitle}" />
             <WrapPanel>
                 <Button Name="DashBtnDiagnose" Style="{DynamicResource WzBtnPrimary}" Margin="0,0,10,8"
-                        Content="Diagnose starten" />
+                        Content="{DynamicResource L.dash.btnDiagnostics}" />
                 <Button Name="DashBtnCleanup" Style="{DynamicResource WzBtnSecondary}" Margin="0,0,10,8"
-                        Content="Speicherplatz analysieren" />
+                        Content="{DynamicResource L.dash.btnCleanup}" />
                 <Button Name="DashBtnOptimize" Style="{DynamicResource WzBtnSecondary}" Margin="0,0,10,8"
-                        Content="Optimierung öffnen" />
+                        Content="{DynamicResource L.dash.btnOptimizer}" />
                 <Button Name="DashBtnAi" Style="{DynamicResource WzBtnSecondary}" Margin="0,0,10,8"
-                        Content="KI-Funktionen prüfen" />
+                        Content="{DynamicResource L.dash.btnAiRemoval}" />
                 <Button Name="DashBtnRefresh" Style="{DynamicResource WzBtnSecondary}" Margin="0,0,10,8"
-                        Content="Daten neu einlesen" />
+                        Content="{DynamicResource L.dash.btnRefresh}" />
             </WrapPanel>
         </StackPanel>
     </Border>

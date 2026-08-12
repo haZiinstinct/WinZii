@@ -1,10 +1,10 @@
 ﻿<StackPanel xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
 
-    <TextBlock Text="// OPTIMIEREN" Style="{DynamicResource WzEyebrow}" />
-    <TextBlock Text="Windows-Optimierung" Style="{DynamicResource WzPageTitle}" />
+    <TextBlock Text="{DynamicResource L.opt.eyebrow}" Style="{DynamicResource WzEyebrow}" />
+    <TextBlock Text="{DynamicResource L.opt.title}" Style="{DynamicResource WzPageTitle}" />
     <TextBlock Style="{DynamicResource WzPageLead}"
-               Text="Geschwindigkeit, Telemetrie, Datenschutz und Sicherheit. Jede Änderung wird vorher gesichert und lässt sich einzeln zurücknehmen." />
+               Text="{DynamicResource L.opt.lead}" />
 
     <ItemsControl Name="OptNotices" Margin="0,0,0,14" />
 
@@ -13,24 +13,24 @@
         <StackPanel>
             <Grid>
                 <StackPanel Orientation="Horizontal">
-                    <TextBlock Name="OptSelectionCount" Text="0 ausgewählt" Style="{DynamicResource WzValue}"
+                    <TextBlock Name="OptSelectionCount" Text="{DynamicResource L.opt.selectionCount}" Style="{DynamicResource WzValue}"
                                VerticalAlignment="Center" Foreground="{DynamicResource WzCyan}" />
-                    <TextBlock Name="OptStatusHint" Text="Zustand wird geprüft..." Style="{DynamicResource WzLabel}"
+                    <TextBlock Name="OptStatusHint" Text="{DynamicResource L.opt.stateHint}" Style="{DynamicResource WzLabel}"
                                VerticalAlignment="Center" Margin="14,0,0,0" />
                 </StackPanel>
                 <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
-                    <Button Name="OptBtnRecommended" Style="{DynamicResource WzBtnGhost}" Content="empfohlene" Margin="0,0,4,0" />
-                    <Button Name="OptBtnAll" Style="{DynamicResource WzBtnGhost}" Content="alle" Margin="0,0,4,0" />
-                    <Button Name="OptBtnNone" Style="{DynamicResource WzBtnGhost}" Content="keine" />
+                    <Button Name="OptBtnRecommended" Style="{DynamicResource WzBtnGhost}" Content="{DynamicResource L.opt.btnRecommended}" Margin="0,0,4,0" />
+                    <Button Name="OptBtnAll" Style="{DynamicResource WzBtnGhost}" Content="{DynamicResource L.opt.btnAll}" Margin="0,0,4,0" />
+                    <Button Name="OptBtnNone" Style="{DynamicResource WzBtnGhost}" Content="{DynamicResource L.opt.btnNone}" />
                 </StackPanel>
             </Grid>
             <WrapPanel Margin="0,16,0,0">
                 <Button Name="OptBtnApply" Style="{DynamicResource WzBtnPrimary}" Margin="0,0,10,0"
-                        Content="Auswahl anwenden" />
+                        Content="{DynamicResource L.opt.btnApply}" />
                 <Button Name="OptBtnUndo" Style="{DynamicResource WzBtnSecondary}" Margin="0,0,10,0"
-                        Content="Änderungen zurücknehmen" />
+                        Content="{DynamicResource L.opt.btnUndo}" />
                 <Button Name="OptBtnRefresh" Style="{DynamicResource WzBtnSecondary}"
-                        Content="Zustand neu prüfen" />
+                        Content="{DynamicResource L.opt.btnRefresh}" />
             </WrapPanel>
         </StackPanel>
     </Border>

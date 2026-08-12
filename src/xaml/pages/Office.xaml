@@ -1,16 +1,16 @@
 ﻿<StackPanel xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
 
-    <TextBlock Text="// OFFICE" Style="{DynamicResource WzEyebrow}" />
-    <TextBlock Text="Office einrichten" Style="{DynamicResource WzPageTitle}" />
+    <TextBlock Text="{DynamicResource L.off.eyebrow}" Style="{DynamicResource WzEyebrow}" />
+    <TextBlock Text="{DynamicResource L.off.title}" Style="{DynamicResource WzPageTitle}" />
     <TextBlock Style="{DynamicResource WzPageLead}"
-               Text="Microsoft Office über das offizielle Bereitstellungswerkzeug — oder LibreOffice, wenn keine Lizenz vorhanden ist." />
+               Text="{DynamicResource L.off.lead}" />
 
     <!-- Vorhandene Installation -->
     <Border Style="{DynamicResource WzCardStatic}" Margin="0,0,0,16">
         <StackPanel>
-            <TextBlock Text="// VORHANDEN" Style="{DynamicResource WzEyebrow}" />
-            <TextBlock Name="OffInstalledTitle" Text="wird geprüft..." Style="{DynamicResource WzCardTitle}" />
+            <TextBlock Text="{DynamicResource L.off.installedEyebrow}" Style="{DynamicResource WzEyebrow}" />
+            <TextBlock Name="OffInstalledTitle" Text="{DynamicResource L.off.installedTitle}" Style="{DynamicResource WzCardTitle}" />
             <StackPanel Name="OffInstalledRows" />
         </StackPanel>
     </Border>
@@ -25,21 +25,21 @@
         <!-- Auswahl -->
         <Border Grid.Column="0" Style="{DynamicResource WzCardStatic}" Margin="0,0,0,14">
             <StackPanel>
-                <TextBlock Text="// AUSWAHL" Style="{DynamicResource WzEyebrow}" />
-                <TextBlock Text="Version und Sprache" Style="{DynamicResource WzCardTitle}" />
+                <TextBlock Text="{DynamicResource L.off.choiceEyebrow}" Style="{DynamicResource WzEyebrow}" />
+                <TextBlock Text="{DynamicResource L.off.choiceTitle}" Style="{DynamicResource WzCardTitle}" />
 
-                <TextBlock Text="Ausgabe" Style="{DynamicResource WzLabel}" Margin="0,6,0,4" />
+                <TextBlock Text="{DynamicResource L.off.variantLabel}" Style="{DynamicResource WzLabel}" Margin="0,6,0,4" />
                 <ComboBox Name="OffVariant" Style="{DynamicResource WzComboBox}" />
                 <TextBlock Name="OffVariantNote" Style="{DynamicResource WzHint}" Margin="0,6,0,0" />
 
-                <TextBlock Text="Sprache" Style="{DynamicResource WzLabel}" Margin="0,14,0,4" />
+                <TextBlock Text="{DynamicResource L.off.languageLabel}" Style="{DynamicResource WzLabel}" Margin="0,14,0,4" />
                 <ComboBox Name="OffLanguage" Style="{DynamicResource WzComboBox}" />
 
                 <StackPanel Name="OffKeyPanel" Visibility="Collapsed" Margin="0,14,0,0">
-                    <TextBlock Text="Volumenlizenz-Schlüssel" Style="{DynamicResource WzLabel}" Margin="0,0,0,4" />
+                    <TextBlock Text="{DynamicResource L.off.keyLabel}" Style="{DynamicResource WzLabel}" Margin="0,0,0,4" />
                     <TextBox Name="OffKey" Style="{DynamicResource WzTextBox}" />
                     <TextBlock Style="{DynamicResource WzHint}" Margin="0,4,0,0" TextWrapping="Wrap"
-                               Text="Ohne Schlüssel wird zwar installiert, aber nicht aktiviert. Der Schlüssel wird nicht auf dem Datenträger gespeichert." />
+                               Text="{DynamicResource L.off.keyHint}" />
                 </StackPanel>
 
                 <TextBlock Name="OffCacheHint" Style="{DynamicResource WzHint}" Margin="0,14,0,0" />
@@ -49,8 +49,8 @@
         <!-- Programme -->
         <Border Grid.Column="2" Style="{DynamicResource WzCardStatic}" Margin="0,0,0,14">
             <StackPanel>
-                <TextBlock Text="// UMFANG" Style="{DynamicResource WzEyebrow}" />
-                <TextBlock Text="Welche Programme" Style="{DynamicResource WzCardTitle}" />
+                <TextBlock Text="{DynamicResource L.off.appsEyebrow}" Style="{DynamicResource WzEyebrow}" />
+                <TextBlock Text="{DynamicResource L.off.appsTitle}" Style="{DynamicResource WzCardTitle}" />
                 <StackPanel Name="OffApps" />
             </StackPanel>
         </Border>
@@ -59,29 +59,29 @@
     <!-- Aktionen -->
     <Border Style="{DynamicResource WzCardStatic}" Margin="0,0,0,14">
         <StackPanel>
-            <TextBlock Text="// AKTION" Style="{DynamicResource WzEyebrow}" />
-            <TextBlock Text="Microsoft Office" Style="{DynamicResource WzCardTitle}" />
+            <TextBlock Text="{DynamicResource L.off.actionEyebrow}" Style="{DynamicResource WzEyebrow}" />
+            <TextBlock Text="{DynamicResource L.off.actionTitle}" Style="{DynamicResource WzCardTitle}" />
             <WrapPanel>
                 <Button Name="OffBtnRemove" Style="{DynamicResource WzBtnSecondary}" Margin="0,0,10,8"
-                        Content="Office entfernen" />
+                        Content="{DynamicResource L.off.btnRemove}" />
                 <Button Name="OffBtnInstall" Style="{DynamicResource WzBtnPrimary}" Margin="0,0,10,8"
-                        Content="Office installieren" />
+                        Content="{DynamicResource L.off.btnInstall}" />
                 <Button Name="OffBtnDownload" Style="{DynamicResource WzBtnSecondary}" Margin="0,0,10,8"
-                        Content="Auf Datenträger laden" />
+                        Content="{DynamicResource L.off.btnDownload}" />
                 <Button Name="OffBtnXml" Style="{DynamicResource WzBtnSecondary}" Margin="0,0,10,8"
-                        Content="Konfiguration ansehen" />
+                        Content="{DynamicResource L.off.btnXml}" />
             </WrapPanel>
         </StackPanel>
     </Border>
 
     <Border Style="{DynamicResource WzCardStatic}">
         <StackPanel>
-            <TextBlock Text="// ALTERNATIVE" Style="{DynamicResource WzEyebrow}" />
-            <TextBlock Text="LibreOffice" Style="{DynamicResource WzCardTitle}" />
+            <TextBlock Text="{DynamicResource L.off.libreEyebrow}" Style="{DynamicResource WzEyebrow}" />
+            <TextBlock Text="{DynamicResource L.off.libreTitle}" Style="{DynamicResource WzCardTitle}" />
             <TextBlock Style="{DynamicResource WzHint}" Margin="0,0,0,12"
-                       Text="Kostenfrei und ohne Lizenzschlüssel. Öffnet und speichert auch die Formate von Microsoft Office — für die meisten Privatkunden völlig ausreichend." />
+                       Text="{DynamicResource L.off.libreLead}" />
             <Button Name="OffBtnLibre" Style="{DynamicResource WzBtnSecondary}" HorizontalAlignment="Left"
-                    Content="LibreOffice installieren" />
+                    Content="{DynamicResource L.off.btnLibre}" />
         </StackPanel>
     </Border>
 </StackPanel>

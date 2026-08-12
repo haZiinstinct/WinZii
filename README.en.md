@@ -9,7 +9,7 @@ Run it from a USB stick: clean up, optimize, set up — no installation, no acco
 
 [Deutsch](README.md) · **English**
 
-<sub>The interface, reports, and most documentation are **German only**. This readme exists so you can tell what the tool does before deciding whether that works for you.</sub>
+<sub>The interface switches between **German and English** — the language button sits at the bottom of the sidebar and takes effect immediately. Measured values, dialogs, log messages and reports are still German only; that is being worked on step by step.</sub>
 
 ![Version](https://img.shields.io/badge/Version-0.3.0-00d4ff?labelColor=0a0a0f&style=flat-square)
 ![Windows](https://img.shields.io/badge/Windows-10%20%7C%2011-00d4ff?labelColor=0a0a0f&style=flat-square)
@@ -104,7 +104,7 @@ Feedback from other systems is very welcome — especially from Windows 10 and n
 
 ## 🖼️ Interface
 
-Dark theme in the haZii style, German, with a live console: every action is visible while it runs. Long operations never block the UI.
+Dark theme in the haZii style, German or English, with a live console: every action is visible while it runs. Long operations never block the UI.
 
 <img src="docs/screenshot-dashboard.png" alt="WinZii dashboard" width="100%">
 

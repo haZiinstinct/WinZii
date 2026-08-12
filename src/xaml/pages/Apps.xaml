@@ -1,10 +1,10 @@
 ﻿<StackPanel xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
 
-    <TextBlock Text="// INSTALLIEREN" Style="{DynamicResource WzEyebrow}" />
-    <TextBlock Text="Programme" Style="{DynamicResource WzPageTitle}" />
+    <TextBlock Text="{DynamicResource L.apps.eyebrow}" Style="{DynamicResource WzEyebrow}" />
+    <TextBlock Text="{DynamicResource L.apps.title}" Style="{DynamicResource WzPageTitle}" />
     <TextBlock Style="{DynamicResource WzPageLead}"
-               Text="Installation über winget, den Paketdienst von Microsoft. Programme lassen sich auch vorab auf den Datenträger laden, um sie später ohne Internet einzuspielen." />
+               Text="{DynamicResource L.apps.lead}" />
 
     <ItemsControl Name="AppsNotices" Margin="0,0,0,14" />
 
@@ -12,23 +12,23 @@
         <StackPanel>
             <Grid>
                 <StackPanel Orientation="Horizontal">
-                    <TextBlock Name="AppsSelectionCount" Text="0 ausgewählt" Style="{DynamicResource WzValue}"
+                    <TextBlock Name="AppsSelectionCount" Text="{DynamicResource L.apps.selectionCount}" Style="{DynamicResource WzValue}"
                                VerticalAlignment="Center" Foreground="{DynamicResource WzCyan}" />
                     <TextBlock Name="AppsOfflineHint" Text="" Style="{DynamicResource WzLabel}"
                                VerticalAlignment="Center" Margin="14,0,0,0" />
                 </StackPanel>
                 <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
-                    <Button Name="AppsBtnRecommended" Style="{DynamicResource WzBtnGhost}" Content="empfohlene" Margin="0,0,4,0" />
-                    <Button Name="AppsBtnNone" Style="{DynamicResource WzBtnGhost}" Content="keine" />
+                    <Button Name="AppsBtnRecommended" Style="{DynamicResource WzBtnGhost}" Content="{DynamicResource L.apps.btnRecommended}" Margin="0,0,4,0" />
+                    <Button Name="AppsBtnNone" Style="{DynamicResource WzBtnGhost}" Content="{DynamicResource L.apps.btnNone}" />
                 </StackPanel>
             </Grid>
             <WrapPanel Margin="0,16,0,0">
                 <Button Name="AppsBtnInstall" Style="{DynamicResource WzBtnPrimary}" Margin="0,0,10,0"
-                        IsEnabled="False" Content="Auswahl installieren" />
+                        IsEnabled="False" Content="{DynamicResource L.apps.btnInstall}" />
                 <Button Name="AppsBtnDownload" Style="{DynamicResource WzBtnSecondary}" Margin="0,0,10,0"
-                        IsEnabled="False" Content="Auf Datenträger laden" />
+                        IsEnabled="False" Content="{DynamicResource L.apps.btnDownload}" />
                 <Button Name="AppsBtnWinget" Style="{DynamicResource WzBtnSecondary}"
-                        Content="winget nachinstallieren" Visibility="Collapsed" />
+                        Content="{DynamicResource L.apps.btnBootstrap}" Visibility="Collapsed" />
             </WrapPanel>
         </StackPanel>
     </Border>
@@ -38,10 +38,10 @@
     <!-- Zweiter Bereich: entfernen statt installieren -->
     <Border Style="{DynamicResource WzCardStatic}" Margin="0,4,0,0">
         <StackPanel>
-            <TextBlock Text="// DEINSTALLIEREN" Style="{DynamicResource WzEyebrow}" />
-            <TextBlock Name="AppsUninstallTitle" Text="Installierte Programme" Style="{DynamicResource WzCardTitle}" />
+            <TextBlock Text="{DynamicResource L.apps.uninstallEyebrow}" Style="{DynamicResource WzEyebrow}" />
+            <TextBlock Name="AppsUninstallTitle" Text="{DynamicResource L.apps.uninstallTitle}" Style="{DynamicResource WzCardTitle}" />
             <TextBlock Style="{DynamicResource WzHint}" Margin="0,0,0,12"
-                       Text="Dieselbe Liste wie in der Systemsteuerung. Vorinstallierte Herstellersoftware und abgelaufene Virenscanner-Testversionen lassen sich hier in einem Durchgang entfernen." />
+                       Text="{DynamicResource L.apps.uninstallLead}" />
 
             <Grid Margin="0,0,0,12">
                 <Grid.ColumnDefinitions>
@@ -49,12 +49,12 @@
                     <ColumnDefinition Width="Auto" />
                 </Grid.ColumnDefinitions>
                 <TextBox Name="AppsUninstallSearch" Grid.Column="0" Style="{DynamicResource WzTextBox}"
-                         ToolTip="Filtert nach Name oder Herausgeber." />
+                         ToolTip="{DynamicResource L.apps.tipFilter}" />
                 <StackPanel Grid.Column="1" Orientation="Horizontal" Margin="10,0,0,0">
                     <Button Name="AppsBtnUninstallScan" Style="{DynamicResource WzBtnSecondary}" Margin="0,0,8,0"
-                            Content="Liste laden" />
+                            Content="{DynamicResource L.apps.btnList}" />
                     <Button Name="AppsBtnUninstall" Style="{DynamicResource WzBtnDanger}"
-                            Content="Ausgewählte entfernen" IsEnabled="False" />
+                            Content="{DynamicResource L.apps.btnRemove}" IsEnabled="False" />
                 </StackPanel>
             </Grid>
 

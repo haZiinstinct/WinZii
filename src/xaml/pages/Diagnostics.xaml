@@ -1,10 +1,10 @@
 ﻿<StackPanel xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
 
-    <TextBlock Text="// DIAGNOSE" Style="{DynamicResource WzEyebrow}" />
-    <TextBlock Text="Fehleranalyse" Style="{DynamicResource WzPageTitle}" />
+    <TextBlock Text="{DynamicResource L.diag.eyebrow}" Style="{DynamicResource WzEyebrow}" />
+    <TextBlock Text="{DynamicResource L.diag.title}" Style="{DynamicResource WzPageTitle}" />
     <TextBlock Style="{DynamicResource WzPageLead}"
-               Text="Ereignisprotokolle, Bluescreens und Datenträgerzustand — zusammengefasst und in Klartext übersetzt statt als Rohdaten." />
+               Text="{DynamicResource L.diag.lead}" />
 
     <ItemsControl Name="DiagNotices" Margin="0,0,0,14" />
 
@@ -13,7 +13,7 @@
         <StackPanel>
             <Grid>
                 <StackPanel Orientation="Horizontal">
-                    <TextBlock Text="Zeitraum" Style="{DynamicResource WzLabel}" VerticalAlignment="Center" Margin="0,0,10,0" />
+                    <TextBlock Text="{DynamicResource L.diag.rangeLabel}" Style="{DynamicResource WzLabel}" VerticalAlignment="Center" Margin="0,0,10,0" />
                     <ComboBox Name="DiagRange" Style="{DynamicResource WzComboBox}" Width="180" />
                 </StackPanel>
                 <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
@@ -22,17 +22,17 @@
             </Grid>
             <WrapPanel Margin="0,16,0,0">
                 <Button Name="DiagBtnScan" Style="{DynamicResource WzBtnPrimary}" Margin="0,0,10,8"
-                        Content="Analyse starten" />
+                        Content="{DynamicResource L.diag.btnAnalyse}" />
                 <Button Name="DiagBtnReport" Style="{DynamicResource WzBtnSecondary}" Margin="0,0,10,8"
-                        Content="Bericht erstellen" IsEnabled="False" />
+                        Content="{DynamicResource L.diag.btnReport}" IsEnabled="False" />
                 <Button Name="DiagBtnSfc" Style="{DynamicResource WzBtnSecondary}" Margin="0,0,10,8"
-                        Content="Systemdateien prüfen" />
+                        Content="{DynamicResource L.diag.btnSfc}" />
                 <Button Name="DiagBtnDism" Style="{DynamicResource WzBtnSecondary}" Margin="0,0,10,8"
-                        Content="Windows-Abbild reparieren" />
+                        Content="{DynamicResource L.diag.btnDism}" />
                 <Button Name="DiagBtnChkdsk" Style="{DynamicResource WzBtnSecondary}" Margin="0,0,10,8"
-                        Content="Dateisystem prüfen" />
+                        Content="{DynamicResource L.diag.btnChkdsk}" />
                 <Button Name="DiagBtnBattery" Style="{DynamicResource WzBtnSecondary}" Margin="0,0,10,8"
-                        Content="Akkubericht" />
+                        Content="{DynamicResource L.diag.btnBattery}" />
             </WrapPanel>
         </StackPanel>
     </Border>
@@ -40,8 +40,8 @@
     <!-- Auffälligkeiten -->
     <Border Style="{DynamicResource WzCardStatic}" Margin="0,0,0,14">
         <StackPanel>
-            <TextBlock Text="// EREIGNISSE" Style="{DynamicResource WzEyebrow}" />
-            <TextBlock Name="DiagEventsTitle" Text="Noch nicht analysiert" Style="{DynamicResource WzCardTitle}" />
+            <TextBlock Text="{DynamicResource L.diag.eventsEyebrow}" Style="{DynamicResource WzEyebrow}" />
+            <TextBlock Name="DiagEventsTitle" Text="{DynamicResource L.diag.notAnalysed}" Style="{DynamicResource WzCardTitle}" />
             <StackPanel Name="DiagEvents" />
         </StackPanel>
     </Border>
@@ -49,8 +49,8 @@
     <!-- Startdauer -->
     <Border Style="{DynamicResource WzCardStatic}" Margin="0,0,0,14">
         <StackPanel>
-            <TextBlock Text="// STARTDAUER" Style="{DynamicResource WzEyebrow}" />
-            <TextBlock Name="DiagBootTitle" Text="Noch nicht analysiert" Style="{DynamicResource WzCardTitle}" />
+            <TextBlock Text="{DynamicResource L.diag.bootEyebrow}" Style="{DynamicResource WzEyebrow}" />
+            <TextBlock Name="DiagBootTitle" Text="{DynamicResource L.diag.notAnalysed}" Style="{DynamicResource WzCardTitle}" />
             <StackPanel Name="DiagBoot" />
         </StackPanel>
     </Border>
@@ -58,10 +58,10 @@
     <!-- Zuverlässigkeitsverlauf -->
     <Border Style="{DynamicResource WzCardStatic}" Margin="0,0,0,14">
         <StackPanel>
-            <TextBlock Text="// ZUVERLÄSSIGKEIT" Style="{DynamicResource WzEyebrow}" />
-            <TextBlock Name="DiagReliabilityTitle" Text="Noch nicht analysiert" Style="{DynamicResource WzCardTitle}" />
+            <TextBlock Text="{DynamicResource L.diag.reliabilityEyebrow}" Style="{DynamicResource WzEyebrow}" />
+            <TextBlock Name="DiagReliabilityTitle" Text="{DynamicResource L.diag.notAnalysed}" Style="{DynamicResource WzCardTitle}" />
             <TextBlock Style="{DynamicResource WzHint}" Margin="0,0,0,10"
-                       Text="Abstürze, Programmfehler und Installationen in einer Zeitleiste. Hier zeigt sich, ob ein Problem mit einer Installation zusammenfällt — das sieht man in der Ereignisliste nicht." />
+                       Text="{DynamicResource L.diag.reliabilityHint}" />
             <StackPanel Name="DiagReliability" />
         </StackPanel>
     </Border>
@@ -69,8 +69,8 @@
     <!-- Bluescreens -->
     <Border Style="{DynamicResource WzCardStatic}" Margin="0,0,0,14">
         <StackPanel>
-            <TextBlock Text="// ABSTÜRZE" Style="{DynamicResource WzEyebrow}" />
-            <TextBlock Name="DiagDumpsTitle" Text="Noch nicht analysiert" Style="{DynamicResource WzCardTitle}" />
+            <TextBlock Text="{DynamicResource L.diag.crashEyebrow}" Style="{DynamicResource WzEyebrow}" />
+            <TextBlock Name="DiagDumpsTitle" Text="{DynamicResource L.diag.notAnalysed}" Style="{DynamicResource WzCardTitle}" />
             <StackPanel Name="DiagDumps" />
         </StackPanel>
     </Border>
@@ -78,8 +78,8 @@
     <!-- Datenträger -->
     <Border Style="{DynamicResource WzCardStatic}">
         <StackPanel>
-            <TextBlock Text="// DATENTRÄGER" Style="{DynamicResource WzEyebrow}" />
-            <TextBlock Name="DiagDisksTitle" Text="Noch nicht analysiert" Style="{DynamicResource WzCardTitle}" />
+            <TextBlock Text="{DynamicResource L.diag.diskEyebrow}" Style="{DynamicResource WzEyebrow}" />
+            <TextBlock Name="DiagDisksTitle" Text="{DynamicResource L.diag.notAnalysed}" Style="{DynamicResource WzCardTitle}" />
             <StackPanel Name="DiagDisks" />
         </StackPanel>
     </Border>

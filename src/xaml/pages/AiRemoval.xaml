@@ -1,21 +1,21 @@
 ﻿<StackPanel xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
 
-    <TextBlock Text="// KI-ENTFERNUNG" Style="{DynamicResource WzEyebrow}" />
-    <TextBlock Text="Copilot, Recall und Co." Style="{DynamicResource WzPageTitle}" />
+    <TextBlock Text="{DynamicResource L.ai.eyebrow}" Style="{DynamicResource WzEyebrow}" />
+    <TextBlock Text="{DynamicResource L.ai.title}" Style="{DynamicResource WzPageTitle}" />
     <TextBlock Style="{DynamicResource WzPageLead}"
-               Text="Erst sperren, dann entfernen. Die Sperren wirken auch vorbeugend, falls ein Funktionsupdate KI-Bestandteile nachliefert." />
+               Text="{DynamicResource L.ai.lead}" />
 
     <ItemsControl Name="AiNotices" Margin="0,0,0,14" />
 
     <!-- Bestandsaufnahme -->
     <Border Style="{DynamicResource WzCardStatic}" Margin="0,0,0,16">
         <StackPanel>
-            <TextBlock Text="// BESTANDSAUFNAHME" Style="{DynamicResource WzEyebrow}" />
-            <TextBlock Name="AiScanTitle" Text="Wird geprüft..." Style="{DynamicResource WzCardTitle}" TextWrapping="Wrap" />
+            <TextBlock Text="{DynamicResource L.ai.scanEyebrow}" Style="{DynamicResource WzEyebrow}" />
+            <TextBlock Name="AiScanTitle" Text="{DynamicResource L.ai.scanTitle}" Style="{DynamicResource WzCardTitle}" TextWrapping="Wrap" />
             <StackPanel Name="AiScanRows" />
             <Button Name="AiBtnScan" Style="{DynamicResource WzBtnSecondary}" Margin="0,12,0,0"
-                    HorizontalAlignment="Left" Content="Erneut suchen" />
+                    HorizontalAlignment="Left" Content="{DynamicResource L.ai.btnScan}" />
         </StackPanel>
     </Border>
 
@@ -24,23 +24,23 @@
         <StackPanel>
             <Grid>
                 <StackPanel Orientation="Horizontal">
-                    <TextBlock Name="AiSelectionCount" Text="0 ausgewählt" Style="{DynamicResource WzValue}"
+                    <TextBlock Name="AiSelectionCount" Text="{DynamicResource L.ai.selectionCount}" Style="{DynamicResource WzValue}"
                                VerticalAlignment="Center" Foreground="{DynamicResource WzCyan}" />
-                    <TextBlock Name="AiStatusHint" Text="Zustand wird geprüft..." Style="{DynamicResource WzLabel}"
+                    <TextBlock Name="AiStatusHint" Text="{DynamicResource L.ai.stateHint}" Style="{DynamicResource WzLabel}"
                                VerticalAlignment="Center" Margin="14,0,0,0" />
                 </StackPanel>
                 <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
-                    <Button Name="AiBtnRecommended" Style="{DynamicResource WzBtnGhost}" Content="empfohlene" Margin="0,0,4,0" />
-                    <Button Name="AiBtnNone" Style="{DynamicResource WzBtnGhost}" Content="keine" />
+                    <Button Name="AiBtnRecommended" Style="{DynamicResource WzBtnGhost}" Content="{DynamicResource L.ai.btnRecommended}" Margin="0,0,4,0" />
+                    <Button Name="AiBtnNone" Style="{DynamicResource WzBtnGhost}" Content="{DynamicResource L.ai.btnNone}" />
                 </StackPanel>
             </Grid>
             <WrapPanel Margin="0,16,0,0">
                 <Button Name="AiBtnApply" Style="{DynamicResource WzBtnPrimary}" Margin="0,0,10,0"
-                        Content="Auswahl anwenden" />
+                        Content="{DynamicResource L.ai.btnApply}" />
                 <Button Name="AiBtnUndo" Style="{DynamicResource WzBtnSecondary}" Margin="0,0,10,0"
-                        Content="Änderungen zurücknehmen" />
+                        Content="{DynamicResource L.ai.btnUndo}" />
                 <Button Name="AiBtnRefresh" Style="{DynamicResource WzBtnSecondary}"
-                        Content="Zustand neu prüfen" />
+                        Content="{DynamicResource L.ai.btnRefresh}" />
             </WrapPanel>
         </StackPanel>
     </Border>

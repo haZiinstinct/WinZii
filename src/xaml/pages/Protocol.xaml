@@ -1,10 +1,10 @@
 ﻿<StackPanel xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
 
-    <TextBlock Text="// PROTOKOLL" Style="{DynamicResource WzEyebrow}" />
-    <TextBlock Text="Sitzungsprotokoll" Style="{DynamicResource WzPageTitle}" />
+    <TextBlock Text="{DynamicResource L.log.eyebrow}" Style="{DynamicResource WzEyebrow}" />
+    <TextBlock Text="{DynamicResource L.log.title}" Style="{DynamicResource WzPageTitle}" />
     <TextBlock Style="{DynamicResource WzPageLead}"
-               Text="Jeder Arbeitsschritt wird mitgeschrieben — als Nachweis für den Kunden und als Gedächtnisstütze für dich." />
+               Text="{DynamicResource L.log.lead}" />
 
     <Grid>
         <Grid.ColumnDefinitions>
@@ -17,42 +17,42 @@
 
         <Border Grid.Column="0" Style="{DynamicResource WzCard}">
             <StackPanel>
-                <TextBlock Text="// UMFANG" Style="{DynamicResource WzEyebrow}" />
+                <TextBlock Text="{DynamicResource L.log.countEyebrow}" Style="{DynamicResource WzEyebrow}" />
                 <TextBlock Name="ProtoCount" Text="0" Style="{DynamicResource WzValueBig}" />
-                <TextBlock Text="protokollierte Schritte" Style="{DynamicResource WzLabel}" Margin="0,4,0,0" />
+                <TextBlock Text="{DynamicResource L.log.countHint}" Style="{DynamicResource WzLabel}" Margin="0,4,0,0" />
             </StackPanel>
         </Border>
 
         <Border Grid.Column="2" Style="{DynamicResource WzCard}">
             <StackPanel>
-                <TextBlock Text="// DAUER" Style="{DynamicResource WzEyebrow}" />
-                <TextBlock Name="ProtoDuration" Text="0 Min" Style="{DynamicResource WzValueBig}" />
-                <TextBlock Name="ProtoStart" Text="seit Programmstart" Style="{DynamicResource WzLabel}" Margin="0,4,0,0" />
+                <TextBlock Text="{DynamicResource L.log.durationEyebrow}" Style="{DynamicResource WzEyebrow}" />
+                <TextBlock Name="ProtoDuration" Text="{DynamicResource L.log.durationValue}" Style="{DynamicResource WzValueBig}" />
+                <TextBlock Name="ProtoStart" Text="{DynamicResource L.log.durationHint}" Style="{DynamicResource WzLabel}" Margin="0,4,0,0" />
             </StackPanel>
         </Border>
 
         <Border Grid.Column="4" Style="{DynamicResource WzCard}">
             <StackPanel>
-                <TextBlock Text="// AUFFÄLLIGKEITEN" Style="{DynamicResource WzEyebrow}" />
+                <TextBlock Text="{DynamicResource L.log.issuesEyebrow}" Style="{DynamicResource WzEyebrow}" />
                 <TextBlock Name="ProtoIssues" Text="0" Style="{DynamicResource WzValueBig}" />
-                <TextBlock Text="Warnungen und Fehler" Style="{DynamicResource WzLabel}" Margin="0,4,0,0" />
+                <TextBlock Text="{DynamicResource L.log.issuesHint}" Style="{DynamicResource WzLabel}" Margin="0,4,0,0" />
             </StackPanel>
         </Border>
     </Grid>
 
     <Border Style="{DynamicResource WzCardStatic}" Margin="0,14,0,0">
         <StackPanel>
-            <TextBlock Text="// AUSGABE" Style="{DynamicResource WzEyebrow}" />
-            <TextBlock Text="Protokoll und Ablage" Style="{DynamicResource WzCardTitle}" />
+            <TextBlock Text="{DynamicResource L.log.outputEyebrow}" Style="{DynamicResource WzEyebrow}" />
+            <TextBlock Text="{DynamicResource L.log.outputTitle}" Style="{DynamicResource WzCardTitle}" />
             <TextBlock Name="ProtoPathHint" Style="{DynamicResource WzHint}" Margin="0,0,0,14"
-                       Text="Berichte werden auf dem WinZii-Datenträger abgelegt." />
+                       Text="{DynamicResource L.log.outputHint}" />
             <WrapPanel>
                 <Button Name="ProtoBtnExport" Style="{DynamicResource WzBtnPrimary}" Margin="0,0,10,8"
-                        Content="Protokoll als HTML sichern" />
+                        Content="{DynamicResource L.log.btnHtml}" />
                 <Button Name="ProtoBtnOpenFolder" Style="{DynamicResource WzBtnSecondary}" Margin="0,0,10,8"
-                        Content="Berichtsordner öffnen" />
+                        Content="{DynamicResource L.log.btnFolder}" />
                 <Button Name="ProtoBtnOpenLog" Style="{DynamicResource WzBtnSecondary}" Margin="0,0,10,8"
-                        Content="Textprotokoll öffnen" />
+                        Content="{DynamicResource L.log.btnText}" />
             </WrapPanel>
         </StackPanel>
     </Border>
@@ -61,15 +61,15 @@
         <StackPanel>
             <Grid>
                 <StackPanel Grid.Column="0">
-                    <TextBlock Text="// ÜBERGABE" Style="{DynamicResource WzEyebrow}" />
-                    <TextBlock Name="ProtoHandoverTitle" Text="Übergabeblatt für den Kunden" Style="{DynamicResource WzCardTitle}" />
+                    <TextBlock Text="{DynamicResource L.log.handoverEyebrow}" Style="{DynamicResource WzEyebrow}" />
+                    <TextBlock Name="ProtoHandoverTitle" Text="{DynamicResource L.log.handoverTitle}" Style="{DynamicResource WzCardTitle}" />
                 </StackPanel>
                 <Button Name="ProtoBtnHandover" Style="{DynamicResource WzBtnPrimary}"
                         HorizontalAlignment="Right" VerticalAlignment="Top"
-                        Content="Übergabeblatt erstellen" />
+                        Content="{DynamicResource L.log.btnHandover}" />
             </Grid>
             <TextBlock Style="{DynamicResource WzHint}" Margin="0,0,0,14"
-                       Text="Fasst in Kundensprache zusammen, was gemacht wurde, wie viel Platz gewonnen wurde, wie der PC ausgestattet ist und was noch ansteht. Das Protokoll darüber ist ein Entwicklerlog und dafür ungeeignet." />
+                       Text="{DynamicResource L.log.handoverHint}" />
 
             <Grid>
                 <Grid.ColumnDefinitions>
@@ -84,13 +84,13 @@
                     <RowDefinition Height="Auto" />
                 </Grid.RowDefinitions>
 
-                <TextBlock Grid.Row="0" Grid.Column="0" Text="Techniker" Style="{DynamicResource WzLabel}" Margin="0,0,0,5" />
+                <TextBlock Grid.Row="0" Grid.Column="0" Text="{DynamicResource L.log.technicianLabel}" Style="{DynamicResource WzLabel}" Margin="0,0,0,5" />
                 <TextBox Grid.Row="1" Grid.Column="0" Name="ProtoTechnician" Style="{DynamicResource WzTextBox}" />
 
-                <TextBlock Grid.Row="0" Grid.Column="2" Text="Kunde" Style="{DynamicResource WzLabel}" Margin="0,0,0,5" />
+                <TextBlock Grid.Row="0" Grid.Column="2" Text="{DynamicResource L.log.customerLabel}" Style="{DynamicResource WzLabel}" Margin="0,0,0,5" />
                 <TextBox Grid.Row="1" Grid.Column="2" Name="ProtoCustomer" Style="{DynamicResource WzTextBox}" />
 
-                <TextBlock Grid.Row="0" Grid.Column="4" Text="Auftragsnummer" Style="{DynamicResource WzLabel}" Margin="0,0,0,5" />
+                <TextBlock Grid.Row="0" Grid.Column="4" Text="{DynamicResource L.log.orderLabel}" Style="{DynamicResource WzLabel}" Margin="0,0,0,5" />
                 <TextBox Grid.Row="1" Grid.Column="4" Name="ProtoOrderNumber" Style="{DynamicResource WzTextBox}" />
             </Grid>
         </StackPanel>
@@ -98,8 +98,8 @@
 
     <Border Style="{DynamicResource WzCardStatic}" Margin="0,14,0,0">
         <StackPanel>
-            <TextBlock Text="// VERLAUF" Style="{DynamicResource WzEyebrow}" />
-            <TextBlock Text="Letzte Schritte" Style="{DynamicResource WzCardTitle}" />
+            <TextBlock Text="{DynamicResource L.log.historyEyebrow}" Style="{DynamicResource WzEyebrow}" />
+            <TextBlock Text="{DynamicResource L.log.historyTitle}" Style="{DynamicResource WzCardTitle}" />
             <ItemsControl Name="ProtoEntries" />
         </StackPanel>
     </Border>
