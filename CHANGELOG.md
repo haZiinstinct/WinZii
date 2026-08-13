@@ -3,7 +3,7 @@
 Alle nennenswerten Änderungen an WinZii. Die Fassungen folgen
 [Semantic Versioning](https://semver.org/lang/de/).
 
-## [0.4.1] — 2026-08-12
+## [0.4.1] — 2026-08-13
 
 Der erste Abnahmelauf auf fremder Hardware, nach `docs/ABNAHME.md` — ein Notebook mit
 Akku und WLAN statt des Entwicklungsrechners. Sechs Befunde, alle aus derselben Familie
