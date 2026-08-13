@@ -98,7 +98,7 @@ Ehrlich gesagt, damit niemand böse überrascht wird: WinZii wurde auf **einem**
 | **Treibersicherung und Office** | Nur lesend geprüft, nie vollständig durchgeführt. |
 | **Drucker zurückspielen** | In der Sandbox vollständig durchlaufen: Treiber aus dem Treiberspeicher nachziehen, Netzwerkanschluss anlegen, Drucker einrichten, beim zweiten Lauf nichts doppeln. Ungeprüft bleibt ein Drucker an echter Hardware — USB-Anschlüsse entstehen erst mit dem Gerät und werden bewusst übersprungen. |
 | **WLAN zurückspielen** | Die Profildateien werden richtig gelesen und ein Fehlschlag sauber gemeldet. Ein Profil wirklich einzurichten konnte nie geprüft werden — weder der Entwicklungsrechner noch die Sandbox hat einen WLAN-Adapter. |
-| **Kleine Bildschirme** | Das Fenster braucht mindestens 1000 × 560 Punkte und verkleinert sich beim Start selbst auf die Arbeitsfläche. |
+| **Kleine Bildschirme** | Das Fenster braucht mindestens 1000 × 560 Punkte und verkleinert sich beim Start selbst auf die Arbeitsfläche. Bei 1092 × 614 — einem 1366er-Laptop bei 125 % — ist alles geprüft: Konsole startet eingeklappt, die Seitenleiste holt den aktiven Eintrag ins Bild, nichts liegt außerhalb. Genau am Mindestmaß fehlen der engsten Dashboard-Karte 4 px, dann bricht »Systemlaufwerk« mitten im Wort. |
 
 **In der Windows Sandbox geprüft** (`tools\Test-Sandbox.wsb`, ein frisches Windows 11 24H2 ohne winget): Start über den Launcher, echte Optimierungen anwenden und wieder zurücknehmen, Netzwerk-Diagnose, die winget-Nachinstallation, das Finden und Lesen einer Sicherung, das Anlegen eines Netzwerkdruckers samt Treiber sowie ein echter Dateiumzug mit Unterordnern — alles auf einem System, das nichts von diesem Projekt weiß.
 

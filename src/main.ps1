@@ -144,6 +144,15 @@ try {
     # Ohne Anpassung bleibt die Vorgabegröße
 }
 
+# Prüfhilfe (WZ_SELFTEST_SIZE=1092x614): Genau das Gegenteil des Problems oben —
+# auf einem großen Monitor greift keine der Anpassungen für niedrige Bildschirme,
+# und sie lassen sich dort nicht prüfen. Muss vor der Einklapp-Entscheidung
+# stehen, die weiter unten an der Fensterhöhe hängt.
+if ($env:WZ_SELFTEST_SIZE -match '^(\d+)\s*[xX*]\s*(\d+)$') {
+    $window.Width = [double]$Matches[1]
+    $window.Height = [double]$Matches[2]
+}
+
 # --- Kopfzeile füllen -----------------------------------------------------
 $syncHash.HeaderHost.Text = $env:COMPUTERNAME.ToUpper()
 $syncHash.SidebarVersion.Text = "v$($syncHash.Version)"

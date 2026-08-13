@@ -61,6 +61,19 @@ wie der Audit davor: Etwas wird gemeldet, das so nicht stimmt.
 - **7-Zip wirklich installiert** und über `winget list` nachgewiesen.
 - winget-Erkennung fünfzehnmal hintereinander ohne einen einzigen Aussetzer.
 - BitLocker-Ausgabe gegen `manage-bde` gegengehalten.
+- **Die Oberfläche auf 1092×614** (Punkt 8): Konsole startet eingeklappt und lässt sich mit
+  einem Klick wieder aufziehen, die Seitenleiste holt den aktiven Eintrag ins Bild — auch
+  bei »Protokoll«, dem letzten der dreizehn —, die Werte fluchten innerhalb jeder Karte,
+  und kein Bedienelement liegt außerhalb des Fensters.
+- Die neun Kennungen der Rubrik **Sicherheit** lösen sich alle über `winget show` auf.
+
+### Bekannt und offen
+
+- **Am Mindestmaß 1000×560 bricht eine Karte mitten im Wort.** Nachgemessen: Der Wert
+  bekommt 97,6 px, »Systemlaufwerk« braucht in JetBrains Mono 12 genau 100,8 px — es
+  fehlen **4 px**, und daraus wird »Systemlaufwer k«. Bei 1092×614, der Größe eines
+  1366er-Laptops, sind es 128 px und alles passt. Betroffen ist die engste der drei
+  Dashboard-Karten; erreichbar bleibt alles.
 
 ### Geändert
 
