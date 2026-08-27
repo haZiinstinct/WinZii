@@ -3,6 +3,68 @@
 Alle nennenswerten Änderungen an WinZii. Die Fassungen folgen
 [Semantic Versioning](https://semver.org/lang/de/).
 
+## [0.5.0] — 2026-08-28
+
+Deinstallieren wird restlos. Ein Deinstallierer räumt selten alles weg: Der
+Installationsordner bleibt liegen, im Startmenü steht noch ein Eintrag, in der Registry
+der eigene Schlüssel. Auf einem Kundenrechner summiert sich das über Jahre. WinZii sieht
+jetzt nach dem Entfernen nach und räumt die Reste mit Ansage weg.
+
+Weil das die einzige Stelle im Werkzeug ist, die Ordner **endgültig** löscht, steht davor
+mehr Prüfung als Funktion.
+
+### Neu
+
+- **Restesuche nach dem Deinstallieren.** Gesucht wird der eingetragene
+  Installationsordner, exakt nach dem Programm benannte Ordner unter ProgramData und
+  AppData, Startmenü-Einträge und die eigenen Registry-Schlüssel. Ein Dialog zeigt die
+  Funde mit Größe; entfernt wird erst nach Bestätigung. Registry-Schlüssel gehen vorher
+  als `.reg`-Datei in die Sicherung, die auf der Seite »Rücknahme« auftaucht — für Ordner
+  gibt es keine Sicherung, und genau das sagt der Dialog vorher.
+- Die Suche ist bewusst eng gehalten: nie eine Wurzel, nie ein Sammelordner wie »Common
+  Files«, keine Herausgeber-Schlüssel wie »Google« oder »Adobe«, unter denen mehrere
+  Programme wohnen, und Namen unter vier Zeichen fliegen raus. Lieber einen Rest
+  übersehen als den falschen Ordner anfassen.
+
+### Behoben
+
+- **»Entfernt« hieß nicht immer entfernt.** Programme ohne stillen Schalter öffnen den
+  Assistenten des Herstellers. Klickt der Techniker ihn weg, meldet mancher trotzdem
+  Rückgabewert 0 — und WinZii schrieb »entfernt« ins Protokoll. Schlimmer: Die Restesuche
+  hätte dann den Deinstallationsschlüssel eines Programms angeboten, das noch installiert
+  ist. Wäre er entfernt worden, stünde das Programm weder in der Systemsteuerung noch in
+  WinZii je wieder — installiert, aber nicht mehr entfernbar. Nach jedem Lauf wird jetzt
+  in der Programmliste nachgesehen; steht der Eintrag noch da, ist das ein Fehlschlag mit
+  Begründung.
+- **Die Programmliste zeigte unter fremdem Konto die falschen Programme.** Der
+  HKCU-Zweig wird jetzt wie überall sonst über `Resolve-WzRegistryPath` aufgelöst.
+  Beantwortet der Techniker die Rechteanforderung mit dem eigenen Konto, standen dort
+  bisher **seine** benutzerbezogenen Programme statt die des Kunden — und die Restesuche
+  hätte in seinem Profil aufgeräumt.
+- **Store-Apps und Zwischenspeicher sind samt Unterordnern gesperrt.** »WindowsApps«,
+  »Packages« und »Temp« galten nur als Ordner selbst als tabu, alles darunter war Beute.
+  An den Dateien in `WindowsApps` hängen Rechte, die sich nach einem Löschversuch nicht
+  wiederherstellen lassen. »Programs« kam als Sammelordner dazu: unter
+  `%LocalAppData%\Programs` wohnen ganze Programmfamilien.
+- **Registry-Reste haben ein eigenes Regelwerk bekommen**, in derselben Form wie das für
+  Ordner: nur unterhalb von SOFTWARE, nie der Zweig selbst, auch nicht in der Schreibweise
+  mit Benutzer-SID. Vorher entschied allein `Test-Path`, ob ein Schlüssel entfernt wird.
+- **Beide Regelwerke laufen ein zweites Mal, unmittelbar vor dem Löschen.** Zwischen dem
+  Suchen im Hintergrund und der Bestätigung liegt ein Dialog — was danach mit
+  `-Recurse -Force` verschwindet, wird noch einmal gegen dieselben Regeln gehalten.
+- Fehlt ein Profilordner, entfällt der Zweig, statt dass die Suche mitten im Lauf
+  abbricht. Leere Einträge fliegen aus den Listen, bevor `@()` aus einem `$null` ein
+  einelementiges Feld macht.
+
+### Geprüft
+
+- **`tools\Test-Undo.ps1` hat einen achten Abschnitt.** 40 Prüfungen: beide Regelwerke
+  gegen Pfade und Schlüssel, die es wirklich gibt und die trotzdem niemand anfassen darf,
+  die Ableitung des Ordnernamens aus dem Anzeigenamen, die Erfolgskontrolle nach dem
+  Deinstallieren — und die ganze Kette an einem Wegwerf-Programm, das der Abschnitt selbst
+  anlegt: finden, Testmodus, Abweisung eines gesperrten Ordners, entfernen,
+  `.reg`-Sicherung, `undo.json`. Der Abschnitt braucht keine Administratorrechte.
+
 ## [0.4.1] — 2026-08-13
 
 Der erste Abnahmelauf auf fremder Hardware, nach `docs/ABNAHME.md` — ein Notebook mit

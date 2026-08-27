@@ -11,7 +11,7 @@ Vom USB-Stick starten, aufräumen, optimieren, einrichten — ohne Installation,
 
 <sub>A Windows maintenance toolkit for IT technicians. Interface switchable between German and English; measured values, dialogs and log stay German for now.</sub>
 
-![Version](https://img.shields.io/badge/Version-0.4.1-00d4ff?labelColor=0a0a0f&style=flat-square)
+![Version](https://img.shields.io/badge/Version-0.5.0-00d4ff?labelColor=0a0a0f&style=flat-square)
 ![Windows](https://img.shields.io/badge/Windows-10%20%7C%2011-00d4ff?labelColor=0a0a0f&style=flat-square)
 ![PowerShell](https://img.shields.io/badge/PowerShell-5.1-00d4ff?labelColor=0a0a0f&style=flat-square)
 ![Installation](https://img.shields.io/badge/Installation-keine-00d4ff?labelColor=0a0a0f&style=flat-square)
@@ -31,7 +31,7 @@ Vom USB-Stick starten, aufräumen, optimieren, einrichten — ohne Installation,
 | **Optimierung** | 41 Eingriffe für Geschwindigkeit, Telemetrie, Datenschutz und Sicherheit. Jeder mit Begründung, jeder einzeln zurücknehmbar. |
 | **KI-Entfernung** | Findet Copilot, Recall und Click to Do — sperrt sie per Richtlinie oder entfernt sie ganz. Die Sperren wirken auch vorbeugend gegen Funktionsupdates. |
 | **Bereinigung** | Zeigt erst, wo wie viel Platz liegt (Zwischenspeicher, Update-Reste, Browser-Caches, Windows.old), dann wird gezielt gelöscht. Persönliche Dateien sind ausgeschlossen. |
-| **Programme** | 59 Programme über winget, darunter eine Rubrik **Sicherheit** (Zweitmeinung, Aufräumen nach einem Befall, Schutz danach), mit Nachinstallation von winget selbst für LTSC-Systeme. Installationsdateien lassen sich auf den Stick laden. Zweiter Bereich: installierte Programme suchen und entfernen, still wo möglich. |
+| **Programme** | 59 Programme über winget, darunter eine Rubrik **Sicherheit** (Zweitmeinung, Aufräumen nach einem Befall, Schutz danach), mit Nachinstallation von winget selbst für LTSC-Systeme. Installationsdateien lassen sich auf den Stick laden. Zweiter Bereich: installierte Programme suchen und entfernen, still wo möglich — und danach die Reste, die der Deinstallierer liegen lässt: Installationsordner, Startmenü-Einträge, eigene Registry-Schlüssel. Die Funde stehen mit Größe im Dialog, entfernt wird erst nach Bestätigung, Schlüssel vorher als `.reg` gesichert. |
 | **Office** | Microsoft 365, Office LTSC 2024 und 2021 über das offizielle Bereitstellungswerkzeug — auf Wunsch komplett offline vom Stick. Dazu LibreOffice. |
 | **Daten** | Beantwortet vor der Neuinstallation: Was muss gesichert werden? Profilgrößen je Konto, wann ein Konto zuletzt benutzt wurde, Outlook-Dateien, Browser-Profile, Drucker, Netzlaufwerke, Produktschlüssel. Warnt nicht nur vor OneDrive-Platzhaltern, die im Explorer wie Dateien aussehen und leer sind, sondern lädt sie auf Wunsch herunter und wartet auf den Abschluss. Exportiert Lesezeichen, WLAN-Zugänge, Geräteliste und BitLocker-Schlüssel — und kopiert die persönlichen Ordner mit robocopy auf eine externe Platte, ohne an der Quelle etwas zu löschen. |
 | **Zurückspielen** | Die andere Hälfte des Datenumzugs: WLAN-Netze, Lesezeichen, Drucker und Netzlaufwerke aus einer Sicherung wieder anlegen — auch aus der eines anderen Rechners. Zeigt vorher, was passt und was nicht: fehlende Druckertreiber, Browser-Profile, die es hier nicht gibt, und WLAN-Netze, die ohne Schlüssel gesichert wurden. |
@@ -53,7 +53,7 @@ Das war alles. WinZii braucht keine Installation, keine Laufzeitumgebung und kei
 > **Windows meldet sich mit einem blauen Hinweis?**
 > Auf »Weitere Informationen« und dann »Trotzdem ausführen« klicken. Der Hinweis erscheint bei jeder Datei aus dem Internet, die nicht kostenpflichtig signiert wurde. Zu jedem Release gehört eine SHA256-Prüfsumme — damit lässt sich das Archiv vor dem Entpacken abgleichen:
 > ```powershell
-> Get-FileHash .\WinZii-0.4.1.zip -Algorithm SHA256
+> Get-FileHash .\WinZii-0.5.0.zip -Algorithm SHA256
 > ```
 
 **Voraussetzungen:** Windows 10 oder 11 mit Administratorrechten. PowerShell 5.1 und .NET Framework sind in Windows enthalten.
@@ -95,6 +95,7 @@ Ehrlich gesagt, damit niemand böse überrascht wird: WinZii wurde auf **einem**
 | **BitLocker, OneDrive** | Der »nicht vorhanden«-Pfad ist geprüft und meldet sauber, auf dem Notebook zusätzlich gegen `manage-bde` gegengehalten. Ein verschlüsselter Datenträger und ein OneDrive mit Platzhaltern fehlen weiterhin. |
 | **Energieplan** | Anlegen, aktivieren, zweiter Durchlauf ohne Doppelkopie und Zurücknehmen sind auf dem Notebook durchgespielt. Was Netz und Akku unterscheidet, sind Kühlungsrichtlinie und Turbo-Verhalten — viele Hersteller blenden beide aus der Energieoberfläche aus. Setzen lassen sie sich trotzdem, nachsehen kann man sie dort dann aber nicht. Kann ein Gerät sie gar nicht setzen, sagt WinZii im Protokoll, dass der Plan nichts bewirkt. |
 | **Office auf den Datenträger laden** | Der Abbruch beendet das Bereitstellungswerkzeug, **nicht** den Download: Geladen wird vom Click-to-Run-Dienst von Windows, und der macht im Hintergrund weiter. Im Abnahmelauf wuchs der Ordner nach dem Abbruch von 39 MB auf 2,5 GB. WinZii sagt das im Protokoll und nennt den Ordner zum Löschen; ein angefangener Vorrat gilt seit 0.4.1 zuverlässig als unvollständig. |
+| **Restesuche nach dem Deinstallieren** | Die Regeln und die ganze Kette — finden, sichern, entfernen — sind in `tools\Test-Undo.ps1` mit 40 Prüfungen abgedeckt, an einem Wegwerf-Programm. Gegen echte Deinstallierer läuft sie erst im nächsten Abnahmelauf. Zwei Dinge gelten dauerhaft: **Gelöschte Ordner sind endgültig weg** — gesichert werden nur Registry-Schlüssel —, und die Suche ist absichtlich eng. Sie übersieht lieber einen Rest, als den Ordner eines anderen Programms anzufassen. |
 | **Treibersicherung und Office** | Nur lesend geprüft, nie vollständig durchgeführt. |
 | **Drucker zurückspielen** | In der Sandbox vollständig durchlaufen: Treiber aus dem Treiberspeicher nachziehen, Netzwerkanschluss anlegen, Drucker einrichten, beim zweiten Lauf nichts doppeln. Ungeprüft bleibt ein Drucker an echter Hardware — USB-Anschlüsse entstehen erst mit dem Gerät und werden bewusst übersprungen. |
 | **WLAN zurückspielen** | Die Profildateien werden richtig gelesen und ein Fehlschlag sauber gemeldet. Ein Profil wirklich einzurichten konnte nie geprüft werden — weder der Entwicklungsrechner noch die Sandbox hat einen WLAN-Adapter. |

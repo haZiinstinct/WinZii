@@ -10,8 +10,9 @@ bequemen Zweig. Genau daraus sind die drei Symptome entstanden, die den Audit au
 haben. Alles unten ist der Teil, der auf dem Entwicklungsrechner **grundsätzlich nicht**
 prüfbar ist.
 
-Stand: **0.4.0**, Tag `v0.4.0`. Alle acht Prüfwerkzeuge grün, Sandbox-Lauf bestanden,
-Start aus sauberer Kopie mit leerem `offline\` geprüft.
+Stand: **0.5.0**, Tag `v0.4.1`. Alle acht Prüfwerkzeuge grün, Sandbox-Lauf bestanden,
+Start aus sauberer Kopie mit leerem `offline\` geprüft. Die Punkte 1 bis 11 sind im
+Abnahmelauf zu 0.4.1 abgearbeitet; neu dazugekommen ist Punkt 12.
 
 > **`main` ist weiter als der Tag.** Auf dem Entwicklungsrechner wird parallel gearbeitet.
 > Vor dem ersten Commit hier immer `git pull --rebase origin main` — sonst wird der Push
@@ -182,6 +183,36 @@ Auf dem Entwicklungsrechner gibt es davon nichts, geprüft ist nur der »nicht v
 - **BitLocker-Schlüssel sichern** — der Dialog muss vorher deutlich sagen, dass die
   Schlüssel im Klartext auf dem Datenträger landen.
 
+## 12. Restesuche nach dem Deinstallieren (neu in 0.5.0)
+
+Der einzige Pfad in WinZii, der Ordner **endgültig** löscht — ohne Sicherung, ohne
+Rücknahme. `tools\Test-Undo.ps1` Abschnitt 8 prüft die Regeln und die ganze Kette an
+einem Wegwerf-Programm; was dort nicht geht, ist die Begegnung mit echten
+Deinstallierern. Genau die gehört hierher.
+
+Zuerst der Blick ohne Eingriff: Seite **Programme**, zweiter Bereich, ein beliebiges
+Programm auswählen und `Start.bat -DryRun` laufen lassen. Im Testmodus wird nichts
+entfernt, aber die Fundliste steht im Protokoll.
+
+Dann drei Fälle, in dieser Reihenfolge:
+
+1. **Ein stiller Deinstallierer, der Reste hinterlässt.** Ein kleines Programm über die
+   Seite installieren, benutzen (damit es Einstellungen anlegt), dann über WinZii
+   entfernen. Der Dialog muss die Funde mit Größe zeigen. **Jeden Pfad in der Liste
+   einzeln ansehen, bevor bestätigt wird** — steht dort ein Ordner, der einem anderen
+   Programm gehört, ist das ein Befund und die Bestätigung bleibt aus.
+2. **Ein Assistent, der weggeklickt wird.** Ein Programm ohne stillen Schalter auswählen,
+   den Assistenten des Herstellers öffnen lassen und **abbrechen**. WinZii muss
+   »steht weiter in der Programmliste« melden und darf **keine** Reste anbieten. Das ist
+   der Fall, der ein Programm unentfernbar machen würde.
+3. **Elevierung mit einem anderen Konto** (wie in Abschnitt 2). Die Programmliste muss die
+   Programme des angemeldeten Anwenders zeigen, nicht die des Technikerkontos — erkennbar
+   an der Spalte »nur dieses Konto«. Ein Rest darf niemals im Profil des Technikers liegen.
+
+Danach die Sicherung nachsehen: unter `backups\<rechnername>\<zeitstempel>-Programmreste`
+müssen `undo.json` und je entferntem Schlüssel eine `.reg`-Datei liegen, und der Eintrag
+muss auf der Seite **Rücknahme** auftauchen.
+
 ---
 
 ## Was danach passiert
@@ -195,6 +226,6 @@ powershell -NoProfile -ExecutionPolicy Bypass -File tools/Repair-Encoding.ps1
 Dann die Prüfwerkzeuge: `Test-Smoke`, `Test-Catalogs`, `Test-Pages`, `Test-Language`,
 `Test-Undo`, `Test-Process`, `Test-Contrast`, `Test-Dialogs`, `Invoke-Analyzer`.
 
-Fällt bei der Abnahme etwas auf, das Anwender betrifft, wird daraus **0.4.1**. Der
+Fällt bei der Abnahme etwas auf, das Anwender betrifft, wird daraus **0.5.1**. Der
 Abschnitt »Bekannte Grenzen« in beiden Readme-Dateien wird dann ehrlich nachgezogen —
 was auf dem Laptop geprüft wurde, darf dort nicht mehr als ungetestet stehen.
