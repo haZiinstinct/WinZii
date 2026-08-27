@@ -13,6 +13,10 @@
 # und am Ende in jedem Fall wiederhergestellt, der Wegwerf-Plan gelöscht. Ohne
 # Administratorrechte wird der Abschnitt übersprungen.
 #
+# Abschnitt 8 nimmt sich die Restesuche vor — die einzige Stelle in WinZii, die
+# Ordner endgültig löscht. Erst die beiden Regelwerke, die davor stehen, dann
+# die ganze Kette an einem Wegwerf-Programm, das der Abschnitt selbst anlegt.
+#
 # Aufruf:  powershell -NoProfile -ExecutionPolicy Bypass -File tools\Test-Undo.ps1
 [CmdletBinding()]
 param()
@@ -27,7 +31,8 @@ $syncHash.DryRun = $false
 . (Join-Path $root 'src\version.ps1')
 $syncHash.Version = $script:WzVersion
 
-foreach ($module in 'Core.Paths', 'Core.Logging', 'Core.Json', 'Core.Runspace', 'Core.Backup', 'Optimizer') {
+foreach ($module in 'Core.Paths', 'Core.Logging', 'Core.Json', 'Core.Runspace', 'Core.Backup',
+    'Optimizer', 'Core.System', 'Uninstall') {
     . (Join-Path $root "src\modules\$module.ps1")
 }
 
@@ -329,7 +334,159 @@ if (-not $istAdmin) {
     }
 }
 
+# --- 8. Restesuche nach dem Deinstallieren ----------------------------------
+# Hier wird endgültig gelöscht, deshalb steht vor dem Löschen zweimal dasselbe
+# Regelwerk. Beide werden zuerst trocken durchgeprüft — auf Pfade, die es gibt,
+# aber niemand anfassen darf. Erst danach läuft die Kette an einem Wegwerf-
+# Programm, das dieser Abschnitt selbst anlegt.
+Write-Host ''
+Write-Host '8. Restesuche: Regeln, Fund und Rücknahme' -ForegroundColor White
+
+# Die Wurzeln kommen aus derselben Quelle wie in der Prüfung selbst. Unter einem
+# Technikerkonto zeigen $env:LOCALAPPDATA und Get-WzUserFolder auf verschiedene
+# Profile — mit $env:… prüfte der Test etwas anderes als den Ernstfall.
+$lokal = Get-WzUserFolder -Kind 'LocalAppData'
+$programme = $env:ProgramFiles
+$startmenue = Join-Path $env:ProgramData 'Microsoft\Windows\Start Menu\Programs'
+
+$pfadRegeln = @(
+    @{ Pfad = $programme;                                          Erlaubt = $false; Was = 'Wurzel selbst' }
+    @{ Pfad = 'C:\';                                               Erlaubt = $false; Was = 'Laufwerkswurzel' }
+    @{ Pfad = 'C:\Windows\System32';                               Erlaubt = $false; Was = 'außerhalb der Wurzeln' }
+    @{ Pfad = (Join-Path $programme 'Common Files');               Erlaubt = $false; Was = 'Sammelordner' }
+    @{ Pfad = (Join-Path $programme 'WindowsApps\Wegwerf');        Erlaubt = $false; Was = 'Store-Apps, auch darunter' }
+    @{ Pfad = (Join-Path $lokal 'Temp\Wegwerf');                   Erlaubt = $false; Was = 'Zwischenspeicher, auch darunter' }
+    @{ Pfad = (Join-Path $lokal 'Programs');                       Erlaubt = $false; Was = 'Programs als Sammelordner' }
+    @{ Pfad = (Join-Path $programme 'Wegwerfprogramm');            Erlaubt = $true;  Was = 'Programmordner' }
+    @{ Pfad = (Join-Path $lokal 'Programs\Wegwerfprogramm');       Erlaubt = $true;  Was = 'Programm unter Programs' }
+    @{ Pfad = (Join-Path $startmenue 'Wegwerfprogramm');           Erlaubt = $true;  Was = 'Startmenü-Eintrag' }
+)
+foreach ($regel in $pfadRegeln) {
+    Write-Check "Ordner: $($regel.Was)" ((Test-WzLeftoverPathSafe -Path $regel.Pfad) -eq $regel.Erlaubt)
+}
+
+$keyRegeln = @(
+    @{ Pfad = 'HKLM:\SOFTWARE';                                      Erlaubt = $false; Was = 'Zweig selbst' }
+    @{ Pfad = 'HKLM:\SOFTWARE\WOW6432Node';                          Erlaubt = $false; Was = '32-Bit-Zweig selbst' }
+    @{ Pfad = 'HKLM:\SYSTEM\CurrentControlSet\Services';             Erlaubt = $false; Was = 'außerhalb von SOFTWARE' }
+    @{ Pfad = 'HKLM:\SOFTWARE\Wegwerfprogramm';                      Erlaubt = $true;  Was = 'Schlüssel unter SOFTWARE' }
+    @{ Pfad = 'HKLM:\SOFTWARE\WOW6432Node\Wegwerfprogramm';          Erlaubt = $true;  Was = 'Schlüssel im 32-Bit-Zweig' }
+    @{ Pfad = 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Uninstall\Wegwerf'; Erlaubt = $true; Was = 'Deinstallationsschlüssel' }
+    # Dieselben beiden Fälle in der Schreibweise, die unter fremdem Konto entsteht.
+    @{ Pfad = 'Registry::HKEY_USERS\S-1-5-21-1-2-3-1001\SOFTWARE';   Erlaubt = $false; Was = 'fremdes Konto, Zweig selbst' }
+    @{ Pfad = 'Registry::HKEY_USERS\S-1-5-21-1-2-3-1001\SOFTWARE\Wegwerf'; Erlaubt = $true; Was = 'fremdes Konto, Schlüssel' }
+)
+foreach ($regel in $keyRegeln) {
+    Write-Check "Registry: $($regel.Was)" ((Test-WzLeftoverKeySafe -Path $regel.Pfad) -eq $regel.Erlaubt)
+}
+
+# Aus dem Anzeigenamen wird der Ordnername. Trifft er zu breit, räumt die Suche
+# beim Nachbarprogramm auf.
+$namensFaelle = @(
+    @{ Name = 'Mozilla Firefox 128.0 (x64 de)'; Erwartet = 'Mozilla Firefox'; Was = 'Version und Klammer fallen weg' }
+    @{ Name = 'VLC';                            Erwartet = $null;             Was = 'zu kurzer Name fällt raus' }
+    @{ Name = 'C:\Unsinn';                      Erwartet = $null;             Was = 'Pfadzeichen fallen raus' }
+)
+foreach ($fall in $namensFaelle) {
+    $kandidaten = @(Get-WzLeftoverNameCandidates -Program ([pscustomobject]@{ Name = $fall.Name }))
+    $ok = if ($fall.Erwartet) { $kandidaten -contains $fall.Erwartet } else { $kandidaten.Count -eq 0 }
+    Write-Check "Name: $($fall.Was)" $ok ($kandidaten -join ', ')
+}
+
+# Ein Wegwerf-Programm: ein Ordner mit Inhalt und ein eigener Schlüssel.
+$restName = 'WinZii-Selbsttest-Restprogramm'
+$restKey = "HKCU:\Software\$restName"
+$restOrdner = Join-Path $lokal $restName
+
+if (-not (Test-Path -LiteralPath $restKey)) { [void](New-Item -Path $restKey -Force) }
+Set-ItemProperty -Path $restKey -Name 'DisplayName' -Value $restName -Force
+[void](New-Item -Path $restOrdner -ItemType Directory -Force)
+Set-Content -LiteralPath (Join-Path $restOrdner 'rest.txt') -Value 'Wegwerfdatei des Selbsttests'
+
+# Ein Assistent, den der Techniker wegklickt, meldet mitunter trotzdem Erfolg.
+# Steht der Eintrag danach noch in der Liste, ist nichts entfernt worden.
+Write-Check 'noch eingetragen gilt als nicht entfernt' `
+    (-not (Test-WzProgramGone -Program ([pscustomobject]@{ Name = $restName; RegistryPath = $restKey })))
+Write-Check 'fehlender Schlüssel gilt als entfernt' `
+    (Test-WzProgramGone -Program ([pscustomobject]@{ Name = $restName; RegistryPath = "$restKey-GibtEsNicht" }))
+Write-Check 'ohne Schlüsselpfad gilt als entfernt' `
+    (Test-WzProgramGone -Program ([pscustomobject]@{ Name = $restName; RegistryPath = '' }))
+
+$restProgramm = [pscustomobject]@{
+    Name            = $restName
+    InstallLocation = $restOrdner
+    RegistryPath    = $restKey
+}
+$funde = @(Find-WzUninstallLeftovers -Programs @($restProgramm))
+$ordnerFunde = @($funde | Where-Object { $_.Kind -eq 'Ordner' })
+$keyFunde = @($funde | Where-Object { $_.Kind -eq 'Registry' })
+
+Write-Check 'Ordner gefunden, genau einmal' `
+    ($ordnerFunde.Count -eq 1 -and $ordnerFunde[0].TargetPath -eq $restOrdner) ("{0} Fund(e)" -f $ordnerFunde.Count)
+Write-Check 'Größe des Ordners ermittelt' ($ordnerFunde.Count -eq 1 -and $ordnerFunde[0].SizeBytes -gt 0)
+Write-Check 'Schlüssel gefunden, genau einmal' ($keyFunde.Count -eq 1) ("{0} Fund(e)" -f $keyFunde.Count)
+
+# Ein Programm ohne Reste darf auch keine melden — sonst stünde nach jeder
+# Deinstallation ein Dialog mit fremden Ordnern darin.
+$ohneReste = @(Find-WzUninstallLeftovers -Programs @([pscustomobject]@{
+    Name = 'WinZii-Selbsttest-GibtEsNicht'; InstallLocation = ''; RegistryPath = '' }))
+Write-Check 'ohne Reste bleibt die Liste leer' ($ohneReste.Count -eq 0) ("{0} Fund(e)" -f $ohneReste.Count)
+
+$syncHash.DryRun = $true
+$trockenReste = Remove-WzUninstallLeftovers -Leftovers $funde
+$syncHash.DryRun = $false
+Write-Check 'Testmodus fasst nichts an' `
+    ((Test-Path -LiteralPath $restOrdner) -and (Test-Path -LiteralPath $restKey))
+Write-Check 'Testmodus legt keine Sicherung an' ($null -eq $trockenReste.UndoFile)
+
+# Zwischen Suchen und Bestätigen liegt ein Dialog. Was danach gelöscht wird,
+# muss noch einmal durch dasselbe Regelwerk — hier mit einem Ordner, den es
+# wirklich gibt, der aber gesperrt ist.
+$verboten = Join-Path $lokal 'Temp\winzii-selbsttest-verboten'
+[void](New-Item -Path $verboten -ItemType Directory -Force)
+$abgewiesen = Remove-WzUninstallLeftovers -Leftovers @([pscustomobject]@{
+    Kind = 'Ordner'; Path = $verboten; TargetPath = $verboten; SizeBytes = 0; Program = 'Selbsttest' })
+Write-Check 'gesperrter Ordner wird abgewiesen' `
+    ($abgewiesen.Removed -eq 0 -and $abgewiesen.Failed -eq 1) "Removed=$($abgewiesen.Removed) Failed=$($abgewiesen.Failed)"
+Write-Check 'gesperrter Ordner steht danach noch' (Test-Path -LiteralPath $verboten)
+Remove-Item -LiteralPath $verboten -Recurse -Force -ErrorAction SilentlyContinue
+
+$restLauf = Remove-WzUninstallLeftovers -Leftovers $funde
+Write-Check 'beide Reste entfernt' `
+    ($restLauf.Removed -eq 2 -and $restLauf.Failed -eq 0) "Removed=$($restLauf.Removed) Failed=$($restLauf.Failed)"
+Write-Check 'Ordner ist weg' (-not (Test-Path -LiteralPath $restOrdner))
+Write-Check 'Schlüssel ist weg' (-not (Test-Path -LiteralPath $restKey))
+Write-Check 'freigewordener Platz gezählt' ($restLauf.Bytes -gt 0) ("{0} Byte" -f $restLauf.Bytes)
+
+Write-Check 'undo.json geschrieben' ($restLauf.UndoFile -and (Test-Path -LiteralPath $restLauf.UndoFile)) $restLauf.UndoFile
+if ($restLauf.UndoFile) {
+    $restSession = Split-Path -Parent $restLauf.UndoFile
+    $restRegDateien = @(Get-ChildItem -LiteralPath $restSession -Filter '*.reg' -ErrorAction SilentlyContinue)
+    Write-Check '.reg-Sicherung des Schlüssels' ($restRegDateien.Count -ge 1) ("{0} Datei(en)" -f $restRegDateien.Count)
+    if ($restRegDateien.Count -ge 1) {
+        $restText = [IO.File]::ReadAllText($restRegDateien[0].FullName, [Text.Encoding]::Unicode)
+        Write-Check '.reg enthält den Schlüssel' ($restText -match [regex]::Escape($restName))
+    }
+
+    $restManifest = Read-WzJson -Path $restLauf.UndoFile
+    $restEintraege = @($restManifest.entries)
+    Write-Check 'Sicherung nennt die entfernten Pfade' `
+        ($restEintraege.Count -eq 1 -and @($restEintraege[0].previous.paths).Count -eq 2) ("{0} Pfad(e)" -f @($restEintraege[0].previous.paths).Count)
+
+    try { Remove-Item -LiteralPath $restSession -Recurse -Force -ErrorAction Stop } catch { }
+}
+
 # --- Aufräumen --------------------------------------------------------------
+# Sicherheitsnetz: Bricht Abschnitt 8 mittendrin ab, bleibt weder der
+# Wegwerf-Ordner noch der Schlüssel liegen.
+foreach ($rest in @($restOrdner, $verboten)) {
+    if ($rest -and (Test-Path -LiteralPath $rest)) {
+        try { Remove-Item -LiteralPath $rest -Recurse -Force -ErrorAction Stop } catch { }
+    }
+}
+if ($restKey -and (Test-Path -LiteralPath $restKey)) {
+    try { Remove-Item -LiteralPath $restKey -Recurse -Force -ErrorAction Stop } catch { }
+}
 try { Remove-Item -LiteralPath $testKey -Recurse -Force -ErrorAction Stop } catch { }
 $backupRoot = Get-WzBackupRoot
 if (Test-Path -LiteralPath $backupRoot) {

@@ -19,10 +19,15 @@ function Get-WzInstalledPrograms {
     [CmdletBinding()]
     param([string]$Filter)
 
+    # Der HKCU-Zweig wird aufgelöst: Beantwortet der Techniker die
+    # Rechteanforderung mit dem eigenen Konto, zeigt HKCU auf dessen Profil —
+    # aufgelistet würden dann seine Programme, nicht die des Kunden.
+    $userBranch = Resolve-WzRegistryPath 'HKCU:\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall'
+
     $roots = @(
         @{ Path = 'HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\*'; Scope = 'alle Benutzer' }
         @{ Path = 'HKLM:\SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Uninstall\*'; Scope = 'alle Benutzer (32 Bit)' }
-        @{ Path = 'HKCU:\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\*'; Scope = 'nur dieses Konto' }
+        @{ Path = "$userBranch\*"; Scope = 'nur dieses Konto' }
     )
 
     $programs = @()
@@ -115,6 +120,19 @@ function Uninstall-WzPrograms {
         $result = Invoke-WzUninstallCommand -Program $program
 
         if ($result.Success) {
+            # Erfolg behaupten ist nicht Erfolg haben: Ein Assistent, den der
+            # Techniker wegklickt, meldet mitunter trotzdem Code 0. Ohne diese
+            # Kontrolle stünde »entfernt« im Protokoll, und die Restesuche böte
+            # gleich darauf den Deinstallationsschlüssel eines Programms an,
+            # das noch installiert ist — danach wäre es gar nicht mehr zu
+            # entfernen.
+            if (-not (Test-WzProgramGone -Program $program)) {
+                $summary.Failed++
+                $summary.Details += "$($program.Name): steht weiter in der Programmliste — abgebrochen, oder ein Neustart steht aus"
+                Write-WzLog "$($program.Name) steht weiter in der Programmliste — nicht als entfernt gewertet." -Level Warn
+                continue
+            }
+
             $summary.Removed++
             $summary.RemovedPrograms += $program
             $summary.Details += "$($program.Name): entfernt"
@@ -174,6 +192,31 @@ function Invoke-WzUninstallCommand {
     }
 
     return $result
+}
+
+function Test-WzProgramGone {
+    <#
+    .SYNOPSIS
+        Ist das Programm nach dem Deinstallieren wirklich aus der Liste
+        verschwunden?
+    .NOTES
+        Gefragt wird die Stelle, aus der die Liste stammt: der eigene
+        Deinstallationsschlüssel. Steht dort noch ein Anzeigename, ist das
+        Programm noch da. Ohne Schlüsselpfad — etwa bei einem von Hand
+        gebauten Eintrag — gilt es als entfernt, sonst bliebe die Prüfung ein
+        Hindernis ohne Aussage.
+    #>
+    param([Parameter(Mandatory = $true)]$Program)
+
+    if (-not $Program.RegistryPath) { return $true }
+
+    try {
+        $entry = Get-ItemProperty -LiteralPath (Resolve-WzRegistryPath $Program.RegistryPath) -ErrorAction Stop
+    } catch {
+        return $true
+    }
+
+    return (-not $entry.DisplayName)
 }
 
 function Split-WzCommandLine {
@@ -265,15 +308,52 @@ function Test-WzLeftoverPathSafe {
         if ($Path.Length -le $prefix.Length) { continue }
         if (-not $Path.StartsWith($prefix, [StringComparison]::OrdinalIgnoreCase)) { continue }
 
-        # Unmittelbar unter der Wurzel darf kein Sammelordner getroffen werden
         $firstSegment = ($Path.Substring($prefix.Length) -split '\\')[0]
+
+        # Store-Apps und Zwischenspeicher sind samt allem darunter tabu. Dort
+        # lässt kein Deinstallierer etwas liegen, wohl aber liegt dort
+        # Windows-Eigenes — und in »WindowsApps« hängen Rechte daran, die sich
+        # nach einem Löschversuch nicht wiederherstellen lassen.
+        if ($firstSegment -in @('WindowsApps', 'Packages', 'Temp')) { return $false }
+
+        # Sammelordner selbst nie; die Programmordner darunter schon. »Programs«
+        # steht mit in der Liste, weil unter %LocalAppData%\Programs ganze
+        # Programmfamilien wohnen.
         if ($firstSegment -in @('Common Files', 'Microsoft', 'Microsoft Shared',
-            'WindowsApps', 'Packages', 'Temp', 'Windows')) {
+            'Windows', 'Programs', 'Application Data')) {
             if ($Path.TrimEnd('\') -eq ($prefix + $firstSegment)) { return $false }
         }
         return $true
     }
     return $false
+}
+
+function Test-WzLeftoverKeySafe {
+    <#
+    .SYNOPSIS
+        Darf dieser Registry-Schlüssel überhaupt als Rest gelten?
+    .NOTES
+        Das Gegenstück zu Test-WzLeftoverPathSafe für die Registry: nur
+        unterhalb von SOFTWARE, und nie der Zweig selbst. Geprüft wird die
+        aufgelöste Schreibweise mit, denn unter fremdem Konto steht dort
+        »Registry::HKEY_USERS\<SID>\…«.
+    #>
+    param([string]$Path)
+
+    if (-not $Path) { return $false }
+
+    $rest = $Path -replace '^Registry::', ''
+    $rest = $rest -replace '^HKEY_USERS\\[^\\]+\\', ''
+    $rest = $rest -replace '^(HKLM|HKCU|HKEY_LOCAL_MACHINE|HKEY_CURRENT_USER):?\\', ''
+    $segments = @(($rest -split '\\') | Where-Object { $_ })
+
+    if ($segments.Count -lt 2) { return $false }
+    if ($segments[0] -ne 'SOFTWARE') { return $false }
+    # »SOFTWARE\WOW6432Node« ist die 32-Bit-Ausgabe desselben Zweigs, also
+    # ebenfalls eine Wurzel und keine Beute.
+    if ($segments.Count -eq 2 -and $segments[1] -eq 'WOW6432Node') { return $false }
+
+    return $true
 }
 
 function Find-WzUninstallLeftovers {
@@ -292,22 +372,24 @@ function Find-WzUninstallLeftovers {
     $leftovers = @()
     $seen = @{}
 
+    # Fehlt eine dieser Wurzeln, entfällt der zugehörige Zweig. Join-Path wirft
+    # bei $null, und ein Fund weniger ist besser als ein Abbruch mitten in der
+    # Suche.
     $localApp = Get-WzUserFolder -Kind 'LocalAppData'
     $roamingApp = Get-WzUserFolder -Kind 'RoamingAppData'
-    $startMenus = @(
-        (Join-Path $env:ProgramData 'Microsoft\Windows\Start Menu\Programs'),
-        (Join-Path $roamingApp 'Microsoft\Windows\Start Menu\Programs')
-    )
+    $startMenus = @()
+    if ($env:ProgramData) { $startMenus += (Join-Path $env:ProgramData 'Microsoft\Windows\Start Menu\Programs') }
+    if ($roamingApp) { $startMenus += (Join-Path $roamingApp 'Microsoft\Windows\Start Menu\Programs') }
 
-    foreach ($program in @($Programs)) {
+    foreach ($program in @($Programs | Where-Object { $_ })) {
         $names = @(Get-WzLeftoverNameCandidates -Program $program)
 
         $folderCandidates = @()
         if ($program.InstallLocation) { $folderCandidates += $program.InstallLocation }
         foreach ($name in $names) {
-            $folderCandidates += Join-Path $env:ProgramData $name
-            $folderCandidates += Join-Path $localApp $name
-            $folderCandidates += Join-Path $roamingApp $name
+            if ($env:ProgramData) { $folderCandidates += Join-Path $env:ProgramData $name }
+            if ($localApp) { $folderCandidates += Join-Path $localApp $name }
+            if ($roamingApp) { $folderCandidates += Join-Path $roamingApp $name }
             foreach ($menu in $startMenus) { $folderCandidates += Join-Path $menu $name }
         }
 
@@ -349,6 +431,7 @@ function Find-WzUninstallLeftovers {
         foreach ($key in $keyCandidates) {
             $resolved = Resolve-WzRegistryPath $key
             if ($seen.ContainsKey($resolved.ToLowerInvariant())) { continue }
+            if (-not (Test-WzLeftoverKeySafe -Path $resolved)) { continue }
             if (-not (Test-Path -LiteralPath $resolved)) { continue }
             $seen[$resolved.ToLowerInvariant()] = $true
 
@@ -378,14 +461,17 @@ function Remove-WzUninstallLeftovers {
     param([Parameter(Mandatory = $true)]$Leftovers)
 
     $summary = [pscustomobject]@{
-        Removed = 0
-        Failed  = 0
-        Bytes   = [int64]0
-        Details = @()
+        Removed  = 0
+        Failed   = 0
+        Bytes    = [int64]0
+        Details  = @()
+        # Wo die .reg-Sicherungen liegen — dieselbe Angabe wie bei den Tweaks,
+        # damit sich der Weg zur Rücknahme auch im Protokoll nachlesen lässt.
+        UndoFile = $null
     }
 
     if ($syncHash.DryRun) {
-        foreach ($leftover in @($Leftovers)) {
+        foreach ($leftover in @($Leftovers | Where-Object { $_ })) {
             Write-WzLog "[Test] Rest würde entfernt: $($leftover.Path)" -Level Test
             $summary.Details += "$($leftover.Path): Testmodus"
         }
@@ -395,7 +481,23 @@ function Remove-WzUninstallLeftovers {
     $session = New-WzUndoSession -Scope 'Programmreste'
     $removedPaths = New-Object Collections.ArrayList
 
-    foreach ($leftover in @($Leftovers)) {
+    foreach ($leftover in @($Leftovers | Where-Object { $_ })) {
+        # Zwischen Suchen und Löschen liegt ein Dialog. Was gleich mit
+        # »-Recurse -Force« verschwindet, wird deshalb unmittelbar davor noch
+        # einmal gegen dieselben Regeln gehalten — die Liste kommt aus einem
+        # Hintergrundlauf, das Löschen ist endgültig.
+        $safe = if ($leftover.Kind -eq 'Registry') {
+            Test-WzLeftoverKeySafe -Path $leftover.TargetPath
+        } else {
+            Test-WzLeftoverPathSafe -Path $leftover.TargetPath
+        }
+        if (-not $safe) {
+            $summary.Failed++
+            $summary.Details += "$($leftover.Path): nicht entfernt — außerhalb der erlaubten Bereiche"
+            Write-WzLog "Rest übersprungen, außerhalb der erlaubten Bereiche: $($leftover.TargetPath)" -Level Warn
+            continue
+        }
+
         try {
             if ($leftover.Kind -eq 'Registry') {
                 Export-WzRegistryKey -Session $session -Path $leftover.TargetPath
@@ -424,7 +526,10 @@ function Remove-WzUninstallLeftovers {
             -Action @{ type = 'leftoverCleanup'; undo = @{
                 hint = 'Ordner sind endgültig gelöscht; entfernte Registry-Schlüssel liegen als .reg-Datei im Sicherungsordner.' } } `
             -Previous @{ paths = @($removedPaths) }
-        [void](Complete-WzUndoSession -Session $session)
+        $summary.UndoFile = Complete-WzUndoSession -Session $session
+    } else {
+        # Kein Rest entfernt: den leeren Sicherungsordner nicht stehen lassen.
+        try { Remove-Item -LiteralPath $session.Directory -Recurse -Force -ErrorAction Stop } catch { }
     }
 
     return $summary
