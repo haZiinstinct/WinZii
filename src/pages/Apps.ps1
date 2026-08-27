@@ -284,18 +284,66 @@ function Start-WzUninstallSelected {
 
     Invoke-WzTask -Name 'Programme entfernen' -ArgumentList (, $selected) -ScriptBlock {
         param($programs)
-        Uninstall-WzPrograms -Programs $programs
+        $summary = Uninstall-WzPrograms -Programs $programs
+        # Gleich nachsehen, was die Deinstallierer liegen gelassen haben —
+        # aber nur bei den Programmen, die wirklich weg sind.
+        $leftovers = @()
+        if (@($summary.RemovedPrograms).Count -gt 0) {
+            $leftovers = @(Find-WzUninstallLeftovers -Programs $summary.RemovedPrograms)
+        }
+        [pscustomobject]@{ Summary = $summary; Leftovers = $leftovers }
     } -OnComplete {
-        param($summary)
-        if (-not $summary) { return }
+        param($result)
+        if (-not $result) { return }
+        $summary = $result.Summary
+        $leftovers = @($result.Leftovers | Where-Object { $_ })
+
         Add-WzAction -Area 'Programme' `
             -Summary "$($summary.Removed) Programm(e) entfernt$(if ($summary.Failed -gt 0) { ", $($summary.Failed) ohne Erfolg" })" `
             -Detail @($selected | ForEach-Object { $_.Name })
 
-        Show-WzInfo -Title 'Deinstallation abgeschlossen' `
-            -Message "$($summary.Removed) entfernt, $($summary.Failed) fehlgeschlagen." `
-            -Items @($summary.Details)
-        Start-WzUninstallScan
+        if ($leftovers.Count -eq 0) {
+            Show-WzInfo -Title 'Deinstallation abgeschlossen' `
+                -Message "$($summary.Removed) entfernt, $($summary.Failed) fehlgeschlagen.$(if ($summary.Removed -gt 0) { ' Reste wurden keine gefunden.' })" `
+                -Items @($summary.Details)
+            Start-WzUninstallScan
+            return
+        }
+
+        # Reste gefunden: Ergebnis und Nachfrage in einem Dialog
+        $bytes = [int64]0
+        $measure = ($leftovers | Measure-Object -Property SizeBytes -Sum).Sum
+        if ($measure) { $bytes = [int64]$measure }
+
+        $answer = Show-WzConfirm -Title 'Deinstallation abgeschlossen' `
+            -Message ("$($summary.Removed) entfernt, $($summary.Failed) fehlgeschlagen. " +
+                "Die Deinstallierer haben Reste zurückgelassen ($(Format-WzBytes $bytes)). " +
+                'Registry-Schlüssel werden vor dem Entfernen als .reg-Datei gesichert. ' +
+                'Gelöschte Ordner sind endgültig weg — auch gespeicherte Einstellungen und Profile darin.') `
+            -Items @($leftovers | ForEach-Object {
+                "$($_.Kind): $($_.Path)$(if ($_.SizeBytes -gt 0) { " — $(Format-WzBytes $_.SizeBytes)" })"
+            }) `
+            -ConfirmText 'Reste entfernen' -Danger
+        if (-not $answer.Confirmed) {
+            Start-WzUninstallScan
+            return
+        }
+
+        Invoke-WzTask -Name 'Programmreste entfernen' -ArgumentList (, $leftovers) -ScriptBlock {
+            param($items)
+            Remove-WzUninstallLeftovers -Leftovers $items
+        } -OnComplete {
+            param($cleanup)
+            if (-not $cleanup) { return }
+            if ($cleanup.Removed -gt 0) {
+                Add-WzAction -Area 'Programme' `
+                    -Summary "$($cleanup.Removed) Programmrest(e) entfernt$(if ($cleanup.Bytes -gt 0) { " ($(Format-WzBytes $cleanup.Bytes))" })"
+            }
+            Show-WzInfo -Title 'Reste entfernt' `
+                -Message "$($cleanup.Removed) entfernt, $($cleanup.Failed) fehlgeschlagen." `
+                -Items @($cleanup.Details)
+            Start-WzUninstallScan
+        }
     }.GetNewClosure()
 }
 

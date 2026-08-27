@@ -50,19 +50,22 @@ function Get-WzInstalledPrograms {
             $productCode = if ($entry.PSChildName -match '^\{[0-9A-Fa-f-]{36}\}$') { $entry.PSChildName } else { '' }
 
             $programs += [pscustomobject]@{
-                Name        = $entry.DisplayName.Trim()
-                Version     = [string]$entry.DisplayVersion
-                Publisher   = [string]$entry.Publisher
-                SizeBytes   = $sizeBytes
-                Installed   = $installed
-                Scope       = $root.Scope
-                Command     = $command
-                IsQuiet     = [bool]$quiet
-                ProductCode = $productCode
+                Name            = $entry.DisplayName.Trim()
+                Version         = [string]$entry.DisplayVersion
+                Publisher       = [string]$entry.Publisher
+                SizeBytes       = $sizeBytes
+                Installed       = $installed
+                Scope           = $root.Scope
+                Command         = $command
+                IsQuiet         = [bool]$quiet
+                ProductCode     = $productCode
                 # Nur MSI und Programme mit eigenem stillen Schalter lassen sich
                 # ohne Rückfragen entfernen; alles andere öffnet ein Fenster.
-                CanSilent   = ([bool]$quiet -or [bool]$productCode)
-                RegistryKey = $entry.PSChildName
+                CanSilent       = ([bool]$quiet -or [bool]$productCode)
+                RegistryKey     = $entry.PSChildName
+                # Für die Restesuche nach dem Entfernen
+                InstallLocation = ([string]$entry.InstallLocation).Trim().Trim('"').TrimEnd('\')
+                RegistryPath    = (($root.Path -replace '\\\*$', '') + '\' + $entry.PSChildName)
             }
         }
     }
@@ -96,6 +99,9 @@ function Uninstall-WzPrograms {
         Removed = 0
         Failed  = 0
         Details = @()
+        # Die wirklich entfernten Programme — nur für die sucht sich danach
+        # die Restesuche durch Ordner und Registry.
+        RemovedPrograms = @()
     }
 
     foreach ($program in @($Programs)) {
@@ -110,6 +116,7 @@ function Uninstall-WzPrograms {
 
         if ($result.Success) {
             $summary.Removed++
+            $summary.RemovedPrograms += $program
             $summary.Details += "$($program.Name): entfernt"
             Write-WzLog "$($program.Name) entfernt." -Level Ok
         } else {
@@ -199,4 +206,226 @@ function Split-WzCommandLine {
 
     $parts = $line -split '\s+', 2
     return @($parts[0], $(if ($parts.Count -gt 1) { $parts[1] } else { '' }))
+}
+
+# --- Restesuche ------------------------------------------------------------
+#
+# Deinstallierer lassen gern etwas liegen: den Installationsordner, Einträge
+# im Startmenü, eigene Registry-Schlüssel. »Restlos« heißt: nach dem Entfernen
+# nachsehen und die Reste mit Ansage wegräumen.
+
+function Get-WzLeftoverNameCandidates {
+    <#
+    .SYNOPSIS
+        Ordner- und Schlüsselnamen, unter denen ein Programm seine Reste ablegt.
+    .NOTES
+        Bewusst nur der Anzeigename und eine Variante ohne Versions- und
+        Klammerzusatz (»Mozilla Firefox 128.0 (x64 de)« → »Mozilla Firefox«).
+        Herausgebernamen wären zu breit — unter »Google« oder »Adobe« wohnen
+        mehrere Programme.
+    #>
+    param([Parameter(Mandatory = $true)]$Program)
+
+    $names = @()
+    $base = $Program.Name.Trim()
+    if ($base) { $names += $base }
+
+    $trimmed = ($base -replace '\s*\([^)]*\)\s*$', '' -replace '\s+v?\d[\d.]*$', '').Trim()
+    if ($trimmed -and $trimmed -ne $base) { $names += $trimmed }
+
+    # Zu kurze Namen treffen zu leicht den falschen Ordner; Zeichen, die in
+    # Pfaden nichts verloren haben, fliegen gleich mit raus.
+    return @($names | Where-Object { $_.Length -ge 4 -and $_ -notmatch '[\\/:*?"<>|]' })
+}
+
+function Test-WzLeftoverPathSafe {
+    <#
+    .SYNOPSIS
+        Darf dieser Ordner überhaupt als Rest gelten?
+    .NOTES
+        Nur unterhalb der bekannten Programm- und Datenwurzeln, nie die Wurzel
+        selbst und nie ein bekannter Sammelordner wie »Common Files« — dort
+        wohnen viele Programme gleichzeitig.
+    #>
+    param([string]$Path)
+
+    if (-not $Path) { return $false }
+    if ($Path -notmatch '^[A-Za-z]:\\') { return $false }
+
+    $roots = @(
+        $env:ProgramFiles
+        ${env:ProgramFiles(x86)}
+        $env:ProgramData
+        (Get-WzUserFolder -Kind 'LocalAppData')
+        (Get-WzUserFolder -Kind 'RoamingAppData')
+    ) | Where-Object { $_ }
+
+    foreach ($root in $roots) {
+        $prefix = $root.TrimEnd('\') + '\'
+        if ($Path.Length -le $prefix.Length) { continue }
+        if (-not $Path.StartsWith($prefix, [StringComparison]::OrdinalIgnoreCase)) { continue }
+
+        # Unmittelbar unter der Wurzel darf kein Sammelordner getroffen werden
+        $firstSegment = ($Path.Substring($prefix.Length) -split '\\')[0]
+        if ($firstSegment -in @('Common Files', 'Microsoft', 'Microsoft Shared',
+            'WindowsApps', 'Packages', 'Temp', 'Windows')) {
+            if ($Path.TrimEnd('\') -eq ($prefix + $firstSegment)) { return $false }
+        }
+        return $true
+    }
+    return $false
+}
+
+function Find-WzUninstallLeftovers {
+    <#
+    .SYNOPSIS
+        Sucht nach dem Entfernen zurückgebliebene Ordner, Startmenü-Einträge
+        und Registry-Schlüssel der übergebenen Programme.
+    .NOTES
+        Die Suche ist bewusst eng: der eingetragene Installationsordner und
+        exakt nach dem Programm benannte Ordner und Schlüssel. Lieber einen
+        Rest übersehen als den falschen Ordner anfassen.
+    #>
+    [CmdletBinding()]
+    param([Parameter(Mandatory = $true)]$Programs)
+
+    $leftovers = @()
+    $seen = @{}
+
+    $localApp = Get-WzUserFolder -Kind 'LocalAppData'
+    $roamingApp = Get-WzUserFolder -Kind 'RoamingAppData'
+    $startMenus = @(
+        (Join-Path $env:ProgramData 'Microsoft\Windows\Start Menu\Programs'),
+        (Join-Path $roamingApp 'Microsoft\Windows\Start Menu\Programs')
+    )
+
+    foreach ($program in @($Programs)) {
+        $names = @(Get-WzLeftoverNameCandidates -Program $program)
+
+        $folderCandidates = @()
+        if ($program.InstallLocation) { $folderCandidates += $program.InstallLocation }
+        foreach ($name in $names) {
+            $folderCandidates += Join-Path $env:ProgramData $name
+            $folderCandidates += Join-Path $localApp $name
+            $folderCandidates += Join-Path $roamingApp $name
+            foreach ($menu in $startMenus) { $folderCandidates += Join-Path $menu $name }
+        }
+
+        foreach ($folder in $folderCandidates) {
+            $folder = $folder.TrimEnd('\')
+            if ($seen.ContainsKey($folder.ToLowerInvariant())) { continue }
+            if (-not (Test-WzLeftoverPathSafe -Path $folder)) { continue }
+            if (-not (Test-Path -LiteralPath $folder -PathType Container)) { continue }
+            $seen[$folder.ToLowerInvariant()] = $true
+
+            $bytes = [int64]0
+            try {
+                $sum = (Get-ChildItem -LiteralPath $folder -Recurse -Force -File -ErrorAction SilentlyContinue |
+                    Measure-Object -Property Length -Sum).Sum
+                if ($sum) { $bytes = [int64]$sum }
+            } catch { }
+
+            $leftovers += [pscustomobject]@{
+                Kind       = 'Ordner'
+                Path       = $folder
+                TargetPath = $folder
+                SizeBytes  = $bytes
+                Program    = $program.Name
+            }
+        }
+
+        # Registry: der eigene Deinstallationsschlüssel und exakt benannte
+        # Software-Schlüssel. Herausgeber-Wurzeln bleiben unangetastet.
+        $keyCandidates = @()
+        if ($program.RegistryPath) { $keyCandidates += $program.RegistryPath }
+        foreach ($name in $names) {
+            if ($name -in @('Microsoft', 'Windows', 'Google', 'Mozilla', 'Adobe',
+                'Apple', 'Intel', 'NVIDIA', 'Oracle', 'Policies', 'Classes', 'Clients')) { continue }
+            $keyCandidates += "HKLM:\SOFTWARE\$name"
+            $keyCandidates += "HKLM:\SOFTWARE\WOW6432Node\$name"
+            $keyCandidates += "HKCU:\Software\$name"
+        }
+
+        foreach ($key in $keyCandidates) {
+            $resolved = Resolve-WzRegistryPath $key
+            if ($seen.ContainsKey($resolved.ToLowerInvariant())) { continue }
+            if (-not (Test-Path -LiteralPath $resolved)) { continue }
+            $seen[$resolved.ToLowerInvariant()] = $true
+
+            $leftovers += [pscustomobject]@{
+                Kind       = 'Registry'
+                Path       = $key
+                TargetPath = $resolved
+                SizeBytes  = [int64]0
+                Program    = $program.Name
+            }
+        }
+    }
+
+    return @($leftovers)
+}
+
+function Remove-WzUninstallLeftovers {
+    <#
+    .SYNOPSIS
+        Entfernt die gefundenen Reste.
+    .DESCRIPTION
+        Registry-Schlüssel werden vorher als .reg-Datei in den Sicherungsordner
+        exportiert. Für Ordner gibt es keine Sicherung — das sagt der
+        Bestätigungsdialog vorher deutlich.
+    #>
+    [CmdletBinding()]
+    param([Parameter(Mandatory = $true)]$Leftovers)
+
+    $summary = [pscustomobject]@{
+        Removed = 0
+        Failed  = 0
+        Bytes   = [int64]0
+        Details = @()
+    }
+
+    if ($syncHash.DryRun) {
+        foreach ($leftover in @($Leftovers)) {
+            Write-WzLog "[Test] Rest würde entfernt: $($leftover.Path)" -Level Test
+            $summary.Details += "$($leftover.Path): Testmodus"
+        }
+        return $summary
+    }
+
+    $session = New-WzUndoSession -Scope 'Programmreste'
+    $removedPaths = New-Object Collections.ArrayList
+
+    foreach ($leftover in @($Leftovers)) {
+        try {
+            if ($leftover.Kind -eq 'Registry') {
+                Export-WzRegistryKey -Session $session -Path $leftover.TargetPath
+                Remove-Item -LiteralPath $leftover.TargetPath -Recurse -Force -ErrorAction Stop
+            } else {
+                Remove-Item -LiteralPath $leftover.TargetPath -Recurse -Force -ErrorAction Stop
+                $summary.Bytes += $leftover.SizeBytes
+            }
+            $summary.Removed++
+            [void]$removedPaths.Add($leftover.Path)
+            $summary.Details += "$($leftover.Path): entfernt"
+            Write-WzLog "Rest entfernt: $($leftover.Path)" -Level Ok
+        } catch {
+            $summary.Failed++
+            $message = $_.Exception.Message.Split([char]10)[0]
+            $summary.Details += "$($leftover.Path): $message"
+            Write-WzLog "Rest nicht entfernt: $($leftover.Path) — $message" -Level Warn
+        }
+    }
+
+    if ($removedPaths.Count -gt 0) {
+        # Damit die Sicherung auf der Seite »Rücknahme« auftaucht. Automatisch
+        # zurückholen lässt sich davon nichts — der Hinweis sagt, was geht.
+        Save-WzUndoState -Session $session -ItemId 'uninstall-leftovers' `
+            -ItemName 'Programmreste entfernt' `
+            -Action @{ type = 'leftoverCleanup'; undo = @{
+                hint = 'Ordner sind endgültig gelöscht; entfernte Registry-Schlüssel liegen als .reg-Datei im Sicherungsordner.' } } `
+            -Previous @{ paths = @($removedPaths) }
+        [void](Complete-WzUndoSession -Session $session)
+    }
+
+    return $summary
 }
