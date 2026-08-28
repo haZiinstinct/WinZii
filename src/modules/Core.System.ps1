@@ -450,10 +450,14 @@ function Get-WzSecurityInfo {
     try {
         $mp = Get-MpComputerStatus -ErrorAction Stop
         $parts = @()
+        # Weiches Trennzeichen (U+00AD): Am Fenster-Mindestmaß ist die Karte
+        # schmaler als das Wort, und WPF trennte mitten drin (»Echtzeitschut z«).
+        # So wird daraus bei Platznot »Echtzeit-schutz«, sonst bleibt es unsichtbar.
+        $echtzeitschutz = "Echtzeit$([char]0xAD)schutz"
         if ($mp.RealTimeProtectionEnabled) {
-            $parts += 'Echtzeitschutz an'
+            $parts += "$echtzeitschutz an"
         } else {
-            $parts += 'Echtzeitschutz AUS'
+            $parts += "$echtzeitschutz AUS"
             $info.DefenderOk = $false
         }
         if ($null -ne $mp.AntivirusSignatureAge) {
@@ -619,7 +623,10 @@ function Get-WzBitLockerStatus {
     # Verwaltungsoberfläche fehlt dort.
     if (-not $service) { return 'Dienst nicht vorhanden' }
     if ($bootStatus -eq 0 -and $service.Status -ne 'Running') {
-        return 'Systemlaufwerk nicht verschlüsselt'
+        # Laufwerksbuchstabe statt »Systemlaufwerk« — wie die WMI-Ausgabe unten
+        # (»C: an · D: aus«). Das lange Wort brach am Fenster-Mindestmaß mitten
+        # in der Dashboard-Karte um: »Systemlaufwer k«.
+        return "$env:SystemDrive nicht verschlüsselt"
     }
 
     try {
