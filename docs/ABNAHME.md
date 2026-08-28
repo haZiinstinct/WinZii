@@ -190,8 +190,9 @@ Rücknahme. `tools\Test-Undo.ps1` Abschnitt 8 prüft die Regeln und die ganze Ke
 einem Wegwerf-Programm; was dort nicht geht, ist die Begegnung mit echten
 Deinstallierern. Genau die gehört hierher.
 
-Zuerst der Blick ohne Eingriff: Seite **Programme**, zweiter Bereich, ein beliebiges
-Programm auswählen und `Start.bat -DryRun` laufen lassen. Im Testmodus wird nichts
+Zuerst der Blick ohne Eingriff: Seite **Deinstallieren** (seit 0.5.0 ein eigener
+Eintrag in der Seitenleiste), ein beliebiges Programm auswählen und `Start.bat -DryRun`
+laufen lassen. Im Testmodus wird nichts
 entfernt, aber die Fundliste steht im Protokoll.
 
 Dann drei Fälle, in dieser Reihenfolge:

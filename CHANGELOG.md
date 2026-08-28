@@ -25,6 +25,12 @@ mehr Prüfung als Funktion.
   Files«, keine Herausgeber-Schlüssel wie »Google« oder »Adobe«, unter denen mehrere
   Programme wohnen, und Namen unter vier Zeichen fliegen raus. Lieber einen Rest
   übersehen als den falschen Ordner anfassen.
+- **Deinstallieren ist eine eigene Seite.** Der Bereich hing bisher unter den
+  installierbaren Programmen — erreichbar erst nach gut hundert Katalogzeilen. Jetzt
+  steht er als eigener Eintrag in der Seitenleiste zwischen Programme und Office; die
+  Gruppe heißt deshalb SOFTWARE statt INSTALLIEREN. Die Liste lädt beim Öffnen der Seite
+  von selbst, und nach einem Sprachwechsel liest die Seite neu ein, statt leer
+  stehenzubleiben.
 
 ### Behoben
 
@@ -55,6 +61,12 @@ mehr Prüfung als Funktion.
 - Fehlt ein Profilordner, entfällt der Zweig, statt dass die Suche mitten im Lauf
   abbricht. Leere Einträge fliegen aus den Listen, bevor `@()` aus einem `$null` ein
   einelementiges Feld macht.
+- **Am Fenster-Mindestmaß brach die Sicherheitskarte mitten im Wort** — der offene Punkt
+  aus 0.4.1. Aus »Systemlaufwerk nicht verschlüsselt« wurde »Systemlaufwer k«, aus
+  »Echtzeitschutz an« ein »Echtzeitschut z«. BitLocker nennt jetzt den
+  Laufwerksbuchstaben wie die übrige Ausgabe (»C: an · D: aus«), und im Echtzeitschutz
+  steckt ein weiches Trennzeichen: bei Platznot wird daraus »Echtzeit-schutz«, sonst
+  bleibt es unsichtbar. Bei 1000×560 nachgemessen.
 
 ### Geprüft
 

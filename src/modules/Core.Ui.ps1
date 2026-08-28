@@ -118,7 +118,7 @@ function Update-WzNavState {
         if ($isActive) { $active = $button }
     }
 
-    # Auf einem niedrigen Bildschirm passen nicht alle dreizehn Einträge
+    # Auf einem niedrigen Bildschirm passen nicht alle vierzehn Einträge
     # untereinander. Wer über einen Schnellstart-Knopf auf eine der unteren
     # Seiten sprang, sah die Markierung gar nicht — die Leiste blieb oben
     # stehen, und es sah aus, als sei nichts passiert.
