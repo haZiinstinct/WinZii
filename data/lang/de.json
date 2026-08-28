@@ -11,7 +11,7 @@
   "nav": {
     "groupSystem": "// SYSTEM",
     "groupOptimize": "// OPTIMIEREN",
-    "groupInstall": "// INSTALLIEREN",
+    "groupInstall": "// SOFTWARE",
     "groupTakeover": "// ÜBERNEHMEN",
     "groupTools": "// WERKZEUGE",
     "dashboard": "Dashboard",
@@ -21,6 +21,7 @@
     "cleanup": "Bereinigung",
     "autostart": "Autostart",
     "apps": "Programme",
+    "uninstall": "Deinstallieren",
     "office": "Office",
     "userData": "Daten",
     "restore": "Zurückspielen",
@@ -89,10 +90,13 @@
     "btnNone": "keine",
     "btnInstall": "Auswahl installieren",
     "btnDownload": "Auf Datenträger laden",
-    "btnBootstrap": "winget nachinstallieren",
-    "uninstallEyebrow": "// DEINSTALLIEREN",
-    "uninstallTitle": "Installierte Programme",
-    "uninstallLead": "Dieselbe Liste wie in der Systemsteuerung. Vorinstallierte Herstellersoftware und abgelaufene Virenscanner-Testversionen lassen sich hier in einem Durchgang entfernen.",
+    "btnBootstrap": "winget nachinstallieren"
+  },
+  "unin": {
+    "eyebrow": "// DEINSTALLIEREN",
+    "title": "Programme entfernen",
+    "lead": "Dieselbe Liste wie in der Systemsteuerung. Vorinstallierte Herstellersoftware und abgelaufene Virenscanner-Testversionen lassen sich hier in einem Durchgang entfernen — auf Wunsch restlos samt zurückgebliebener Ordner und Registry-Schlüssel.",
+    "listTitle": "Installierte Programme",
     "tipFilter": "Filtert nach Name oder Herausgeber.",
     "btnList": "Liste laden",
     "btnRemove": "Ausgewählte entfernen"

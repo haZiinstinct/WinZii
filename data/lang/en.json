@@ -11,7 +11,7 @@
   "nav": {
     "groupSystem": "// SYSTEM",
     "groupOptimize": "// OPTIMISE",
-    "groupInstall": "// INSTALL",
+    "groupInstall": "// SOFTWARE",
     "groupTakeover": "// TAKE OVER",
     "groupTools": "// TOOLS",
     "dashboard": "Dashboard",
@@ -21,6 +21,7 @@
     "cleanup": "Cleanup",
     "autostart": "Startup",
     "apps": "Programs",
+    "uninstall": "Uninstall",
     "office": "Office",
     "userData": "Data",
     "restore": "Restore",
@@ -89,10 +90,13 @@
     "btnNone": "none",
     "btnInstall": "Install selection",
     "btnDownload": "Download to drive",
-    "btnBootstrap": "Set up winget",
-    "uninstallEyebrow": "// UNINSTALL",
-    "uninstallTitle": "Installed programs",
-    "uninstallLead": "The same list as in Control Panel. Preinstalled manufacturer software and expired antivirus trials can be removed here in one go.",
+    "btnBootstrap": "Set up winget"
+  },
+  "unin": {
+    "eyebrow": "// UNINSTALL",
+    "title": "Remove programs",
+    "lead": "The same list as in Control Panel. Preinstalled manufacturer software and expired antivirus trials can be removed here in one go — on request completely, including leftover folders and registry keys.",
+    "listTitle": "Installed programs",
     "tipFilter": "Filters by name or publisher.",
     "btnList": "Load list",
     "btnRemove": "Remove selected"

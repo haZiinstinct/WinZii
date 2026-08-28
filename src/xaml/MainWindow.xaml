@@ -91,6 +91,12 @@
                                 <TextBlock Text="{DynamicResource L.nav.apps}" VerticalAlignment="Center" />
                             </StackPanel>
                         </Button>
+                        <Button Name="NavUninstall" Tag="Uninstall" Style="{DynamicResource WzNavButton}">
+                            <StackPanel Orientation="Horizontal">
+                                <TextBlock Text="&#xE711;" FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets" FontSize="14" Width="24" VerticalAlignment="Center" />
+                                <TextBlock Text="{DynamicResource L.nav.uninstall}" VerticalAlignment="Center" />
+                            </StackPanel>
+                        </Button>
                         <Button Name="NavOffice" Tag="Office" Style="{DynamicResource WzNavButton}">
                             <StackPanel Orientation="Horizontal">
                                 <TextBlock Text="&#xE8A5;" FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets" FontSize="14" Width="24" VerticalAlignment="Center" />

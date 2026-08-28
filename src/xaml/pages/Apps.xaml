@@ -34,31 +34,4 @@
     </Border>
 
     <StackPanel Name="AppsCategories" />
-
-    <!-- Zweiter Bereich: entfernen statt installieren -->
-    <Border Style="{DynamicResource WzCardStatic}" Margin="0,4,0,0">
-        <StackPanel>
-            <TextBlock Text="{DynamicResource L.apps.uninstallEyebrow}" Style="{DynamicResource WzEyebrow}" />
-            <TextBlock Name="AppsUninstallTitle" Text="{DynamicResource L.apps.uninstallTitle}" Style="{DynamicResource WzCardTitle}" />
-            <TextBlock Style="{DynamicResource WzHint}" Margin="0,0,0,12"
-                       Text="{DynamicResource L.apps.uninstallLead}" />
-
-            <Grid Margin="0,0,0,12">
-                <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="*" />
-                    <ColumnDefinition Width="Auto" />
-                </Grid.ColumnDefinitions>
-                <TextBox Name="AppsUninstallSearch" Grid.Column="0" Style="{DynamicResource WzTextBox}"
-                         ToolTip="{DynamicResource L.apps.tipFilter}" />
-                <StackPanel Grid.Column="1" Orientation="Horizontal" Margin="10,0,0,0">
-                    <Button Name="AppsBtnUninstallScan" Style="{DynamicResource WzBtnSecondary}" Margin="0,0,8,0"
-                            Content="{DynamicResource L.apps.btnList}" />
-                    <Button Name="AppsBtnUninstall" Style="{DynamicResource WzBtnDanger}"
-                            Content="{DynamicResource L.apps.btnRemove}" IsEnabled="False" />
-                </StackPanel>
-            </Grid>
-
-            <StackPanel Name="AppsUninstallList" />
-        </StackPanel>
-    </Border>
 </StackPanel>
