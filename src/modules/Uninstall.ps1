@@ -126,7 +126,13 @@ function Uninstall-WzPrograms {
             # gleich darauf den Deinstallationsschlüssel eines Programms an,
             # das noch installiert ist — danach wäre es gar nicht mehr zu
             # entfernen.
-            if (-not (Test-WzProgramGone -Program $program)) {
+            #
+            # Mit Nachfrist, weil die Kontrolle sonst schneller ist als der
+            # Deinstallierer: Der Aufruf kehrt zurück, während dessen eigener
+            # Prozess noch aufräumt. Zehn Sekunden reichen weit über das
+            # gemessene Fenster hinaus und kosten nur dort Zeit, wo wirklich
+            # etwas schiefgegangen ist.
+            if (-not (Test-WzProgramGone -Program $program -WaitSeconds 10)) {
                 $summary.Failed++
                 $summary.Details += "$($program.Name): steht weiter in der Programmliste — abgebrochen, oder ein Neustart steht aus"
                 Write-WzLog "$($program.Name) steht weiter in der Programmliste — nicht als entfernt gewertet." -Level Warn
@@ -205,18 +211,38 @@ function Test-WzProgramGone {
         Programm noch da. Ohne Schlüsselpfad — etwa bei einem von Hand
         gebauten Eintrag — gilt es als entfernt, sonst bliebe die Prüfung ein
         Hindernis ohne Aussage.
+    .PARAMETER WaitSeconds
+        Nachfrist. Viele Deinstallierer kehren zurück, bevor sie fertig sind:
+        Auf dem Abnahmelaptop meldete SumatraPDF nach 0,38 s Erfolg, der
+        Registry-Eintrag verschwand erst eine Sekunde später. Ohne Frist fiel
+        die Prüfung in dieses Fenster, das Programm galt als »steht weiter in
+        der Programmliste« — und weil es damit nicht als entfernt zählte, lief
+        die Restesuche gar nicht erst an. Der Rest blieb liegen.
+
+        Der weggeklickte Assistent wird davon nicht verdeckt: Sein Eintrag
+        steht auch nach der Frist noch da, die Meldung kommt nur später.
     #>
-    param([Parameter(Mandatory = $true)]$Program)
+    param(
+        [Parameter(Mandatory = $true)]$Program,
+        [int]$WaitSeconds = 0
+    )
 
     if (-not $Program.RegistryPath) { return $true }
 
-    try {
-        $entry = Get-ItemProperty -LiteralPath (Resolve-WzRegistryPath $Program.RegistryPath) -ErrorAction Stop
-    } catch {
-        return $true
-    }
+    $frist = [Diagnostics.Stopwatch]::StartNew()
+    while ($true) {
+        $weg = $false
+        try {
+            $entry = Get-ItemProperty -LiteralPath (Resolve-WzRegistryPath $Program.RegistryPath) -ErrorAction Stop
+            $weg = -not $entry.DisplayName
+        } catch {
+            $weg = $true
+        }
 
-    return (-not $entry.DisplayName)
+        if ($weg) { return $true }
+        if ($frist.Elapsed.TotalSeconds -ge $WaitSeconds) { return $false }
+        Start-Sleep -Milliseconds 500
+    }
 }
 
 function Split-WzCommandLine {

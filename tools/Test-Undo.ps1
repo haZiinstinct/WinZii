@@ -412,6 +412,21 @@ Write-Check 'fehlender Schlüssel gilt als entfernt' `
 Write-Check 'ohne Schlüsselpfad gilt als entfernt' `
     (Test-WzProgramGone -Program ([pscustomobject]@{ Name = $restName; RegistryPath = '' }))
 
+# Die Nachfrist für Deinstallierer, die vor sich selbst zurückkehren. Geprüft
+# wird beides: dass sie wirklich gewartet wird, und dass sie nicht anfällt,
+# wenn der Schlüssel längst weg ist — sonst kostete jede Deinstallation Zeit.
+$uhr = [Diagnostics.Stopwatch]::StartNew()
+$nochDa = Test-WzProgramGone -Program ([pscustomobject]@{ Name = $restName; RegistryPath = $restKey }) -WaitSeconds 2
+$gewartet = $uhr.Elapsed.TotalSeconds
+Write-Check 'Nachfrist wartet und urteilt dann' `
+    ((-not $nochDa) -and $gewartet -ge 2) ("{0:N1} s gewartet" -f $gewartet)
+
+$uhr = [Diagnostics.Stopwatch]::StartNew()
+$schonWeg = Test-WzProgramGone -Program ([pscustomobject]@{ Name = $restName; RegistryPath = "$restKey-GibtEsNicht" }) -WaitSeconds 10
+$sofort = $uhr.Elapsed.TotalSeconds
+Write-Check 'Nachfrist kostet nichts, wenn es weg ist' `
+    ($schonWeg -and $sofort -lt 1) ("{0:N2} s" -f $sofort)
+
 $restProgramm = [pscustomobject]@{
     Name            = $restName
     InstallLocation = $restOrdner
