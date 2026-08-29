@@ -10,19 +10,36 @@ bequemen Zweig. Genau daraus sind die drei Symptome entstanden, die den Audit au
 haben. Alles unten ist der Teil, der auf dem Entwicklungsrechner **grundsätzlich nicht**
 prüfbar ist.
 
-Stand: **0.5.1**, Tag `v0.5.0`. Alle neun Prüfwerkzeuge grün, Sandbox-Lauf bestanden,
-Start aus sauberer Kopie mit leerem `offline\` geprüft.
+Stand: **0.5.1** — im Quelltext, im Changelog und in beiden Readme-Dateien. Der letzte
+Tag ist `v0.5.0`, das letzte Release ebenfalls: **0.5.1 ist noch nicht veröffentlicht.**
+Alle neun Prüfwerkzeuge grün, Sandbox-Lauf mit dem 0.5.1-Stand bestanden, Start aus
+sauberer Kopie mit leerem `offline\` geprüft.
 
-Im Lauf zu 0.5.1 sind die Punkte 1, 3, 6, 7, 11 und 12 auf einem zweiten Notebook
-abgearbeitet — Punkt 12 hat dabei zwei Fehler gefunden, beide behoben. Offen geblieben
-sind vier Punkte, und zwar nicht aus Nachlässigkeit:
+Im Lauf zu 0.5.1 sind sechs Punkte auf einem zweiten Notebook abgearbeitet — Punkt 12
+hat dabei zwei Fehler gefunden, beide behoben. Damit hier niemand nachzählen muss, was
+noch aussteht, stehen **alle zwölf** Punkte in einer Tabelle. Zwei davon fehlten in der
+ersten Fassung dieser Übersicht ganz — sie sind nie abgearbeitet worden, standen aber
+auch nicht als offen da:
 
-| Punkt | Warum noch offen |
+| Punkt | Stand |
 | --- | --- |
-| 2 — fremdes Konto | Es gab kein zweites Technikerkonto zum Elevieren. |
-| 4 — leerer Stick | Der echte Downloadweg lief (`offline\` war leer), aber winget war schon eingerichtet — die Nachinstallation ohne Zwischenspeicher steht weiter aus. |
-| 8 — kleiner Bildschirm | Nur die Rechnung, nicht das Auge: `WZ_SELFTEST_SIZE=1092x614` startet das Fenster im Zielformat, angesehen hat es noch niemand. |
-| 10 — Sandbox | Windows Sandbox ist auf dem Gerät nicht eingeschaltet (`Containers-DisposableClientVM: Disabled`). |
+| 1 — winget nach Neuanmeldung | **Erledigt** (Notebook, 0.5.1). |
+| 2 — fremdes Konto | **Offen.** Es gab kein zweites Technikerkonto zum Elevieren. |
+| 3 — WLAN statt Kabel | **Erledigt** (Notebook, 0.5.1): 93 MB in 32 s, Installation samt Nachprüfung. |
+| 4 — leerer Stick | **Halb.** Der echte Downloadweg lief (`offline\` war leer), aber winget war schon eingerichtet — die Nachinstallation ohne Zwischenspeicher (~315 MB) steht weiter aus, ebenso Office. |
+| 5 — OEM-Office | **Offen.** Auf keinem der beiden Geräte liegt ein vorinstalliertes OEM-Office; der Punkt braucht ein Kundengerät. |
+| 6 — Startdauer | **Erledigt** (Notebook, 0.4.1): 57,5 s im Mittel als Referenzwert. |
+| 7 — Energieplan | **Erledigt** (Notebook, 0.5.1), samt Kühlungsrichtlinie und Turbo-Verhalten. |
+| 8 — kleiner Bildschirm | **Erledigt** (Entwicklungsrechner, 0.5.1). `WZ_SELFTEST_SIZE` erzwingt das Format auch auf einem großen Bildschirm — bei 1092×614 und am Mindestmaß 1000×560 angesehen: Konsole startet eingeklappt, die Seitenleiste holt »Protokoll« als vierzehnten Eintrag ins Bild, keine Worttrennung mitten im Wort. Nur das Ziehen von Hand fehlt. |
+| 9 — Rubrik »Sicherheit« | **Offen.** Die neun Kennungen lösen sich über `winget show` auf, installiert wurde bis heute keine. |
+| 10 — Sandbox | **Halb.** Auf dem Notebook nicht möglich, Windows Sandbox ist dort nicht eingeschaltet (`Containers-DisposableClientVM: Disabled`). Auf dem Entwicklungsrechner ist der 0.5.1-Stand gelaufen: 39 Prüfungen grün. Der Netzweg des Laptops bleibt ungeprüft. |
+| 11 — Akku, BitLocker, OneDrive | **Halb.** Der Akku ist geprüft. Ein verschlüsselter Datenträger und ein OneDrive mit Platzhaltern fehlen weiterhin — beides gibt es auf keinem der zwei Geräte. |
+| 12 — Restesuche | **Erledigt** (Notebook, 0.5.1) und der ergiebigste Punkt: zwei echte Fehler. |
+
+Was davon nur ein Kundengerät klären kann: **5** (OEM-Office), **9** (Sicherheitsprogramme
+wirklich installieren), **11** (BitLocker, OneDrive) und **2** (zweites Konto). **4** und
+**10** ließen sich dagegen jederzeit nachholen — für 4 reicht ein leerer Stick, für 10 das
+Einschalten von Windows Sandbox auf dem Notebook.
 
 > **`main` ist weiter als der Tag.** Auf dem Entwicklungsrechner wird parallel gearbeitet.
 > Vor dem ersten Commit hier immer `git pull --rebase origin main` — sonst wird der Push
