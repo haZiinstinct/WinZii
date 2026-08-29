@@ -10,9 +10,19 @@ bequemen Zweig. Genau daraus sind die drei Symptome entstanden, die den Audit au
 haben. Alles unten ist der Teil, der auf dem Entwicklungsrechner **grundsätzlich nicht**
 prüfbar ist.
 
-Stand: **0.5.0**, Tag `v0.4.1`. Alle acht Prüfwerkzeuge grün, Sandbox-Lauf bestanden,
-Start aus sauberer Kopie mit leerem `offline\` geprüft. Die Punkte 1 bis 11 sind im
-Abnahmelauf zu 0.4.1 abgearbeitet; neu dazugekommen ist Punkt 12.
+Stand: **0.5.1**, Tag `v0.5.0`. Alle neun Prüfwerkzeuge grün, Sandbox-Lauf bestanden,
+Start aus sauberer Kopie mit leerem `offline\` geprüft.
+
+Im Lauf zu 0.5.1 sind die Punkte 1, 3, 6, 7, 11 und 12 auf einem zweiten Notebook
+abgearbeitet — Punkt 12 hat dabei zwei Fehler gefunden, beide behoben. Offen geblieben
+sind vier Punkte, und zwar nicht aus Nachlässigkeit:
+
+| Punkt | Warum noch offen |
+| --- | --- |
+| 2 — fremdes Konto | Es gab kein zweites Technikerkonto zum Elevieren. |
+| 4 — leerer Stick | Der echte Downloadweg lief (`offline\` war leer), aber winget war schon eingerichtet — die Nachinstallation ohne Zwischenspeicher steht weiter aus. |
+| 8 — kleiner Bildschirm | Nur die Rechnung, nicht das Auge: `WZ_SELFTEST_SIZE=1092x614` startet das Fenster im Zielformat, angesehen hat es noch niemand. |
+| 10 — Sandbox | Windows Sandbox ist auf dem Gerät nicht eingeschaltet (`Containers-DisposableClientVM: Disabled`). |
 
 > **`main` ist weiter als der Tag.** Auf dem Entwicklungsrechner wird parallel gearbeitet.
 > Vor dem ersten Commit hier immer `git pull --rebase origin main` — sonst wird der Push
@@ -127,6 +137,13 @@ Auf dem Entwicklungsrechner ist die Arbeitsfläche groß, das Fenster startet gr
 Anpassungen für niedrige Bildschirme laufen dort nie an. Auf einem 1366×768-Gerät bei
 125 % Skalierung sind es logisch 1092×614, knapp über dem Mindestmaß 1000×560.
 
+Dafür gibt es die Prüfhilfe aus 0.4.1 — sie erzwingt genau dieses Format, auch auf einem
+großen Bildschirm, ohne dass an der Skalierung von Windows gedreht werden muss:
+
+```bat
+cmd /c "set WZ_SELFTEST_SIZE=1092x614 && Start.bat"
+```
+
 - **Startet die Konsole eingeklappt?** Unter 700 px Fensterhöhe soll sie das. Steht in
   der Klappzeile »eingeklappt« und ist darüber die ganze Seite zu sehen — oder frisst
   die Konsole die halbe Höhe?
@@ -189,6 +206,14 @@ Der einzige Pfad in WinZii, der Ordner **endgültig** löscht — ohne Sicherung
 Rücknahme. `tools\Test-Undo.ps1` Abschnitt 8 prüft die Regeln und die ganze Kette an
 einem Wegwerf-Programm; was dort nicht geht, ist die Begegnung mit echten
 Deinstallierern. Genau die gehört hierher.
+
+> **Der Lauf zu 0.5.1 hat hier zwei Fehler gefunden**, beide behoben und beide in
+> Abschnitt 8 des Selbsttests festgehalten: Der eingetragene Installationsordner wurde
+> ungeprüft übernommen, auch wenn dort noch andere Programme wohnten (Adobe trägt für
+> Audition und Premiere `C:\Program Files\Adobe` ein — 20 GB, sechs Programme). Und eine
+> gelungene Deinstallation galt als gescheitert, weil der Deinstallierer eine Sekunde
+> nach seinem eigenen Rückgabewert fertig wurde; die Restesuche lief dann gar nicht erst
+> an. Wer den Punkt erneut abarbeitet, sollte beides gezielt gegenprüfen.
 
 Zuerst der Blick ohne Eingriff: Seite **Deinstallieren** (seit 0.5.0 ein eigener
 Eintrag in der Seitenleiste), ein beliebiges Programm auswählen und `Start.bat -DryRun`

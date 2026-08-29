@@ -3,6 +3,55 @@
 Alle nennenswerten Änderungen an WinZii. Die Fassungen folgen
 [Semantic Versioning](https://semver.org/lang/de/).
 
+## [0.5.1] — 2026-08-29
+
+Der Abnahmelauf zu 0.5.0 auf fremder Hardware — ein Notebook mit Akku, WLAN und
+53 gewachsen installierten Programmen. Beide Funde liegen im Pfad, der in 0.5.0
+neu dazugekommen ist, und beide waren auf dem Entwicklungsrechner nicht zu
+sehen: Dort ist kein Ordner geteilt, und dort ist kein Deinstallierer langsamer
+als die Kontrolle danach.
+
+### Behoben
+
+- **Die Restesuche hätte einen Ordner mit fremden Programmen darin gelöscht.**
+  Adobe trägt für »Audition 2025« und »Premiere Pro 2025« als Installationsordner
+  `C:\Program Files\Adobe` ein — den Sammelordner, unter dem auch Photoshop,
+  Illustrator, Dreamweaver und Acrobat wohnen. Die Suche übernahm den Pfad
+  ungeprüft, und die feste Liste der Sammelordner kennt nur die Wurzeln selbst
+  und Namen wie »Common Files«; eine Ebene tiefer galt alles als sicher. Auf dem
+  Abnahmegerät wären das 20,2 GB gewesen, endgültig, ohne Sicherung. Statt zu
+  raten, welche Ordner geteilt sind, wird jetzt nachgesehen, wer sonst noch dort
+  wohnt: Ein Ordner scheidet aus, wenn ein anderes registriertes Programm dort
+  oder darunter liegt. Der eigene Unterordner bleibt erlaubt, sonst wäre unter
+  einem geteilten Elternordner gar nichts mehr aufräumbar. Von 124 Fundstellen
+  des Geräts bleiben 122 — die zwei, die verschwinden, sind genau die
+  gefährlichen.
+- **Eine gelungene Deinstallation galt als gescheitert.** SumatraPDF kehrt nach
+  0,38 Sekunden mit Erfolg zurück, sein Registry-Eintrag verschwindet erst eine
+  Sekunde später. Die Kontrolle danach fragte sofort, sah den Eintrag noch und
+  meldete »steht weiter in der Programmliste«. Schwerer wog die Folge: Was nicht
+  als entfernt zählt, kommt nicht in die Liste für die Restesuche — die lief
+  also gar nicht erst an, und der Rest blieb liegen. `Test-WzProgramGone` hat
+  jetzt eine Nachfrist, die der Deinstallationspfad mit zehn Sekunden nutzt.
+  Überall sonst antwortet die Prüfung weiter sofort, und der weggeklickte
+  Assistent aus 0.5.0 wird nicht verdeckt — sein Eintrag steht auch nach der
+  Frist noch da.
+
+### Geprüft
+
+- Die Restesuche ist gegen echte Deinstallierer gelaufen, nicht nur gegen das
+  Wegwerf-Programm des Selbsttests: installieren, benutzen, entfernen, Funde
+  ansehen, aufräumen, Sicherung nachschlagen.
+- Downloads und Installationen über WLAN statt über Kabel — 93 MB in 32 s, ein
+  Fehlschlag lässt nichts Halbfertiges liegen, die Nachprüfung über `winget list`
+  greift.
+- Der Energieplan aus 0.4.0 auf einem Notebook: anlegen, aktivieren, zweiter
+  Durchlauf ohne Doppelkopie, zurücknehmen. Die Werte, die Netz und Akku
+  unterscheiden, kommen auf diesem Gerät wirklich an — Kühlungsrichtlinie 1/0,
+  Turbo-Verhalten 2/3, sichtbar nur über `powercfg /qh`.
+- `tools\Test-Undo.ps1` deckt die Restesuche jetzt mit 46 Prüfungen ab; vier
+  davon sind neu und halten beide Fehler fest.
+
 ## [0.5.0] — 2026-08-28
 
 Deinstallieren wird restlos. Ein Deinstallierer räumt selten alles weg: Der

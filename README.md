@@ -11,7 +11,7 @@ Vom USB-Stick starten, aufräumen, optimieren, einrichten — ohne Installation,
 
 <sub>A Windows maintenance toolkit for IT technicians. Interface switchable between German and English; measured values, dialogs and log stay German for now.</sub>
 
-![Version](https://img.shields.io/badge/Version-0.5.0-00d4ff?labelColor=0a0a0f&style=flat-square)
+![Version](https://img.shields.io/badge/Version-0.5.1-00d4ff?labelColor=0a0a0f&style=flat-square)
 ![Windows](https://img.shields.io/badge/Windows-10%20%7C%2011-00d4ff?labelColor=0a0a0f&style=flat-square)
 ![PowerShell](https://img.shields.io/badge/PowerShell-5.1-00d4ff?labelColor=0a0a0f&style=flat-square)
 ![Installation](https://img.shields.io/badge/Installation-keine-00d4ff?labelColor=0a0a0f&style=flat-square)
@@ -54,7 +54,7 @@ Das war alles. WinZii braucht keine Installation, keine Laufzeitumgebung und kei
 > **Windows meldet sich mit einem blauen Hinweis?**
 > Auf »Weitere Informationen« und dann »Trotzdem ausführen« klicken. Der Hinweis erscheint bei jeder Datei aus dem Internet, die nicht kostenpflichtig signiert wurde. Zu jedem Release gehört eine SHA256-Prüfsumme — damit lässt sich das Archiv vor dem Entpacken abgleichen:
 > ```powershell
-> Get-FileHash .\WinZii-0.5.0.zip -Algorithm SHA256
+> Get-FileHash .\WinZii-0.5.1.zip -Algorithm SHA256
 > ```
 
 **Voraussetzungen:** Windows 10 oder 11 mit Administratorrechten. PowerShell 5.1 und .NET Framework sind in Windows enthalten.
@@ -92,11 +92,11 @@ Ehrlich gesagt, damit niemand böse überrascht wird: WinZii wurde auf **einem**
 | **Windows 10** | Die Versionsweiche greift (33 Einträge für beide Systeme, 7 nur für Windows 11, 1 nur für Windows 10), aber es lief dort nie ein vollständiger Durchlauf. |
 | **Nicht-deutsches Windows** | Die Stellen, die Windows-Ausgaben auswerten, kennen Deutsch und Englisch; `takeown` fragt die Oberflächensprache ab. Geprüft wurde nur die deutsche Seite. |
 | **Akku** | Auf dem Notebook geprüft: Verschleiß wird gemessen und im Dashboard angezeigt. Bis 0.4.0 meldete dasselbe Gerät »kein Akku vorhanden«, weil die Erkennung an einer einzigen WMI-Klasse hing. |
-| **WLAN** | Verbindungsprüfung und Internetzugang über WLAN geprüft, ohne Kabel im Gerät. Downloads über WLAN stehen noch aus. |
+| **WLAN** | Verbindungsprüfung, Internetzugang und seit 0.5.1 auch Downloads über WLAN geprüft, ohne Kabel im Gerät: 93 MB in 32 s, eine Installation über winget mitsamt Nachprüfung, und ein Fehlschlag lässt nichts Halbfertiges liegen. |
 | **BitLocker, OneDrive** | Der »nicht vorhanden«-Pfad ist geprüft und meldet sauber, auf dem Notebook zusätzlich gegen `manage-bde` gegengehalten. Ein verschlüsselter Datenträger und ein OneDrive mit Platzhaltern fehlen weiterhin. |
 | **Energieplan** | Anlegen, aktivieren, zweiter Durchlauf ohne Doppelkopie und Zurücknehmen sind auf dem Notebook durchgespielt. Was Netz und Akku unterscheidet, sind Kühlungsrichtlinie und Turbo-Verhalten — viele Hersteller blenden beide aus der Energieoberfläche aus. Setzen lassen sie sich trotzdem, nachsehen kann man sie dort dann aber nicht. Kann ein Gerät sie gar nicht setzen, sagt WinZii im Protokoll, dass der Plan nichts bewirkt. |
 | **Office auf den Datenträger laden** | Der Abbruch beendet das Bereitstellungswerkzeug, **nicht** den Download: Geladen wird vom Click-to-Run-Dienst von Windows, und der macht im Hintergrund weiter. Im Abnahmelauf wuchs der Ordner nach dem Abbruch von 39 MB auf 2,5 GB. WinZii sagt das im Protokoll und nennt den Ordner zum Löschen; ein angefangener Vorrat gilt seit 0.4.1 zuverlässig als unvollständig. |
-| **Restesuche nach dem Deinstallieren** | Die Regeln und die ganze Kette — finden, sichern, entfernen — sind in `tools\Test-Undo.ps1` mit 40 Prüfungen abgedeckt, an einem Wegwerf-Programm. Gegen echte Deinstallierer läuft sie erst im nächsten Abnahmelauf. Zwei Dinge gelten dauerhaft: **Gelöschte Ordner sind endgültig weg** — gesichert werden nur Registry-Schlüssel —, und die Suche ist absichtlich eng. Sie übersieht lieber einen Rest, als den Ordner eines anderen Programms anzufassen. |
+| **Restesuche nach dem Deinstallieren** | Die Regeln und die ganze Kette — finden, sichern, entfernen — sind in `tools\Test-Undo.ps1` mit 46 Prüfungen abgedeckt. Seit 0.5.1 ist sie auch gegen echte Deinstallierer gelaufen, auf einem Gerät mit 53 gewachsen installierten Programmen; der Lauf hat zwei Fehler gefunden, beide behoben (siehe [CHANGELOG](CHANGELOG.md)). Zwei Dinge gelten dauerhaft: **Gelöschte Ordner sind endgültig weg** — gesichert werden nur Registry-Schlüssel —, und die Suche ist absichtlich eng. Sie übersieht lieber einen Rest, als den Ordner eines anderen Programms anzufassen; seit 0.5.1 auch dann nicht, wenn der Hersteller selbst den Sammelordner der ganzen Familie als Installationsordner einträgt. |
 | **Treibersicherung und Office** | Nur lesend geprüft, nie vollständig durchgeführt. |
 | **Drucker zurückspielen** | In der Sandbox vollständig durchlaufen: Treiber aus dem Treiberspeicher nachziehen, Netzwerkanschluss anlegen, Drucker einrichten, beim zweiten Lauf nichts doppeln. Ungeprüft bleibt ein Drucker an echter Hardware — USB-Anschlüsse entstehen erst mit dem Gerät und werden bewusst übersprungen. |
 | **WLAN zurückspielen** | Die Profildateien werden richtig gelesen und ein Fehlschlag sauber gemeldet. Ein Profil wirklich einzurichten konnte nie geprüft werden — weder der Entwicklungsrechner noch die Sandbox hat einen WLAN-Adapter. |

@@ -11,7 +11,7 @@ Run it from a USB stick: clean up, optimize, set up — no installation, no acco
 
 <sub>The interface switches between **German and English** — the language button sits at the bottom of the sidebar and takes effect immediately. Measured values, dialogs, log messages and reports are still German only; that is being worked on step by step.</sub>
 
-![Version](https://img.shields.io/badge/Version-0.5.0-00d4ff?labelColor=0a0a0f&style=flat-square)
+![Version](https://img.shields.io/badge/Version-0.5.1-00d4ff?labelColor=0a0a0f&style=flat-square)
 ![Windows](https://img.shields.io/badge/Windows-10%20%7C%2011-00d4ff?labelColor=0a0a0f&style=flat-square)
 ![PowerShell](https://img.shields.io/badge/PowerShell-5.1-00d4ff?labelColor=0a0a0f&style=flat-square)
 ![Install](https://img.shields.io/badge/Install-none-00d4ff?labelColor=0a0a0f&style=flat-square)
@@ -54,7 +54,7 @@ That is all. WinZii needs no installation, no runtime, no particular drive lette
 > **Windows shows a blue SmartScreen warning?**
 > Click "More info" and then "Run anyway". The warning appears for any unsigned file downloaded from the internet. Every release ships a SHA256 checksum so you can verify the archive before extracting:
 > ```powershell
-> Get-FileHash .\WinZii-0.5.0.zip -Algorithm SHA256
+> Get-FileHash .\WinZii-0.5.1.zip -Algorithm SHA256
 > ```
 
 **Requirements:** Windows 10 or 11 with administrator rights. PowerShell 5.1 and .NET Framework ship with Windows.
@@ -92,11 +92,11 @@ To be blunt, so nobody gets surprised: WinZii was developed on **one** machine �
 | **Windows 10** | The version switch works (33 tweaks for both systems, 7 Windows-11-only, 1 Windows-10-only), but a full run never happened there. |
 | **Non-German Windows** | The code that parses Windows output knows German and English; `takeown` adapts to the UI language. Only the German side has been exercised. |
 | **Battery** | Verified on the notebook: wear is measured and shown on the dashboard. Up to 0.4.0 that same device reported "no battery present", because detection hung on a single WMI class. |
-| **Wi-Fi** | Connection check and internet access verified over Wi-Fi, with no cable in the machine. Downloads over Wi-Fi are still pending. |
+| **Wi-Fi** | Connection check, internet access and, since 0.5.1, downloads verified over Wi-Fi with no cable in the machine: 93 MB in 32 s, an install through winget including the follow-up check, and a failed download leaves nothing half-finished behind. |
 | **BitLocker, OneDrive** | The "not present" path is verified and reports cleanly, on the notebook additionally cross-checked against `manage-bde`. An encrypted volume and a OneDrive with placeholders are still missing. |
 | **Power plan** | Creating, activating, a second run without a duplicate copy, and undoing have been exercised on the notebook. What separates mains from battery are the cooling policy and the turbo behaviour — many vendors hide both from the power UI. They can still be set, you just cannot inspect them there afterwards. If a device cannot set them at all, WinZii says in the log that the plan achieves nothing. |
 | **Downloading Office** | Cancelling ends the deployment tool, **not** the download: the fetching is done by the Windows Click-to-Run service, which carries on in the background. During the acceptance run the folder grew from 39 MB to 2.5 GB after the cancel. WinZii says so in the log and names the folder to delete; since 0.4.1 a partial cache is reliably reported as incomplete. |
-| **Leftover cleanup after uninstalling** | The rules and the whole chain — find, back up, remove — are covered by 40 checks in `tools\Test-Undo.ps1`, against a throwaway program. Facing real uninstallers is up to the next acceptance run. Two things hold permanently: **deleted folders are gone for good** — only registry keys are backed up — and the search is deliberately narrow. It would rather miss a leftover than touch another program's folder. |
+| **Leftover cleanup after uninstalling** | The rules and the whole chain — find, back up, remove — are covered by 46 checks in `tools\Test-Undo.ps1`. Since 0.5.1 it has also faced real uninstallers, on a machine with 53 programs grown over the years; that run found two bugs, both fixed (see the [CHANGELOG](CHANGELOG.md)). Two things hold permanently: **deleted folders are gone for good** — only registry keys are backed up — and the search is deliberately narrow. It would rather miss a leftover than touch another program's folder — since 0.5.1 not even when the vendor itself records the whole family's shared folder as the install location. |
 | **Driver backup, Office install** | Verified read-only, never executed end to end. |
 | **Restoring printers** | Fully exercised in the Sandbox: pulling the driver from the driver store, creating the network port, adding the printer, and not duplicating it on a second run. What remains untested is a printer on real hardware — USB ports only appear once the device is attached and are deliberately skipped. |
 | **Restoring Wi-Fi** | Profile files are read correctly and a failure is reported cleanly. Actually creating a profile could never be verified — neither the development machine nor the Sandbox has a Wi-Fi adapter. |
