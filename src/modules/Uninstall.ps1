@@ -281,6 +281,39 @@ function Get-WzLeftoverNameCandidates {
     return @($names | Where-Object { $_.Length -ge 4 -and $_ -notmatch '[\\/:*?"<>|]' })
 }
 
+function Get-WzForeignInstallLocations {
+    <#
+    .SYNOPSIS
+        Installationsordner aller Programme außer den übergebenen.
+    .NOTES
+        Die feste Liste der Sammelordner reicht nicht. Auf dem Abnahmelaptop
+        tragen »Adobe Audition 2025« und »Adobe Premiere Pro 2025« beide
+        »C:\Program Files\Adobe« als Installationsordner ein — den Ordner, unter
+        dem auch Photoshop, Illustrator, Dreamweaver und Acrobat liegen. Die
+        Restesuche hätte ihn nach dem Entfernen eines der beiden zum Löschen
+        angeboten: 20 GB, endgültig, ohne Sicherung.
+
+        Deshalb wird nicht mehr geraten, welche Ordner geteilt sind, sondern
+        nachgesehen, wer sonst noch dort wohnt.
+    #>
+    [CmdletBinding()]
+    param($Excluding)
+
+    $eigene = @{}
+    foreach ($program in @($Excluding | Where-Object { $_ })) {
+        if ($program.Name) { $eigene[[string]$program.Name] = $true }
+    }
+
+    $orte = @()
+    foreach ($program in @(Get-WzInstalledPrograms)) {
+        if ($eigene.ContainsKey($program.Name)) { continue }
+        if (-not $program.InstallLocation) { continue }
+        $orte += $program.InstallLocation.TrimEnd('\')
+    }
+
+    return @($orte | Sort-Object -Unique)
+}
+
 function Test-WzLeftoverPathSafe {
     <#
     .SYNOPSIS
@@ -289,11 +322,26 @@ function Test-WzLeftoverPathSafe {
         Nur unterhalb der bekannten Programm- und Datenwurzeln, nie die Wurzel
         selbst und nie ein bekannter Sammelordner wie »Common Files« — dort
         wohnen viele Programme gleichzeitig.
+
+        Und nie ein Ordner, in dem noch ein anderes Programm wohnt: Manche
+        Hersteller tragen als Installationsordner den Sammelordner der ganzen
+        Programmfamilie ein. Welche das sind, weiß nur die Programmliste selbst,
+        deshalb kommt sie über $ForeignLocations herein.
     #>
-    param([string]$Path)
+    param([string]$Path, [string[]]$ForeignLocations = @())
 
     if (-not $Path) { return $false }
     if ($Path -notmatch '^[A-Za-z]:\\') { return $false }
+
+    $sauber = $Path.TrimEnd('\')
+    foreach ($fremd in @($ForeignLocations | Where-Object { $_ })) {
+        $fremd = $fremd.TrimEnd('\')
+        # Gleich der Ordner eines anderen Programms — oder ein Ordner, unter dem
+        # ein anderes Programm liegt. Der umgekehrte Fall bleibt erlaubt: der
+        # eigene Unterordner darf weg, auch wenn der Elternordner geteilt ist.
+        if ($fremd -eq $sauber) { return $false }
+        if ($fremd.StartsWith($sauber + '\', [StringComparison]::OrdinalIgnoreCase)) { return $false }
+    }
 
     $roots = @(
         $env:ProgramFiles
@@ -381,6 +429,9 @@ function Find-WzUninstallLeftovers {
     if ($env:ProgramData) { $startMenus += (Join-Path $env:ProgramData 'Microsoft\Windows\Start Menu\Programs') }
     if ($roamingApp) { $startMenus += (Join-Path $roamingApp 'Microsoft\Windows\Start Menu\Programs') }
 
+    # Einmal für den ganzen Lauf: Wo wohnen die Programme, die bleiben sollen?
+    $foreignLocations = @(Get-WzForeignInstallLocations -Excluding $Programs)
+
     foreach ($program in @($Programs | Where-Object { $_ })) {
         $names = @(Get-WzLeftoverNameCandidates -Program $program)
 
@@ -396,7 +447,7 @@ function Find-WzUninstallLeftovers {
         foreach ($folder in $folderCandidates) {
             $folder = $folder.TrimEnd('\')
             if ($seen.ContainsKey($folder.ToLowerInvariant())) { continue }
-            if (-not (Test-WzLeftoverPathSafe -Path $folder)) { continue }
+            if (-not (Test-WzLeftoverPathSafe -Path $folder -ForeignLocations $foreignLocations)) { continue }
             if (-not (Test-Path -LiteralPath $folder -PathType Container)) { continue }
             $seen[$folder.ToLowerInvariant()] = $true
 
@@ -481,6 +532,14 @@ function Remove-WzUninstallLeftovers {
     $session = New-WzUndoSession -Scope 'Programmreste'
     $removedPaths = New-Object Collections.ArrayList
 
+    # Dieselbe Frage wie in der Suche, aber jetzt zählt sie: Wer wohnt sonst
+    # noch dort? Die Programme, deren Reste hier stehen, sind ausgenommen —
+    # bleibt ihr Eintrag stehen, wäre der eigene Ordner sonst geschützt.
+    $foreignLocations = @(Get-WzForeignInstallLocations -Excluding @(
+        @($Leftovers | Where-Object { $_ -and $_.Program } |
+            Select-Object -ExpandProperty Program -Unique) |
+            ForEach-Object { [pscustomobject]@{ Name = $_ } }))
+
     foreach ($leftover in @($Leftovers | Where-Object { $_ })) {
         # Zwischen Suchen und Löschen liegt ein Dialog. Was gleich mit
         # »-Recurse -Force« verschwindet, wird deshalb unmittelbar davor noch
@@ -489,7 +548,7 @@ function Remove-WzUninstallLeftovers {
         $safe = if ($leftover.Kind -eq 'Registry') {
             Test-WzLeftoverKeySafe -Path $leftover.TargetPath
         } else {
-            Test-WzLeftoverPathSafe -Path $leftover.TargetPath
+            Test-WzLeftoverPathSafe -Path $leftover.TargetPath -ForeignLocations $foreignLocations
         }
         if (-not $safe) {
             $summary.Failed++

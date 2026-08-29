@@ -432,6 +432,56 @@ $ohneReste = @(Find-WzUninstallLeftovers -Programs @([pscustomobject]@{
     Name = 'WinZii-Selbsttest-GibtEsNicht'; InstallLocation = ''; RegistryPath = '' }))
 Write-Check 'ohne Reste bleibt die Liste leer' ($ohneReste.Count -eq 0) ("{0} Fund(e)" -f $ohneReste.Count)
 
+# Der Fall vom Abnahmelaptop: Ein Hersteller trägt als Installationsordner den
+# Sammelordner der ganzen Familie ein, und ein Nachbarprogramm wohnt darunter.
+# Angeboten werden darf der Sammelordner dann nicht — das Löschen ist endgültig.
+$sammelOrdner = Join-Path $lokal 'WinZii-Selbsttest-Sammelordner'
+$nachbarOrdner = Join-Path $sammelOrdner 'Nachbarprogramm'
+$nachbarKey = 'HKCU:\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\WinZii-Selbsttest-Nachbar'
+[void](New-Item -Path $nachbarOrdner -ItemType Directory -Force)
+Set-Content -LiteralPath (Join-Path $nachbarOrdner 'nachbar.txt') -Value 'Gehört dem Nachbarprogramm'
+if (-not (Test-Path -LiteralPath $nachbarKey)) { [void](New-Item -Path $nachbarKey -Force) }
+Set-ItemProperty -Path $nachbarKey -Name 'DisplayName' -Value 'WinZii-Selbsttest-Nachbarprogramm' -Force
+Set-ItemProperty -Path $nachbarKey -Name 'UninstallString' -Value 'cmd.exe /c rem' -Force
+Set-ItemProperty -Path $nachbarKey -Name 'InstallLocation' -Value $nachbarOrdner -Force
+
+$sammelProgramm = [pscustomobject]@{
+    Name            = 'WinZii-Selbsttest-Sammelprogramm'
+    InstallLocation = $sammelOrdner
+    RegistryPath    = ''
+}
+$sammelFunde = @(Find-WzUninstallLeftovers -Programs @($sammelProgramm))
+Write-Check 'geteilter Ordner wird nicht angeboten' `
+    (@($sammelFunde | Where-Object { $_.TargetPath -eq $sammelOrdner }).Count -eq 0) `
+    ("{0} Fund(e)" -f $sammelFunde.Count)
+
+# Und wenn er trotzdem in der Liste steht — aus einem älteren Lauf, aus einem
+# Hintergrundlauf vor der Installation des Nachbarn —, muss ihn die Nachprüfung
+# unmittelbar vor dem Löschen abweisen.
+$sammelAbgewiesen = Remove-WzUninstallLeftovers -Leftovers @([pscustomobject]@{
+    Kind = 'Ordner'; Path = $sammelOrdner; TargetPath = $sammelOrdner
+    SizeBytes = 0; Program = $sammelProgramm.Name })
+Write-Check 'geteilter Ordner wird vor dem Löschen abgewiesen' `
+    ($sammelAbgewiesen.Removed -eq 0 -and $sammelAbgewiesen.Failed -eq 1) `
+    "Removed=$($sammelAbgewiesen.Removed) Failed=$($sammelAbgewiesen.Failed)"
+Write-Check 'Nachbarprogramm steht danach noch' (Test-Path -LiteralPath $nachbarOrdner)
+
+# Der eigene Unterordner bleibt erlaubt, sonst wäre nach dieser Regel gar
+# nichts mehr aufräumbar, was unter einem geteilten Ordner liegt.
+$eigenerUnterordner = Join-Path $sammelOrdner 'WinZii-Selbsttest-Eigenprogramm'
+[void](New-Item -Path $eigenerUnterordner -ItemType Directory -Force)
+Set-Content -LiteralPath (Join-Path $eigenerUnterordner 'eigen.txt') -Value 'Wegwerfdatei'
+$eigeneFunde = @(Find-WzUninstallLeftovers -Programs @([pscustomobject]@{
+    Name            = 'WinZii-Selbsttest-Eigenprogramm'
+    InstallLocation = $eigenerUnterordner
+    RegistryPath    = '' }))
+Write-Check 'eigener Unterordner bleibt auffindbar' `
+    (@($eigeneFunde | Where-Object { $_.TargetPath -eq $eigenerUnterordner }).Count -eq 1) `
+    ("{0} Fund(e)" -f $eigeneFunde.Count)
+
+Remove-Item -LiteralPath $nachbarKey -Recurse -Force -ErrorAction SilentlyContinue
+Remove-Item -LiteralPath $sammelOrdner -Recurse -Force -ErrorAction SilentlyContinue
+
 $syncHash.DryRun = $true
 $trockenReste = Remove-WzUninstallLeftovers -Leftovers $funde
 $syncHash.DryRun = $false
@@ -479,13 +529,15 @@ if ($restLauf.UndoFile) {
 # --- Aufräumen --------------------------------------------------------------
 # Sicherheitsnetz: Bricht Abschnitt 8 mittendrin ab, bleibt weder der
 # Wegwerf-Ordner noch der Schlüssel liegen.
-foreach ($rest in @($restOrdner, $verboten)) {
+foreach ($rest in @($restOrdner, $verboten, $sammelOrdner)) {
     if ($rest -and (Test-Path -LiteralPath $rest)) {
         try { Remove-Item -LiteralPath $rest -Recurse -Force -ErrorAction Stop } catch { }
     }
 }
-if ($restKey -and (Test-Path -LiteralPath $restKey)) {
-    try { Remove-Item -LiteralPath $restKey -Recurse -Force -ErrorAction Stop } catch { }
+foreach ($schluessel in @($restKey, $nachbarKey)) {
+    if ($schluessel -and (Test-Path -LiteralPath $schluessel)) {
+        try { Remove-Item -LiteralPath $schluessel -Recurse -Force -ErrorAction Stop } catch { }
+    }
 }
 try { Remove-Item -LiteralPath $testKey -Recurse -Force -ErrorAction Stop } catch { }
 $backupRoot = Get-WzBackupRoot
