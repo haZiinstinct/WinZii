@@ -16,10 +16,10 @@ function Get-WzUserDataOverview {
 
     # Das Vermessen der Ordner dauert je nach Datenmenge zwanzig Sekunden und
     # mehr — die Zwischenmeldungen zeigen, dass es vorangeht.
-    Write-WzLog 'Benutzerprofile werden vermessen...' -Level Info
+    Write-WzLog (Get-WzText 'data.logMeasuringProfiles') -Level Info
     $profiles = Get-WzUserProfiles -IncludeSizes
 
-    Write-WzLog 'OneDrive, Outlook und Browser werden geprüft...' -Level Info
+    Write-WzLog (Get-WzText 'data.logCheckingApps') -Level Info
     $oneDrive = Get-WzOneDriveState
     $outlook = Get-WzOutlookFiles
     $browsers = Get-WzBrowserProfiles
@@ -61,7 +61,7 @@ function Get-WzUserProfiles {
         $entries = @(Get-CimInstance -Query 'SELECT LocalPath,SID,Special,LastUseTime FROM Win32_UserProfile' -ErrorAction Stop |
             Where-Object { -not $_.Special -and $_.LocalPath })
     } catch {
-        Write-WzLog "Benutzerprofile nicht abfragbar: $($_.Exception.Message)" -Level Warn
+        Write-WzLog (Get-WzText 'data.logProfilesUnreadable' @{ grund = $_.Exception.Message }) -Level Warn
         return @()
     }
 
@@ -228,12 +228,12 @@ function Get-WzOneDriveState {
 
                 $count = $localFiles + $cloudOnly
                 if (($count % 20000) -eq 0 -and $count -gt 0) {
-                    Write-WzLog "OneDrive: $count Datei(en) geprüft..." -Level Info
+                    Write-WzLog (Get-WzText 'data.logOneDriveCounted' @{ anzahl = $count }) -Level Info
                 }
                 if ($watch.Elapsed.TotalSeconds -gt 45) {
                     $incomplete = $true
                     $anyIncomplete = $true
-                    Write-WzLog "OneDrive-Ordner sehr groß — Zählung nach 45 s abgebrochen ($count Datei(en) geprüft)." -Level Warn
+                    Write-WzLog (Get-WzText 'data.logOneDriveAborted' @{ anzahl = $count }) -Level Warn
                     break
                 }
             }
@@ -255,13 +255,10 @@ function Get-WzOneDriveState {
     if ($anyIncomplete) {
         # Eine halbe Zählung darf nicht beruhigend klingen — die eigentliche
         # Empfehlung gilt dann erst recht.
-        $result.PlaceholderWarning = 'Der OneDrive-Ordner ist so groß, dass die Prüfung abgebrochen wurde — die Zahlen sind unvollständig. ' +
-            'Vor dem Kopieren in OneDrive »Immer auf diesem Gerät behalten« wählen und das Herunterladen abwarten.'
+        $result.PlaceholderWarning = Get-WzText 'data.warnIncompleteCount'
     } elseif ($anyPlaceholder) {
         $total = ($folders | Measure-Object -Property CloudOnly -Sum).Sum
-        $result.PlaceholderWarning = "Achtung: $total Datei(en) liegen nur in der Cloud und nicht auf dieser Platte. " +
-            'Wer den OneDrive-Ordner einfach kopiert, sichert leere Platzhalter. Vorher in OneDrive ' +
-            '»Immer auf diesem Gerät behalten« wählen und das Herunterladen abwarten.'
+        $result.PlaceholderWarning = Get-WzText 'data.warnPlaceholders' @{ anzahl = $total }
     }
 
     return $result
@@ -292,8 +289,8 @@ function Get-WzOutlookFiles {
                     Name     = $file.Name
                     Path     = $file.FullName
                     Bytes    = $file.Length
-                    Kind     = if ($file.Extension -eq '.pst') { 'PST — enthält eigene Daten, unbedingt sichern' }
-                               else { 'OST — nur Zwischenspeicher, wird neu aufgebaut' }
+                    Kind     = if ($file.Extension -eq '.pst') { Get-WzText 'data.outlookPst' }
+                               else { Get-WzText 'data.outlookOst' }
                     Modified = $file.LastWriteTime
                 }
             }
@@ -375,7 +372,7 @@ function Export-WzWlanProfiles {
     $target = New-WzDirectory (Join-Path (Get-WzUserDataDir) 'wlan')
 
     if ($syncHash.DryRun) {
-        Write-WzLog "[Test] WLAN-Netze würden nach $target gesichert" -Level Test
+        Write-WzLog (Get-WzText 'data.logWlanTest' @{ ziel = $target }) -Level Test
         return [pscustomobject]@{ Count = 0; Path = $target }
     }
 
@@ -386,10 +383,10 @@ function Export-WzWlanProfiles {
     $files = @(Get-ChildItem -LiteralPath $target -Filter '*.xml' -File -ErrorAction SilentlyContinue)
 
     if ($files.Count -gt 0) {
-        $note = if ($IncludeKeys) { ' samt Schlüsseln — bitte vertraulich behandeln' } else { ' ohne Schlüssel' }
+        $note = if ($IncludeKeys) { Get-WzText 'data.logWlanWithKeys' } else { Get-WzText 'data.logWlanNoKeys' }
         Write-WzLog "$($files.Count) WLAN-Netz(e) gesichert$note" -Level Ok
     } else {
-        Write-WzLog "Keine WLAN-Netze gesichert (Code $($result.ExitCode))" -Level Warn
+        Write-WzLog (Get-WzText 'data.logWlanNone' @{ code = $result.ExitCode }) -Level Warn
     }
 
     return [pscustomobject]@{ Count = $files.Count; Path = $target }
@@ -490,7 +487,7 @@ function Get-WzBitLockerKeys {
             }
         }
     } catch {
-        Write-WzLog "BitLocker-Schlüssel nicht abfragbar: $($_.Exception.Message.Split([char]10)[0])" -Level Warn
+        Write-WzLog (Get-WzText 'data.logBitlockerUnreadable' @{ grund = $_.Exception.Message.Split([char]10)[0] }) -Level Warn
     }
     return @($keys)
 }
@@ -504,18 +501,18 @@ function Save-WzBitLockerKeys {
 
     if ($Keys.Count -eq 0) { return $null }
     if ($syncHash.DryRun) {
-        Write-WzLog '[Test] BitLocker-Schlüssel würden gesichert' -Level Test
+        Write-WzLog (Get-WzText 'data.logBitlockerTest') -Level Test
         return $null
     }
 
     $target = Join-Path (Get-WzBackupDir -Stamp "$(Get-Date -Format 'yyyy-MM-dd_HHmmss')-bitlocker") 'bitlocker-schluessel.txt'
     $lines = @(
-        'BitLocker-Wiederherstellungsschlüssel'
+        (Get-WzText 'data.fileBitlockerHeader')
         "Computer: $env:COMPUTERNAME"
         "Gesichert am: $(Get-Date -Format 'dd.MM.yyyy HH:mm')"
         ''
-        'Diese Schlüssel öffnen die verschlüsselten Laufwerke dieses PCs.'
-        'Bitte sicher aufbewahren und nicht offen herumliegen lassen.'
+        (Get-WzText 'data.fileBitlockerNote1')
+        (Get-WzText 'data.fileBitlockerNote2')
         ''
     )
     foreach ($key in $Keys) {
@@ -525,7 +522,7 @@ function Save-WzBitLockerKeys {
     }
 
     [IO.File]::WriteAllText($target, ($lines -join [Environment]::NewLine), [Text.Encoding]::UTF8)
-    Write-WzLog "BitLocker-Schlüssel gesichert: $target" -Level Ok
+    Write-WzLog (Get-WzText 'data.logBitlockerSaved' @{ ziel = $target }) -Level Ok
     return $target
 }
 
@@ -587,7 +584,7 @@ function Export-WzDeviceList {
     $file = Join-Path $target 'geraete.json'
 
     if ($syncHash.DryRun) {
-        Write-WzLog "[Test] $($Printers.Count) Drucker und $($NetDrives.Count) Netzlaufwerk(e) würden nach $file geschrieben" -Level Test
+        Write-WzLog (Get-WzText 'data.logDevicesTest' @{ drucker = $Printers.Count; laufwerke = $NetDrives.Count; ziel = $file }) -Level Test
         return [pscustomobject]@{ Count = 0; Path = $file }
     }
 
@@ -611,12 +608,12 @@ function Export-WzDeviceList {
     try {
         [void](Save-WzJson -InputObject $payload -Path $file)
     } catch {
-        Write-WzLog "Geräteliste nicht speicherbar: $($_.Exception.Message.Split([char]10)[0])" -Level Warn
+        Write-WzLog (Get-WzText 'data.logDevicesUnsavable' @{ grund = $_.Exception.Message.Split([char]10)[0] }) -Level Warn
         return [pscustomobject]@{ Count = 0; Path = $file }
     }
 
     $count = $Printers.Count + $NetDrives.Count
-    Write-WzLog "$($Printers.Count) Drucker und $($NetDrives.Count) Netzlaufwerk(e) gesichert nach $file" -Level Ok
+    Write-WzLog (Get-WzText 'data.logDevicesSaved' @{ drucker = $Printers.Count; laufwerke = $NetDrives.Count; ziel = $file }) -Level Ok
     return [pscustomobject]@{ Count = $count; Path = $file }
 }
 
@@ -633,7 +630,7 @@ function Export-WzBrowserBookmarks {
     foreach ($browser in $Browsers) {
         foreach ($file in $browser.BookmarkFiles) {
             if ($syncHash.DryRun) {
-                Write-WzLog "[Test] $($browser.Name): $(Split-Path -Leaf $file) würde gesichert" -Level Test
+                Write-WzLog (Get-WzText 'data.logBookmarkTest' @{ browser = $browser.Name; datei = (Split-Path -Leaf $file) }) -Level Test
                 continue
             }
             try {
@@ -642,7 +639,7 @@ function Export-WzBrowserBookmarks {
                 Copy-Item -LiteralPath $file -Destination (Join-Path $target $safeName) -Force -ErrorAction Stop
                 $count++
             } catch {
-                Write-WzLog "Lesezeichen von $($browser.Name) nicht kopierbar: $($_.Exception.Message.Split([char]10)[0])" -Level Warn
+                Write-WzLog (Get-WzText 'data.logBookmarkFailed' @{ browser = $browser.Name; grund = $_.Exception.Message.Split([char]10)[0] }) -Level Warn
             }
         }
     }

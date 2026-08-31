@@ -29,10 +29,14 @@ foreach ($modul in 'Core.Paths', 'Core.Logging', 'Core.Json', 'Core.I18n', 'Core
     . (Join-Path $repo "src\modules\$modul.ps1")
 }
 
-# Die Module holen ihre Texte ueber Get-WzText — ohne Sprachtabelle wirft der
-# Aufruf mitten in einer Funktion.
+# Die Module holen ihre Texte ueber Get-WzText — ohne Sprachtabelle liefert der
+# Aufruf nur den Schluessel zurueck, und die Pruefungen unten vergleichen Text.
+# Die Wurzel zeigt hier absichtlich auf die Spielwiese; die Sprachdateien liegen
+# aber im Repo, also fuer den Ladevorgang kurz umgebogen.
 $syncHash.Language = 'de'
+$global:WzRootPath = $repo
 [void](Import-WzLanguage)
+$global:WzRootPath = $spielwiese
 
 $script:fehler = 0
 function Write-Check {

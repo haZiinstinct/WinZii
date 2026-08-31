@@ -47,7 +47,7 @@ function Update-WzOfficePage {
     if ($syncHash.OffChecked) { return }
     $syncHash.OffChecked = $true
 
-    Invoke-WzTask -Name 'Office prüfen' -Silent -ScriptBlock {
+    Invoke-WzTask -Name (Get-WzText 'off.taskCheck') -Silent -ScriptBlock {
         Get-WzInstalledOffice
     } -OnComplete {
         param($office)
@@ -58,13 +58,13 @@ function Update-WzOfficePage {
         $rows.Children.Clear()
 
         if ($office.Installed) {
-            [void]$rows.Children.Add((New-WzInfoRow 'Version' $office.Version -Kind 'ok'))
-            if ($office.Details) { [void]$rows.Children.Add((New-WzInfoRow 'Merkmale' $office.Details)) }
-            [void]$rows.Children.Add((New-WzInfoRow 'Hinweis' 'Eine Neuinstallation ersetzt die vorhandene Fassung'))
+            [void]$rows.Children.Add((New-WzInfoRow (Get-WzText 'off.lblVersion') $office.Version -Kind 'ok'))
+            if ($office.Details) { [void]$rows.Children.Add((New-WzInfoRow (Get-WzText 'off.lblFeatures') $office.Details)) }
+            [void]$rows.Children.Add((New-WzInfoRow (Get-WzText 'off.lblHint') (Get-WzText 'off.hintReplaces')))
         } else {
-            [void]$rows.Children.Add((New-WzInfoRow 'Zustand' 'Auf diesem PC ist kein Office installiert'))
+            [void]$rows.Children.Add((New-WzInfoRow (Get-WzText 'off.lblState') (Get-WzText 'off.stateNone')))
         }
-        Write-WzLog "Office: $($office.Name)" -Level Info
+        Write-WzLog (Get-WzText 'off.logInstalled' @{ name = $office.Name }) -Level Info
     }
 }
 
@@ -99,7 +99,7 @@ function Update-WzOfficeSelection {
         if ($choice.Variant.id -eq 'office2024') {
             $checkBox.IsEnabled = $false
             $checkBox.IsChecked = $false
-            $checkBox.Content = "$($app.name) (in dieser Ausgabe nicht enthalten)"
+            $checkBox.Content = Get-WzText 'off.appNotIncluded' @{ name = $app.name }
         } else {
             $checkBox.IsEnabled = $true
             $checkBox.IsChecked = [bool]$app.defaultIncluded
@@ -116,11 +116,11 @@ function Update-WzOfficeSelection {
 
     $cache = Test-WzOfficeCache -VariantId $choice.Variant.id -Language $choice.Language
     $syncHash.OffCacheHint.Text = if ($cache.Available) {
-        "Auf dem Datenträger liegen bereits $(Format-WzBytes $cache.Bytes) — die Installation läuft ohne Internet."
+        Get-WzText 'off.cacheReady' @{ groesse = (Format-WzBytes $cache.Bytes) }
     } elseif ($cache.Bytes -gt 0) {
-        "Auf dem Datenträger liegen $(Format-WzBytes $cache.Bytes), der Satz ist aber $($cache.Detail). Die Installation lädt von Microsoft."
+        Get-WzText 'off.cachePartial' @{ groesse = (Format-WzBytes $cache.Bytes); grund = $cache.Detail }
     } else {
-        'Für diese Auswahl liegt noch nichts auf dem Datenträger. Die Installation lädt die Dateien von Microsoft.'
+        Get-WzText 'off.cacheNone'
     }
 }
 
@@ -145,10 +145,10 @@ function Show-WzOfficeXml {
 
     # Der Lizenzschlüssel steht bewusst nicht darin: Er wird erst unmittelbar
     # vor dem Start eingesetzt und danach wieder entfernt.
-    $hint = if ($choice.Key) { ' Der eingegebene Lizenzschlüssel wird erst beim Installieren eingesetzt und danach wieder entfernt — er steht deshalb nicht in der Vorschau.' } else { '' }
+    $hint = if ($choice.Key) { Get-WzText 'off.xmlKeyHint' } else { '' }
 
-    Show-WzInfo -Title 'Konfiguration für das Bereitstellungswerkzeug' `
-        -Message "Diese Datei steuert die Installation. Sie liegt unter $file.$hint" `
+    Show-WzInfo -Title (Get-WzText 'off.xmlTitle') `
+        -Message (Get-WzText 'off.xmlMessage' @{ pfad = $file; hinweis = $hint }) `
         -Items @($content -split "`r?`n")
 }
 
@@ -162,9 +162,9 @@ function Start-WzOfficeInstall {
     $cache = Test-WzOfficeCache -VariantId $choice.Variant.id -Language $choice.Language
     $languageName = $syncHash.OffLanguage.SelectedItem.Content
 
-    $items = @("Ausgabe: $($choice.Variant.name)", "Sprache: $languageName")
-    $items += "Programme: $($choice.Apps -join ', ')"
-    $items += if ($cache.Available) { 'Quelle: Datenträger (kein Internet nötig)' } else { 'Quelle: Microsoft (Internet nötig)' }
+    $items = @((Get-WzText 'off.itemEdition' @{ name = $choice.Variant.name }), (Get-WzText 'off.itemLanguage' @{ name = $languageName }))
+    $items += Get-WzText 'off.itemApps' @{ liste = ($choice.Apps -join ', ') }
+    $items += if ($cache.Available) { Get-WzText 'off.sourceDrive' } else { Get-WzText 'off.sourceMicrosoft' }
 
     # Die Installation läuft mit FORCEAPPSHUTDOWN: laufende Office-Programme
     # werden ohne eigene Nachfrage beendet. Das gehört in den Dialog — sonst
@@ -176,7 +176,7 @@ function Start-WzOfficeInstall {
     $running = @(Get-Process -Name @($officeProcessNames.Keys) -ErrorAction SilentlyContinue |
         ForEach-Object { $officeProcessNames[$_.ProcessName.ToLower()] } | Sort-Object -Unique)
     foreach ($name in $running) {
-        $items += "Läuft gerade: $name — wird beim Installieren beendet, ungespeicherte Dokumente gehen verloren"
+        $items += Get-WzText 'off.itemRunning' @{ name = $name }
     }
 
     # Vorhandenes Office in anderer Bitness blockiert die Installation — ODT
@@ -185,33 +185,33 @@ function Start-WzOfficeInstall {
     $installed = Get-WzInstalledOffice
     $edition = '64'
     if ($installed.Installed -and $installed.Bitness -and $installed.Bitness -ne '64') {
-        $conflict = Show-WzConfirm -Title 'Vorhandenes Office steht im Weg' `
-            -Message "Auf diesem PC ist $($installed.Name) als $($installed.Bitness)-Bit-Fassung installiert. Eine 64-Bit-Installation daneben lehnt Windows ab. Entweder wird das vorhandene Office zuerst entfernt, oder die neue Fassung wird ebenfalls als $($installed.Bitness)-Bit eingerichtet." `
-            -Items @("Vorhanden: $($installed.Name)", "Merkmale: $($installed.Details)") `
-            -Choices @("$($installed.Bitness)-Bit installieren, vorhandenes ersetzen", 'Vorhandenes zuerst entfernen') `
-            -ChoiceLabel 'Vorgehen' -ConfirmText 'Weiter'
+        $conflict = Show-WzConfirm -Title (Get-WzText 'off.conflictTitle') `
+            -Message (Get-WzText 'off.conflictMessage' @{ name = $installed.Name; bit = $installed.Bitness }) `
+            -Items @((Get-WzText 'off.itemPresent' @{ name = $installed.Name }), (Get-WzText 'off.itemDetails' @{ details = $installed.Details })) `
+            -Choices @((Get-WzText 'off.choiceSameBitness' @{ bit = $installed.Bitness }), (Get-WzText 'off.choiceRemoveFirst')) `
+            -ChoiceLabel (Get-WzText 'off.lblApproach') -ConfirmText (Get-WzText 'off.btnNext')
         if (-not $conflict.Confirmed) { return }
         if ($conflict.SelectedIndex -eq 1) {
             Start-WzOfficeRemove
             return
         }
         $edition = $installed.Bitness
-        $items += "Bitness: $edition-Bit (wie die vorhandene Installation)"
+        $items += Get-WzText 'off.itemBitness' @{ bit = $edition }
     }
 
     if ($choice.Variant.productId -like '*Volume' -and -not $choice.Key) {
-        $items += 'Ohne Volumenlizenz-Schlüssel: Office wird installiert, aber nicht aktiviert'
+        $items += Get-WzText 'off.itemNoVolumeKey'
     }
 
-    $message = 'Office wird installiert. Vorhandene Office-Versionen werden dabei ersetzt, laufende Office-Programme werden ohne Nachfrage beendet. Der Vorgang dauert je nach Verbindung 10 bis 30 Minuten.'
-    if ($running.Count -gt 0) { $message += ' Bitte vorher alle offenen Dokumente speichern.' }
+    $message = Get-WzText 'off.installMessage'
+    if ($running.Count -gt 0) { $message += Get-WzText 'off.installSaveFirst' }
     if ($choice.Variant.note) { $message += " $($choice.Variant.note)" }
 
-    $answer = Show-WzConfirm -Title 'Office installieren' -Message $message -Items $items `
-        -ConfirmText $(if ($syncHash.DryRun) { 'Testlauf starten' } else { 'Installieren' }) -Danger
+    $answer = Show-WzConfirm -Title (Get-WzText 'off.installTitle') -Message $message -Items $items `
+        -ConfirmText $(if ($syncHash.DryRun) { Get-WzText 'off.btnDryRun' } else { Get-WzText 'off.btnInstallGo' }) -Danger
     if (-not $answer.Confirmed) { return }
 
-    Invoke-WzTask -Name 'Office installieren' -Cancelable `
+    Invoke-WzTask -Name (Get-WzText 'off.taskInstall') -Cancelable `
         -ArgumentList @($choice.Variant.id, $choice.Language, $choice.Apps, $choice.Key, $edition) -ScriptBlock {
         param($variantId, $language, $apps, $key, $edition)
         Invoke-WzOfficeInstall -VariantId $variantId -Language $language -IncludedApps $apps `
@@ -221,19 +221,19 @@ function Start-WzOfficeInstall {
         $syncHash.OffChecked = $false
         Update-WzOfficePage
         if ($syncHash.DryRun) {
-            Show-WzInfo -Title 'Testlauf beendet' `
-                -Message 'Es wurde nichts verändert. Im Protokoll steht, was passiert wäre.'
+            Show-WzInfo -Title (Get-WzText 'off.dryRunTitle') `
+                -Message (Get-WzText 'off.dryRunInstall')
             return
         }
         if ($ok) {
             # Erst festhalten, wenn Office wirklich nachweisbar da ist
-            Add-WzAction -Area 'Office' -Summary "$($choice.Variant.name) installiert ($($choice.Language))" `
+            Add-WzAction -Area 'Office' -Summary (Get-WzText 'off.actionInstalled' @{ name = $choice.Variant.name; sprache = $choice.Language }) `
                 -Detail @($choice.Apps)
-            Show-WzInfo -Title 'Office eingerichtet' `
-                -Message 'Beim ersten Start ist die Anmeldung beziehungsweise die Eingabe des Lizenzschlüssels nötig.'
+            Show-WzInfo -Title (Get-WzText 'off.installOkTitle') `
+                -Message (Get-WzText 'off.installOkMessage')
         } else {
-            Show-WzInfo -Title 'Nicht abgeschlossen' `
-                -Message 'Die Installation lief nicht durch. Die Fehlernummern des Bereitstellungswerkzeugs stehen im Protokoll; die Protokolldatei liegt unter offline\odt\logs.'
+            Show-WzInfo -Title (Get-WzText 'off.notFinishedTitle') `
+                -Message (Get-WzText 'off.installFailMessage')
         }
     }.GetNewClosure()
 }
@@ -248,34 +248,34 @@ function Start-WzOfficeRemove {
     $remnants = Get-WzOfficeRemnants
 
     if (-not $installed.Installed -and $remnants.Items.Count -eq 0) {
-        Show-WzInfo -Title 'Kein Office gefunden' `
-            -Message 'Auf diesem PC ist kein Microsoft Office installiert. Es gibt nichts zu entfernen.'
+        Show-WzInfo -Title (Get-WzText 'off.noOfficeTitle') `
+            -Message (Get-WzText 'off.noOfficeMessage')
         return
     }
 
     $items = @()
-    if ($installed.Installed) { $items += "$($installed.Name) — $($installed.Details)" }
+    if ($installed.Installed) { $items += Get-WzText 'off.itemInstalledDetail' @{ name = $installed.Name; details = $installed.Details } }
     $items += $remnants.Items
 
-    $answer = Show-WzConfirm -Title 'Office entfernen' `
-        -Message ('Office wird über das offizielle Bereitstellungswerkzeug von Microsoft entfernt. Laufende Office-Programme werden dabei ohne Nachfrage beendet — bitte vorher alle Dokumente speichern.' + [Environment]::NewLine + [Environment]::NewLine +
-            'Gründlich entfernt zusätzlich die Store-Fassung und die Ordner, die das Werkzeug stehen lässt. Das lässt sich nicht rückgängig machen; dafür wird vorher ein Wiederherstellungspunkt angelegt.') `
+    $answer = Show-WzConfirm -Title (Get-WzText 'off.removeTitle') `
+        -Message ((Get-WzText 'off.removeMessage') + [Environment]::NewLine + [Environment]::NewLine +
+            (Get-WzText 'off.removeMessage2')) `
         -Items $items `
-        -Choices @('Sauber entfernen (empfohlen)', 'Gründlich entfernen, samt Resten') `
-        -ChoiceLabel 'Umfang' `
-        -ConfirmText $(if ($syncHash.DryRun) { 'Testlauf starten' } else { 'Entfernen' }) -Danger
+        -Choices @((Get-WzText 'off.choiceClean'), (Get-WzText 'off.choiceThorough')) `
+        -ChoiceLabel (Get-WzText 'off.lblScope') `
+        -ConfirmText $(if ($syncHash.DryRun) { Get-WzText 'off.btnDryRun' } else { Get-WzText 'off.btnRemoveGo' }) -Danger
     if (-not $answer.Confirmed) { return }
 
     $thorough = ($answer.SelectedIndex -eq 1)
     if ($thorough -and -not $syncHash.DryRun) {
-        $sure = Show-WzConfirm -Title 'Gründlich entfernen' `
-            -Message 'Dabei werden auch Ordner gelöscht, in denen Vorlagen oder Erweiterungen liegen können. Es gibt keinen Rückweg.' `
-            -Items @($remnants.Items) -ConfirmText 'Trotzdem gründlich entfernen' -Danger
+        $sure = Show-WzConfirm -Title (Get-WzText 'off.thoroughTitle') `
+            -Message (Get-WzText 'off.thoroughMessage') `
+            -Items @($remnants.Items) -ConfirmText (Get-WzText 'off.btnThoroughAnyway') -Danger
         if (-not $sure.Confirmed) { return }
-        [void](New-WzRestorePoint -Description 'WinZii: vor dem gründlichen Entfernen von Office')
+        [void](New-WzRestorePoint -Description (Get-WzText 'off.restorePointThorough'))
     }
 
-    Invoke-WzTask -Name 'Office entfernen' -Cancelable -ArgumentList @($thorough) -ScriptBlock {
+    Invoke-WzTask -Name (Get-WzText 'off.taskRemove') -Cancelable -ArgumentList @($thorough) -ScriptBlock {
         param($thorough)
         Remove-WzOffice -Thorough:$thorough
     } -OnComplete {
@@ -285,19 +285,19 @@ function Start-WzOfficeRemove {
         Update-WzOfficePage
 
         if ($syncHash.DryRun) {
-            Show-WzInfo -Title 'Testlauf beendet' `
-                -Message 'Es wurde nichts entfernt. Im Protokoll steht, was passiert wäre.' `
+            Show-WzInfo -Title (Get-WzText 'off.dryRunTitle') `
+                -Message (Get-WzText 'off.dryRunRemove') `
                 -Items @($summary.Details)
             return
         }
 
         $lines = @($summary.Steps) + @($summary.Details)
-        if ($lines.Count -eq 0) { $lines = @('Es gab nichts zu tun.') }
-        Show-WzInfo -Title $(if ($summary.Ok) { 'Office entfernt' } else { 'Nicht vollständig entfernt' }) `
+        if ($lines.Count -eq 0) { $lines = @(Get-WzText 'off.nothingToDo') }
+        Show-WzInfo -Title $(if ($summary.Ok) { Get-WzText 'off.removeOkTitle' } else { Get-WzText 'off.removePartialTitle' }) `
             -Message $(if ($summary.Ok) {
-                'Office ist entfernt. Ein Neustart räumt die letzten Reste weg.'
+                Get-WzText 'off.removeOkMessage'
             } else {
-                'Es ist noch Office auffindbar. Einzelheiten stehen unten und im Protokoll.'
+                Get-WzText 'off.removePartialMessage'
             }) -Items $lines
     }
 }
@@ -310,18 +310,19 @@ function Start-WzOfficeDownload {
     # Start eines Vorgangs, der stundenlang laufen könnte.
     $target = Test-WzOfficeTarget
     if (-not $target.Ok) {
-        Show-WzInfo -Title 'Dateisystem ungeeignet' -Message $target.Message
+        Show-WzInfo -Title (Get-WzText 'off.badFsTitle') -Message $target.Message
         return
     }
     $volume = $target.Volume
 
     $languageName = $syncHash.OffLanguage.SelectedItem.Content
-    $answer = Show-WzConfirm -Title 'Office auf den Datenträger laden' `
-        -Message "Die Installationsdateien werden auf dem WinZii-Datenträger abgelegt. Danach lässt sich Office auf jedem PC ohne Internet einrichten. Benötigt werden etwa 4 GB, frei sind $(Format-WzBytes $volume.FreeBytes)." `
-        -Items @("Ausgabe: $($choice.Variant.name)", "Sprache: $languageName") -ConfirmText 'Laden'
+    $answer = Show-WzConfirm -Title (Get-WzText 'off.downloadTitle') `
+        -Message (Get-WzText 'off.downloadMessage' @{ frei = (Format-WzBytes $volume.FreeBytes) }) `
+        -Items @((Get-WzText 'off.itemEdition' @{ name = $choice.Variant.name }), (Get-WzText 'off.itemLanguage' @{ name = $languageName })) `
+        -ConfirmText (Get-WzText 'off.btnDownloadGo')
     if (-not $answer.Confirmed) { return }
 
-    Invoke-WzTask -Name 'Office laden' -ArgumentList @($choice.Variant.id, $choice.Language, $choice.Apps) -ScriptBlock {
+    Invoke-WzTask -Name (Get-WzText 'off.taskDownload') -ArgumentList @($choice.Variant.id, $choice.Language, $choice.Apps) -ScriptBlock {
         param($variantId, $language, $apps)
         Invoke-WzOfficeDownload -VariantId $variantId -Language $language -IncludedApps $apps
     } -OnComplete {
@@ -329,14 +330,14 @@ function Start-WzOfficeDownload {
         Update-WzOfficeSelection
         if ($syncHash.DryRun) {
             # Der Testmodus meldete bisher »Fertig«, als läge Office nun da.
-            Show-WzInfo -Title 'Testlauf beendet' `
-                -Message 'Es wurde nichts geladen. Im Protokoll steht, was passiert wäre.'
+            Show-WzInfo -Title (Get-WzText 'off.dryRunTitle') `
+                -Message (Get-WzText 'off.dryRunDownload')
             return
         }
         if ($ok) {
             Add-WzAction -Area 'Office' `
-                -Summary "$($choice.Variant.name) auf den Datenträger geladen ($($choice.Language))"
-            Show-WzInfo -Title 'Fertig' -Message 'Office liegt jetzt auf dem Datenträger und lässt sich ohne Internet installieren.'
+                -Summary (Get-WzText 'off.actionDownloaded' @{ name = $choice.Variant.name; sprache = $choice.Language })
+            Show-WzInfo -Title (Get-WzText 'off.downloadOkTitle') -Message (Get-WzText 'off.downloadOkMessage')
         }
     }.GetNewClosure()
 }
@@ -347,41 +348,41 @@ function Start-WzLibreOfficeInstall {
     # einen Weg vorwärts zu nennen.
     $winget = Test-WzWinget
     if (-not $winget.Available -and -not $syncHash.DryRun) {
-        Show-WzInfo -Title 'winget fehlt' `
-            -Message 'LibreOffice wird über winget installiert, und das ist auf diesem PC nicht einsatzbereit. Auf der Seite »Programme« lässt es sich mit »winget einrichten« nachinstallieren.' `
-            -Items @($(if ($winget.Path) { "Gefunden, aber nicht lauffähig: $($winget.Path)" } else { 'winget wurde nicht gefunden.' }))
+        Show-WzInfo -Title (Get-WzText 'off.wingetMissingTitle') `
+            -Message (Get-WzText 'off.wingetMissingMessage') `
+            -Items @($(if ($winget.Path) { Get-WzText 'off.wingetFoundNotRunnable' @{ pfad = $winget.Path } } else { Get-WzText 'off.wingetNotFound' }))
         return
     }
 
-    $answer = Show-WzConfirm -Title 'LibreOffice installieren' `
-        -Message 'LibreOffice wird über winget installiert. Es ist kostenfrei und braucht keinen Lizenzschlüssel.' `
-        -ConfirmText 'Installieren'
+    $answer = Show-WzConfirm -Title (Get-WzText 'off.libreDialogTitle') `
+        -Message (Get-WzText 'off.libreMessage') `
+        -ConfirmText (Get-WzText 'off.btnInstallGo')
     if (-not $answer.Confirmed) { return }
 
-    Invoke-WzTask -Name 'LibreOffice installieren' -Cancelable -ScriptBlock {
+    Invoke-WzTask -Name (Get-WzText 'off.taskLibre') -Cancelable -ScriptBlock {
         Install-WzLibreOffice
     } -OnComplete {
         param($summary)
         if (-not $summary) { return }
         if ($syncHash.DryRun) {
-            Show-WzInfo -Title 'Testlauf beendet' -Message 'Es wurde nichts installiert.'
+            Show-WzInfo -Title (Get-WzText 'off.dryRunTitle') -Message (Get-WzText 'off.dryRunLibre')
             return
         }
         if ($summary.Installed -gt 0) {
-            Add-WzAction -Area 'Office' -Summary 'LibreOffice installiert' `
+            Add-WzAction -Area 'Office' -Summary (Get-WzText 'off.actionLibre') `
                 -RebootRequired:$summary.RebootRequired
-            Show-WzInfo -Title 'LibreOffice eingerichtet' `
+            Show-WzInfo -Title (Get-WzText 'off.libreOkTitle') `
                 -Message $(if ($summary.RebootRequired) {
-                    'Die Installation ist abgeschlossen. Ein Neustart schließt sie ab.'
+                    Get-WzText 'off.libreOkReboot'
                 } else {
-                    'Die Installation ist abgeschlossen.'
+                    Get-WzText 'off.libreOkMessage'
                 })
         } elseif ($summary.Skipped -gt 0) {
-            Show-WzInfo -Title 'Bereits vorhanden' -Message 'LibreOffice ist auf diesem PC schon installiert.'
+            Show-WzInfo -Title (Get-WzText 'off.librePresentTitle') -Message (Get-WzText 'off.librePresentMessage')
         } else {
             # Der Grund stand bisher nur als nackte Zahl im Protokoll
-            Show-WzInfo -Title 'Nicht abgeschlossen' `
-                -Message 'Die Installation lief nicht durch.' -Items @($summary.Details)
+            Show-WzInfo -Title (Get-WzText 'off.notFinishedTitle') `
+                -Message (Get-WzText 'off.libreFailMessage') -Items @($summary.Details)
         }
     }
 }

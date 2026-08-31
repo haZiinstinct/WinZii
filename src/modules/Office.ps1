@@ -174,7 +174,7 @@ function Test-WzOfficeTarget {
     $result = [pscustomobject]@{ Ok = $true; Message = ''; Volume = $volume }
     if ($volume.IsFat32) {
         $result.Ok = $false
-        $result.Message = 'Der Datenträger ist mit FAT32 formatiert. Die Office-Pakete überschreiten die dort mögliche Dateigröße von 4 GB — bitte den Datenträger mit exFAT oder NTFS formatieren.'
+        $result.Message = Get-WzText 'off.fat32Message'
     }
     return $result
 }
@@ -196,17 +196,17 @@ function Get-WzOdtSetup {
     # Datei, die für immer wiederverwendet wurde — setup.exe ist rund 7 MB groß.
     if (Test-Path -LiteralPath $setupPath) {
         if ((Get-Item -LiteralPath $setupPath).Length -gt 1MB) { return $setupPath }
-        Write-WzLog 'Die abgelegte setup.exe ist unbrauchbar klein — sie wird neu geladen.' -Level Warn
+        Write-WzLog (Get-WzText 'off.logSetupTooSmall') -Level Warn
         try { Remove-Item -LiteralPath $setupPath -Force -ErrorAction Stop } catch { }
     }
 
     if ($syncHash.DryRun) {
-        Write-WzLog '[Test] Office Deployment Tool würde geladen.' -Level Test
+        Write-WzLog (Get-WzText 'off.logOdtTest') -Level Test
         return $null
     }
 
     $catalog = Get-WzOfficeCatalog
-    Write-WzLog 'Lade das Office Deployment Tool von Microsoft...' -Level Action
+    Write-WzLog (Get-WzText 'off.logOdtDownload') -Level Action
     if (Get-WzDownload -Url $catalog.odtSetupUrl -TargetPath $setupPath) {
         Write-WzLog 'Office Deployment Tool bereit' -Level Ok
         return $setupPath
@@ -251,12 +251,12 @@ function Test-WzOfficeCache {
     # Dateien anlegt — von »gleich zu Beginn da« bis »kommt zum Schluss«.
     $dataDir = Join-Path $path 'Office\Data'
     if (-not (Test-Path -LiteralPath $dataDir)) {
-        $result.Detail = 'unvollständig — die Datenablage von Office fehlt'
+        $result.Detail = Get-WzText 'off.cacheNoData'
         return $result
     }
     $cab = @(Get-ChildItem -LiteralPath $dataDir -Filter 'v*.cab' -File -ErrorAction SilentlyContinue)
     if ($cab.Count -eq 0) {
-        $result.Detail = 'unvollständig — die Katalogdatei von Office fehlt'
+        $result.Detail = Get-WzText 'off.cacheNoCatalog'
         return $result
     }
 
@@ -277,24 +277,24 @@ function Test-WzOfficeCache {
     $inSprache = @($streams | Where-Object { $_.Name -like "*$Language*" })
 
     if ($neutral.Count -eq 0) {
-        $result.Detail = 'unvollständig — die Programmdateien von Office fehlen'
+        $result.Detail = Get-WzText 'off.cacheNoProgram'
         return $result
     }
     if (($neutral | Measure-Object -Property Length -Maximum).Maximum -lt 1GB) {
-        $result.Detail = 'unvollständig — die Programmdateien sind erst angefangen'
+        $result.Detail = Get-WzText 'off.cacheProgramStarted'
         return $result
     }
     if ($inSprache.Count -eq 0 -or ($inSprache | Measure-Object -Property Length -Maximum).Maximum -lt 50MB) {
-        $result.Detail = "unvollständig — die Sprachdateien für $Language fehlen"
+        $result.Detail = Get-WzText 'off.cacheNoLanguage' @{ sprache = $Language }
         return $result
     }
     if ($result.Bytes -lt 2GB) {
-        $result.Detail = 'unvollständig — der Vorrat ist zu klein für einen vollen Satz'
+        $result.Detail = Get-WzText 'off.cacheTooSmall'
         return $result
     }
 
     $result.Available = $true
-    $result.Detail = 'vollständig'
+    $result.Detail = Get-WzText 'off.cacheComplete'
     return $result
 }
 
@@ -316,7 +316,7 @@ function Invoke-WzOfficeDownload {
     }
     $volume = $target.Volume
     if ($volume.FreeBytes -gt 0 -and $volume.FreeBytes -lt 6GB) {
-        Write-WzLog "Nur $(Format-WzBytes $volume.FreeBytes) frei. Für Office werden etwa 4 bis 6 GB gebraucht." -Level Warn
+        Write-WzLog (Get-WzText 'off.logLittleSpace' @{ frei = (Format-WzBytes $volume.FreeBytes) }) -Level Warn
     }
 
     $setup = Get-WzOdtSetup
@@ -331,7 +331,7 @@ function Invoke-WzOfficeDownload {
         return $true
     }
 
-    Write-WzLog 'Office wird geladen — je nach Verbindung dauert das von zehn Minuten bis über eine Stunde...' -Level Action
+    Write-WzLog (Get-WzText 'off.logDownloading') -Level Action
     $started = Get-Date
     # -KillOnCancel: Ein reiner Download darf mitten im Wort abgebrochen werden.
     # Das Bereitstellungswerkzeug setzt beim nächsten Lauf auf dem Vorhandenen
@@ -345,7 +345,7 @@ function Invoke-WzOfficeDownload {
     $log = Get-WzOdtLogVerdict -Since $started
 
     if ($result.TimedOut) {
-        Write-WzLog 'Zeitüberschreitung nach zwei Stunden — der Vorgang wurde abgebrochen.' -Level Error
+        Write-WzLog (Get-WzText 'off.logDownloadTimeout') -Level Error
         return $false
     }
     if ($result.Canceled) {
@@ -354,25 +354,23 @@ function Invoke-WzOfficeDownload {
         # von Windows. Der lässt sich nicht mitbeenden. Im Abnahmelauf wuchs der
         # Ordner nach dem Abbruch von 39 MB auf 2,5 GB weiter. Das gehört gesagt,
         # sonst wundert sich der Techniker über den vollen Datenträger.
-        Write-WzLog 'Abgebrochen. Der Vorrat ist unvollständig; der nächste Lauf setzt darauf auf.' -Level Warn
-        Write-WzLog ('  Windows lädt im Hintergrund weiter — das Laden erledigt der Click-to-Run-Dienst, ' +
-            'nicht das Bereitstellungswerkzeug. Wer den Platz sofort braucht, löscht den Ordner von Hand: ' +
-            $cachePath) -Level Info
+        Write-WzLog (Get-WzText 'off.logDownloadCancelled') -Level Warn
+        Write-WzLog (Get-WzText 'off.logClickToRunKeeps' @{ pfad = $cachePath }) -Level Info
         return $false
     }
     if ($result.ExitCode -eq 0 -and $cache.Available) {
-        Write-WzLog "Office liegt jetzt vollständig auf dem Datenträger ($(Format-WzBytes $cache.Bytes))" -Level Ok
+        Write-WzLog (Get-WzText 'off.logDownloadOk' @{ groesse = (Format-WzBytes $cache.Bytes) }) -Level Ok
         return $true
     }
     if ($result.ExitCode -eq 0) {
         # Früher wurde hier »Office liegt jetzt auf dem Datenträger (0 B)«
         # gemeldet — der Cache wurde berechnet, aber nie abgefragt.
-        Write-WzLog "Das Bereitstellungswerkzeug meldete Erfolg, der Vorrat ist aber $($cache.Detail) ($(Format-WzBytes $cache.Bytes))." -Level Error
+        Write-WzLog (Get-WzText 'off.logDownloadIncomplete' @{ grund = $cache.Detail; groesse = (Format-WzBytes $cache.Bytes) }) -Level Error
     } else {
-        Write-WzLog "Herunterladen fehlgeschlagen (Rückgabewert $($result.ExitCode))" -Level Error
+        Write-WzLog (Get-WzText 'off.logDownloadFailed' @{ code = $result.ExitCode }) -Level Error
     }
     if ($log.HasError) {
-        Write-WzLog "Das Bereitstellungswerkzeug meldet: $($log.Codes -join ', ') — Protokoll: $($log.LogFile)" -Level Error
+        Write-WzLog (Get-WzText 'off.logOdtCodes' @{ codes = ($log.Codes -join ', '); pfad = $log.LogFile }) -Level Error
     }
     return $false
 }
@@ -399,7 +397,7 @@ function Invoke-WzOfficeInstall {
     try {
         $system = Get-CimInstance -ClassName Win32_LogicalDisk -Filter "DeviceID='$env:SystemDrive'" -ErrorAction Stop
         if ([int64]$system.FreeSpace -lt 5GB) {
-            Write-WzLog "Auf $env:SystemDrive sind nur $(Format-WzBytes ([int64]$system.FreeSpace)) frei. Office braucht etwa 4 GB." -Level Warn
+            Write-WzLog (Get-WzText 'off.logSystemSpace' @{ laufwerk = $env:SystemDrive; frei = (Format-WzBytes ([int64]$system.FreeSpace)) }) -Level Warn
         }
     } catch { }
 
@@ -407,11 +405,11 @@ function Invoke-WzOfficeInstall {
     $sourcePath = if ($cache.Available) { $cache.Path } else { $null }
 
     if ($sourcePath) {
-        Write-WzLog "Installation vom Datenträger ($(Format-WzBytes $cache.Bytes)) — kein Internet nötig." -Level Info
+        Write-WzLog (Get-WzText 'off.logInstallFromDrive' @{ groesse = (Format-WzBytes $cache.Bytes) }) -Level Info
     } elseif ($cache.Bytes -gt 0) {
-        Write-WzLog "Der Vorrat auf dem Datenträger ist $($cache.Detail) — Office wird von Microsoft geladen." -Level Warn
+        Write-WzLog (Get-WzText 'off.logCacheIncomplete' @{ grund = $cache.Detail }) -Level Warn
     } else {
-        Write-WzLog 'Keine Dateien auf dem Datenträger — Office wird direkt von Microsoft geladen.' -Level Info
+        Write-WzLog (Get-WzText 'off.logNoCache') -Level Info
     }
 
     $configFile = New-WzOfficeConfigXml -VariantId $VariantId -Language $Language `
@@ -423,7 +421,7 @@ function Invoke-WzOfficeInstall {
         return $false
     }
 
-    Write-WzLog 'Office wird installiert — das dauert einige Minuten...' -Level Action
+    Write-WzLog (Get-WzText 'off.logInstalling') -Level Action
     $started = Get-Date
     try {
         $result = Invoke-WzProcess -FilePath $setup -Arguments "/configure `"$configFile`"" `
@@ -434,7 +432,7 @@ function Invoke-WzOfficeInstall {
     }
 
     if ($result.TimedOut) {
-        Write-WzLog 'Zeitüberschreitung nach zwei Stunden. Die Installation kann halb fertig sein — bitte vor einem neuen Versuch entfernen.' -Level Error
+        Write-WzLog (Get-WzText 'off.logInstallTimeout') -Level Error
         return $false
     }
 
@@ -446,17 +444,17 @@ function Invoke-WzOfficeInstall {
     $reallyThere = ($installed -and $installed.Installed)
 
     if ($result.ExitCode -eq 0 -and $reallyThere -and -not $log.HasError) {
-        Write-WzLog "Office wurde installiert: $($installed.Name)" -Level Ok
+        Write-WzLog (Get-WzText 'off.logInstalledOk' @{ name = $installed.Name }) -Level Ok
         return $true
     }
 
     if ($result.ExitCode -ne 0) {
-        Write-WzLog "Installation fehlgeschlagen (Rückgabewert $($result.ExitCode))" -Level Error
+        Write-WzLog (Get-WzText 'off.logInstallFailed' @{ code = $result.ExitCode }) -Level Error
     } elseif (-not $reallyThere) {
-        Write-WzLog 'Das Bereitstellungswerkzeug meldete Erfolg, es ist aber kein Office auffindbar.' -Level Error
+        Write-WzLog (Get-WzText 'off.logInstallNotFound') -Level Error
     }
     if ($log.HasError) {
-        Write-WzLog "Das Bereitstellungswerkzeug meldet: $($log.Codes -join ', ') — Protokoll: $($log.LogFile)" -Level Error
+        Write-WzLog (Get-WzText 'off.logOdtCodes' @{ codes = ($log.Codes -join ', '); pfad = $log.LogFile }) -Level Error
     }
     return $false
 }
@@ -486,15 +484,15 @@ function Get-WzOfficeChannelName {
     #>
     param([AllowNull()][string]$CdnBaseUrl)
 
-    if (-not $CdnBaseUrl) { return 'Kanal unbekannt' }
+    if (-not $CdnBaseUrl) { return Get-WzText 'off.channelUnknown' }
     $guid = ($CdnBaseUrl -replace '.*/', '')
     $names = @{
-        '492350f6-3a01-4f97-b9c0-c7c6ddf67d60' = 'Aktueller Kanal'
-        '7ffbc6bf-bc32-4f92-8982-f9dd17fd3114' = 'Halbjährlicher Kanal (Unternehmen)'
-        'b8f9b850-328d-4355-9145-c59439a0c4cf' = 'Aktueller Kanal (Vorschau)'
-        '55336b82-a18d-4dd6-b5f6-9e5095c314a6' = 'Monatlicher Unternehmenskanal'
-        '5030841d-c919-4594-8d2d-84ae4f96e58e' = 'Halbjährlicher Kanal (Vorschau)'
-        '2e148de9-61c8-4051-b103-4af54baffbb4' = 'Beta-Kanal'
+        '492350f6-3a01-4f97-b9c0-c7c6ddf67d60' = (Get-WzText 'off.channelCurrent')
+        '7ffbc6bf-bc32-4f92-8982-f9dd17fd3114' = (Get-WzText 'off.channelSemiAnnual')
+        'b8f9b850-328d-4355-9145-c59439a0c4cf' = (Get-WzText 'off.channelCurrentPreview')
+        '55336b82-a18d-4dd6-b5f6-9e5095c314a6' = (Get-WzText 'off.channelMonthlyEnterprise')
+        '5030841d-c919-4594-8d2d-84ae4f96e58e' = (Get-WzText 'off.channelSemiAnnualPreview')
+        '2e148de9-61c8-4051-b103-4af54baffbb4' = (Get-WzText 'off.channelBeta')
         'f2e724c1-748f-4b47-8fb8-8e0d210e9208' = 'LTSC 2019'
         '5462eee5-1e97-495b-9370-853cd873bb07' = 'LTSC 2021'
         '7983bac0-e531-40cf-be00-fd24fe66619c' = 'LTSC 2024'
@@ -565,15 +563,15 @@ function Remove-WzOffice {
     $remnants = Get-WzOfficeRemnants
     if (-not $before.Installed -and $remnants.Items.Count -eq 0) {
         $summary.Ok = $true
-        $summary.Details += 'Es ist kein Office installiert — nichts zu tun.'
+        $summary.Details += Get-WzText 'off.detailNothingToDo'
         Write-WzLog 'Kein Office gefunden, nichts zu entfernen.' -Level Info
         return $summary
     }
 
     if ($syncHash.DryRun) {
-        Write-WzLog "[Test] Office würde entfernt: $($before.Name)" -Level Test
-        foreach ($item in $remnants.Items) { Write-WzLog "[Test] $item würde entfernt" -Level Test }
-        $summary.Details += 'Testmodus — es wurde nichts verändert.'
+        Write-WzLog (Get-WzText 'off.logRemoveTest' @{ name = $before.Name }) -Level Test
+        foreach ($item in $remnants.Items) { Write-WzLog (Get-WzText 'off.logRemoveItemTest' @{ name = $item }) -Level Test }
+        $summary.Details += Get-WzText 'off.detailDryRun'
         return $summary
     }
 
@@ -581,7 +579,7 @@ function Remove-WzOffice {
     if ($before.Installed) {
         $setup = Get-WzOdtSetup
         if (-not $setup) {
-            $summary.Details += 'Das Bereitstellungswerkzeug ließ sich nicht holen.'
+            $summary.Details += Get-WzText 'off.detailNoOdt'
             return $summary
         }
 
@@ -598,22 +596,22 @@ function Remove-WzOffice {
         )
         [IO.File]::WriteAllText($configFile, ($lines -join [Environment]::NewLine), (New-Object Text.UTF8Encoding($false)))
 
-        Write-WzLog "Entferne $($before.Name) — das dauert einige Minuten..." -Level Action
+        Write-WzLog (Get-WzText 'off.logRemoving' @{ name = $before.Name }) -Level Action
         $started = Get-Date
         $result = Invoke-WzProcess -FilePath $setup -Arguments "/configure `"$configFile`"" `
             -WorkingDirectory $workDir -TimeoutSeconds 3600
 
         if ($result.TimedOut) {
-            $summary.Details += 'Zeitüberschreitung beim Entfernen.'
-            Write-WzLog 'Zeitüberschreitung beim Entfernen.' -Level Error
+            $summary.Details += Get-WzText 'off.removeTimeout'
+            Write-WzLog (Get-WzText 'off.removeTimeout') -Level Error
             return $summary
         }
         $log = Get-WzOdtLogVerdict -Since $started
         if ($log.HasError) {
-            Write-WzLog "Das Bereitstellungswerkzeug meldet: $($log.Codes -join ', ')" -Level Warn
+            Write-WzLog (Get-WzText 'off.logOdtCodesShort' @{ codes = ($log.Codes -join ', ') }) -Level Warn
         }
         $summary.Steps += "Office entfernt: $($before.Name)"
-        Write-WzLog 'Das Bereitstellungswerkzeug ist durchgelaufen.' -Level Ok
+        Write-WzLog (Get-WzText 'off.logOdtDone') -Level Ok
     }
 
     # --- Stufe 2: die Reste ------------------------------------------------
@@ -629,7 +627,7 @@ function Remove-WzOffice {
                 Write-WzLog "Store-Fassung entfernt: $($app.Name)" -Level Ok
             } catch {
                 $summary.Details += "$($app.Name): $($_.Exception.Message.Split([char]10)[0])"
-                Write-WzLog "$($app.Name) ließ sich nicht entfernen: $($_.Exception.Message.Split([char]10)[0])" -Level Warn
+                Write-WzLog (Get-WzText 'off.logAppRemoveFailed' @{ name = $app.Name; grund = $_.Exception.Message.Split([char]10)[0] }) -Level Warn
             }
         }
         foreach ($folder in $remnants.Folders) {
@@ -639,7 +637,7 @@ function Remove-WzOffice {
                 Write-WzLog "Ordner entfernt: $folder" -Level Ok
             } catch {
                 $summary.Details += "$folder blieb liegen: $($_.Exception.Message.Split([char]10)[0])"
-                Write-WzLog "$folder ließ sich nicht entfernen — meist noch in Benutzung." -Level Warn
+                Write-WzLog (Get-WzText 'off.logFolderRemoveFailed' @{ pfad = $folder }) -Level Warn
             }
         }
     }
@@ -648,14 +646,14 @@ function Remove-WzOffice {
     $after = Get-WzInstalledOffice
     $summary.Ok = -not $after.Installed
     if ($summary.Ok) {
-        Write-WzLog 'Office ist entfernt.' -Level Ok
+        Write-WzLog (Get-WzText 'off.logRemoved') -Level Ok
         if ($summary.Steps.Count -gt 0) {
             Add-WzAction -Area 'Office' -Summary "Office entfernt: $($before.Name)" `
                 -Detail $summary.Steps -RebootRequired
         }
     } else {
-        $summary.Details += "Es ist weiterhin Office auffindbar: $($after.Name)"
-        Write-WzLog "Nach dem Entfernen ist weiterhin Office auffindbar: $($after.Name)" -Level Warn
+        $summary.Details += Get-WzText 'off.detailStillFound' @{ name = $after.Name }
+        Write-WzLog (Get-WzText 'off.logStillFound' @{ name = $after.Name }) -Level Warn
     }
     return $summary
 }
@@ -676,7 +674,7 @@ function Get-WzInstalledOffice {
         Welche Office-Version ist bereits installiert?
     #>
     $result = [pscustomobject]@{
-        Installed = $false; Name = 'nicht installiert'; Version = ''; Details = ''
+        Installed = $false; Name = (Get-WzText 'off.notInstalled'); Version = ''; Details = ''
         Bitness = $null; IsClickToRun = $false
     }
 
@@ -718,7 +716,7 @@ function Get-WzInstalledOffice {
             $result.Installed = $true
             $result.Name = $msi.DisplayName
             $result.Version = $msi.DisplayVersion
-            $result.Details = 'ältere MSI-Installation'
+            $result.Details = Get-WzText 'off.detailOldMsi'
         }
     } catch { }
 
