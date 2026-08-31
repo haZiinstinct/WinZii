@@ -111,12 +111,12 @@ function Uninstall-WzPrograms {
 
     foreach ($program in @($Programs)) {
         if ($syncHash.DryRun) {
-            Write-WzLog "[Test] $($program.Name) würde entfernt" -Level Test
-            $summary.Details += "$($program.Name): Testmodus"
+            Write-WzLog (Get-WzText 'unin.logWouldRemove' @{ name = $program.Name }) -Level Test
+            $summary.Details += "$($program.Name): $(Get-WzText 'unin.logTestMode')"
             continue
         }
 
-        Write-WzLog "Entferne $($program.Name)..." -Level Action
+        Write-WzLog (Get-WzText 'unin.logRemoving' @{ name = $program.Name }) -Level Action
         $result = Invoke-WzUninstallCommand -Program $program
 
         if ($result.Success) {
@@ -134,15 +134,15 @@ function Uninstall-WzPrograms {
             # etwas schiefgegangen ist.
             if (-not (Test-WzProgramGone -Program $program -WaitSeconds 10)) {
                 $summary.Failed++
-                $summary.Details += "$($program.Name): steht weiter in der Programmliste — abgebrochen, oder ein Neustart steht aus"
-                Write-WzLog "$($program.Name) steht weiter in der Programmliste — nicht als entfernt gewertet." -Level Warn
+                $summary.Details += "$($program.Name): $(Get-WzText 'unin.detailStillListed')"
+                Write-WzLog (Get-WzText 'unin.logStillListed' @{ name = $program.Name }) -Level Warn
                 continue
             }
 
             $summary.Removed++
             $summary.RemovedPrograms += $program
-            $summary.Details += "$($program.Name): entfernt"
-            Write-WzLog "$($program.Name) entfernt." -Level Ok
+            $summary.Details += "$($program.Name): $(Get-WzText 'unin.detailRemoved')"
+            Write-WzLog (Get-WzText 'unin.logRemoved' @{ name = $program.Name }) -Level Ok
         } else {
             $summary.Failed++
             $summary.Details += "$($program.Name): $($result.Message)"
@@ -172,26 +172,26 @@ function Invoke-WzUninstallCommand {
                 $result.Success = $true
             } elseif ($process.ExitCode -eq 1605) {
                 $result.Success = $true
-                $result.Message = 'war bereits entfernt'
+                $result.Message = Get-WzText 'unin.msgAlreadyGone'
             } else {
-                $result.Message = "msiexec meldet Code $($process.ExitCode)"
+                $result.Message = Get-WzText 'unin.msgMsiexecCode' @{ code = $process.ExitCode }
             }
             return $result
         }
 
         $filePath, $arguments = Split-WzCommandLine $Program.Command
         if (-not $filePath) {
-            $result.Message = 'kein verwertbarer Deinstallationsbefehl hinterlegt'
+            $result.Message = Get-WzText 'unin.msgNoCommand'
             return $result
         }
 
         $process = Invoke-WzProcess -FilePath $filePath -Arguments $arguments -TimeoutSeconds 1800
         if ($process.TimedOut) {
-            $result.Message = 'der Assistent lief in eine Zeitüberschreitung'
+            $result.Message = Get-WzText 'unin.msgTimeout'
         } elseif ($process.ExitCode -in @(0, 3010)) {
             $result.Success = $true
         } else {
-            $result.Message = "der Assistent meldet Code $($process.ExitCode)"
+            $result.Message = Get-WzText 'unin.msgWizardCode' @{ code = $process.ExitCode }
         }
     } catch {
         $result.Message = $_.Exception.Message.Split([char]10)[0]
@@ -549,8 +549,8 @@ function Remove-WzUninstallLeftovers {
 
     if ($syncHash.DryRun) {
         foreach ($leftover in @($Leftovers | Where-Object { $_ })) {
-            Write-WzLog "[Test] Rest würde entfernt: $($leftover.Path)" -Level Test
-            $summary.Details += "$($leftover.Path): Testmodus"
+            Write-WzLog (Get-WzText 'unin.logLeftoverWould' @{ pfad = $leftover.Path }) -Level Test
+            $summary.Details += "$($leftover.Path): $(Get-WzText 'unin.logTestMode')"
         }
         return $summary
     }
@@ -578,8 +578,8 @@ function Remove-WzUninstallLeftovers {
         }
         if (-not $safe) {
             $summary.Failed++
-            $summary.Details += "$($leftover.Path): nicht entfernt — außerhalb der erlaubten Bereiche"
-            Write-WzLog "Rest übersprungen, außerhalb der erlaubten Bereiche: $($leftover.TargetPath)" -Level Warn
+            $summary.Details += "$($leftover.Path): $(Get-WzText 'unin.detailOutside')"
+            Write-WzLog (Get-WzText 'unin.logOutside' @{ pfad = $leftover.TargetPath }) -Level Warn
             continue
         }
 
@@ -593,13 +593,13 @@ function Remove-WzUninstallLeftovers {
             }
             $summary.Removed++
             [void]$removedPaths.Add($leftover.Path)
-            $summary.Details += "$($leftover.Path): entfernt"
-            Write-WzLog "Rest entfernt: $($leftover.Path)" -Level Ok
+            $summary.Details += "$($leftover.Path): $(Get-WzText 'unin.detailRemoved')"
+            Write-WzLog (Get-WzText 'unin.logLeftoverRemoved' @{ pfad = $leftover.Path }) -Level Ok
         } catch {
             $summary.Failed++
             $message = $_.Exception.Message.Split([char]10)[0]
             $summary.Details += "$($leftover.Path): $message"
-            Write-WzLog "Rest nicht entfernt: $($leftover.Path) — $message" -Level Warn
+            Write-WzLog (Get-WzText 'unin.logLeftoverFailed' @{ pfad = $leftover.Path; grund = $message }) -Level Warn
         }
     }
 
@@ -607,9 +607,9 @@ function Remove-WzUninstallLeftovers {
         # Damit die Sicherung auf der Seite »Rücknahme« auftaucht. Automatisch
         # zurückholen lässt sich davon nichts — der Hinweis sagt, was geht.
         Save-WzUndoState -Session $session -ItemId 'uninstall-leftovers' `
-            -ItemName 'Programmreste entfernt' `
+            -ItemName (Get-WzText 'unin.undoItemName') `
             -Action @{ type = 'leftoverCleanup'; undo = @{
-                hint = 'Ordner sind endgültig gelöscht; entfernte Registry-Schlüssel liegen als .reg-Datei im Sicherungsordner.' } } `
+                hint = (Get-WzText 'unin.undoHint') } } `
             -Previous @{ paths = @($removedPaths) }
         $summary.UndoFile = Complete-WzUndoSession -Session $session
     } else {

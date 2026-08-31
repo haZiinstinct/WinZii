@@ -22,10 +22,10 @@ function Update-WzUninstallPage {
 
 function Start-WzUninstallScan {
     $filter = $syncHash.UninstallSearch.Text
-    $syncHash.UninstallTitle.Text = 'wird gelesen...'
+    $syncHash.UninstallTitle.Text = Get-WzText 'unin.reading'
     $syncHash.UninstallList.Children.Clear()
 
-    Invoke-WzTask -Name 'Programmliste lesen' -Cancelable -Silent -ArgumentList @($filter) -ScriptBlock {
+    Invoke-WzTask -Name (Get-WzText 'unin.taskScan') -Cancelable -Silent -ArgumentList @($filter) -ScriptBlock {
         param($needle)
         Get-WzInstalledPrograms -Filter $needle
     } -OnComplete {
@@ -41,13 +41,13 @@ function Write-WzUninstallList {
 
     $filter = $syncHash.UninstallSearch.Text
     $syncHash.UninstallTitle.Text = if ($Programs.Count -eq 0 -and $filter) {
-        "Nichts gefunden für »$filter«"
+        Get-WzText 'unin.noMatch' @{ filter = $filter }
     } elseif ($Programs.Count -eq 0) {
-        'Keine Programme gefunden'
+        Get-WzText 'unin.noPrograms'
     } elseif ($filter) {
-        "$($Programs.Count) Treffer für »$filter«"
+        Get-WzText 'unin.matches' @{ anzahl = $Programs.Count; filter = $filter }
     } else {
-        "$($Programs.Count) installierte Programme"
+        Get-WzText 'unin.installedCount' @{ anzahl = $Programs.Count }
     }
 
     $container = $syncHash.UninstallList
@@ -61,7 +61,7 @@ function Write-WzUninstallList {
         if ($program.Version) { $parts += $program.Version }
         if ($program.Publisher) { $parts += $program.Publisher }
         if ($program.SizeBytes -gt 0) { $parts += Format-WzBytes $program.SizeBytes }
-        if (-not $program.CanSilent) { $parts += 'fragt beim Entfernen nach' }
+        if (-not $program.CanSilent) { $parts += Get-WzText 'unin.asksOnRemoval' }
 
         $item = [pscustomobject]@{
             name        = $program.Name
@@ -75,8 +75,8 @@ function Write-WzUninstallList {
     }
 
     if ($Programs.Count -gt $shown.Count) {
-        [void]$container.Children.Add((New-WzInfoRow 'weitere' `
-            "$($Programs.Count - $shown.Count) Einträge sind ausgeblendet — bitte die Suche oben nutzen." -LabelWidth 200))
+        [void]$container.Children.Add((New-WzInfoRow (Get-WzText 'unin.more') `
+            (Get-WzText 'unin.hidden' @{ anzahl = ($Programs.Count - $shown.Count) }) -LabelWidth 200))
     }
 
     Update-WzUninstallSelection
@@ -92,18 +92,17 @@ function Start-WzUninstallSelected {
     if ($selected.Count -eq 0) { return }
 
     $loud = @($selected | Where-Object { -not $_.CanSilent })
-    $message = "$($selected.Count) Programm(e) werden entfernt. Das lässt sich nicht rückgängig machen — die Programme müssen danach neu installiert werden."
+    $message = Get-WzText 'unin.confirmMessage' @{ anzahl = $selected.Count }
     if ($loud.Count -gt 0) {
-        $message += "`n`n$($loud.Count) davon bringen einen eigenen Assistenten mit und fragen selbst noch einmal nach. " +
-            'Solange muss WinZii warten; bitte die Fenster durchklicken.'
+        $message += "`n`n" + (Get-WzText 'unin.confirmLoud' @{ anzahl = $loud.Count })
     }
 
-    $answer = Show-WzConfirm -Title 'Programme entfernen' -Message $message `
+    $answer = Show-WzConfirm -Title (Get-WzText 'unin.confirmTitle') -Message $message `
         -Items @($selected | ForEach-Object { $_.Name }) `
-        -ConfirmText 'Entfernen' -Danger
+        -ConfirmText (Get-WzText 'unin.btnConfirmRemove') -Danger
     if (-not $answer.Confirmed) { return }
 
-    Invoke-WzTask -Name 'Programme entfernen' -ArgumentList (, $selected) -ScriptBlock {
+    Invoke-WzTask -Name (Get-WzText 'unin.taskRemove') -ArgumentList (, $selected) -ScriptBlock {
         param($programs)
         $summary = Uninstall-WzPrograms -Programs $programs
         # Gleich nachsehen, was die Deinstallierer liegen gelassen haben —
@@ -120,12 +119,12 @@ function Start-WzUninstallSelected {
         $leftovers = @($result.Leftovers | Where-Object { $_ })
 
         Add-WzAction -Area 'Programme' `
-            -Summary "$($summary.Removed) Programm(e) entfernt$(if ($summary.Failed -gt 0) { ", $($summary.Failed) ohne Erfolg" })" `
+            -Summary ((Get-WzText 'unin.actionRemoved' @{ anzahl = $summary.Removed }) + $(if ($summary.Failed -gt 0) { Get-WzText 'unin.actionFailedSuffix' @{ anzahl = $summary.Failed } })) `
             -Detail @($selected | ForEach-Object { $_.Name })
 
         if ($leftovers.Count -eq 0) {
-            Show-WzInfo -Title 'Deinstallation abgeschlossen' `
-                -Message "$($summary.Removed) entfernt, $($summary.Failed) fehlgeschlagen.$(if ($summary.Removed -gt 0) { ' Reste wurden keine gefunden.' })" `
+            Show-WzInfo -Title (Get-WzText 'unin.doneTitle') `
+                -Message ((Get-WzText 'unin.doneMessage' @{ entfernt = $summary.Removed; fehlgeschlagen = $summary.Failed }) + $(if ($summary.Removed -gt 0) { Get-WzText 'unin.doneNoLeftovers' })) `
                 -Items @($summary.Details)
             Start-WzUninstallScan
             return
@@ -136,21 +135,20 @@ function Start-WzUninstallSelected {
         $measure = ($leftovers | Measure-Object -Property SizeBytes -Sum).Sum
         if ($measure) { $bytes = [int64]$measure }
 
-        $answer = Show-WzConfirm -Title 'Deinstallation abgeschlossen' `
-            -Message ("$($summary.Removed) entfernt, $($summary.Failed) fehlgeschlagen. " +
-                "Die Deinstallierer haben Reste zurückgelassen ($(Format-WzBytes $bytes)). " +
-                'Registry-Schlüssel werden vor dem Entfernen als .reg-Datei gesichert. ' +
-                'Gelöschte Ordner sind endgültig weg — auch gespeicherte Einstellungen und Profile darin.') `
+        $answer = Show-WzConfirm -Title (Get-WzText 'unin.doneTitle') `
+            -Message (Get-WzText 'unin.leftoverMessage' @{
+                entfernt = $summary.Removed; fehlgeschlagen = $summary.Failed
+                groesse  = (Format-WzBytes $bytes) }) `
             -Items @($leftovers | ForEach-Object {
                 "$($_.Kind): $($_.Path)$(if ($_.SizeBytes -gt 0) { " — $(Format-WzBytes $_.SizeBytes)" })"
             }) `
-            -ConfirmText 'Reste entfernen' -Danger
+            -ConfirmText (Get-WzText 'unin.btnRemoveLeftovers') -Danger
         if (-not $answer.Confirmed) {
             Start-WzUninstallScan
             return
         }
 
-        Invoke-WzTask -Name 'Programmreste entfernen' -ArgumentList (, $leftovers) -ScriptBlock {
+        Invoke-WzTask -Name (Get-WzText 'unin.taskLeftovers') -ArgumentList (, $leftovers) -ScriptBlock {
             param($items)
             Remove-WzUninstallLeftovers -Leftovers $items
         } -OnComplete {
@@ -158,10 +156,10 @@ function Start-WzUninstallSelected {
             if (-not $cleanup) { return }
             if ($cleanup.Removed -gt 0) {
                 Add-WzAction -Area 'Programme' `
-                    -Summary "$($cleanup.Removed) Programmrest(e) entfernt$(if ($cleanup.Bytes -gt 0) { " ($(Format-WzBytes $cleanup.Bytes))" })"
+                    -Summary ((Get-WzText 'unin.actionLeftovers' @{ anzahl = $cleanup.Removed }) + $(if ($cleanup.Bytes -gt 0) { " ($(Format-WzBytes $cleanup.Bytes))" }))
             }
-            Show-WzInfo -Title 'Reste entfernt' `
-                -Message "$($cleanup.Removed) entfernt, $($cleanup.Failed) fehlgeschlagen." `
+            Show-WzInfo -Title (Get-WzText 'unin.leftoverDoneTitle') `
+                -Message (Get-WzText 'unin.doneMessage' @{ entfernt = $cleanup.Removed; fehlgeschlagen = $cleanup.Failed }) `
                 -Items @($cleanup.Details)
             Start-WzUninstallScan
         }
