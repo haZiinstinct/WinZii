@@ -192,10 +192,11 @@ function New-WzRestorePoint {
     .OUTPUTS
         $true bei Erfolg.
     #>
-    param([string]$Description = 'WinZii — vor Änderungen')
+    param([string]$Description)
+    if (-not $Description) { $Description = Get-WzText 'core.restorePointDesc' }
 
     if ($syncHash.DryRun) {
-        Write-WzLog "[Test] Wiederherstellungspunkt '$Description' würde erstellt." -Level Test
+        Write-WzLog (Get-WzText 'core.logRestorePointTest' @{ name = $Description }) -Level Test
         return $true
     }
 
@@ -215,10 +216,10 @@ function New-WzRestorePoint {
         try {
             Enable-ComputerRestore -Drive "$env:SystemDrive\" -ErrorAction Stop
             if ($protectionWasOff) {
-                Write-WzLog "Der Systemschutz für $env:SystemDrive war ausgeschaltet und wurde eingeschaltet. Er bleibt an — sonst wäre der Punkt sofort wieder weg. Das kostet etwas Speicherplatz." -Level Warn
+                Write-WzLog (Get-WzText 'core.logProtectionOn' @{ laufwerk = $env:SystemDrive }) -Level Warn
             }
         } catch {
-            Write-WzLog 'Systemschutz konnte nicht aktiviert werden — Wiederherstellungspunkt evtl. nicht möglich.' -Level Warn
+            Write-WzLog (Get-WzText 'core.logProtectionFailed') -Level Warn
         }
 
         $current = Get-ItemProperty -Path $frequencyPath -Name 'SystemRestorePointCreationFrequency' -ErrorAction SilentlyContinue
@@ -297,7 +298,7 @@ function Restore-WzUndoSession {
     param([Parameter(Mandatory = $true)][string]$UndoFile)
 
     $data = Read-WzJson -Path $UndoFile
-    if (-not $data) { throw "Sicherung nicht lesbar: $UndoFile" }
+    if (-not $data) { throw (Get-WzText 'core.backupUnreadable' @{ pfad = $UndoFile }) }
 
     $result = [pscustomobject]@{ Restored = 0; Skipped = 0; Failed = 0; Notes = @() }
 
@@ -362,7 +363,7 @@ function Restore-WzUndoSession {
                         if ($undoResult.ExitCode -eq 0) { $result.Restored++ } else { $result.Failed++ }
                     } else {
                         $result.Skipped++
-                        $result.Notes += "$($entry.itemName): kein Rückgängig-Befehl hinterlegt"
+                        $result.Notes += "$($entry.itemName): $(Get-WzText 'core.noUndoCommand')"
                     }
                 }
                 'powerplan' {
@@ -391,14 +392,14 @@ function Restore-WzUndoSession {
                 default {
                     # appx, capability: nicht automatisch zurückholbar
                     $result.Skipped++
-                    $hint = if ($action.undo -and $action.undo.hint) { $action.undo.hint } else { 'nicht automatisch wiederherstellbar' }
+                    $hint = if ($action.undo -and $action.undo.hint) { $action.undo.hint } else { Get-WzText 'core.notRestorable' }
                     $note = "$($entry.itemName): $hint"
                     if ($result.Notes -notcontains $note) { $result.Notes += $note }
                 }
             }
         } catch {
             $result.Failed++
-            Write-WzLog "Rückgängig fehlgeschlagen ($($entry.itemName)): $($_.Exception.Message)" -Level Warn
+            Write-WzLog (Get-WzText 'core.undoFailed' @{ name = $entry.itemName; grund = $_.Exception.Message }) -Level Warn
         }
     }
 
@@ -409,7 +410,7 @@ function Restore-WzUndoSession {
             $data | Add-Member -NotePropertyName 'restoredAt' -NotePropertyValue ((Get-Date).ToString('s')) -Force
             [void](Save-WzJson -InputObject $data -Path $UndoFile -Depth 12)
         } catch {
-            Write-WzLog "Sicherung konnte nicht als zurückgenommen vermerkt werden: $($_.Exception.Message)" -Level Warn
+            Write-WzLog (Get-WzText 'core.undoMarkFailed' @{ grund = $_.Exception.Message }) -Level Warn
         }
     }
 

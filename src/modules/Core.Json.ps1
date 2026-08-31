@@ -21,14 +21,14 @@ function Get-WzCatalog {
 
     $path = Join-Path (Get-WzDataDir) "$Name.json"
     if (-not (Test-Path -LiteralPath $path)) {
-        throw "Katalog '$Name' nicht gefunden: $path"
+        throw (Get-WzText 'core.catalogNotFound' @{ name = $Name; pfad = $path })
     }
 
     try {
         $raw = [IO.File]::ReadAllText($path, [Text.Encoding]::UTF8)
         $catalog = $raw | ConvertFrom-Json
     } catch {
-        throw "Katalog '$Name' ist fehlerhaft: $($_.Exception.Message)"
+        throw (Get-WzText 'core.catalogBroken' @{ name = $Name; grund = $_.Exception.Message })
     }
 
     $script:WzCatalogCache[$Name] = $catalog
@@ -61,7 +61,7 @@ function Read-WzJson {
     try {
         return [IO.File]::ReadAllText($Path, [Text.Encoding]::UTF8) | ConvertFrom-Json
     } catch {
-        Write-WzLog "JSON konnte nicht gelesen werden: $Path" -Level Warn
+        Write-WzLog (Get-WzText 'core.jsonUnreadable' @{ pfad = $Path }) -Level Warn
         return $null
     }
 }

@@ -25,9 +25,14 @@ $syncHash.DryRun = $false
 . (Join-Path $repo 'src\version.ps1')
 $syncHash.Version = $script:WzVersion
 
-foreach ($modul in 'Core.Paths', 'Core.Logging', 'Core.Json', 'Core.Runspace', 'Office') {
+foreach ($modul in 'Core.Paths', 'Core.Logging', 'Core.Json', 'Core.I18n', 'Core.Runspace', 'Office') {
     . (Join-Path $repo "src\modules\$modul.ps1")
 }
+
+# Die Module holen ihre Texte ueber Get-WzText — ohne Sprachtabelle wirft der
+# Aufruf mitten in einer Funktion.
+$syncHash.Language = 'de'
+[void](Import-WzLanguage)
 
 $script:fehler = 0
 function Write-Check {

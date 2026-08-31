@@ -61,10 +61,10 @@ function Invoke-WzTask {
         # Früher nur eine Protokollzeile: Wer während des Startscans auf
         # »Installieren« klickte, bestätigte den Dialog und sah dann — nichts.
         # Der Auftrag verschwand lautlos. Jetzt sagt es der Aufrufer.
-        Write-WzLog "Es läuft bereits ein Vorgang ($($syncHash.BusyName)). Bitte abwarten." -Level Warn
+        Write-WzLog (Get-WzText 'core.busyLog' @{ name = $syncHash.BusyName }) -Level Warn
         if (-not $Silent) {
-            Show-WzInfo -Title 'Es läuft schon etwas' `
-                -Message "»$($syncHash.BusyName)« ist noch nicht fertig. Bitte warten, bis der Vorgang durch ist — dann noch einmal versuchen." `
+            Show-WzInfo -Title (Get-WzText 'core.busyInfoTitle') `
+                -Message (Get-WzText 'core.busyInfoMessage' @{ name = $syncHash.BusyName }) `
                 -Items @("Angefordert: $Name")
         }
         return
@@ -141,7 +141,7 @@ function Invoke-WzTask {
             if ($state.Canceled) {
                 Write-WzLog "$($state.Name) abgebrochen ($seconds s)." -Level Warn
             } elseif ($failed) {
-                Write-WzLog "$($state.Name) mit Fehlern beendet ($seconds s)." -Level Warn
+                Write-WzLog (Get-WzText 'core.taskFailed' @{ name = $state.Name; sekunden = $seconds }) -Level Warn
             } else {
                 Write-WzLog "$($state.Name) abgeschlossen ($seconds s)." -Level Ok
             }
@@ -156,7 +156,7 @@ function Invoke-WzTask {
                 }
                 & $state.OnComplete $payload
             } catch {
-                Write-WzLog "Nachbereitung von $($state.Name) fehlgeschlagen: $($_.Exception.Message)" -Level Error
+                Write-WzLog (Get-WzText 'core.taskPostFailed' @{ name = $state.Name; grund = $_.Exception.Message }) -Level Error
             }
         }
     }.GetNewClosure())
@@ -221,7 +221,7 @@ function Stop-WzTask {
     if (-not $state -or -not $state.Cancelable -or $state.Canceled) { return }
 
     $state.Canceled = $true
-    Write-WzLog "$($state.Name) wird abgebrochen..." -Level Warn
+    Write-WzLog (Get-WzText 'core.taskCancelling' @{ name = $state.Name }) -Level Warn
     try {
         [void]$state.PowerShell.BeginStop($null, $null)
     } catch { }
@@ -377,7 +377,7 @@ function Invoke-WzProcess {
             if ($KillOnCancel -and $syncHash -and $syncHash.CurrentTask -and $syncHash.CurrentTask.Canceled) {
                 $result.Canceled = $true
                 Stop-WzProcessTree -ProcessId $process.Id
-                Write-WzLog "$([IO.Path]::GetFileName($FilePath)) auf Wunsch abgebrochen." -Level Warn
+                Write-WzLog (Get-WzText 'core.procCancelled' @{ datei = [IO.Path]::GetFileName($FilePath) }) -Level Warn
                 [void]$process.WaitForExit(5000)
                 break
             }
@@ -398,7 +398,7 @@ function Invoke-WzProcess {
         }
     } catch {
         $result.StdErr = $_.Exception.Message
-        Write-WzLog "Start von $FilePath fehlgeschlagen: $($_.Exception.Message)" -Level Error
+        Write-WzLog (Get-WzText 'core.procStartFailed' @{ datei = $FilePath; grund = $_.Exception.Message }) -Level Error
     } finally {
         if ($process) { $process.Dispose() }
     }

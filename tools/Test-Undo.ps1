@@ -31,10 +31,16 @@ $syncHash.DryRun = $false
 . (Join-Path $root 'src\version.ps1')
 $syncHash.Version = $script:WzVersion
 
-foreach ($module in 'Core.Paths', 'Core.Logging', 'Core.Json', 'Core.Runspace', 'Core.Backup',
-    'Optimizer', 'Core.System', 'Uninstall') {
+foreach ($module in 'Core.Paths', 'Core.Logging', 'Core.Json', 'Core.I18n', 'Core.Runspace',
+    'Core.Backup', 'Optimizer', 'Core.System', 'Uninstall') {
     . (Join-Path $root "src\modules\$module.ps1")
 }
+
+# Die Module holen ihre Texte ueber Get-WzText. Ohne geladene Sprachtabelle
+# wirft der Aufruf, und ein Fehlschlag mitten in einer Funktion saehe aus wie
+# ein Fehler in der Sache. Deutsch, damit die Meldungen lesbar bleiben.
+$syncHash.Language = 'de'
+[void](Import-WzLanguage)
 
 $script:failed = 0
 $testKey = 'HKCU:\Software\WinZii-Selbsttest'

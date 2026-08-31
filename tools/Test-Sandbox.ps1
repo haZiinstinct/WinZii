@@ -72,9 +72,14 @@ $syncHash.LogEntries = [Collections.ArrayList]::Synchronized((New-Object Collect
 $syncHash.Actions = [Collections.ArrayList]::Synchronized((New-Object Collections.ArrayList))
 $syncHash.DryRun = $false
 # Cleanup ist für Measure-WzPathSet dabei, das der Dateiumzug zum Nachmessen braucht
-foreach ($m in 'Core.Paths', 'Core.Logging', 'Core.Json', 'Core.Runspace', 'Core.Ui', 'Core.System', 'Core.Backup', 'Cleanup', 'Optimizer') {
+foreach ($m in 'Core.Paths', 'Core.Logging', 'Core.Json', 'Core.I18n', 'Core.Runspace', 'Core.Ui', 'Core.System', 'Core.Backup', 'Cleanup', 'Optimizer') {
     . (Join-Path $root "src\modules\$m.ps1")
 }
+
+# Die Module holen ihre Texte ueber Get-WzText — ohne Sprachtabelle wirft der
+# Aufruf mitten in einer Funktion.
+$syncHash.Language = 'de'
+[void](Import-WzLanguage)
 . (Join-Path $root 'src\version.ps1')
 $syncHash.Version = $script:WzVersion
 $syncHash.SystemInfo = [pscustomobject]@{ BuildNumber = $build }

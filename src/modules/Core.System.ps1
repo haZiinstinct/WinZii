@@ -342,14 +342,14 @@ function Get-WzBatteryHealth {
         # negativer Verschleiß wäre Unsinn, also bei 0 abschneiden.
         $result.WearPercent = [math]::Max(0, [math]::Round((1 - ($result.FullmWh / $result.DesignmWh)) * 100))
         $result.Verdict = if ($result.WearPercent -lt 20) {
-            "$($result.WearPercent) % Verschleiß — der Akku ist in Ordnung"
+            Get-WzText 'core.wearOk' @{ prozent = $result.WearPercent }
         } elseif ($result.WearPercent -lt 40) {
-            "$($result.WearPercent) % Verschleiß — merklich schwächer, aber brauchbar"
+            Get-WzText 'core.wearWeak' @{ prozent = $result.WearPercent }
         } else {
-            "$($result.WearPercent) % Verschleiß — ein Austausch lohnt sich"
+            Get-WzText 'core.wearReplace' @{ prozent = $result.WearPercent }
         }
     } else {
-        $result.Verdict = 'Akku vorhanden, aber ohne Kapazitätsangaben'
+        $result.Verdict = Get-WzText 'core.wearUnknown'
     }
 
     return $result
@@ -389,7 +389,7 @@ function Get-WzBatteryReportCapacities {
             }
         }
     } catch {
-        Write-WzLog "Akkubericht nicht auswertbar: $($_.Exception.Message.Split([char]10)[0])" -Level Info
+        Write-WzLog (Get-WzText 'core.logBatteryReport' @{ grund = $_.Exception.Message.Split([char]10)[0] }) -Level Info
     } finally {
         Remove-Item -LiteralPath $file -Force -ErrorAction SilentlyContinue
     }
@@ -466,7 +466,7 @@ function Get-WzSecurityInfo {
         }
         $info.Defender = $parts -join ' · '
     } catch {
-        $info.Defender = 'Drittanbieter-Virenschutz oder nicht abfragbar'
+        $info.Defender = Get-WzText 'core.defenderThirdParty'
     }
 
     $info.PhysicalDisks = @()
@@ -475,7 +475,7 @@ function Get-WzSecurityInfo {
             [pscustomobject]@{
                 Number    = $_.DeviceId
                 Model     = $_.FriendlyName
-                MediaType = if ($_.MediaType) { $_.MediaType } else { 'Datenträger' }
+                MediaType = if ($_.MediaType) { $_.MediaType } else { Get-WzText 'core.diskGeneric' }
                 BusType   = $_.BusType
                 SizeBytes = [int64]$_.Size
                 Health    = $_.HealthStatus
@@ -557,7 +557,7 @@ function Get-WzWingetCandidates {
         # Der Ordner ist per Rechtevergabe auch für Administratoren gesperrt.
         # Früher verschluckte -ErrorAction SilentlyContinue genau das und
         # ließ winget als »nicht vorhanden« erscheinen.
-        Write-WzLog "WindowsApps nicht durchsuchbar: $($_.Exception.Message.Split([char]10)[0])" -Level Info
+        Write-WzLog (Get-WzText 'core.logWindowsApps' @{ grund = $_.Exception.Message.Split([char]10)[0] }) -Level Info
     }
 
     return @($candidates | Select-Object -Unique)
@@ -590,22 +590,22 @@ function Get-WzActivationStatus {
         $query = "SELECT LicenseStatus,ProductKeyChannel FROM SoftwareLicensingProduct " +
                  "WHERE PartialProductKey IS NOT NULL AND ApplicationID='55c92734-d682-4d71-983e-d6ec3f16059f'"
         $product = Get-CimInstance -Query $query -ErrorAction Stop | Select-Object -First 1
-        if (-not $product) { return 'nicht ermittelbar' }
+        if (-not $product) { return Get-WzText 'core.actNotDeterminable' }
 
         $state = switch ($product.LicenseStatus) {
-            0 { 'nicht lizenziert' }
+            0 { Get-WzText 'core.actUnlicensed' }
             1 { 'aktiviert' }
             2 { 'Karenzzeit' }
-            3 { 'Karenzzeit außerhalb der Toleranz' }
+            3 { Get-WzText 'core.actGraceOut' }
             4 { 'unlizenzierte Karenzzeit' }
-            5 { 'Benachrichtigung — nicht aktiviert' }
-            6 { 'zusätzliche Karenzzeit' }
+            5 { Get-WzText 'core.actNotification' }
+            6 { Get-WzText 'core.actExtraGrace' }
             default { "Status $($product.LicenseStatus)" }
         }
         $channel = if ($product.ProductKeyChannel) { " · $($product.ProductKeyChannel)" } else { '' }
         return "$state$channel"
     } catch {
-        return 'nicht ermittelbar'
+        return Get-WzText 'core.actNotDeterminable'
     }
 }
 
@@ -621,18 +621,18 @@ function Get-WzBitLockerStatus {
 
     # Kein pauschales »Windows Home«: Home hat den Dienst ebenfalls, nur die
     # Verwaltungsoberfläche fehlt dort.
-    if (-not $service) { return 'Dienst nicht vorhanden' }
+    if (-not $service) { return Get-WzText 'core.bdeNoService' }
     if ($bootStatus -eq 0 -and $service.Status -ne 'Running') {
         # Laufwerksbuchstabe statt »Systemlaufwerk« — wie die WMI-Ausgabe unten
         # (»C: an · D: aus«). Das lange Wort brach am Fenster-Mindestmaß mitten
         # in der Dashboard-Karte um: »Systemlaufwer k«.
-        return "$env:SystemDrive nicht verschlüsselt"
+        return Get-WzText 'core.bdeNotEncrypted' @{ laufwerk = $env:SystemDrive }
     }
 
     try {
         $volumes = Get-CimInstance -Namespace 'root\cimv2\security\microsoftvolumeencryption' `
             -Query 'SELECT DriveLetter,ProtectionStatus FROM Win32_EncryptableVolume' -ErrorAction Stop
-        if (-not $volumes) { return 'nicht eingerichtet' }
+        if (-not $volumes) { return Get-WzText 'core.bdeNotSetup' }
 
         $parts = @()
         foreach ($volume in $volumes) {
@@ -645,10 +645,10 @@ function Get-WzBitLockerStatus {
             }
             $parts += "$($volume.DriveLetter) $state"
         }
-        if ($parts.Count -eq 0) { return 'nicht eingerichtet' }
+        if ($parts.Count -eq 0) { return Get-WzText 'core.bdeNotSetup' }
         return ($parts -join ' · ')
     } catch {
-        return 'nicht abfragbar'
+        return Get-WzText 'core.bdeNotQueryable'
     }
 }
 
@@ -660,10 +660,10 @@ function Get-WzTpmStatus {
         und liefert auf manchen Systemen trotz vorhandenem TPM nichts.
     #>
     $enum = Get-ItemProperty 'HKLM:\SYSTEM\CurrentControlSet\Services\TPM\Enum' -ErrorAction SilentlyContinue
-    if (-not $enum -or [int]$enum.Count -lt 1) { return 'nicht vorhanden' }
+    if (-not $enum -or [int]$enum.Count -lt 1) { return Get-WzText 'core.tpmNone' }
 
     $service = Get-Service TPM -ErrorAction SilentlyContinue
-    if ($service -and $service.Status -eq 'Running') { return 'vorhanden und aktiv' }
+    if ($service -and $service.Status -eq 'Running') { return Get-WzText 'core.tpmActive' }
     return 'vorhanden, Dienst gestoppt'
 }
 

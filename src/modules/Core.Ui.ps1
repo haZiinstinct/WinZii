@@ -19,7 +19,7 @@ function Import-WzXaml {
     )
 
     if (-not (Test-Path -LiteralPath $Path)) {
-        throw "XAML-Datei nicht gefunden: $Path"
+        throw (Get-WzText 'core.xamlNotFound' @{ pfad = $Path })
     }
 
     $raw = [IO.File]::ReadAllText($Path, [Text.Encoding]::UTF8)
@@ -29,7 +29,7 @@ function Import-WzXaml {
     try {
         $root = [Windows.Markup.XamlReader]::Load($reader)
     } catch {
-        throw "XAML '$([IO.Path]::GetFileName($Path))' konnte nicht geladen werden: $($_.Exception.Message)"
+        throw (Get-WzText 'core.xamlLoadFailed' @{ datei = [IO.Path]::GetFileName($Path); grund = $_.Exception.Message })
     }
 
     Register-WzNames -Root $root -Xml $xaml -Prefix $Prefix
@@ -82,7 +82,7 @@ function Show-WzPage {
                 $initializer = "Initialize-Wz$($Id)Page"
                 if (Get-Command $initializer -ErrorAction SilentlyContinue) { & $initializer }
             } catch {
-                Write-WzLog "Seite '$Id' konnte nicht geladen werden: $($_.Exception.Message)" -Level Error
+                Write-WzLog (Get-WzText 'core.pageLoadFailed' @{ seite = $Id; grund = $_.Exception.Message }) -Level Error
                 return
             }
         }
@@ -175,7 +175,7 @@ function New-WzPlaceholderPage {
     $stack = New-Object Windows.Controls.StackPanel
 
     $eyebrow = New-Object Windows.Controls.TextBlock
-    $eyebrow.Text = '// IN ARBEIT'
+    $eyebrow.Text = Get-WzText 'core.placeholderEyebrow'
     $eyebrow.Style = $syncHash.Window.FindResource('WzEyebrow')
     [void]$stack.Children.Add($eyebrow)
 
@@ -185,7 +185,7 @@ function New-WzPlaceholderPage {
     [void]$stack.Children.Add($title)
 
     $lead = New-Object Windows.Controls.TextBlock
-    $lead.Text = 'Dieser Bereich wird gerade gebaut.'
+    $lead.Text = Get-WzText 'core.placeholderLead'
     $lead.Style = $syncHash.Window.FindResource('WzPageLead')
     [void]$stack.Children.Add($lead)
 
@@ -274,7 +274,7 @@ function Show-WzConfirm {
         [string[]]$Choices = @(),
         [string]$ChoiceLabel = 'Auswahl',
         [int]$ChoiceDefault = 0,
-        [string]$ConfirmText = 'Ausführen',
+        [string]$ConfirmText,
         [switch]$Danger,
         [switch]$HideCancel
     )
@@ -289,7 +289,7 @@ function Show-WzConfirm {
     # nichts anzeigen als abstürzen (kommt vor, wenn beim Beenden noch eine
     # Hintergrundarbeit fertig wird).
     if (-not $syncHash.Window) {
-        Write-WzLog "Dialog '$Title' übersprungen — kein Fenster mehr vorhanden." -Level Warn
+        Write-WzLog (Get-WzText 'core.dialogSkipped' @{ titel = $Title }) -Level Warn
         return $result
     }
 
@@ -375,7 +375,7 @@ function Show-WzConfirm {
     } elseif ($HideCancel) {
         '// HINWEIS'
     } else {
-        '// BESTÄTIGUNG'
+        Get-WzText 'core.confirmEyebrow'
     }
     $eyebrow.FontFamily = $syncHash.Window.FindResource('WzFontMono')
     $eyebrow.FontSize = 10.5
@@ -407,7 +407,7 @@ function Show-WzConfirm {
     $closeButton.Padding = New-Object Windows.Thickness(0)
     $closeButton.Style = $syncHash.Window.FindResource('WzBtnGhost')
     $closeButton.VerticalAlignment = 'Top'
-    $closeButton.ToolTip = 'Schließen (Esc)'
+    $closeButton.ToolTip = Get-WzText 'core.closeTip'
     [Windows.Controls.Grid]::SetColumn($closeButton, 1)
     [void]$header.Children.Add($closeButton)
 
@@ -519,7 +519,7 @@ function Show-WzConfirm {
     }
 
     $okButton = New-Object Windows.Controls.Button
-    $okButton.Content = $ConfirmText
+    $okButton.Content = if ($ConfirmText) { $ConfirmText } else { Get-WzText 'core.btnExecute' }
     $okButton.IsDefault = $true
     $okButton.Style = if ($Danger) {
         $syncHash.Window.FindResource('WzBtnDanger')
@@ -586,7 +586,7 @@ function Show-WzInfo {
         [string[]]$Items = @()
     )
     [void](Show-WzConfirm -Title $Title -Message $Message -Items $Items `
-        -ConfirmText 'Verstanden' -HideCancel)
+        -ConfirmText (Get-WzText 'dialog.understood') -HideCancel)
 }
 
 function New-WzCard {
@@ -993,14 +993,14 @@ function Format-WzAgo {
     # keine Stunde zurück, »heute« wäre trotzdem falsch.
     $now = Get-Date
     $days = [int]($now.Date - $stamp.Date).TotalDays
-    $span = if ($days -lt 0) { 'in der Zukunft' }
-        elseif ($days -eq 0) { 'heute' }
-        elseif ($days -eq 1) { 'gestern' }
-        elseif ($days -lt 30) { "vor $days Tagen" }
-        elseif ($days -lt 60) { 'vor einem Monat' }
-        elseif ($days -lt 365) { "vor $([int][math]::Floor($days / 30)) Monaten" }
-        elseif ($days -lt 730) { 'vor über einem Jahr' }
-        else { "vor über $([int][math]::Floor($days / 365)) Jahren" }
+    $span = if ($days -lt 0) { Get-WzText 'core.agoFuture' }
+        elseif ($days -eq 0) { Get-WzText 'core.agoToday' }
+        elseif ($days -eq 1) { Get-WzText 'core.agoYesterday' }
+        elseif ($days -lt 30) { Get-WzText 'core.agoDays' @{ tage = $days } }
+        elseif ($days -lt 60) { Get-WzText 'core.agoMonth' }
+        elseif ($days -lt 365) { Get-WzText 'core.agoMonths' @{ monate = [int][math]::Floor($days / 30) } }
+        elseif ($days -lt 730) { Get-WzText 'core.agoOverYear' }
+        else { Get-WzText 'core.agoOverYears' @{ jahre = [int][math]::Floor($days / 365) } }
 
     return "$span ($($stamp.ToString('dd.MM.yyyy')))"
 }

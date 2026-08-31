@@ -28,9 +28,14 @@ $syncHash.DryRun = $true
 . (Join-Path $root 'src\version.ps1')
 $syncHash.Version = $script:WzVersion
 
-foreach ($module in 'Core.Paths', 'Core.Logging', 'Core.Json', 'Core.Runspace', 'Core.Ui') {
+foreach ($module in 'Core.Paths', 'Core.Logging', 'Core.Json', 'Core.I18n', 'Core.Runspace', 'Core.Ui') {
     . (Join-Path $root "src\modules\$module.ps1")
 }
+
+# Die Module holen ihre Texte ueber Get-WzText — ohne Sprachtabelle wirft der
+# Aufruf mitten in einer Funktion.
+$syncHash.Language = 'de'
+[void](Import-WzLanguage)
 
 $xamlDir = Join-Path $root 'src\xaml'
 $themeReader = New-Object Xml.XmlNodeReader ([xml][IO.File]::ReadAllText((Join-Path $xamlDir 'Theme.xaml'), [Text.Encoding]::UTF8))
