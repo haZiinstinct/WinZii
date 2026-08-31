@@ -54,14 +54,14 @@ function Invoke-WzNetworkDiagnosis {
     }
 
     if ($adapters.Count -eq 0) {
-        Add-Step 'Netzwerkkarte' 'fail' 'keine aktive Verbindung'
+        Add-Step (Get-WzText 'tool.stepAdapter') 'fail' (Get-WzText 'tool.detailNoConnection')
         return Complete-Diagnosis `
-            -Verdict 'Es ist überhaupt keine Netzwerkverbindung aktiv — weder Kabel noch WLAN.' `
-            -Recommendation 'Netzwerkkabel prüfen beziehungsweise WLAN einschalten. Ist im Geräte-Manager ein Netzwerkadapter mit Fehlerzeichen zu sehen, fehlt der Treiber — dann hilft die Seite »Treiber«.' `
+            -Verdict (Get-WzText 'tool.verdictNoAdapter') `
+            -Recommendation (Get-WzText 'tool.recNoAdapter') `
             -FixHint 'adapter' -Ok $false
     }
     $adapterNames = ($adapters | ForEach-Object { $_.Name }) -join ', '
-    Add-Step 'Netzwerkkarte' 'ok' "$($adapters.Count) aktiv: $adapterNames"
+    Add-Step (Get-WzText 'tool.stepAdapter') 'ok' (Get-WzText 'tool.detailAdaptersActive' @{ anzahl = $adapters.Count; namen = $adapterNames })
 
     # --- 2. IP-Adresse -----------------------------------------------------
     $configs = @()
@@ -80,29 +80,29 @@ function Invoke-WzNetworkDiagnosis {
     $addresses = @($addresses | Where-Object { $_ -ne '0.0.0.0' })
 
     if ($addresses.Count -eq 0) {
-        Add-Step 'IP-Adresse' 'fail' 'keine zugewiesen'
+        Add-Step (Get-WzText 'tool.stepIp') 'fail' (Get-WzText 'tool.detailNoIp')
         return Complete-Diagnosis `
-            -Verdict 'Die Netzwerkkarte ist verbunden, hat aber keine IP-Adresse bekommen.' `
-            -Recommendation 'Zuerst »IP-Adresse auffrischen« versuchen. Bleibt es dabei, vergibt der Router keine Adressen (DHCP) oder es ist eine feste Adresse falsch eingetragen.' `
+            -Verdict (Get-WzText 'tool.verdictNoIp') `
+            -Recommendation (Get-WzText 'tool.recNoIp') `
             -FixHint 'renew' -Ok $false
     }
 
     $apipa = @($addresses | Where-Object { $_ -like '169.254.*' })
     if ($apipa.Count -eq $addresses.Count) {
-        Add-Step 'IP-Adresse' 'fail' "$($apipa -join ', ') — Selbstvergabe, kein DHCP"
+        Add-Step (Get-WzText 'tool.stepIp') 'fail' (Get-WzText 'tool.detailApipa' @{ adressen = ($apipa -join ', ') })
         return Complete-Diagnosis `
-            -Verdict "Der PC hat sich mit $($apipa[0]) selbst eine Adresse gegeben — er hat vom Router keine bekommen." `
-            -Recommendation 'Das ist fast immer der Router oder das Kabel: »IP-Adresse auffrischen« versuchen, sonst Router neu starten. Bei WLAN prüfen, ob überhaupt das richtige Netz verbunden ist.' `
+            -Verdict (Get-WzText 'tool.verdictApipa' @{ adresse = $apipa[0] }) `
+            -Recommendation (Get-WzText 'tool.recApipa') `
             -FixHint 'renew' -Ok $false
     }
-    Add-Step 'IP-Adresse' 'ok' ($addresses -join ', ')
+    Add-Step (Get-WzText 'tool.stepIp') 'ok' ($addresses -join ', ')
 
     # --- 3. Standardgateway ------------------------------------------------
     if ($gateways.Count -eq 0) {
-        Add-Step 'Router (Gateway)' 'fail' 'nicht eingetragen'
+        Add-Step (Get-WzText 'tool.stepGateway') 'fail' (Get-WzText 'tool.detailNoGateway')
         return Complete-Diagnosis `
-            -Verdict 'Es ist kein Standardgateway eingetragen — der PC weiß nicht, wohin er Anfragen ins Internet schicken soll.' `
-            -Recommendation 'Meist eine falsch gesetzte feste IP-Konfiguration. »IP-Adresse auffrischen« stellt den Bezug über DHCP wieder her.' `
+            -Verdict (Get-WzText 'tool.verdictNoGateway') `
+            -Recommendation (Get-WzText 'tool.recNoGateway') `
             -FixHint 'renew' -Ok $false
     }
 
@@ -121,14 +121,14 @@ function Invoke-WzNetworkDiagnosis {
     # Namensauflösung und Internetzugang.
     $gatewayAnswered = ($gatewayReply -and $gatewayReply.Status -eq 'Success')
     if ($gatewayAnswered) {
-        Add-Step 'Router (Gateway)' 'ok' "$gateway antwortet in $($gatewayReply.RoundtripTime) ms"
+        Add-Step (Get-WzText 'tool.stepGateway') 'ok' (Get-WzText 'tool.detailGatewayOk' @{ adresse = $gateway; ms = $gatewayReply.RoundtripTime })
     } else {
-        Add-Step 'Router (Gateway)' 'warn' "$gateway antwortet nicht auf Ping"
+        Add-Step (Get-WzText 'tool.stepGateway') 'warn' (Get-WzText 'tool.detailGatewayNoPing' @{ adresse = $gateway })
     }
 
     # --- 4. Namensauflösung ------------------------------------------------
     if ($dnsServers.Count -eq 0) {
-        Add-Step 'Namensauflösung' 'warn' 'kein DNS-Server eingetragen'
+        Add-Step (Get-WzText 'tool.stepDns') 'warn' (Get-WzText 'tool.detailNoDnsServer')
     }
 
     $dnsOk = $false
@@ -138,63 +138,63 @@ function Invoke-WzNetworkDiagnosis {
         $records = @($answer | Where-Object { $_.IPAddress })
         if ($records.Count -gt 0) {
             $dnsOk = $true
-            $dnsDetail = "über $($dnsServers -join ', ') aufgelöst"
+            $dnsDetail = Get-WzText 'tool.detailDnsResolved' @{ server = ($dnsServers -join ', ') }
         }
     } catch {
         $dnsDetail = $_.Exception.Message.Split([char]10)[0]
     }
 
     if (-not $dnsOk) {
-        Add-Step 'Namensauflösung' 'fail' $dnsDetail
+        Add-Step (Get-WzText 'tool.stepDns') 'fail' $dnsDetail
         if (-not $gatewayAnswered) {
             # Router stumm UND keine Namensauflösung: jetzt ist der Router der
             # wahrscheinlichste Schuldige.
             return Complete-Diagnosis `
-                -Verdict "Der Router unter $gateway antwortet nicht, und auch die Namensauflösung scheitert." `
-                -Recommendation 'Router neu starten und Kabel prüfen. Bei WLAN kann auch schlechter Empfang die Ursache sein.' `
+                -Verdict (Get-WzText 'tool.verdictRouterAndDns' @{ adresse = $gateway }) `
+                -Recommendation (Get-WzText 'tool.recRouterAndDns') `
                 -FixHint 'reset' -Ok $false
         }
         return Complete-Diagnosis `
-            -Verdict 'Der Router antwortet, aber Internetadressen lassen sich nicht in IP-Adressen übersetzen — das ist ein reines DNS-Problem.' `
-            -Recommendation 'Unten auf »Cloudflare« oder »Quad9« umstellen. Das behebt es fast immer und ist jederzeit auf »zurück auf Router« umkehrbar.' `
+            -Verdict (Get-WzText 'tool.verdictDnsOnly') `
+            -Recommendation (Get-WzText 'tool.recDnsOnly') `
             -FixHint 'dns' -Ok $false
     }
-    Add-Step 'Namensauflösung' 'ok' $dnsDetail
+    Add-Step (Get-WzText 'tool.stepDns') 'ok' $dnsDetail
 
     # --- 5. Tatsächlicher Internetzugang -----------------------------------
     $web = Test-WzInternetAccess -TimeoutMs ($TimeoutMs * 2)
-    Add-Step 'Internetzugang' $web.Status $web.Detail
+    Add-Step (Get-WzText 'tool.stepInternet') $web.Status $web.Detail
 
     switch ($web.Kind) {
         'ok' {
-            $verdict = 'Das Netzwerk ist in Ordnung — Namensauflösung und Internetzugang antworten.'
+            $verdict = Get-WzText 'tool.verdictOk'
             if ($gatewayAnswered) {
-                $verdict = 'Das Netzwerk ist in Ordnung — Router, Namensauflösung und Internetzugang antworten alle.'
+                $verdict = Get-WzText 'tool.verdictOkAll'
             } else {
-                $verdict += " Der Router unter $gateway beantwortet dabei keine Ping-Anfragen — manche Geräte blocken das grundsätzlich, gestört ist dadurch nichts."
+                $verdict += Get-WzText 'tool.verdictOkNoPing' @{ adresse = $gateway }
             }
             return Complete-Diagnosis `
                 -Verdict $verdict `
-                -Recommendation 'Klagt der Kunde trotzdem über »kein Internet«, liegt es an einem einzelnen Programm: Virenscanner mit eigener Firewall, VPN-Software oder ein Proxy im Browser.' `
+                -Recommendation (Get-WzText 'tool.recOk') `
                 -FixHint '' -Ok $true
         }
         'portal' {
             return Complete-Diagnosis `
-                -Verdict 'Es hängt ein Anmeldeportal dazwischen — typisch für Hotel-, Gäste- oder Firmen-WLAN.' `
-                -Recommendation 'Im Browser eine beliebige Seite aufrufen; die Anmeldeseite erscheint dann von selbst.' `
+                -Verdict (Get-WzText 'tool.verdictPortal') `
+                -Recommendation (Get-WzText 'tool.recPortal') `
                 -FixHint '' -Ok $false
         }
         'certificate' {
             $timeNote = Test-WzSystemTime
             return Complete-Diagnosis `
-                -Verdict "Die Verbindung steht, aber das Sicherheitszertifikat wird abgelehnt. $timeNote" `
-                -Recommendation 'Zwei übliche Ursachen: Die Systemuhr geht falsch (dann stimmt kein Zertifikat mehr), oder ein mitlesender Virenscanner beziehungsweise Firmen-Proxy schaltet sich dazwischen. Ein Netzwerk-Reset hilft hier nicht.' `
+                -Verdict (Get-WzText 'tool.verdictCertificate' @{ zeithinweis = $timeNote }) `
+                -Recommendation (Get-WzText 'tool.recCertificate') `
                 -FixHint 'time' -Ok $false
         }
         default {
             return Complete-Diagnosis `
-                -Verdict 'Router und Namensauflösung arbeiten, aber es kommt keine Verbindung nach draußen zustande.' `
-                -Recommendation 'Meist blockiert eine Firewall oder ein Virenscanner. Ist am Router eine Kindersicherung oder Zeitbegrenzung eingerichtet, greift die ebenfalls hier.' `
+                -Verdict (Get-WzText 'tool.verdictNoInternet') `
+                -Recommendation (Get-WzText 'tool.recNoInternet') `
                 -FixHint 'reset' -Ok $false
         }
     }
@@ -250,7 +250,7 @@ function Test-WzInternetAccess {
         if ($probe.Status -ge 300 -and $probe.Status -lt 400) {
             $result.Kind = 'portal'
             $result.Status = 'warn'
-            $result.Detail = "Umleitung auf eine Anmeldeseite (HTTP $($probe.Status))"
+            $result.Detail = Get-WzText 'tool.detailRedirect' @{ status = $probe.Status }
             return $result
         }
         if ($probe.Body.Trim() -ne 'Microsoft Connect Test') {
@@ -273,7 +273,7 @@ function Test-WzInternetAccess {
         [void](& $abrufen 'https://aka.ms/' $true)
         $result.Kind = 'ok'
         $result.Status = 'ok'
-        $result.Detail = 'Prüfseite und HTTPS erreichbar'
+        $result.Detail = Get-WzText 'tool.detailProbeOk'
     } catch [Net.WebException] {
         $message = $_.Exception.Message
         if ($_.Exception.Status -eq 'ProtocolError') {
@@ -289,7 +289,7 @@ function Test-WzInternetAccess {
         } elseif ($_.Exception.Status -eq 'Timeout') {
             $result.Kind = 'blocked'
             $result.Status = 'fail'
-            $result.Detail = 'Zeitüberschreitung'
+            $result.Detail = Get-WzText 'tool.detailTimeout'
         } else {
             $result.Kind = 'blocked'
             $result.Status = 'fail'
@@ -316,15 +316,15 @@ function Test-WzSystemTime {
         if ($build.InstallDate) {
             $installed = [DateTimeOffset]::FromUnixTimeSeconds([int64]$build.InstallDate).LocalDateTime
             if ($now -lt $installed) {
-                return "Achtung: Die Systemuhr steht auf $($now.ToString('dd.MM.yyyy')) und damit vor dem Installationsdatum von Windows — sie geht falsch."
+                return Get-WzText 'tool.clockBeforeInstall' @{ datum = $now.ToString('d', (Get-WzLanguageCulture)) }
             }
         }
     } catch { }
 
     if ($now.Year -lt 2024 -or $now.Year -gt 2100) {
-        return "Achtung: Die Systemuhr steht auf $($now.ToString('dd.MM.yyyy')) und ist damit offensichtlich falsch."
+        return Get-WzText 'tool.clockWrong' @{ datum = $now.ToString('d', (Get-WzLanguageCulture)) }
     }
-    return "Die Systemuhr steht auf $($now.ToString('dd.MM.yyyy HH:mm')) und wirkt plausibel."
+    return Get-WzText 'tool.clockPlausible' @{ datum = $now.ToString('g', (Get-WzLanguageCulture)) }
 }
 
 function Start-WzDefenderScan {
@@ -341,13 +341,13 @@ function Start-WzDefenderScan {
 
     if ($syncHash.DryRun) {
         $result.Success = $true
-        $result.Summary = 'Testmodus — es wurde nicht geprüft.'
-        Write-WzLog '[Test] Virenschnellprüfung würde gestartet' -Level Test
+        $result.Summary = Get-WzText 'tool.scanDryRun'
+        Write-WzLog (Get-WzText 'tool.logScanTest') -Level Test
         return $result
     }
 
     try {
-        Write-WzLog 'Virenschnellprüfung läuft — das dauert einige Minuten...' -Level Action
+        Write-WzLog (Get-WzText 'tool.logScanRunning') -Level Action
         Start-MpScan -ScanType QuickScan -ErrorAction Stop
 
         $threats = @(Get-MpThreatDetection -ErrorAction SilentlyContinue |
@@ -355,18 +355,18 @@ function Start-WzDefenderScan {
 
         $result.Success = $true
         if ($threats.Count -eq 0) {
-            $result.Summary = 'Die Schnellprüfung hat nichts gefunden.'
+            $result.Summary = Get-WzText 'tool.scanClean'
             Write-WzLog $result.Summary -Level Ok
         } else {
             $names = @($threats | ForEach-Object {
                 (Get-MpThreat -ThreatID $_.ThreatID -ErrorAction SilentlyContinue).ThreatName
             } | Where-Object { $_ } | Select-Object -Unique)
             $result.Threats = $names
-            $result.Summary = "$($threats.Count) Fund(e). Der Defender hat sie in Quarantäne verschoben."
+            $result.Summary = Get-WzText 'tool.scanFound' @{ anzahl = $threats.Count }
             Write-WzLog $result.Summary -Level Warn
         }
     } catch {
-        $result.Summary = "Die Prüfung ließ sich nicht starten: $($_.Exception.Message.Split([char]10)[0])"
+        $result.Summary = Get-WzText 'tool.scanFailed' @{ grund = $_.Exception.Message.Split([char]10)[0] }
         Write-WzLog $result.Summary -Level Error
     }
 

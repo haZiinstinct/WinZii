@@ -34,7 +34,7 @@ function Get-WzEventSummary {
         } catch {
             # "Keine Ereignisse gefunden" ist kein Fehler
             if ($_.Exception.Message -notmatch 'No events|Keine Ereignisse') {
-                Write-WzLog "Protokoll '$logName' nicht lesbar: $($_.Exception.Message)" -Level Warn
+                Write-WzLog (Get-WzText 'diag.logLogUnreadable' @{ name = $logName; grund = $_.Exception.Message }) -Level Warn
             }
         }
     }
@@ -103,11 +103,11 @@ function Get-WzBootPerformance {
     } catch {
         $message = $_.Exception.Message
         $result.Hint = if ($message -match 'nicht autorisiert|not authorized|Zugriff verweigert|access is denied') {
-            'Das Leistungsprotokoll ließ sich nicht öffnen — dafür fehlen die Administratorrechte.'
+            Get-WzText 'diag.hintNoRights'
         } elseif ($message -match 'Keine Ereignisse|No events') {
-            'Es sind noch keine Startvorgänge aufgezeichnet. Nach dem nächsten Neustart steht der Wert zur Verfügung.'
+            Get-WzText 'diag.hintNoBoots'
         } else {
-            'Das Leistungsprotokoll ist auf diesem PC nicht verfügbar. In virtuellen Maschinen ist es oft abgeschaltet.'
+            Get-WzText 'diag.hintNoLog'
         }
         return $result
     }
@@ -130,7 +130,7 @@ function Get-WzBootPerformance {
     $runs = @($runs | Where-Object { $_ })
 
     if ($runs.Count -eq 0) {
-        $result.Hint = 'Es sind noch keine Startvorgänge aufgezeichnet.'
+        $result.Hint = Get-WzText 'diag.hintNoBootsShort'
         return $result
     }
 
@@ -166,11 +166,11 @@ function Get-WzBootPerformance {
     $result.Worst = @($culprits | Sort-Object DelaySeconds -Descending | Select-Object -First 5)
 
     $result.Hint = if ($result.AverageSeconds -lt 30) {
-        'Die Startzeit ist unauffällig.'
+        Get-WzText 'diag.bootFine'
     } elseif ($result.AverageSeconds -lt 60) {
-        'Der Start dauert länger als üblich. Ein Blick auf die Autostart-Einträge lohnt sich.'
+        Get-WzText 'diag.bootSlow'
     } else {
-        'Der Start dauert deutlich zu lange. Autostart ausdünnen und den Datenträgerzustand prüfen — bei alten Festplatten ist das der häufigste Grund.'
+        Get-WzText 'diag.bootVerySlow'
     }
 
     return $result
@@ -235,9 +235,9 @@ function Get-WzMinidumps {
             Time           = $file.LastWriteTime
             SizeBytes      = $file.Length
             Code           = if ($code) { $code } else { 'unbekannt' }
-            Name           = if ($known) { $known.name } else { 'nicht zugeordnet' }
-            Cause          = if ($known) { $known.cause } else { 'Der Stoppcode ist nicht in der Übersetzungstabelle enthalten.' }
-            Recommendation = if ($known) { $known.recommendation } else { 'Abbild mit WinDbg auswerten oder den Code nachschlagen.' }
+            Name           = if ($known) { $known.name } else { Get-WzText 'diag.dumpUnknownName' }
+            Cause          = if ($known) { $known.cause } else { Get-WzText 'diag.dumpUnknownCause' }
+            Recommendation = if ($known) { $known.recommendation } else { Get-WzText 'diag.dumpUnknownRec' }
         }
     }
 
@@ -327,6 +327,9 @@ function Get-WzSmartStatus {
                 WearPercent  = $null
                 ReadErrors   = 'n/v'
                 Assessment   = ''
+                # Sprachneutrales Kennzeichen: Die Seite verglich den
+                # Bewertungstext gegen »unauffällig«. Auf Englisch traf das nie.
+                AssessmentOk = $false
             }
 
             # Zwingend je Datenträger zurücksetzen: Bleibt hier der Wert des
@@ -357,23 +360,24 @@ function Get-WzSmartStatus {
             $notes = @()
             if ($entry.Health -ne 'Healthy') { $notes += 'Windows meldet einen Fehlerzustand' }
             if ($counter) {
-                if ($counter.Wear -gt 80) { $notes += 'Abnutzung über 80 Prozent — Austausch einplanen' }
-                if ($counter.ReadErrorsUncorrected -gt 0) { $notes += 'nicht behebbare Lesefehler vorhanden' }
-                if ($counter.Temperature -gt 60) { $notes += 'Temperatur auffällig hoch' }
+                if ($counter.Wear -gt 80) { $notes += Get-WzText 'diag.noteWear' }
+                if ($counter.ReadErrorsUncorrected -gt 0) { $notes += Get-WzText 'diag.noteReadErrors' }
+                if ($counter.Temperature -gt 60) { $notes += Get-WzText 'diag.noteTemperature' }
             }
+            $entry.AssessmentOk = ($notes.Count -eq 0 -and $counter)
             $entry.Assessment = if ($notes.Count -gt 0) {
                 $notes -join '; '
             } elseif ($counter) {
-                'unauffällig'
+                Get-WzText 'diag.inconspicuous'
             } else {
                 # Ohne Messwerte ist "unauffällig" eine Behauptung, keine Aussage
-                'keine Zustandswerte verfügbar'
+                Get-WzText 'diag.noHealthValues'
             }
 
             $disks += $entry
         }
     } catch {
-        Write-WzLog "Datenträgerzustand nicht abfragbar: $($_.Exception.Message)" -Level Warn
+        Write-WzLog (Get-WzText 'diag.logDisksUnreadable' @{ grund = $_.Exception.Message }) -Level Warn
     }
 
     return @($disks)
@@ -390,7 +394,7 @@ function Invoke-WzSfc {
         return [pscustomobject]@{ Success = $true; Summary = 'Testmodus' }
     }
 
-    Write-WzLog 'Systemdateien werden geprüft — das dauert einige Minuten...' -Level Action
+    Write-WzLog (Get-WzText 'diag.logSfcRunning') -Level Action
     $outFile = [IO.Path]::GetTempFileName()
     try {
         $result = Invoke-WzProcess -FilePath 'cmd.exe' -Arguments "/c sfc /scannow > `"$outFile`"" -TimeoutSeconds 2400
@@ -399,17 +403,22 @@ function Invoke-WzSfc {
             $text = [IO.File]::ReadAllText($outFile, [Text.Encoding]::Unicode) -replace "`0", ''
         }
 
+        # Der Zustand als eigene Groesse: Die Meldung wurde vorher gegen
+        # »Keine*« geprueft, um die Protokollstufe zu waehlen — auf Englisch
+        # stand danach jede saubere Pruefung als Warnung im Protokoll.
+        $clean = $false
         $summary = if ($text -match 'keine Integritätsverletzungen|did not find any integrity violations') {
-            'Keine beschädigten Systemdateien gefunden.'
+            $clean = $true
+            Get-WzText 'diag.sfcClean'
         } elseif ($text -match 'erfolgreich repariert|successfully repaired') {
-            'Beschädigte Dateien wurden gefunden und repariert. Ein Neustart wird empfohlen.'
+            Get-WzText 'diag.sfcRepaired'
         } elseif ($text -match 'nicht reparieren|unable to fix') {
-            'Beschädigte Dateien gefunden, die nicht repariert werden konnten. Jetzt DISM ausführen.'
+            Get-WzText 'diag.sfcUnfixable'
         } else {
-            "Prüfung beendet (Code $($result.ExitCode))."
+            Get-WzText 'diag.sfcOther' @{ code = $result.ExitCode }
         }
 
-        Write-WzLog $summary -Level $(if ($summary -like 'Keine*') { 'Ok' } else { 'Warn' })
+        Write-WzLog $summary -Level $(if ($clean) { 'Ok' } else { 'Warn' })
         return [pscustomobject]@{ Success = ($result.ExitCode -eq 0); Summary = $summary }
     } finally {
         Remove-Item $outFile -Force -ErrorAction SilentlyContinue
@@ -428,13 +437,13 @@ function Invoke-WzDismRepair {
         return [pscustomobject]@{ Success = $true; Summary = 'Testmodus' }
     }
 
-    Write-WzLog "Windows-Abbild wird geprüft ($Action) — das dauert 5 bis 20 Minuten..." -Level Action
+    Write-WzLog (Get-WzText 'diag.logDismRunning' @{ aktion = $Action }) -Level Action
     $result = Invoke-WzProcess -FilePath 'dism.exe' -Arguments "/Online /Cleanup-Image /$Action /NoRestart" -TimeoutSeconds 3600
 
     $summary = switch ($result.ExitCode) {
-        0     { 'Das Windows-Abbild ist in Ordnung.' }
-        87    { 'Der Befehl wurde nicht erkannt — diese Windows-Version kennt die Option nicht.' }
-        default { "DISM endete mit Code $($result.ExitCode). Einzelheiten in %windir%\Logs\DISM\dism.log." }
+        0     { Get-WzText 'diag.dismOk' }
+        87    { Get-WzText 'diag.dismUnknownOption' }
+        default { Get-WzText 'diag.dismOther' @{ code = $result.ExitCode } }
     }
 
     Write-WzLog $summary -Level $(if ($result.ExitCode -eq 0) { 'Ok' } else { 'Warn' })
@@ -453,15 +462,15 @@ function Invoke-WzChkdsk {
         return [pscustomobject]@{ Success = $true; Summary = 'Testmodus' }
     }
 
-    Write-WzLog "Dateisystem von $Drive wird geprüft..." -Level Action
+    Write-WzLog (Get-WzText 'diag.logChkdskRunning' @{ laufwerk = $Drive }) -Level Action
     $result = Invoke-WzProcess -FilePath 'chkdsk.exe' -Arguments "$Drive /scan /perf" -TimeoutSeconds 3600
 
     $summary = switch ($result.ExitCode) {
-        0 { 'Keine Fehler im Dateisystem gefunden.' }
-        1 { 'Fehler gefunden und behoben.' }
-        2 { 'Aufräumarbeiten nötig — Prüfung mit Neustart einplanen.' }
-        3 { 'Fehler gefunden, die einen Neustart zur Reparatur brauchen.' }
-        default { "Prüfung endete mit Code $($result.ExitCode)." }
+        0 { Get-WzText 'diag.chkdskClean' }
+        1 { Get-WzText 'diag.chkdskFixed' }
+        2 { Get-WzText 'diag.chkdskNeedsReboot' }
+        3 { Get-WzText 'diag.chkdskNeedsRepair' }
+        default { Get-WzText 'diag.chkdskOther' @{ code = $result.ExitCode } }
     }
 
     Write-WzLog $summary -Level $(if ($result.ExitCode -le 1) { 'Ok' } else { 'Warn' })
@@ -480,6 +489,6 @@ function New-WzBatteryReport {
         Write-WzLog "Akkubericht erstellt: $outFile" -Level Ok
         return $outFile
     }
-    Write-WzLog 'Kein Akku vorhanden oder Bericht nicht erstellbar.' -Level Info
+    Write-WzLog (Get-WzText 'diag.logNoBattery') -Level Info
     return $null
 }

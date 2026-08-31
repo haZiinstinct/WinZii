@@ -17,13 +17,13 @@ function Initialize-WzDiagnosticsPage {
     $syncHash.DiagBtnBattery.Add_Click({ Start-WzBatteryReport })
 
     [void]$syncHash.DiagNotices.Items.Add((New-WzNotice -Kind 'info' `
-        -Text 'Die Analyse liest nur mit und verändert nichts. Die Reparaturwerkzeuge darunter greifen dagegen ins System ein.'))
+        -Text (Get-WzText 'diag.noticeReadOnly')))
 }
 
 function Start-WzDiagnosticsScan {
     $days = $syncHash.DiagRange.SelectedItem.Tag
 
-    $syncHash.DiagEventsTitle.Text = 'wird ausgewertet...'
+    $syncHash.DiagEventsTitle.Text = Get-WzText 'diag.analysing'
     $syncHash.DiagEvents.Children.Clear()
     $syncHash.DiagDumps.Children.Clear()
     $syncHash.DiagDisks.Children.Clear()
@@ -65,11 +65,11 @@ function Write-WzDiagnosticsReliability {
 
     $problems = @($Records | Where-Object { $_.Type -ne 'Ereignis' })
     $syncHash.DiagReliabilityTitle.Text = if ($Records.Count -eq 0) {
-        'Keine Einträge — auf diesem PC ist die Zuverlässigkeitsüberwachung leer'
+        Get-WzText 'diag.relNone'
     } elseif ($problems.Count -eq 0) {
-        "$($Records.Count) Einträge, keine Abstürze oder Programmfehler darunter"
+        Get-WzText 'diag.relClean' @{ anzahl = $Records.Count }
     } else {
-        "$($problems.Count) Absturz/Programmfehler unter $($Records.Count) Einträgen"
+        Get-WzText 'diag.relProblems' @{ probleme = $problems.Count; gesamt = $Records.Count }
     }
 
     # Nur die jüngsten zeigen; die vollständige Liste steht im Bericht
@@ -80,12 +80,12 @@ function Write-WzDiagnosticsReliability {
             default         { 'normal' }
         }
         [void]$container.Children.Add((New-WzInfoRow `
-            "$($record.Time.ToString('dd.MM.yy HH:mm'))  $($record.Type)" `
-            "$($record.Source) — $($record.Message)" -Kind $kind -LabelWidth 190))
+            (Get-WzText 'diag.relRow' @{ zeit = $record.Time.ToString('g', (Get-WzLanguageCulture)); typ = $record.Type }) `
+            (Get-WzText 'diag.relDetail' @{ quelle = $record.Source; meldung = $record.Message }) -Kind $kind -LabelWidth 190))
     }
     if ($Records.Count -gt 12) {
-        [void]$container.Children.Add((New-WzInfoRow 'weitere' `
-            "$($Records.Count - 12) ältere Einträge stehen im Bericht" -LabelWidth 190))
+        [void]$container.Children.Add((New-WzInfoRow (Get-WzText 'diag.lblMore') `
+            (Get-WzText 'diag.relMore' @{ anzahl = ($Records.Count - 12) }) -LabelWidth 190))
     }
 }
 
@@ -96,21 +96,21 @@ function Write-WzDiagnosticsResult {
     $events = @($Result.Events)
     $critical = @($events | Where-Object { $_.Severity -eq 'critical' })
     $syncHash.DiagEventsTitle.Text = if ($events.Count -eq 0) {
-        "Keine Fehler in den letzten $($Result.Days) Tagen"
+        Get-WzText 'diag.eventsNone' @{ tage = $Result.Days }
     } else {
-        "$($events.Count) Auffälligkeit(en), davon $($critical.Count) kritisch"
+        Get-WzText 'diag.eventsFound' @{ anzahl = $events.Count; kritisch = $critical.Count }
     }
 
     $container = $syncHash.DiagEvents
     $container.Children.Clear()
     if ($events.Count -eq 0) {
-        [void]$container.Children.Add((New-WzInfoRow 'Ergebnis' 'unauffällig' -Kind 'ok'))
+        [void]$container.Children.Add((New-WzInfoRow (Get-WzText 'diag.lblResult') (Get-WzText 'diag.inconspicuous') -Kind 'ok'))
     }
     foreach ($event in ($events | Select-Object -First 20)) {
         [void]$container.Children.Add((New-WzFindingRow -Finding $event))
     }
     if ($events.Count -gt 20) {
-        [void]$container.Children.Add((New-WzInfoRow 'Hinweis' "$($events.Count - 20) weitere Einträge stehen im Bericht"))
+        [void]$container.Children.Add((New-WzInfoRow (Get-WzText 'diag.lblHint') (Get-WzText 'diag.eventsMore' @{ anzahl = ($events.Count - 20) })))
     }
 
     # --- Startdauer -------------------------------------------------------
@@ -119,34 +119,34 @@ function Write-WzDiagnosticsResult {
     $container.Children.Clear()
 
     if (-not $boot -or $boot.Runs.Count -eq 0) {
-        $syncHash.DiagBootTitle.Text = 'Keine Startdaten verfügbar'
-        [void]$container.Children.Add((New-WzInfoRow 'Hinweis' $(if ($boot) { $boot.Hint } else { 'nicht abfragbar' })))
+        $syncHash.DiagBootTitle.Text = Get-WzText 'diag.bootNone'
+        [void]$container.Children.Add((New-WzInfoRow (Get-WzText 'diag.lblHint') $(if ($boot) { $boot.Hint } else { Get-WzText 'diag.notQueryable' })))
     } else {
-        $syncHash.DiagBootTitle.Text = "Im Schnitt $(Format-WzSeconds $boot.AverageSeconds -Unit 'Sekunden') bis zum fertigen Desktop"
+        $syncHash.DiagBootTitle.Text = Get-WzText 'diag.bootAverage' @{ dauer = (Format-WzSeconds $boot.AverageSeconds -Unit (Get-WzText 'diag.unitSeconds')) }
         $kind = if ($boot.AverageSeconds -lt 30) { 'ok' } elseif ($boot.AverageSeconds -lt 60) { 'warn' } else { 'error' }
-        [void]$container.Children.Add((New-WzInfoRow 'Bewertung' $boot.Hint -Kind $kind))
+        [void]$container.Children.Add((New-WzInfoRow (Get-WzText 'diag.lblRating') $boot.Hint -Kind $kind))
 
         $latest = $boot.Runs[0]
         # Die Aufteilung lag schon immer im Ergebnis und wurde nie gezeigt. Sie
         # beantwortet die eigentliche Frage: liegt es an Windows oder am Autostart?
         $windowsSeconds = $latest.MainPathMs / 1000
         $afterSeconds = [int]$latest.DegradedBy / 1000
-        [void]$container.Children.Add((New-WzInfoRow 'Letzter Start' `
-            "$($latest.Time.ToString('dd.MM.yyyy HH:mm')) · $(Format-WzSeconds $latest.TotalSeconds)"))
-        [void]$container.Children.Add((New-WzInfoRow '    davon Windows' (Format-WzSeconds $windowsSeconds)))
-        [void]$container.Children.Add((New-WzInfoRow '    davon Autostart' (Format-WzSeconds $afterSeconds) `
+        [void]$container.Children.Add((New-WzInfoRow (Get-WzText 'diag.lblLastBoot') `
+            (Get-WzText 'diag.bootLastValue' @{ zeit = $latest.Time.ToString('g', (Get-WzLanguageCulture)); dauer = (Format-WzSeconds $latest.TotalSeconds) })))
+        [void]$container.Children.Add((New-WzInfoRow (Get-WzText 'diag.lblOfWindows') (Format-WzSeconds $windowsSeconds)))
+        [void]$container.Children.Add((New-WzInfoRow (Get-WzText 'diag.lblOfStartup') (Format-WzSeconds $afterSeconds) `
             -Kind $(if ($afterSeconds -gt $windowsSeconds) { 'warn' } else { 'normal' })))
 
         if ($boot.Runs.Count -gt 1) {
             $oldest = $boot.Runs[$boot.Runs.Count - 1]
-            [void]$container.Children.Add((New-WzInfoRow 'Ältester Messwert' `
-                "$($oldest.Time.ToString('dd.MM.yyyy')) · $(Format-WzSeconds $oldest.TotalSeconds) — $($boot.Runs.Count) Startvorgänge ausgewertet"))
+            [void]$container.Children.Add((New-WzInfoRow (Get-WzText 'diag.lblOldest') `
+                (Get-WzText 'diag.bootOldestValue' @{ zeit = $oldest.Time.ToString('d', (Get-WzLanguageCulture)); dauer = (Format-WzSeconds $oldest.TotalSeconds); anzahl = $boot.Runs.Count })))
         }
 
         if ($boot.Worst.Count -gt 0) {
             foreach ($culprit in $boot.Worst) {
-                [void]$container.Children.Add((New-WzInfoRow 'Bremst' `
-                    "$($culprit.Name) — $(Format-WzSeconds $culprit.DelaySeconds)" -Kind 'warn'))
+                [void]$container.Children.Add((New-WzInfoRow (Get-WzText 'diag.lblSlowsDown') `
+                    (Get-WzText 'diag.culpritValue' @{ name = $culprit.Name; dauer = (Format-WzSeconds $culprit.DelaySeconds) }) -Kind 'warn'))
             }
         }
     }
@@ -157,20 +157,20 @@ function Write-WzDiagnosticsResult {
     # --- Abstürze (Fortsetzung nach der Zuverlässigkeit) ------------------
     $dumps = @($Result.Dumps)
     $syncHash.DiagDumpsTitle.Text = if ($dumps.Count -eq 0) {
-        'Keine Bluescreens in den letzten 90 Tagen'
+        Get-WzText 'diag.dumpsNone'
     } else {
-        "$($dumps.Count) Absturzabbild(er) gefunden"
+        Get-WzText 'diag.dumpsFound' @{ anzahl = $dumps.Count }
     }
 
     $container = $syncHash.DiagDumps
     $container.Children.Clear()
     if ($dumps.Count -eq 0) {
-        [void]$container.Children.Add((New-WzInfoRow 'Ergebnis' 'keine Abstürze aufgezeichnet' -Kind 'ok'))
+        [void]$container.Children.Add((New-WzInfoRow (Get-WzText 'diag.lblResult') (Get-WzText 'diag.noCrashes') -Kind 'ok'))
     }
     foreach ($dump in ($dumps | Select-Object -First 10)) {
         $finding = [pscustomobject]@{
             Severity       = 'critical'
-            Title          = "$($dump.Code) — $($dump.Name)"
+            Title          = (Get-WzText 'diag.dumpTitle' @{ code = $dump.Code; name = $dump.Name })
             Count          = 1
             Last           = $dump.Time
             Explanation    = $dump.Cause
@@ -181,32 +181,32 @@ function Write-WzDiagnosticsResult {
 
     # --- Datenträger ------------------------------------------------------
     $disks = @($Result.Disks)
-    $problems = @($disks | Where-Object { $_.Assessment -ne 'unauffällig' })
+    $problems = @($disks | Where-Object { -not $_.AssessmentOk })
     $syncHash.DiagDisksTitle.Text = if ($problems.Count -gt 0) {
-        "$($problems.Count) von $($disks.Count) Datenträger(n) auffällig"
+        Get-WzText 'diag.disksProblems' @{ probleme = $problems.Count; gesamt = $disks.Count }
     } else {
-        "$($disks.Count) Datenträger, alle unauffällig"
+        Get-WzText 'diag.disksClean' @{ anzahl = $disks.Count }
     }
 
     $container = $syncHash.DiagDisks
     $container.Children.Clear()
     foreach ($disk in $disks) {
-        $kind = if ($disk.Assessment -eq 'unauffällig') { 'ok' } else { 'warn' }
-        [void]$container.Children.Add((New-WzInfoRow $disk.Model "$($disk.MediaType) · $(Format-WzBytes $disk.SizeBytes) · $($disk.BusType)"))
-        [void]$container.Children.Add((New-WzInfoRow 'Zustand' $disk.Assessment -Kind $kind))
-        if ($disk.PowerOnHours -ne 'n/v') { [void]$container.Children.Add((New-WzInfoRow 'Betriebszeit' $disk.PowerOnHours)) }
-        if ($disk.Temperature -ne 'n/v') { [void]$container.Children.Add((New-WzInfoRow 'Temperatur' $disk.Temperature)) }
+        $kind = if ($disk.AssessmentOk) { 'ok' } else { 'warn' }
+        [void]$container.Children.Add((New-WzInfoRow $disk.Model (Get-WzText 'diag.diskDetail' @{ art = $disk.MediaType; groesse = (Format-WzBytes $disk.SizeBytes); bus = $disk.BusType })))
+        [void]$container.Children.Add((New-WzInfoRow (Get-WzText 'diag.lblCondition') $disk.Assessment -Kind $kind))
+        if ($disk.PowerOnHours -ne 'n/v') { [void]$container.Children.Add((New-WzInfoRow (Get-WzText 'diag.lblPowerOn') $disk.PowerOnHours)) }
+        if ($disk.Temperature -ne 'n/v') { [void]$container.Children.Add((New-WzInfoRow (Get-WzText 'diag.lblTemperature') $disk.Temperature)) }
         if ($disk.Wear -ne 'n/v') {
-            [void]$container.Children.Add((New-WzInfoRow 'Abnutzung' $disk.Wear))
+            [void]$container.Children.Add((New-WzInfoRow (Get-WzText 'diag.lblWear') $disk.Wear))
             if ($null -ne $disk.WearPercent) {
                 [void]$container.Children.Add((New-WzMeter -Percent $disk.WearPercent `
-                    -Caption "$($disk.WearPercent) % der Schreibzyklen verbraucht"))
+                    -Caption (Get-WzText 'diag.wearCaption' @{ prozent = $disk.WearPercent })))
             }
         }
     }
 
-    $syncHash.DiagSummary.Text = "$($events.Count) Ereignisse · $($dumps.Count) Abstürze · $($problems.Count) Datenträgerhinweise"
-    Write-WzLog "Diagnose: $($events.Count) Auffälligkeiten, $($dumps.Count) Abstürze, $($problems.Count) Datenträgerhinweise" -Level Ok
+    $syncHash.DiagSummary.Text = Get-WzText 'diag.summary' @{ ereignisse = $events.Count; abstuerze = $dumps.Count; datentraeger = $problems.Count }
+    Write-WzLog (Get-WzText 'diag.logSummary' @{ ereignisse = $events.Count; abstuerze = $dumps.Count; datentraeger = $problems.Count }) -Level Ok
 }
 
 function New-WzFindingRow {
@@ -289,13 +289,13 @@ function New-WzFindingRow {
 function Start-WzDiagnosticsReport {
     if (-not $syncHash.DiagResult) { return }
 
-    Invoke-WzTask -Name 'Bericht erstellen' -ScriptBlock {
+    Invoke-WzTask -Name (Get-WzText 'diag.taskReport') -ScriptBlock {
         New-WzDiagReport -Result $syncHash.DiagResult
     } -OnComplete {
         param($file)
         if (-not $file) { return }
-        Show-WzInfo -Title 'Bericht erstellt' `
-            -Message 'Der Bericht liegt auf dem WinZii-Datenträger und lässt sich in jedem Browser öffnen — auch als Ausdruck für den Kunden geeignet.' `
+        Show-WzInfo -Title (Get-WzText 'diag.reportTitle') `
+            -Message (Get-WzText 'diag.reportMessage') `
             -Items @($file)
         Start-Process $file
     }
@@ -306,23 +306,23 @@ function Start-WzRepairTool {
 
     $config = switch ($Kind) {
         'sfc' {
-            @{ Title = 'Systemdateien prüfen'
-               Message = 'Windows vergleicht alle Systemdateien mit dem Original und ersetzt beschädigte. Dauert 5 bis 15 Minuten.'
+            @{ Title = (Get-WzText 'diag.sfcTitle')
+               Message = (Get-WzText 'diag.sfcMessage')
                Block = { Invoke-WzSfc } }
         }
         'dism' {
-            @{ Title = 'Windows-Abbild reparieren'
-               Message = 'DISM prüft das Windows-Abbild und lädt fehlende Bestandteile bei Bedarf von Microsoft nach. Dauert 5 bis 20 Minuten und braucht Internet.'
+            @{ Title = (Get-WzText 'diag.dismTitle')
+               Message = (Get-WzText 'diag.dismMessage')
                Block = { Invoke-WzDismRepair -Action RestoreHealth } }
         }
         'chkdsk' {
-            @{ Title = 'Dateisystem prüfen'
-               Message = 'Prüft das Dateisystem im laufenden Betrieb. Ein Neustart ist dafür nicht nötig.'
+            @{ Title = (Get-WzText 'diag.chkdskTitle')
+               Message = (Get-WzText 'diag.chkdskMessage')
                Block = { Invoke-WzChkdsk } }
         }
     }
 
-    $answer = Show-WzConfirm -Title $config.Title -Message $config.Message -ConfirmText 'Starten'
+    $answer = Show-WzConfirm -Title $config.Title -Message $config.Message -ConfirmText (Get-WzText 'diag.btnStart')
     if (-not $answer.Confirmed) { return }
 
     Invoke-WzTask -Name $config.Title -ScriptBlock $config.Block -OnComplete {
@@ -333,14 +333,14 @@ function Start-WzRepairTool {
 }
 
 function Start-WzBatteryReport {
-    Invoke-WzTask -Name 'Akkubericht' -ScriptBlock {
+    Invoke-WzTask -Name (Get-WzText 'diag.taskBattery') -ScriptBlock {
         New-WzBatteryReport
     } -OnComplete {
         param($file)
         if ($file) {
             Start-Process $file
         } else {
-            Show-WzInfo -Title 'Kein Akku' -Message 'Dieser PC hat keinen Akku — ein Bericht ist daher nicht möglich.'
+            Show-WzInfo -Title (Get-WzText 'diag.noBatteryTitle') -Message (Get-WzText 'diag.noBatteryMessage')
         }
     }
 }
