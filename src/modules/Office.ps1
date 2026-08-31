@@ -208,7 +208,7 @@ function Get-WzOdtSetup {
     $catalog = Get-WzOfficeCatalog
     Write-WzLog (Get-WzText 'off.logOdtDownload') -Level Action
     if (Get-WzDownload -Url $catalog.odtSetupUrl -TargetPath $setupPath) {
-        Write-WzLog 'Office Deployment Tool bereit' -Level Ok
+        Write-WzLog (Get-WzText 'off.logOdtReady') -Level Ok
         return $setupPath
     }
     return $null
@@ -564,7 +564,7 @@ function Remove-WzOffice {
     if (-not $before.Installed -and $remnants.Items.Count -eq 0) {
         $summary.Ok = $true
         $summary.Details += Get-WzText 'off.detailNothingToDo'
-        Write-WzLog 'Kein Office gefunden, nichts zu entfernen.' -Level Info
+        Write-WzLog (Get-WzText 'off.logNothingToRemove') -Level Info
         return $summary
     }
 

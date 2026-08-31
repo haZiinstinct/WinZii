@@ -412,7 +412,7 @@ function Remove-WzWindowsOld {
 
     try {
         Remove-Item -LiteralPath $target -Recurse -Force -ErrorAction Stop
-        Write-WzLog '  entfernt' -Level Ok
+        Write-WzLog (Get-WzText 'clean.logRemovedShort') -Level Ok
         return [pscustomobject]@{ Removed = 1; Failed = 0 }
     } catch {
         Write-WzLog (Get-WzText 'clean.logPartialRemove' @{ grund = $_.Exception.Message }) -Level Warn

@@ -8,7 +8,7 @@ function Initialize-WzAiRemovalPage {
 
     $syncHash.AiBtnApply.Add_Click({
         Invoke-WzTweakSelection -Rows $syncHash.AiRows -Scope 'ki-entfernung' `
-            -Title 'KI-Bestandteile abschalten' -OnDone {
+            -Title (Get-WzText 'ai.applyTitle') -OnDone {
                 Update-WzAiStates
                 Update-WzAiScan
             }
@@ -57,12 +57,12 @@ function Update-WzAiScan {
     $syncHash.AiScanTitle.Text = Get-WzText 'ai.checking'
     $syncHash.AiScanRows.Children.Clear()
 
-    Invoke-WzTask -Name 'KI-Bestandteile suchen' -Silent -ScriptBlock {
+    Invoke-WzTask -Name (Get-WzText 'ai.taskScan') -Silent -ScriptBlock {
         Get-WzAiStatus
     } -OnComplete {
         param($status)
         if (-not $status) {
-            $syncHash.AiScanTitle.Text = 'Suche fehlgeschlagen'
+            $syncHash.AiScanTitle.Text = Get-WzText 'ai.scanFailed'
             return
         }
         $syncHash.AiStatus = $status
@@ -100,11 +100,11 @@ function Write-WzAiScanResult {
     }
     foreach ($feature in $Status.Features) {
         $kind = if ($feature.State -eq 'Enabled') { 'warn' } else { 'normal' }
-        [void]$rows.Children.Add((New-WzInfoRow 'Windows-Funktion' "$($feature.Name) — $($feature.State)" -Kind $kind))
+        [void]$rows.Children.Add((New-WzInfoRow (Get-WzText 'ai.lblFeature') (Get-WzText 'ai.stateValue' @{ name = $feature.Name; zustand = $feature.State }) -Kind $kind))
     }
     foreach ($task in $Status.Tasks) {
         $kind = if ($task.State -eq 'Disabled') { 'ok' } else { 'warn' }
-        [void]$rows.Children.Add((New-WzInfoRow 'Aufgabe' "$($task.Name) — $($task.State)" -Kind $kind))
+        [void]$rows.Children.Add((New-WzInfoRow (Get-WzText 'ai.lblTask') (Get-WzText 'ai.stateValue' @{ name = $task.Name; zustand = $task.State }) -Kind $kind))
     }
 }
 

@@ -175,7 +175,7 @@ function Invoke-WzTweaks {
     if ($items.Count -eq 0) { return $summary }
 
     if ($CreateRestorePoint) {
-        Write-WzLog 'Erstelle Systemwiederherstellungspunkt (kann eine Minute dauern)...' -Level Action
+        Write-WzLog (Get-WzText 'opt.logRestorePoint') -Level Action
         [void](New-WzRestorePoint -Description "WinZii — vor $Scope")
     }
 
@@ -277,7 +277,7 @@ function Invoke-WzServiceAction {
 
     $service = Get-Service -Name $Action.serviceName -ErrorAction SilentlyContinue
     if (-not $service) {
-        Write-WzLog "  Dienst nicht vorhanden: $($Action.serviceName)" -Level Info
+        Write-WzLog (Get-WzText 'opt.logNoService' @{ name = $Action.serviceName }) -Level Info
         return
     }
 
@@ -305,7 +305,7 @@ function Invoke-WzServiceAction {
         Stop-Service -Name $Action.serviceName -Force -ErrorAction SilentlyContinue
         $after = Get-Service -Name $Action.serviceName -ErrorAction SilentlyContinue
         if ($after -and $after.Status -eq 'Running') {
-            Write-WzLog "  Dienst $($Action.serviceName) läuft weiter — die Änderung greift nach einem Neustart." -Level Warn
+            Write-WzLog (Get-WzText 'opt.logServiceStillRuns' @{ name = $Action.serviceName }) -Level Warn
             if ($Session) { $Session.NeedsReboot = $true }
         }
     }
@@ -330,7 +330,7 @@ function Invoke-WzScheduledTaskAction {
 
     $task = Get-ScheduledTask -TaskPath $Action.taskPath -TaskName $Action.taskName -ErrorAction SilentlyContinue
     if (-not $task) {
-        Write-WzLog "  Aufgabe nicht vorhanden: $($Action.taskName)" -Level Info
+        Write-WzLog (Get-WzText 'opt.logNoTask' @{ name = $Action.taskName }) -Level Info
         return
     }
     if ($Action.state -eq 'Disabled' -and $task.State -eq 'Disabled') {
@@ -360,7 +360,7 @@ function Invoke-WzFeatureAction {
 
     $feature = Get-WindowsOptionalFeature -Online -FeatureName $Action.featureName -ErrorAction SilentlyContinue
     if (-not $feature) {
-        Write-WzLog "  Funktion nicht vorhanden: $($Action.featureName)" -Level Info
+        Write-WzLog (Get-WzText 'opt.logNoFeature' @{ name = $Action.featureName }) -Level Info
         return
     }
     $targetEnabled = ($Action.state -eq 'Enabled')
@@ -399,7 +399,7 @@ function Invoke-WzCommandAction {
     # wird er hier eingefangen und in die Undo-Sitzung geschrieben. Beispiel
     # Energiesparplan: Ohne das würde die Rücknahme stur auf »Ausbalanciert«
     # stellen und einen vom Hersteller eingerichteten Plan verwerfen.
-    $previous = @{ note = 'Befehl ausgeführt' }
+    $previous = @{ note = (Get-WzText 'opt.noteCommandRun') }
     if ($Action.undoCapture) {
         $capture = Invoke-WzProcess -FilePath $Action.undoCapture.exec `
             -Arguments $Action.undoCapture.args -TimeoutSeconds 60
@@ -407,7 +407,7 @@ function Invoke-WzCommandAction {
             $value = if ($Matches.Count -gt 1) { $Matches[1] } else { $Matches[0] }
             $previous.undoArgs = $Action.undoCapture.argsFormat -f $value
         } else {
-            Write-WzLog '  Vorzustand nicht auslesbar — die Rücknahme nutzt den Standardwert.' -Level Info
+            Write-WzLog (Get-WzText 'opt.logNoPreviousState') -Level Info
         }
     }
 
@@ -432,12 +432,12 @@ function Invoke-WzCommandAction {
     }
 
     if ($result.ExitCode -eq 0) {
-        Write-WzLog "  ausgeführt: $($Action.exec) $($Action.args)" -Level Ok
+        Write-WzLog (Get-WzText 'opt.logCommandRun' @{ befehl = "$($Action.exec) $($Action.args)" }) -Level Ok
     } elseif ($Action.failHint) {
         # Ein erklärter Fehlschlag ist besser als ein roher Exit-Code
         throw [string]$Action.failHint
     } else {
-        throw "$($Action.exec) endete mit Code $($result.ExitCode)"
+        throw (Get-WzText 'opt.errCommandCode' @{ befehl = $Action.exec; code = $result.ExitCode })
     }
 }
 
@@ -509,9 +509,9 @@ function Invoke-WzPowerPlanAction {
     param($Action, $Session, $Tweak)
 
     if ($syncHash.DryRun) {
-        Write-WzLog "  [Test] Energieplan »$($Action.planName)« anlegen und aktivieren" -Level Test
+        Write-WzLog (Get-WzText 'opt.logPlanTest' @{ name = $Action.planName }) -Level Test
         foreach ($setting in $Action.settings) {
-            Write-WzLog "  [Test]   $($setting.setting): Netz=$($setting.ac) Akku=$($setting.dc)" -Level Test
+            Write-WzLog (Get-WzText 'opt.logPlanSettingTest' @{ name = $setting.setting; ac = $setting.ac; dc = $setting.dc }) -Level Test
         }
         return
     }
@@ -524,7 +524,7 @@ function Invoke-WzPowerPlanAction {
     $vorher = $null
     if ($aktiv.ExitCode -eq 0 -and $aktiv.StdOut -match $guidMuster) { $vorher = $Matches[0] }
     if (-not $vorher) {
-        Write-WzLog '  Aktiver Energieplan nicht auslesbar — ohne ihn gäbe es keine Rücknahme.' -Level Error
+        Write-WzLog (Get-WzText 'opt.logNoActivePlan') -Level Error
         $Session.ActionFailed = $true
         return
     }
@@ -543,19 +543,19 @@ function Invoke-WzPowerPlanAction {
         # die falsche GUID statt eines Fehlers.
         $neueGuid = [regex]::Match([string]$kopie.StdOut, $guidMuster)
         if ($kopie.ExitCode -ne 0 -or -not $neueGuid.Success) {
-            Write-WzLog "  Energieplan ließ sich nicht anlegen (Vorlage $($Action.baseScheme))." -Level Error
+            Write-WzLog (Get-WzText 'opt.logPlanCreateFailed' @{ vorlage = $Action.baseScheme }) -Level Error
             $Session.ActionFailed = $true
             return
         }
         $planGuid = $neueGuid.Value
         $neuAngelegt = $true
 
-        $beschreibung = if ($Action.planDescription) { $Action.planDescription } else { 'Von WinZii angelegt.' }
+        $beschreibung = if ($Action.planDescription) { $Action.planDescription } else { Get-WzText 'opt.planDefaultDescription' }
         [void](Invoke-WzProcess -FilePath 'powercfg.exe' `
             -Arguments "-changename $planGuid `"$($Action.planName)`" `"$beschreibung`"" -TimeoutSeconds 30)
-        Write-WzLog "  Energieplan angelegt: $($Action.planName)" -Level Ok
+        Write-WzLog (Get-WzText 'opt.logPlanCreated' @{ name = $Action.planName }) -Level Ok
     } else {
-        Write-WzLog "  Energieplan »$($Action.planName)« ist bereits vorhanden — er wird aktualisiert." -Level Info
+        Write-WzLog (Get-WzText 'opt.logPlanExists' @{ name = $Action.planName }) -Level Info
     }
 
     # 3. Erst sichern, dann verändern. Bricht etwas danach ab, lässt sich die
@@ -590,9 +590,9 @@ function Invoke-WzPowerPlanAction {
             # »optional« gekennzeichnete Werte dürfen den Eintrag deshalb nicht
             # scheitern lassen, die tragenden schon.
             if ($setting.optional) {
-                Write-WzLog "  $($setting.setting) ($($seite.Betrieb)): von diesem Gerät nicht angeboten, übersprungen." -Level Info
+                Write-WzLog (Get-WzText 'opt.logSettingOptional' @{ name = $setting.setting; betrieb = $seite.Betrieb }) -Level Info
             } else {
-                Write-WzLog "  $($setting.setting) ($($seite.Betrieb)) ließ sich nicht setzen (Code $($gesetzt.ExitCode))." -Level Warn
+                Write-WzLog (Get-WzText 'opt.logSettingFailed' @{ name = $setting.setting; betrieb = $seite.Betrieb; code = $gesetzt.ExitCode }) -Level Warn
                 $Session.ActionFailed = $true
             }
         }
@@ -602,9 +602,9 @@ function Invoke-WzPowerPlanAction {
     # 5. Aktivieren.
     $aktivieren = Invoke-WzProcess -FilePath 'powercfg.exe' -Arguments "/setactive $planGuid" -TimeoutSeconds 30
     if ($aktivieren.ExitCode -eq 0) {
-        Write-WzLog "  Energieplan aktiv: $($Action.planName)" -Level Ok
+        Write-WzLog (Get-WzText 'opt.logPlanActive' @{ name = $Action.planName }) -Level Ok
     } else {
-        Write-WzLog "  Energieplan ließ sich nicht aktivieren (Code $($aktivieren.ExitCode))." -Level Error
+        Write-WzLog (Get-WzText 'opt.logPlanActivateFailed' @{ code = $aktivieren.ExitCode }) -Level Error
         $Session.ActionFailed = $true
     }
 
@@ -615,8 +615,7 @@ function Invoke-WzPowerPlanAction {
     #    Eintrag getrennte Betriebsarten verspricht. Das gehört ins Protokoll,
     #    statt es als Erfolg durchgehen zu lassen.
     if ($unterschiedGewollt -gt 0 -and $unterschiedGesetzt -eq 0) {
-        Write-WzLog ('  Hinweis: Dieses Gerät bietet keinen der Werte an, die Netz und Akku ' +
-            'unterscheiden. Der Plan verhält sich wie der bisherige — der Eintrag bringt hier nichts.') -Level Warn
+        Write-WzLog (Get-WzText 'opt.logPlanNoEffect') -Level Warn
     }
 }
 
@@ -639,7 +638,7 @@ function Get-WzCachedFeatureState {
                 $script:WzFeatureCache[$feature.FeatureName] = [string]$feature.State
             }
         } catch {
-            Write-WzLog "Windows-Funktionen nicht abfragbar: $($_.Exception.Message)" -Level Warn
+            Write-WzLog (Get-WzText 'opt.logFeaturesUnreadable' @{ grund = $_.Exception.Message }) -Level Warn
         }
     }
     if ($script:WzFeatureCache.ContainsKey($FeatureName)) { return $script:WzFeatureCache[$FeatureName] }
@@ -663,7 +662,7 @@ function Get-WzCachedTask {
                 $script:WzTaskCache["$($task.TaskPath)$($task.TaskName)"] = $task
             }
         } catch {
-            Write-WzLog "Geplante Aufgaben nicht abfragbar: $($_.Exception.Message)" -Level Warn
+            Write-WzLog (Get-WzText 'opt.logTasksUnreadable' @{ grund = $_.Exception.Message }) -Level Warn
         }
     }
     $key = "$TaskPath$TaskName"
@@ -691,7 +690,7 @@ function Test-WzCommandState {
             $run = Invoke-WzProcess -FilePath $State.exec -Arguments $State.args -TimeoutSeconds 20
             if ($run.ExitCode -eq 0) { $output = [string]$run.StdOut }
         } catch {
-            Write-WzLog "Zustand nicht abfragbar ($key): $($_.Exception.Message)" -Level Warn
+            Write-WzLog (Get-WzText 'opt.logStateUnreadable' @{ schluessel = $key; grund = $_.Exception.Message }) -Level Warn
         }
         $script:WzCommandCache[$key] = $output
     }
@@ -756,7 +755,7 @@ function Get-WzInteractiveUserSid {
         # Nur verwenden, wenn der Profil-Hive tatsächlich geladen ist
         if (-not (Test-Path -LiteralPath "Registry::HKEY_USERS\$sid")) { return $null }
 
-        Write-WzLog "Angemeldet ist '$interactive', WinZii läuft als '$currentName' — Benutzereinstellungen werden für '$interactive' gesetzt." -Level Info
+        Write-WzLog (Get-WzText 'opt.logInteractiveUser' @{ angemeldet = $interactive; konto = $currentName }) -Level Info
         $script:WzInteractiveSid = $sid
     } catch {
         $script:WzInteractiveSid = $null
@@ -828,16 +827,16 @@ function Get-WzTweakActionSummary {
 
     $lines = foreach ($action in $Tweak.actions) {
         switch ($action.type) {
-            'registry'      { "Registry: $($action.path -replace '^HK(LM|CU):', 'HK$1')\$($action.name) = $($action.value)" }
-            'service'       { "Dienst $($action.serviceName) -> $($action.startupType)" }
-            'scheduledTask' { "Aufgabe $($action.taskName) -> $($action.state)" }
-            'appx'          { "App entfernen: $($action.patterns -join ', ')" }
-            'capability'    { "Systemfunktion entfernen: $($action.patterns -join ', ')" }
-            'feature'       { "Windows-Funktion $($action.featureName) -> $($action.state)" }
-            'command'       { "Befehl: $($action.exec) $($action.args)" }
+            'registry'      { Get-WzText 'opt.sumRegistry' @{ pfad = "$($action.path -replace '^HK(LM|CU):', 'HK$1')\$($action.name)"; wert = $action.value } }
+            'service'       { Get-WzText 'opt.sumService' @{ name = $action.serviceName; ziel = $action.startupType } }
+            'scheduledTask' { Get-WzText 'opt.sumTask' @{ name = $action.taskName; ziel = $action.state } }
+            'appx'          { Get-WzText 'opt.sumAppx' @{ muster = ($action.patterns -join ', ') } }
+            'capability'    { Get-WzText 'opt.sumCapability' @{ muster = ($action.patterns -join ', ') } }
+            'feature'       { Get-WzText 'opt.sumFeature' @{ name = $action.featureName; ziel = $action.state } }
+            'command'       { Get-WzText 'opt.sumCommand' @{ befehl = "$($action.exec) $($action.args)" } }
             'powerplan'     {
-                $werte = foreach ($s in $action.settings) { "$($s.setting) Netz=$($s.ac) Akku=$($s.dc)" }
-                "Energieplan »$($action.planName)« anlegen und aktivieren: $($werte -join ', ')"
+                $werte = foreach ($s in $action.settings) { Get-WzText 'opt.sumPowerSetting' @{ name = $s.setting; ac = $s.ac; dc = $s.dc } }
+                Get-WzText 'opt.sumPowerPlan' @{ name = $action.planName; werte = ($werte -join ', ') }
             }
             default         { $action.type }
         }

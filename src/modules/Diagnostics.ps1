@@ -358,7 +358,7 @@ function Get-WzSmartStatus {
             }
 
             $notes = @()
-            if ($entry.Health -ne 'Healthy') { $notes += 'Windows meldet einen Fehlerzustand' }
+            if ($entry.Health -ne 'Healthy') { $notes += Get-WzText 'diag.noteHealthBad' }
             if ($counter) {
                 if ($counter.Wear -gt 80) { $notes += Get-WzText 'diag.noteWear' }
                 if ($counter.ReadErrorsUncorrected -gt 0) { $notes += Get-WzText 'diag.noteReadErrors' }
@@ -390,8 +390,8 @@ function Invoke-WzSfc {
         über eine Datei eingelesen statt direkt weitergereicht.
     #>
     if ($syncHash.DryRun) {
-        Write-WzLog '[Test] sfc /scannow' -Level Test
-        return [pscustomobject]@{ Success = $true; Summary = 'Testmodus' }
+        Write-WzLog (Get-WzText 'diag.logSfcTest') -Level Test
+        return [pscustomobject]@{ Success = $true; Summary = (Get-WzText 'diag.dryRunSummary') }
     }
 
     Write-WzLog (Get-WzText 'diag.logSfcRunning') -Level Action

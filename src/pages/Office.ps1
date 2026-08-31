@@ -127,7 +127,7 @@ function Update-WzOfficeSelection {
 function Show-WzOfficeXml {
     $choice = Get-WzOfficeChoice
     if ($choice.Apps.Count -eq 0) {
-        Show-WzInfo -Title 'Kein Programm gewählt' -Message 'Bitte mindestens ein Office-Programm auswählen.'
+        Show-WzInfo -Title (Get-WzText 'off.noAppTitle') -Message (Get-WzText 'off.noAppMessage')
         return
     }
 
@@ -155,7 +155,7 @@ function Show-WzOfficeXml {
 function Start-WzOfficeInstall {
     $choice = Get-WzOfficeChoice
     if ($choice.Apps.Count -eq 0) {
-        Show-WzInfo -Title 'Kein Programm gewählt' -Message 'Bitte mindestens ein Office-Programm auswählen.'
+        Show-WzInfo -Title (Get-WzText 'off.noAppTitle') -Message (Get-WzText 'off.noAppMessage')
         return
     }
 

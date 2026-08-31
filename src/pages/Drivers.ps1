@@ -73,9 +73,9 @@ function Write-WzDriverProblems {
     foreach ($device in $Devices) {
         $kind = if ($device.IsCritical) { 'error' } else { 'normal' }
         [void]$container.Children.Add((New-WzInfoRow $device.Name `
-            "Code $($device.Code) · $($device.Class)" -Kind $kind -LabelWidth 250))
-        [void]$container.Children.Add((New-WzInfoRow '    Bedeutung' $device.Meaning -LabelWidth 250))
-        [void]$container.Children.Add((New-WzInfoRow '    Abhilfe' $device.Fix -LabelWidth 250))
+            (Get-WzText 'drv.deviceCode' @{ code = $device.Code; klasse = $device.Class }) -Kind $kind -LabelWidth 250))
+        [void]$container.Children.Add((New-WzInfoRow (Get-WzText 'drv.lblMeaning') $device.Meaning -LabelWidth 250))
+        [void]$container.Children.Add((New-WzInfoRow (Get-WzText 'drv.lblFix') $device.Fix -LabelWidth 250))
     }
 
     if ($critical.Count -gt 0) {
@@ -257,6 +257,6 @@ function Start-WzDriverImport {
         if ($result.Success) {
             Add-WzAction -Area 'Treiber' -RebootRequired -Summary (Get-WzText 'drv.actionImport' @{ ergebnis = $result.Summary })
         }
-        Show-WzInfo -Title 'Treiber eingespielt' -Message $result.Summary
+        Show-WzInfo -Title (Get-WzText 'drv.importDoneTitle') -Message $result.Summary
     }
 }

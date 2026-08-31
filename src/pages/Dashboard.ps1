@@ -24,7 +24,7 @@ function Update-WzDashboardPage {
         $syncHash.SecurityInfo = $null
     }
 
-    Invoke-WzTask -Name 'Systemdaten einlesen' -Silent -ScriptBlock {
+    Invoke-WzTask -Name (Get-WzText 'dash.taskSystem') -Silent -ScriptBlock {
         Get-WzSystemInfo
     } -OnComplete {
         param($info)

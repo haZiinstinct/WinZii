@@ -209,6 +209,61 @@ foreach ($lcid in $lcidMap.Keys) {
 }
 Pruefe 'alle geprüften LCIDs treffen' ($wrong.Count -eq 0) $(if ($wrong.Count) { $wrong[0] } else { "$($lcidMap.Count) geprüft" })
 
+Write-Host ''
+Write-Host '9. Kein fester Anzeigetext im Code'
+
+# Etappe 1 hat alle Oberflaechentexte nach data\lang\ verlegt. Damit sie dort
+# bleiben, wird hier NICHT nach deutschen Woertern geraten — das uebersieht
+# jeden Text ohne Umlaut. Geprueft werden die Stellen, an denen Anzeigetext
+# steht: Titel, Meldungen, Hinweise, Vorgangsnamen, Protokollzeilen,
+# Knopfbeschriftungen und die Beschriftung einer Infozeile. Steht dort ein
+# Zeichenkettenliteral statt Get-WzText, ist es ein Fund.
+#
+# Ausnahmen tragen »# lang-ok« in derselben Zeile und damit eine Begruendung.
+$codeDirs = @((Join-Path $root 'src\modules'), (Join-Path $root 'src\pages'))
+$stellen = @(
+    '-Title'; '-Message'; '-Text'; '-Summary'; '-ConfirmText'; '-ChoiceLabel'
+    '-OptionText'; '-Recommendation'; '-Verdict'; '-Caption'; '-Detail'; '-Hint'
+)
+$fund = @()
+foreach ($dir in $codeDirs) {
+    foreach ($datei in (Get-ChildItem -LiteralPath $dir -Filter '*.ps1' -File -ErrorAction SilentlyContinue)) {
+        # Report.ps1 ist das Uebergabeblatt und gehoert zu Etappe 3
+        if ($datei.Name -eq 'Report.ps1') { continue }
+        $zeilen = [IO.File]::ReadAllLines($datei.FullName, [Text.Encoding]::UTF8)
+        for ($i = 0; $i -lt $zeilen.Count; $i++) {
+            $zeile = $zeilen[$i]
+            if ($zeile.TrimStart().StartsWith('#')) { continue }
+            if ($zeile -match '#\s*lang-ok') { continue }
+
+            $treffer = $null
+            foreach ($stelle in $stellen) {
+                if ($zeile -match ([regex]::Escape($stelle) + "\\s+'([^']{2,})'")) { $treffer = $Matches[1]; break }
+            }
+            if (-not $treffer -and $zeile -match "Invoke-WzTask -Name '([^']{2,})'") { $treffer = $Matches[1] }
+            if (-not $treffer -and $zeile -match "Write-WzLog '([^']{2,})'") { $treffer = $Matches[1] }
+            # Bei einer Infozeile ist auch ein einzelnes Wort Anzeigetext
+            # (»Version«, »Aufgabe«), deshalb entfaellt die Leerzeichenregel.
+            if (-not $treffer -and $zeile -match "New-WzInfoRow '([^']{2,})'") {
+                $fund += ('{0}:{1}  {2}' -f $datei.Name, ($i + 1), $Matches[1])
+                continue
+            }
+            if (-not $treffer -and $zeile -match "\\.Text = '([^']{2,})'") { $treffer = $Matches[1] }
+            if (-not $treffer -and $zeile -match "\\.Content = '([^']{2,})'") { $treffer = $Matches[1] }
+            if (-not $treffer) { continue }
+
+            # Ein Wert ohne Leerzeichen ist meist eine Kennung, kein Satz
+            if ($treffer -notmatch ' ') { continue }
+            $fund += ('{0}:{1}  {2}' -f $datei.Name, ($i + 1), $treffer.Substring(0, [Math]::Min(58, $treffer.Length)))
+        }
+    }
+}
+Pruefe 'kein fester Anzeigetext im Code' ($fund.Count -eq 0) `
+    $(if ($fund.Count) { "$($fund.Count) Fund(e), erster: $($fund[0])" } else { 'Titel, Meldungen, Vorgaenge und Protokoll geprueft' })
+if ($fund.Count -gt 0 -and $All) {
+    foreach ($eintrag in $fund) { Write-Host "         $eintrag" -ForegroundColor DarkYellow }
+}
+
 # --- Abschluss -------------------------------------------------------------
 Write-Host ''
 $sprachen = @($tables.Keys | Sort-Object) -join ', '

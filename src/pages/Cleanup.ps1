@@ -166,7 +166,7 @@ function Start-WzCleanupScan {
 
     $categories = @($syncHash.CleanRows | ForEach-Object { $_.Category })
 
-    Invoke-WzTask -Name 'Speicherplatz analysieren' -Cancelable -ArgumentList (, $categories) -ScriptBlock {
+    Invoke-WzTask -Name (Get-WzText 'clean.taskAnalyse') -Cancelable -ArgumentList (, $categories) -ScriptBlock {
         param($categories)
         $results = @{}
         foreach ($category in $categories) {
@@ -300,7 +300,7 @@ function Start-WzCleanupRun {
             -Summary (Get-WzText 'clean.actionFreed' @{ groesse = (Format-WzBytes $summary.FreedBytes); anzahl = $summary.Removed }) `
             -Detail @($categories | ForEach-Object { $_.name })
 
-        Show-WzInfo -Title 'Bereinigung abgeschlossen' -Message ($lines -join ' ')
+        Show-WzInfo -Title (Get-WzText 'clean.doneTitle') -Message ($lines -join ' ')
         Start-WzCleanupScan
     }.GetNewClosure()
 }

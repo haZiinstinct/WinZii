@@ -283,7 +283,8 @@ function Write-WzDataKeys {
             (Get-WzText 'data.licenceEnding' @{ kanal = $keys.Channel; teil = $keys.PartialKey }) -LabelWidth $width))
     }
     foreach ($office in @($keys.Office)) {
-        [void]$container.Children.Add((New-WzInfoRow 'Office' "$($office.Name) · $($office.Channel)" -LabelWidth $width))
+        # lang-ok: »Office« ist der Produktname und lautet in jeder Sprache gleich
+        [void]$container.Children.Add((New-WzInfoRow 'Office' "$($office.Name) · $($office.Channel)" -LabelWidth $width))  # lang-ok
     }
 
     if ($wlan.Count -gt 0) {
@@ -514,7 +515,7 @@ function Start-WzBitLockerExport {
             Add-WzAction -Area 'Datensicherung' `
                 -Summary (Get-WzText 'data.actionBitlocker' @{ anzahl = $result.Count }) -Detail @($result.Path)
         }
-        Show-WzInfo -Title 'BitLocker' -Message $message -Items @($result.Path | Where-Object { $_ })
+        Show-WzInfo -Title (Get-WzText 'data.bitlockerDoneTitle') -Message $message -Items @($result.Path | Where-Object { $_ })
     }
 }
 

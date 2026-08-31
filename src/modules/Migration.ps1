@@ -47,7 +47,7 @@ function Get-WzMigrationVolumes {
             }
         }
     } catch {
-        Write-WzLog "Laufwerke nicht abfragbar: $($_.Exception.Message.Split([char]10)[0])" -Level Warn
+        Write-WzLog (Get-WzText 'data.logVolumesUnreadable' @{ grund = $_.Exception.Message.Split([char]10)[0] }) -Level Warn
     }
 
     return @($volumes | Sort-Object -Property @{ Expression = 'FreeBytes'; Descending = $true })
@@ -113,17 +113,17 @@ function Invoke-WzFileMigration {
     foreach ($job in $Jobs) {
         $index++
         if ($syncHash.DryRun) {
-            Write-WzLog "[Test] $($job.Name) würde nach $($job.Destination) kopiert ($(Format-WzBytes $job.Bytes))" -Level Test
+            Write-WzLog (Get-WzText 'data.logCopyTest' @{ name = $job.Name; ziel = $job.Destination; groesse = (Format-WzBytes $job.Bytes) }) -Level Test
             continue
         }
         if ($syncHash.CurrentTask -and $syncHash.CurrentTask.Canceled) {
             # Zwischen zwei Ordnern aussteigen statt mitten in einem: Ein
             # halb kopierter Ordner sieht auf dem Ziel aus wie ein ganzer.
-            Write-WzLog 'Dateiumzug abgebrochen — bereits kopierte Ordner bleiben erhalten.' -Level Warn
+            Write-WzLog (Get-WzText 'data.logCopyCancelled') -Level Warn
             break
         }
 
-        Write-WzLog "Kopiere $($job.Name) ($index von $($Jobs.Count), $(Format-WzBytes $job.Bytes))..." -Level Info
+        Write-WzLog (Get-WzText 'data.logCopying' @{ name = $job.Name; nummer = $index; gesamt = $Jobs.Count; groesse = (Format-WzBytes $job.Bytes) }) -Level Info
 
         # /XJ überspringt Verzweigungspunkte: In den Benutzerordnern liegen
         # Kompatibilitätsverweise, die sonst im Kreis führen.
@@ -134,19 +134,19 @@ function Invoke-WzFileMigration {
 
         $measure = Measure-WzPathSet -Paths @($job.Destination)
         if ($result.ExitCode -ge 8 -or $null -eq $result.ExitCode) {
-            $failed += "$($job.Name) (Rückgabewert $($result.ExitCode))"
-            Write-WzLog "$($job.Name): Kopieren mit Fehlern beendet (Rückgabewert $($result.ExitCode))" -Level Err
+            $failed += Get-WzText 'data.copyFailedEntry' @{ name = $job.Name; code = $result.ExitCode }
+            Write-WzLog (Get-WzText 'data.logCopyFailed' @{ name = $job.Name; code = $result.ExitCode }) -Level Err
         } else {
-            $done += "$($job.Name) — $(Format-WzBytes $measure.Bytes) in $($measure.Items) Datei(en)"
+            $done += Get-WzText 'data.copyDoneEntry' @{ name = $job.Name; groesse = (Format-WzBytes $measure.Bytes); anzahl = $measure.Items }
             $copiedBytes += $measure.Bytes
-            Write-WzLog "$($job.Name): $(Format-WzBytes $measure.Bytes) kopiert" -Level Ok
+            Write-WzLog (Get-WzText 'data.logCopiedOne' @{ name = $job.Name; groesse = (Format-WzBytes $measure.Bytes) }) -Level Ok
         }
     }
 
     if ($done.Count -gt 0) {
-        Write-WzLog "Dateiumzug abgeschlossen: $(Format-WzBytes $copiedBytes) in $($done.Count) Ordner(n)" -Level Ok
+        Write-WzLog (Get-WzText 'data.logCopyDone' @{ groesse = (Format-WzBytes $copiedBytes); anzahl = $done.Count }) -Level Ok
         Add-WzAction -Area 'Datensicherung' `
-            -Summary "$(Format-WzBytes $copiedBytes) persönliche Dateien kopiert" -Detail $done
+            -Summary (Get-WzText 'data.actionCopied' @{ groesse = (Format-WzBytes $copiedBytes) }) -Detail $done
     }
 
     return [pscustomobject]@{
@@ -187,16 +187,16 @@ function Invoke-WzOneDriveHydration {
     }
 
     if (-not (Test-Path -LiteralPath $Path)) {
-        $result.Reason = 'Der OneDrive-Ordner ist nicht mehr da.'
+        $result.Reason = Get-WzText 'data.reasonNoFolder'
         return $result
     }
     if (-not (Get-Process -Name 'OneDrive' -ErrorAction SilentlyContinue)) {
-        $result.Reason = 'OneDrive läuft nicht. Ohne den Dienst lädt nichts herunter — bitte OneDrive starten und anmelden.'
+        $result.Reason = Get-WzText 'data.reasonNotRunning'
         return $result
     }
     if ($syncHash.DryRun) {
-        Write-WzLog "[Test] $Path würde auf »Immer auf diesem Gerät behalten« gesetzt" -Level Test
-        $result.Reason = 'Testmodus — es wurde nichts angefordert.'
+        Write-WzLog (Get-WzText 'data.logHydrateTest' @{ pfad = $Path }) -Level Test
+        $result.Reason = Get-WzText 'data.reasonDryRun'
         return $result
     }
 
@@ -204,14 +204,14 @@ function Invoke-WzOneDriveHydration {
     if ($before -eq 0) {
         $result.Started = $true
         $result.Complete = $true
-        $result.Reason = 'Es lagen bereits alle Dateien auf der Platte.'
+        $result.Reason = Get-WzText 'data.reasonAlreadyLocal'
         return $result
     }
 
-    Write-WzLog "$before Platzhalter gefunden — fordere das Herunterladen an..." -Level Action
+    Write-WzLog (Get-WzText 'data.logPlaceholdersFound' @{ anzahl = $before }) -Level Action
     $attrib = Invoke-WzProcess -FilePath 'attrib.exe' -Arguments "+P -U /s /d `"$Path`"" -TimeoutSeconds 120
     if ($attrib.ExitCode -ne 0) {
-        $result.Reason = "Das Kennzeichen ließ sich nicht setzen (Rückgabewert $($attrib.ExitCode))."
+        $result.Reason = Get-WzText 'data.reasonAttribFailed' @{ code = $attrib.ExitCode }
         return $result
     }
     $result.Started = $true
@@ -224,7 +224,7 @@ function Invoke-WzOneDriveHydration {
     while ($watch.Elapsed.TotalSeconds -lt $TimeoutSeconds) {
         Start-Sleep -Seconds 10
         if ($syncHash.CurrentTask -and $syncHash.CurrentTask.Canceled) {
-            $result.Reason = 'Abgebrochen. OneDrive lädt im Hintergrund weiter — das Kennzeichen bleibt gesetzt.'
+            $result.Reason = Get-WzText 'data.reasonCancelled'
             break
         }
         $now = Get-WzPlaceholderCount -Path $Path
@@ -234,20 +234,21 @@ function Invoke-WzOneDriveHydration {
         }
         if ($now -ge $remaining) { $stalled++ } else { $stalled = 0 }
         $remaining = $now
-        Write-WzLog "Noch $remaining Platzhalter — $(Format-WzNumber ($before - $remaining) 'Datei(en)' -Decimals 0) heruntergeladen" -Level Info
+        Write-WzLog (Get-WzText 'data.logRemaining' @{ rest = $remaining
+            geladen = (Format-WzNumber ($before - $remaining) (Get-WzText 'data.unitFiles') -Decimals 0) }) -Level Info
 
         if ($stalled -ge 6) {
-            $result.Reason = 'Seit einer Minute kommt nichts mehr an. Bitte in OneDrive nachsehen, ob die Synchronisierung angehalten ist.'
+            $result.Reason = Get-WzText 'data.reasonStalled'
             break
         }
     }
 
     $result.Remaining = if ($result.Complete) { 0 } else { Get-WzPlaceholderCount -Path $Path }
     if ($result.Complete) {
-        Write-WzLog 'OneDrive: Alle Dateien liegen jetzt lokal vor.' -Level Ok
-        Add-WzAction -Area 'Datensicherung' -Summary "OneDrive vollständig heruntergeladen ($before Datei(en))"
+        Write-WzLog (Get-WzText 'data.logHydrateDone') -Level Ok
+        Add-WzAction -Area 'Datensicherung' -Summary (Get-WzText 'data.actionHydrated' @{ anzahl = $before })
     } elseif (-not $result.Reason) {
-        $result.Reason = "Zeitbudget von $([int]($TimeoutSeconds / 60)) Minuten abgelaufen. OneDrive lädt im Hintergrund weiter."
+        $result.Reason = Get-WzText 'data.reasonTimeout' @{ minuten = [int]($TimeoutSeconds / 60) }
     }
 
     return $result
@@ -366,7 +367,7 @@ function Import-WzWlanProfiles {
         if (-not $name) { $name = [IO.Path]::GetFileNameWithoutExtension($file) }
 
         if ($syncHash.DryRun) {
-            Write-WzLog "[Test] WLAN-Netz $name würde angelegt" -Level Test
+            Write-WzLog (Get-WzText 'rest.logWlanTest' @{ name = $name }) -Level Test
             continue
         }
 
@@ -378,13 +379,13 @@ function Import-WzWlanProfiles {
         } else {
             $failed += $name
             $reason = "$($result.StdOut)$($result.StdErr)".Split([char]10)[0].Trim()
-            Write-WzLog "WLAN-Netz $name nicht angelegt: $reason" -Level Warn
+            Write-WzLog (Get-WzText 'rest.logWlanFailed' @{ name = $name; grund = $reason }) -Level Warn
         }
     }
 
     if ($applied.Count -gt 0) {
-        Write-WzLog "$($applied.Count) WLAN-Netz(e) zurückgespielt" -Level Ok
-        Add-WzAction -Area 'Zurückspielen' -Summary "$($applied.Count) WLAN-Netz(e) wieder eingerichtet" -Detail $applied
+        Write-WzLog (Get-WzText 'rest.logWlanDone' @{ anzahl = $applied.Count }) -Level Ok
+        Add-WzAction -Area 'Zurückspielen' -Summary (Get-WzText 'rest.actionWlan' @{ anzahl = $applied.Count }) -Detail $applied
     }
 
     return [pscustomobject]@{ Applied = @($applied); Failed = @($failed); WithoutKey = @($withoutKey) }
@@ -442,14 +443,14 @@ function Import-WzPrinters {
 
     foreach ($printer in $Printers) {
         if ($existing -contains $printer.name) {
-            Write-WzLog "Drucker $($printer.name) ist bereits eingerichtet — übersprungen" -Level Info
+            Write-WzLog (Get-WzText 'rest.logPrinterExists' @{ name = $printer.name }) -Level Info
             continue
         }
         $driverMissing = ($installed.Count -gt 0 -and $installed -notcontains $printer.treiber)
 
         if ($syncHash.DryRun) {
-            $note = if ($driverMissing) { ' — der Treiber müsste dafür erst eingerichtet werden' } else { '' }
-            Write-WzLog "[Test] Drucker $($printer.name) würde an $($printer.anschluss) angelegt$note" -Level Test
+            $note = if ($driverMissing) { Get-WzText 'rest.noteDriverNeeded' } else { '' }
+            Write-WzLog (Get-WzText 'rest.logPrinterTest' @{ name = $printer.name; anschluss = $printer.anschluss; zusatz = $note }) -Level Test
             continue
         }
 
@@ -458,12 +459,12 @@ function Import-WzPrinters {
             try {
                 Add-PrinterDriver -Name $printer.treiber -ErrorAction Stop
                 $installed += $printer.treiber
-                Write-WzLog "Treiber »$($printer.treiber)« aus dem Treiberspeicher eingerichtet" -Level Ok
+                Write-WzLog (Get-WzText 'rest.logDriverInstalled' @{ name = $printer.treiber }) -Level Ok
             } catch {
                 # Den Grund nennen statt nur »fehlt«: Ohne ihn weiß niemand, ob
                 # der Treiber nachinstalliert werden muss oder der Name nicht stimmt.
                 $reason = $_.Exception.Message.Split([char]10)[0].Trim()
-                Write-WzLog "Treiber »$($printer.treiber)« nicht verfügbar: $reason" -Level Warn
+                Write-WzLog (Get-WzText 'rest.logDriverUnavailable' @{ name = $printer.treiber; grund = $reason }) -Level Warn
                 $missingDriver += "$($printer.name) (Treiber »$($printer.treiber)«)"
                 continue
             }
@@ -501,7 +502,7 @@ function Import-WzPrinters {
             $applied += $printer.name
         } catch {
             $failed += $printer.name
-            Write-WzLog "Drucker $($printer.name) nicht angelegt: $($_.Exception.Message.Split([char]10)[0])" -Level Warn
+            Write-WzLog (Get-WzText 'rest.logPrinterFailed' @{ name = $printer.name; grund = $_.Exception.Message.Split([char]10)[0] }) -Level Warn
             # Den eben angelegten Anschluss wieder abräumen. Sonst bliebe nach
             # einem gescheiterten Versuch ein verwaister Eintrag zurück, den
             # später niemand mehr zuordnen kann. Der Spooler hält ihn direkt
@@ -518,7 +519,7 @@ function Import-WzPrinters {
                     }
                 }
                 if (-not $removed) {
-                    Write-WzLog "Anschluss $createdPort blieb übrig — bitte in den Druckereinstellungen entfernen." -Level Warn
+                    Write-WzLog (Get-WzText 'rest.logPortLeftOver' @{ name = $createdPort }) -Level Warn
                 }
             }
         }
@@ -526,7 +527,7 @@ function Import-WzPrinters {
 
     if ($applied.Count -gt 0) {
         Write-WzLog "$($applied.Count) Drucker wieder eingerichtet" -Level Ok
-        Add-WzAction -Area 'Zurückspielen' -Summary "$($applied.Count) Drucker wieder eingerichtet" -Detail $applied
+        Add-WzAction -Area 'Zurückspielen' -Summary (Get-WzText 'rest.actionPrinters' @{ anzahl = $applied.Count }) -Detail $applied
     }
 
     return [pscustomobject]@{
@@ -557,26 +558,26 @@ function Import-WzMappedDrives {
         if (-not $letter -or -not $drive.ziel) { continue }
 
         if (Test-Path -LiteralPath "${letter}:") {
-            Write-WzLog "Laufwerk ${letter}: ist bereits belegt — übersprungen" -Level Info
+            Write-WzLog (Get-WzText 'rest.logDriveTaken' @{ buchstabe = $letter }) -Level Info
             continue
         }
         if ($syncHash.DryRun) {
-            Write-WzLog "[Test] ${letter}: würde mit $($drive.ziel) verbunden" -Level Test
+            Write-WzLog (Get-WzText 'rest.logDriveTest' @{ buchstabe = $letter; ziel = $drive.ziel }) -Level Test
             continue
         }
 
         try {
             New-SmbMapping -LocalPath "${letter}:" -RemotePath $drive.ziel -Persistent $true -ErrorAction Stop | Out-Null
-            $applied += "${letter}: auf $($drive.ziel)"
+            $applied += Get-WzText 'rest.driveEntry' @{ buchstabe = $letter; ziel = $drive.ziel }
         } catch {
-            $failed += "${letter}: auf $($drive.ziel)"
-            Write-WzLog "Netzlaufwerk ${letter}: nicht verbunden: $($_.Exception.Message.Split([char]10)[0])" -Level Warn
+            $failed += Get-WzText 'rest.driveEntry' @{ buchstabe = $letter; ziel = $drive.ziel }
+            Write-WzLog (Get-WzText 'rest.logDriveFailed' @{ buchstabe = $letter; grund = $_.Exception.Message.Split([char]10)[0] }) -Level Warn
         }
     }
 
     if ($applied.Count -gt 0) {
         Write-WzLog "$($applied.Count) Netzlaufwerk(e) wieder verbunden" -Level Ok
-        Add-WzAction -Area 'Zurückspielen' -Summary "$($applied.Count) Netzlaufwerk(e) wieder verbunden" -Detail $applied
+        Add-WzAction -Area 'Zurückspielen' -Summary (Get-WzText 'rest.actionDrives' @{ anzahl = $applied.Count }) -Detail $applied
     }
 
     return [pscustomobject]@{ Applied = @($applied); Failed = @($failed) }
@@ -614,7 +615,7 @@ function Get-WzBookmarkTargets {
         $match = @($browsers.Keys | Where-Object { $leaf -like "$_-*" } |
             Sort-Object -Property Length -Descending) | Select-Object -First 1
         if (-not $match) {
-            $entry.Reason = 'kein passender Browser auf diesem PC'
+            $entry.Reason = Get-WzText 'rest.reasonNoBrowser'
             $targets += $entry
             continue
         }
@@ -626,7 +627,7 @@ function Get-WzBookmarkTargets {
         # Der Dateiname am Ende steht je Browserart fest, dazwischen der Profilname
         $fileName = if ($browser.Kind -eq 'chromium') { 'Bookmarks' } else { 'places.sqlite' }
         if ($rest -notlike "*-$fileName") {
-            $entry.Reason = 'Dateiname passt nicht zu diesem Browser'
+            $entry.Reason = Get-WzText 'rest.reasonWrongFile'
             $targets += $entry
             continue
         }
@@ -634,7 +635,7 @@ function Get-WzBookmarkTargets {
 
         $profileDir = Join-Path $browser.Path $entry.ProfileName
         if (-not (Test-Path -LiteralPath $profileDir)) {
-            $entry.Reason = "Profil »$($entry.ProfileName)« gibt es auf diesem PC nicht"
+            $entry.Reason = Get-WzText 'rest.reasonNoProfile' @{ name = $entry.ProfileName }
             $targets += $entry
             continue
         }
@@ -666,11 +667,11 @@ function Import-WzBrowserBookmarks {
         if (-not $entry.Target) { continue }
 
         if (Get-WzBrowserProcess -BrowserName $entry.BrowserName) {
-            $blocked += "$($entry.BrowserName) läuft noch"
+            $blocked += Get-WzText 'rest.blockedRunning' @{ name = $entry.BrowserName }
             continue
         }
         if ($syncHash.DryRun) {
-            Write-WzLog "[Test] Lesezeichen für $($entry.BrowserName) / $($entry.ProfileName) würden zurückgespielt" -Level Test
+            Write-WzLog (Get-WzText 'rest.logMarksTest' @{ browser = $entry.BrowserName; profil = $entry.ProfileName }) -Level Test
             continue
         }
 
@@ -683,13 +684,13 @@ function Import-WzBrowserBookmarks {
             $applied += "$($entry.BrowserName) / $($entry.ProfileName)"
         } catch {
             $failed += "$($entry.BrowserName) / $($entry.ProfileName)"
-            Write-WzLog "Lesezeichen für $($entry.BrowserName) nicht zurückgespielt: $($_.Exception.Message.Split([char]10)[0])" -Level Warn
+            Write-WzLog (Get-WzText 'rest.logMarksFailed' @{ browser = $entry.BrowserName; grund = $_.Exception.Message.Split([char]10)[0] }) -Level Warn
         }
     }
 
     if ($applied.Count -gt 0) {
-        Write-WzLog "$($applied.Count) Lesezeichen-Datei(en) zurückgespielt" -Level Ok
-        Add-WzAction -Area 'Zurückspielen' -Summary "$($applied.Count) Lesezeichen-Sammlung(en) wiederhergestellt" -Detail $applied
+        Write-WzLog (Get-WzText 'rest.logMarksDone' @{ anzahl = $applied.Count }) -Level Ok
+        Add-WzAction -Area 'Zurückspielen' -Summary (Get-WzText 'rest.actionMarks' @{ anzahl = $applied.Count }) -Detail $applied
     }
 
     return [pscustomobject]@{ Applied = @($applied); Failed = @($failed); Blocked = @($blocked) }

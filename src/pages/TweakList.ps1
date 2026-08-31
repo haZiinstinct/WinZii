@@ -99,9 +99,9 @@ function Update-WzTweakStates {
     $tweaks = @($Rows | ForEach-Object { $_.Tweak })
     if ($tweaks.Count -eq 0) { return }
 
-    if ($HintTarget) { $HintTarget.Text = 'Zustand wird geprüft...' }
+    if ($HintTarget) { $HintTarget.Text = Get-WzText 'opt.checkingState' }
 
-    Invoke-WzTask -Name 'Zustand prüfen' -Silent -ArgumentList (, $tweaks) -ScriptBlock {
+    Invoke-WzTask -Name (Get-WzText 'opt.taskCheckState') -Silent -ArgumentList (, $tweaks) -ScriptBlock {
         param($tweaks)
         Clear-WzStateCache
         $states = @{}
@@ -147,7 +147,7 @@ function Update-WzTweakStates {
         }
 
         if ($HintTarget) {
-            $HintTarget.Text = "$applied von $($Rows.Count) bereits aktiv"
+            $HintTarget.Text = Get-WzText 'opt.appliedOf' @{ aktiv = $applied; gesamt = $Rows.Count }
         }
         if ($OnDone) { & $OnDone }
     }.GetNewClosure()
@@ -168,7 +168,7 @@ function Invoke-WzTweakSelection {
 
     $selected = @($Rows | Where-Object { $_.CheckBox.IsChecked } | ForEach-Object { $_.Tweak })
     if ($selected.Count -eq 0) {
-        Show-WzInfo -Title 'Nichts ausgewählt' -Message 'Bitte zuerst mindestens einen Eintrag anhaken.'
+        Show-WzInfo -Title (Get-WzText 'opt.nothingSelectedTitle') -Message (Get-WzText 'opt.nothingSelectedMessage')
         return
     }
 
@@ -181,30 +181,30 @@ function Invoke-WzTweakSelection {
     $items = foreach ($tweak in $selected) {
         $suffix = if ($tweak.risk -ne 'low') { " [$($tweak.risk)]" } else { '' }
         $what = Get-WzTweakActionSummary -Tweak $tweak
-        if ($what) { "$($tweak.name)$suffix — $what" } else { "$($tweak.name)$suffix" }
+        if ($what) { Get-WzText 'opt.itemWithWhat' @{ name = $tweak.name; risiko = $suffix; was = $what } } else { "$($tweak.name)$suffix" }
     }
 
-    $message = "$($selected.Count) Änderung(en) werden angewendet."
-    if ($riskyCount -gt 0) { $message += " Davon $riskyCount mit erhöhtem Risiko." }
-    if ($rebootCount -gt 0) { $message += " $rebootCount davon wirken erst nach einem Neustart." }
-    if ($syncHash.DryRun) { $message = "Testmodus: Es wird nur protokolliert, was passieren würde. $message" }
+    $message = Get-WzText 'opt.confirmCount' @{ anzahl = $selected.Count }
+    if ($riskyCount -gt 0) { $message += Get-WzText 'opt.confirmRisky' @{ anzahl = $riskyCount } }
+    if ($rebootCount -gt 0) { $message += Get-WzText 'opt.confirmReboot' @{ anzahl = $rebootCount } }
+    if ($syncHash.DryRun) { $message = Get-WzText 'opt.confirmDryRun' @{ rest = $message } }
 
     # War der Systemschutz aus, bleibt er nach dem Wiederherstellungspunkt an —
     # sonst wäre der Punkt sofort wieder weg. Das kostet dauerhaft Platz und
     # Hintergrundarbeit und ist damit selbst eine Bremse. Also vorher sagen.
-    $optionText = 'Vorher einen Systemwiederherstellungspunkt anlegen (empfohlen)'
+    $optionText = Get-WzText 'opt.optionRestorePoint'
     if (-not (Test-WzSystemProtectionOn)) {
-        $optionText += ' — der Systemschutz ist aus und bleibt danach eingeschaltet'
+        $optionText += Get-WzText 'opt.optionProtectionOff'
     }
 
     $answer = Show-WzConfirm -Title $Title -Message $message -Items $items `
         -OptionText $optionText `
         -OptionDefault (-not $syncHash.DryRun) `
-        -ConfirmText $(if ($syncHash.DryRun) { 'Testlauf starten' } else { 'Anwenden' }) `
+        -ConfirmText $(if ($syncHash.DryRun) { Get-WzText 'opt.btnDryRun' } else { Get-WzText 'opt.btnApplyGo' }) `
         -Danger:($riskyCount -gt 0)
 
     if (-not $answer.Confirmed) {
-        Write-WzLog 'Vorgang abgebrochen.' -Level Info
+        Write-WzLog (Get-WzText 'opt.logCancelled') -Level Info
         return
     }
 
@@ -217,16 +217,16 @@ function Invoke-WzTweakSelection {
         param($summary)
         if (-not $summary) { return }
 
-        $lines = @("$($summary.Applied) Änderung(en) durchgeführt.")
-        if ($summary.Failed -gt 0) { $lines += "$($summary.Failed) mit Fehlern — Einzelheiten im Protokoll." }
-        if ($summary.RebootRequired) { $lines += 'Ein Neustart ist nötig, damit alles greift.' }
-        if ($summary.UndoFile) { $lines += "Sicherung: $(Split-Path -Parent $summary.UndoFile)" }
+        $lines = @(Get-WzText 'opt.lineApplied' @{ anzahl = $summary.Applied })
+        if ($summary.Failed -gt 0) { $lines += Get-WzText 'opt.lineFailed' @{ anzahl = $summary.Failed } }
+        if ($summary.RebootRequired) { $lines += Get-WzText 'opt.lineReboot' }
+        if ($summary.UndoFile) { $lines += Get-WzText 'opt.lineBackup' @{ pfad = (Split-Path -Parent $summary.UndoFile) } }
 
         Add-WzAction -Area $Title -RebootRequired:([bool]$summary.RebootRequired) `
-            -Summary "$($summary.Applied) Einstellung(en) angepasst$(if ($summary.Failed -gt 0) { ", $($summary.Failed) davon ohne Erfolg" })" `
+            -Summary ((Get-WzText 'opt.actionApplied' @{ anzahl = $summary.Applied }) + $(if ($summary.Failed -gt 0) { Get-WzText 'opt.actionFailedSuffix' @{ anzahl = $summary.Failed } })) `
             -Detail @($selected | ForEach-Object { $_.name })
 
-        Show-WzInfo -Title 'Fertig' -Message ($lines -join ' ') -Items @()
+        Show-WzInfo -Title (Get-WzText 'opt.doneTitle') -Message ($lines -join ' ') -Items @()
         if ($OnDone) { & $OnDone }
     }.GetNewClosure()
 }
@@ -240,8 +240,8 @@ function Show-WzUndoDialog {
 
     $sessions = Get-WzUndoSessions
     if ($sessions.Count -eq 0) {
-        Show-WzInfo -Title 'Keine Sicherungen' `
-            -Message 'Auf diesem PC hat WinZii noch keine Änderungen vorgenommen, die sich zurücknehmen ließen.'
+        Show-WzInfo -Title (Get-WzText 'opt.noBackupsTitle') `
+            -Message (Get-WzText 'opt.noBackupsMessage')
         return
     }
 
@@ -255,38 +255,38 @@ function Show-WzUndoDialog {
 
     $choices = foreach ($session in $available) {
         $suffix = if ($session.Restored) {
-            ' — bereits zurückgenommen'
+            Get-WzText 'opt.suffixReverted'
         } else {
             ''
         }
-        "{0}  ·  {1}  ·  {2} Änderung(en){3}" -f `
-            $session.Created.ToString('dd.MM.yyyy HH:mm'), $session.Scope, $session.ActionCount, $suffix
+        Get-WzText 'opt.sessionChoice' @{ zeit = $session.Created.ToString('g', (Get-WzLanguageCulture))
+            bereich = $session.Scope; anzahl = $session.ActionCount; zusatz = $suffix }
     }
 
-    $answer = Show-WzConfirm -Title 'Änderungen zurücknehmen' `
-        -Message 'Wähle die Sicherung, die zurückgespielt werden soll. Jede Sicherung enthält den Zustand vor genau einem Durchlauf; bereits zurückgenommene sind gekennzeichnet.' `
-        -Choices @($choices) -ChoiceLabel 'Sicherung' -ChoiceDefault $preselect `
-        -ConfirmText 'Zurücknehmen' -Danger
+    $answer = Show-WzConfirm -Title (Get-WzText 'opt.undoTitle') `
+        -Message (Get-WzText 'opt.undoMessage') `
+        -Choices @($choices) -ChoiceLabel (Get-WzText 'opt.lblBackup') -ChoiceDefault $preselect `
+        -ConfirmText (Get-WzText 'opt.btnUndoGo') -Danger
 
     if (-not $answer.Confirmed) { return }
 
     $selected = $available[$answer.SelectedIndex]
-    Write-WzLog "Sicherung vom $($selected.Created.ToString('dd.MM.yyyy HH:mm')) ($($selected.Scope)) wird zurückgenommen." -Level Action
+    Write-WzLog (Get-WzText 'opt.logUndoing' @{ zeit = $selected.Created.ToString('g', (Get-WzLanguageCulture)); bereich = $selected.Scope }) -Level Action
 
-    Invoke-WzTask -Name 'Änderungen zurücknehmen' -ArgumentList @($selected.UndoFile) -ScriptBlock {
+    Invoke-WzTask -Name (Get-WzText 'opt.taskUndo') -ArgumentList @($selected.UndoFile) -ScriptBlock {
         param($undoFile)
         Restore-WzUndoSession -UndoFile $undoFile
     } -OnComplete {
         param($result)
         if (-not $result) { return }
 
-        $lines = @("$($result.Restored) Einstellung(en) zurückgesetzt.")
-        if ($result.Failed -gt 0) { $lines += "$($result.Failed) fehlgeschlagen." }
-        if ($result.Skipped -gt 0) { $lines += "$($result.Skipped) nicht automatisch umkehrbar." }
+        $lines = @(Get-WzText 'opt.lineRestored' @{ anzahl = $result.Restored })
+        if ($result.Failed -gt 0) { $lines += Get-WzText 'opt.lineUndoFailed' @{ anzahl = $result.Failed } }
+        if ($result.Skipped -gt 0) { $lines += Get-WzText 'opt.lineSkipped' @{ anzahl = $result.Skipped } }
 
-        Add-WzAction -Area 'Rücknahme' -Summary "$($result.Restored) Einstellung(en) auf den vorherigen Stand zurückgesetzt"
+        Add-WzAction -Area 'Rücknahme' -Summary (Get-WzText 'opt.actionUndo' @{ anzahl = $result.Restored })
 
-        Show-WzInfo -Title 'Zurückgenommen' -Message ($lines -join ' ') -Items @($result.Notes)
+        Show-WzInfo -Title (Get-WzText 'opt.undoneTitle') -Message ($lines -join ' ') -Items @($result.Notes)
         if ($OnDone) { & $OnDone }
     }.GetNewClosure()
 }

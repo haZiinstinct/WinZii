@@ -187,7 +187,7 @@ function Start-WzUpdateReset {
         if ($result.Success) {
             Add-WzAction -Area 'Reparatur' -Summary (Get-WzText 'tool.actionWu')
         }
-        Show-WzInfo -Title 'Windows Update' -Message $message -Items @($result.Messages)
+        Show-WzInfo -Title (Get-WzText 'tool.wuDoneTitle') -Message $message -Items @($result.Messages)
     }
 }
 

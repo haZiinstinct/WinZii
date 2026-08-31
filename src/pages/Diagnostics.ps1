@@ -3,7 +3,7 @@
 function Initialize-WzDiagnosticsPage {
     foreach ($range in @(7, 14, 30, 90)) {
         $item = New-Object Windows.Controls.ComboBoxItem
-        $item.Content = "letzte $range Tage"
+        $item.Content = Get-WzText 'diag.periodDays' @{ tage = $range }
         $item.Tag = $range
         [void]$syncHash.DiagRange.Items.Add($item)
     }
@@ -28,7 +28,7 @@ function Start-WzDiagnosticsScan {
     $syncHash.DiagDumps.Children.Clear()
     $syncHash.DiagDisks.Children.Clear()
 
-    Invoke-WzTask -Name 'Diagnose' -ArgumentList @($days) -ScriptBlock {
+    Invoke-WzTask -Name (Get-WzText 'diag.taskDiag') -ArgumentList @($days) -ScriptBlock {
         param($days)
         [pscustomobject]@{
             Events      = Get-WzEventSummary -Days $days

@@ -103,7 +103,8 @@ function Import-WzLanguage {
                 Expand-WzLanguageNode -Node $json -Prefix '' -Target $flat
                 $tables[$file.BaseName] = $flat
             } catch {
-                Write-Warning "Sprachdatei '$($file.Name)' ist fehlerhaft: $($_.Exception.Message)"
+                # Laeuft waehrend des Ladens der Sprachtabelle — Get-WzText gaebe es hier noch nicht.
+                Write-Warning "Sprachdatei '$($file.Name)' ist fehlerhaft: $($_.Exception.Message)"  # lang-ok
             }
         }
     }

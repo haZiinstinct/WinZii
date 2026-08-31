@@ -378,9 +378,9 @@ function Get-WzBatteryReportCapacities {
 
         $html = [IO.File]::ReadAllText($file, [Text.Encoding]::UTF8)
         $design = Read-WzBatteryReportValue -Html $html -Labels @(
-            'DESIGN CAPACITY', 'KONSTRUKTIONSKAPAZITÄT', 'ENTWURFSKAPAZITÄT')
+            'DESIGN CAPACITY', 'KONSTRUKTIONSKAPAZITÄT', 'ENTWURFSKAPAZITÄT')  # lang-ok: Suchbegriffe im powercfg-Bericht
         $charged = Read-WzBatteryReportValue -Html $html -Labels @(
-            'FULL CHARGE CAPACITY', 'VOLLLADUNGSKAPAZITÄT')
+            'FULL CHARGE CAPACITY', 'VOLLLADUNGSKAPAZITÄT')  # lang-ok: Suchbegriffe im powercfg-Bericht
 
         if ($design -gt 0 -or $charged -gt 0) {
             $script:WzBatteryReportCapacities = [pscustomobject]@{
