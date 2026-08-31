@@ -13,7 +13,7 @@ function Initialize-WzCleanupPage {
     })
 
     [void]$syncHash.CleanNotices.Items.Add((New-WzNotice -Kind 'info' `
-        -Text 'Browser sollten vor dem Löschen geschlossen sein, sonst bleiben gesperrte Dateien liegen. Anmeldungen, Lesezeichen und Passwörter sind nicht betroffen.'))
+        -Text (Get-WzText 'clean.noticeBrowsers')))
 
     Update-WzCleanupSelection
 }
@@ -157,8 +157,8 @@ function Start-WzCleanupScan {
     .SYNOPSIS
         Ermittelt für jede Kategorie den belegten Platz.
     #>
-    $syncHash.CleanTotal.Text = 'wird berechnet...'
-    $syncHash.CleanTotalHint.Text = 'Große Ordner brauchen einen Moment.'
+    $syncHash.CleanTotal.Text = Get-WzText 'clean.calculating'
+    $syncHash.CleanTotalHint.Text = Get-WzText 'clean.calculatingHint'
     foreach ($entry in $syncHash.CleanRows) {
         $entry.SizeBlock.Text = '...'
         $entry.SizeBlock.Foreground = $syncHash.Window.FindResource('WzTextFaint')
@@ -218,10 +218,10 @@ function Start-WzCleanupScan {
         }
 
         $syncHash.CleanTotal.Text = Format-WzBytes $total
-        $syncHash.CleanTotalHint.Text = 'insgesamt löschbar — die Auswahl bestimmt, was davon entfernt wird'
+        $syncHash.CleanTotalHint.Text = Get-WzText 'clean.totalHint'
         $syncHash.CleanScanned = $true
         Update-WzCleanupSelection
-        Write-WzLog "Analyse abgeschlossen: $(Format-WzBytes $total) könnten freigegeben werden." -Level Ok
+        Write-WzLog (Get-WzText 'clean.logAnalysisDone' @{ groesse = (Format-WzBytes $total) }) -Level Ok
     }
 }
 
@@ -232,9 +232,9 @@ function Update-WzCleanupSelection {
     if (-not $bytes) { $bytes = 0 }
 
     $syncHash.CleanSelectionInfo.Text = if ($syncHash.CleanScanned) {
-        "$($selected.Count) Kategorie(n) ausgewählt · $(Format-WzBytes $bytes) werden gelöscht"
+        Get-WzText 'clean.selectedWithSize' @{ anzahl = $selected.Count; groesse = (Format-WzBytes $bytes) }
     } else {
-        "$($selected.Count) Kategorie(n) ausgewählt"
+        Get-WzText 'clean.selectedPlain' @{ anzahl = $selected.Count }
     }
     $syncHash.CleanBtnClean.IsEnabled = ($selected.Count -gt 0)
 }
@@ -245,40 +245,40 @@ function Start-WzCleanupRun {
 
     $deletable = @($selected | Where-Object { $_.Category.method -ne 'reportOnly' })
     if ($deletable.Count -eq 0) {
-        Show-WzInfo -Title 'Nichts zu löschen' `
-            -Message 'Die gewählten Einträge dienen nur der Auswertung. WinZii löscht dort nichts.'
+        Show-WzInfo -Title (Get-WzText 'clean.nothingTitle') `
+            -Message (Get-WzText 'clean.nothingMessage')
         return
     }
 
     $bytes = ($deletable | Measure-Object -Property Bytes -Sum).Sum
     $items = foreach ($entry in $deletable) {
         if ($entry.Bytes -gt 0) {
-            "$($entry.Category.name) — $(Format-WzBytes $entry.Bytes)"
+            Get-WzText 'clean.itemWithSize' @{ name = $entry.Category.name; groesse = (Format-WzBytes $entry.Bytes) }
         } else {
             $entry.Category.name
         }
     }
 
     $riskyCount = @($deletable | Where-Object { $_.Category.risk -eq 'high' }).Count
-    $message = "$($deletable.Count) Kategorie(n) werden gelöscht"
-    if ($bytes -gt 0) { $message += ", etwa $(Format-WzBytes $bytes)" }
+    $message = Get-WzText 'clean.confirmCount' @{ anzahl = $deletable.Count }
+    if ($bytes -gt 0) { $message += Get-WzText 'clean.confirmApprox' @{ groesse = (Format-WzBytes $bytes) } }
     $message += '.'
     if ($riskyCount -gt 0) {
-        $message += ' Darunter sind Einträge, die sich nicht rückgängig machen lassen.'
+        $message += Get-WzText 'clean.confirmRisky'
     }
-    if ($syncHash.DryRun) { $message = "Testmodus: Es wird nur aufgelistet, was gelöscht würde. $message" }
+    if ($syncHash.DryRun) { $message = Get-WzText 'clean.confirmDryRun' @{ rest = $message } }
 
-    $answer = Show-WzConfirm -Title 'Bereinigung starten' -Message $message -Items $items `
-        -ConfirmText $(if ($syncHash.DryRun) { 'Testlauf starten' } else { 'Jetzt löschen' }) `
+    $answer = Show-WzConfirm -Title (Get-WzText 'clean.confirmTitle') -Message $message -Items $items `
+        -ConfirmText $(if ($syncHash.DryRun) { Get-WzText 'clean.btnDryRun' } else { Get-WzText 'clean.btnDeleteNow' }) `
         -Danger:($riskyCount -gt 0)
     if (-not $answer.Confirmed) {
-        Write-WzLog 'Bereinigung abgebrochen.' -Level Info
+        Write-WzLog (Get-WzText 'clean.logCancelled') -Level Info
         return
     }
 
     $categories = @($deletable | ForEach-Object { $_.Category })
 
-    Invoke-WzTask -Name 'Bereinigung' -ArgumentList (, $categories) -ScriptBlock {
+    Invoke-WzTask -Name (Get-WzText 'clean.taskCleanup') -ArgumentList (, $categories) -ScriptBlock {
         param($categories)
         Invoke-WzCleanup -Categories $categories
     } -OnComplete {
@@ -287,17 +287,17 @@ function Start-WzCleanupRun {
 
         $lines = @()
         if ($syncHash.DryRun) {
-            $lines += 'Testlauf beendet — es wurde nichts gelöscht.'
+            $lines += Get-WzText 'clean.lineDryRun'
         } else {
-            $lines += "$(Format-WzBytes $summary.FreedBytes) freigegeben."
-            $lines += "$($summary.Removed) Objekt(e) entfernt."
+            $lines += Get-WzText 'clean.lineFreed' @{ groesse = (Format-WzBytes $summary.FreedBytes) }
+            $lines += Get-WzText 'clean.lineRemoved' @{ anzahl = $summary.Removed }
         }
         if ($summary.Failed -gt 0) {
-            $lines += "$($summary.Failed) Objekt(e) waren gesperrt und blieben liegen — bei Zwischenspeichern ist das normal."
+            $lines += Get-WzText 'clean.lineLocked' @{ anzahl = $summary.Failed }
         }
 
         Add-WzAction -Area 'Speicherplatz' `
-            -Summary "$(Format-WzBytes $summary.FreedBytes) freigegeben, $($summary.Removed) Objekt(e) gelöscht" `
+            -Summary (Get-WzText 'clean.actionFreed' @{ groesse = (Format-WzBytes $summary.FreedBytes); anzahl = $summary.Removed }) `
             -Detail @($categories | ForEach-Object { $_.name })
 
         Show-WzInfo -Title 'Bereinigung abgeschlossen' -Message ($lines -join ' ')

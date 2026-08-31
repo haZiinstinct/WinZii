@@ -64,13 +64,13 @@ function Test-WzWinget {
                 if ($syncHash) { $syncHash.WingetPath = $path }
                 return $result
             }
-            Write-WzLog "winget gefunden, antwortet aber nicht (Code $code): $path" -Level Info
+            Write-WzLog (Get-WzText 'apps.logWingetNoAnswer' @{ code = $code; pfad = $path }) -Level Info
         } catch {
-            Write-WzLog "winget nicht ausführbar: $($_.Exception.Message.Split([char]10)[0])" -Level Info
+            Write-WzLog (Get-WzText 'apps.logWingetNotRunnable' @{ grund = $_.Exception.Message.Split([char]10)[0] }) -Level Info
         }
     }
 
-    Write-WzLog "Keiner der $($candidates.Count) gefundenen winget-Pfade antwortet." -Level Warn
+    Write-WzLog (Get-WzText 'apps.logNoWingetPathAnswers' @{ anzahl = $candidates.Count }) -Level Warn
     return $result
 }
 
@@ -88,7 +88,7 @@ function Install-WzWingetBootstrap {
     $cacheDir = New-WzDirectory (Join-Path (Get-WzOfflineDir) 'winget')
 
     if ($syncHash.DryRun) {
-        Write-WzLog '[Test] winget würde nachinstalliert werden.' -Level Test
+        Write-WzLog (Get-WzText 'apps.logBootstrapTest') -Level Test
         return $false
     }
 
@@ -102,10 +102,10 @@ function Install-WzWingetBootstrap {
     if ($bootstrap.dependenciesZipUrl) {
         $zipFile = Join-Path $cacheDir 'DesktopAppInstaller_Dependencies.zip'
         if (-not (Test-Path -LiteralPath $zipFile)) {
-            Write-WzLog 'Lade Abhängigkeitspaket zum App Installer...' -Level Info
+            Write-WzLog (Get-WzText 'apps.logDepDownload') -Level Info
             [void](Get-WzDownload -Url $bootstrap.dependenciesZipUrl -TargetPath $zipFile)
         } else {
-            Write-WzLog 'Abhängigkeitspaket aus dem Zwischenspeicher auf dem Datenträger' -Level Info
+            Write-WzLog (Get-WzText 'apps.logDepCached') -Level Info
         }
         if (Test-Path -LiteralPath $zipFile) {
             $extractDir = Join-Path $cacheDir 'dependencies'
@@ -126,14 +126,14 @@ function Install-WzWingetBootstrap {
                         Where-Object { $_.Extension -in @('.appx', '.msix') })
                 }
             } catch {
-                Write-WzLog "Abhängigkeitspaket nicht nutzbar: $($_.Exception.Message.Split([char]10)[0])" -Level Warn
+                Write-WzLog (Get-WzText 'apps.logDepUnusable' @{ grund = $_.Exception.Message.Split([char]10)[0] }) -Level Warn
             }
         }
     }
 
     $packages = @()
     if ($dependencyFiles.Count -gt 0) {
-        Write-WzLog "$($dependencyFiles.Count) Abhängigkeit(en) aus dem versionsgleichen Paket" -Level Info
+        Write-WzLog (Get-WzText 'apps.logDepCount' @{ anzahl = $dependencyFiles.Count }) -Level Info
         foreach ($file in $dependencyFiles) {
             $packages += [pscustomobject]@{ Name = $file.BaseName; Url = ''; File = $file.FullName }
         }
@@ -143,7 +143,7 @@ function Install-WzWingetBootstrap {
         # Einzeladressen nicht — beide liegen bei GitHub. Schaden konnte sie
         # dagegen, weil die fest eingetragene UI.Xaml-Fassung mit der Zeit
         # älter wird als die, die der App Installer verlangt.
-        Write-WzLog 'Keine Abhängigkeiten zur Hand. Sind sie auf diesem PC bereits vorhanden, klappt es trotzdem — sonst nennt die Fehlermeldung gleich das fehlende Paket.' -Level Warn
+        Write-WzLog (Get-WzText 'apps.logDepNone') -Level Warn
     }
     $packages += [pscustomobject]@{
         Name = 'App Installer'
@@ -156,11 +156,11 @@ function Install-WzWingetBootstrap {
             if (-not $package.Url) { continue }
             Write-WzLog "Lade $($package.Name)..." -Level Info
             if (-not (Get-WzDownload -Url $package.Url -TargetPath $package.File)) {
-                Write-WzLog "$($package.Name) konnte nicht geladen werden — ohne Internet geht es hier nicht weiter." -Level Error
+                Write-WzLog (Get-WzText 'apps.logPackageFailed' @{ name = $package.Name }) -Level Error
                 return $false
             }
         } elseif ($package.Url) {
-            Write-WzLog "$($package.Name) aus dem Zwischenspeicher auf dem Datenträger" -Level Info
+            Write-WzLog (Get-WzText 'apps.logPackageCached' @{ name = $package.Name }) -Level Info
         }
 
         try {
@@ -173,7 +173,7 @@ function Install-WzWingetBootstrap {
             if ($message -match '0x80073D06|höhere Version|higher version|already installed') {
                 Write-WzLog "$($package.Name) war bereits vorhanden" -Level Info
             } else {
-                Write-WzLog "$($package.Name) ließ sich nicht einrichten: $message" -Level Error
+                Write-WzLog (Get-WzText 'apps.logPackageSetupFailed' @{ name = $package.Name; grund = $message }) -Level Error
             }
         }
 
@@ -184,19 +184,19 @@ function Install-WzWingetBootstrap {
         if ($package.File -like '*.msixbundle') {
             try {
                 Add-AppxProvisionedPackage -Online -PackagePath $package.File -SkipLicense -ErrorAction Stop | Out-Null
-                Write-WzLog 'App Installer für alle Benutzer dieses PCs bereitgestellt' -Level Ok
+                Write-WzLog (Get-WzText 'apps.logProvisioned') -Level Ok
             } catch {
-                Write-WzLog "Bereitstellung für alle Benutzer nicht möglich: $($_.Exception.Message.Split([char]10)[0])" -Level Warn
+                Write-WzLog (Get-WzText 'apps.logProvisionFailed' @{ grund = $_.Exception.Message.Split([char]10)[0] }) -Level Warn
             }
         }
     }
 
     $check = Test-WzWinget
     if ($check.Available) {
-        Write-WzLog "winget ist einsatzbereit ($($check.Version))" -Level Ok
+        Write-WzLog (Get-WzText 'apps.logWingetReady' @{ version = $check.Version }) -Level Ok
         return $true
     }
-    Write-WzLog 'winget ist trotz Einrichtung nicht erreichbar. Nach einem Neustart erneut versuchen.' -Level Warn
+    Write-WzLog (Get-WzText 'apps.logWingetUnreachable') -Level Warn
     return $false
 }
 
@@ -238,17 +238,17 @@ function Get-WzDownload {
     # Zwischenspeicher und blockierte jeden weiteren Versuch dauerhaft, weil
     # der Code danach nur noch Test-Path fragt.
     if (-not (Test-Path -LiteralPath $TargetPath)) {
-        Write-WzLog 'Download beendet, aber es kam keine Datei an.' -Level Error
+        Write-WzLog (Get-WzText 'apps.logNoFileArrived') -Level Error
         return $false
     }
     $file = Get-Item -LiteralPath $TargetPath
     if ($file.Length -lt $MinimumBytes) {
-        Write-WzLog "Die geladene Datei ist mit $(Format-WzBytes $file.Length) zu klein — vermutlich eine Fehlerseite statt des Pakets." -Level Error
+        Write-WzLog (Get-WzText 'apps.logFileTooSmall' @{ groesse = (Format-WzBytes $file.Length) }) -Level Error
         Remove-WzFailedDownload -Path $TargetPath
         return $false
     }
     if (Test-WzHtmlFile -Path $TargetPath) {
-        Write-WzLog 'Es kam eine Webseite statt der Datei an — meist ein Anmeldeportal im WLAN.' -Level Error
+        Write-WzLog (Get-WzText 'apps.logGotWebpage') -Level Error
         Remove-WzFailedDownload -Path $TargetPath
         return $false
     }
@@ -304,11 +304,11 @@ function Get-WzWingetOutcome {
 
     $result = [pscustomobject]@{
         Outcome        = 'fail'
-        Text           = "unbekannter Rückgabewert $ExitCode"
+        Text           = (Get-WzText 'apps.outcomeUnknown' @{ code = $ExitCode })
         RequiresReboot = $false
     }
     if ($null -eq $ExitCode) {
-        $result.Text = 'der Vorgang lieferte kein Ergebnis'
+        $result.Text = Get-WzText 'apps.outcomeNoResult'
         return $result
     }
 
@@ -371,8 +371,8 @@ function Install-WzApps {
 
     $wingetPath = Resolve-WzWingetPath
     if (-not $wingetPath -and -not $syncHash.DryRun) {
-        Write-WzLog 'winget ist nicht verfügbar. Bitte zuerst nachinstallieren.' -Level Error
-        $summary.Details += 'winget wurde auf diesem PC nicht gefunden.'
+        Write-WzLog (Get-WzText 'apps.logWingetUnavailable') -Level Error
+        $summary.Details += Get-WzText 'apps.detailWingetMissing'
         return $summary
     }
 
@@ -385,9 +385,9 @@ function Install-WzApps {
         $net = Test-WzInternetAccess
         if ($net.Kind -ne 'ok') {
             $reason = switch ($net.Kind) {
-                'portal'      { 'Das Netz verlangt eine Anmeldung im Browser (Hotel- oder Gäste-WLAN).' }
-                'certificate' { 'Das Sicherheitszertifikat wird abgelehnt — meist ein Firmen-Proxy oder eine falsche Systemuhr.' }
-                default       { 'Kein Internetzugang.' }
+                'portal'      { Get-WzText 'apps.netPortal' }
+                'certificate' { Get-WzText 'apps.netCertificate' }
+                default       { Get-WzText 'apps.netNone' }
             }
             Write-WzLog "$reason ($($net.Detail))" -Level Error
             $summary.Details += $reason
@@ -412,7 +412,7 @@ function Install-WzApps {
         # neben die Installationsdatei legt.
         $vault = Get-WzOfflineInstallerPath -App $app
         if ($vault) {
-            Write-WzLog '  aus dem Vorrat auf dem Datenträger' -Level Info
+            Write-WzLog (Get-WzText 'apps.logFromVault') -Level Info
             $base = "install --manifest `"$vault`" --silent " +
                     '--accept-package-agreements --disable-interactivity'
         } else {
@@ -431,7 +431,7 @@ function Install-WzApps {
         # dort aber »kein anwendbares Installationsprogramm«, der Rückfall griff
         # also nie. Jetzt entscheidet der Rückgabewert.
         if ($outcome.Outcome -eq 'retry') {
-            Write-WzLog '  systemweit nicht möglich, versuche benutzerbezogen...' -Level Info
+            Write-WzLog (Get-WzText 'apps.logUserScope') -Level Info
             $result = Invoke-WzProcess -FilePath $wingetPath -Arguments $base -TimeoutSeconds 1800
             $outcome = Get-WzWingetOutcome -ExitCode $result.ExitCode
         }
@@ -442,11 +442,11 @@ function Install-WzApps {
                 if (Test-WzAppInstalled -WingetPath $wingetPath -Id $app.wingetId) {
                     $summary.Installed++
                     $summary.InstalledNames += $app.name
-                    Write-WzLog '  installiert' -Level Ok
+                    Write-WzLog (Get-WzText 'apps.logInstalledShort') -Level Ok
                 } else {
                     $summary.Failed++
-                    $summary.Details += "$($app.name): winget meldete Erfolg, das Programm ist aber nicht auffindbar"
-                    Write-WzLog '  winget meldete Erfolg — das Programm ist trotzdem nicht da' -Level Warn
+                    $summary.Details += "$($app.name): $(Get-WzText 'apps.detailSuccessButMissing')"
+                    Write-WzLog (Get-WzText 'apps.logSuccessButMissing') -Level Warn
                 }
             }
             'reboot' {
@@ -482,14 +482,14 @@ function Save-WzOfflineInstallers {
 
     $wingetPath = Resolve-WzWingetPath
     if (-not $wingetPath) {
-        Write-WzLog 'Ohne winget lassen sich keine Installationsdateien vorab laden.' -Level Error
-        $summary.Details += 'winget wurde auf diesem PC nicht gefunden.'
+        Write-WzLog (Get-WzText 'apps.logNoPreload') -Level Error
+        $summary.Details += Get-WzText 'apps.detailWingetMissing'
         return $summary
     }
 
     if (-not $syncHash.DryRun -and -not (Test-WzWingetDownloadSupport -WingetPath $wingetPath)) {
-        Write-WzLog 'Dieses winget kennt den Befehl »download« noch nicht — er kam erst mit Fassung 1.6.' -Level Error
-        $summary.Details += 'winget ist zu alt für das Vorabladen. Über »winget einrichten« lässt sich eine neuere Fassung holen.'
+        Write-WzLog (Get-WzText 'apps.logWingetTooOld') -Level Error
+        $summary.Details += Get-WzText 'apps.detailWingetTooOld'
         return $summary
     }
 
@@ -497,12 +497,12 @@ function Save-WzOfflineInstallers {
 
     foreach ($app in $Apps) {
         if ($syncHash.DryRun) {
-            Write-WzLog "  [Test] $($app.name) würde auf den Datenträger geladen" -Level Test
+            Write-WzLog (Get-WzText 'apps.logWouldDownload' @{ name = $app.name }) -Level Test
             continue
         }
 
         $appDir = New-WzDirectory (Join-Path $targetRoot $app.id)
-        Write-WzLog "Lade $($app.name)..." -Level Action
+        Write-WzLog (Get-WzText 'apps.logDownloading' @{ name = $app.name }) -Level Action
 
         $arguments = "download --id $($app.wingetId) --exact --source winget --accept-source-agreements " +
                      "--accept-package-agreements --disable-interactivity --download-directory `"$appDir`""
@@ -518,12 +518,12 @@ function Save-WzOfflineInstallers {
         if ($result.ExitCode -eq 0 -and $size -gt 0) {
             $summary.Saved++
             $summary.Bytes += $size
-            Write-WzLog "  gespeichert ($(Format-WzBytes $size))" -Level Ok
+            Write-WzLog (Get-WzText 'apps.logSaved' @{ groesse = (Format-WzBytes $size) }) -Level Ok
         } else {
             $summary.Failed++
             $outcome = Get-WzWingetOutcome -ExitCode $result.ExitCode
             $reason = if ($result.ExitCode -eq 0) {
-                'winget meldete Erfolg, es kam aber keine Datei an'
+                Get-WzText 'apps.detailNoFileArrived'
             } else {
                 $outcome.Text
             }

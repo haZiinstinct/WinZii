@@ -54,16 +54,16 @@ function Format-WzPathSetAge {
     # sobald überhaupt etwas Altes dabei ist — steht dort etwas Verwertbares.
     if ($Measure.Items -lt 20 -and $Measure.OldItems -le 0) { return '' }
 
-    $culture = [Globalization.CultureInfo]::GetCultureInfo('de-DE')
+    $culture = Get-WzLanguageCulture
     $total = $Measure.Items.ToString('N0', $culture)
     if ($Measure.OldItems -le 0) {
-        return "$total Datei(en), alle jünger als 90 Tage"
+        return Get-WzText 'clean.filesAllNew' @{ gesamt = $total }
     }
     if ($Measure.OldItems -eq $Measure.Items) {
-        return "$total Datei(en), alle älter als 90 Tage"
+        return Get-WzText 'clean.filesAllOld' @{ gesamt = $total }
     }
     $old = $Measure.OldItems.ToString('N0', $culture)
-    return "$total Datei(en), davon $old älter als 90 Tage ($(Format-WzBytes $Measure.OldBytes))"
+    return Get-WzText 'clean.filesMixed' @{ gesamt = $total; alt = $old; groesse = (Format-WzBytes $Measure.OldBytes) }
 }
 
 function Measure-WzCleanupCategory {
@@ -101,7 +101,7 @@ function Measure-WzCleanupCategory {
                 }
                 [void][Runtime.InteropServices.Marshal]::ReleaseComObject($shell)
             } catch {
-                $result.Detail = 'nicht auslesbar'
+                $result.Detail = Get-WzText 'clean.detailUnreadable'
             }
         }
         'doCache' {
@@ -110,11 +110,11 @@ function Measure-WzCleanupCategory {
                 $result.Bytes = ($cache | Measure-Object -Property FileSizeInCache -Sum).Sum
                 $result.Items = @($cache).Count
             } catch {
-                $result.Detail = 'Dienst nicht verfügbar'
+                $result.Detail = Get-WzText 'clean.detailNoService'
             }
         }
         'dism' {
-            $result.Detail = 'Umfang erst bei der Analyse durch DISM bekannt'
+            $result.Detail = Get-WzText 'clean.detailDismOnly'
         }
         'windowsOld' {
             $measure = Measure-WzPathSet -Paths $Category.paths -Recurse
@@ -128,7 +128,7 @@ function Measure-WzCleanupCategory {
             Get-Process -Name $_ -ErrorAction SilentlyContinue
         })
         if ($running.Count -gt 0) {
-            $result.Blocked = "$($running -join ', ') läuft — bitte schließen"
+            $result.Blocked = Get-WzText 'clean.blockedBy' @{ prozesse = ($running -join ', ') }
         }
     }
 
@@ -226,7 +226,7 @@ function Invoke-WzCleanup {
         Write-WzLog "$($category.name)" -Level Action
 
         if ($category.method -eq 'reportOnly') {
-            Write-WzLog '  nur Auswertung — hier wird nichts gelöscht' -Level Info
+            Write-WzLog (Get-WzText 'clean.logAnalysisOnly') -Level Info
             continue
         }
 
@@ -239,7 +239,7 @@ function Invoke-WzCleanup {
                     $service = Get-Service -Name $serviceName -ErrorAction SilentlyContinue
                     if ($service -and $service.Status -eq 'Running') {
                         if ($syncHash.DryRun) {
-                            Write-WzLog "  [Test] Dienst $serviceName würde angehalten" -Level Test
+                            Write-WzLog (Get-WzText 'clean.logWouldStopService' @{ dienst = $serviceName }) -Level Test
                         } else {
                             Stop-Service -Name $serviceName -Force -ErrorAction SilentlyContinue
                             $stoppedServices += $serviceName
@@ -318,7 +318,7 @@ function Remove-WzPathSet {
 
 function Clear-WzRecycleBin {
     if ($syncHash.DryRun) {
-        Write-WzLog '  [Test] Papierkorb würde geleert' -Level Test
+        Write-WzLog (Get-WzText 'clean.logWouldEmptyBin') -Level Test
         return [pscustomobject]@{ Removed = 0; Failed = 0 }
     }
     try {
@@ -332,7 +332,7 @@ function Clear-WzRecycleBin {
 
 function Clear-WzDeliveryOptimization {
     if ($syncHash.DryRun) {
-        Write-WzLog '  [Test] Übermittlungsoptimierung würde geleert' -Level Test
+        Write-WzLog (Get-WzText 'clean.logWouldClearDo') -Level Test
         return [pscustomobject]@{ Removed = 0; Failed = 0 }
     }
     try {
@@ -362,14 +362,14 @@ function Invoke-WzComponentCleanup {
         return [pscustomobject]@{ Removed = 0; Failed = 0 }
     }
 
-    Write-WzLog '  DISM läuft — das dauert einige Minuten...' -Level Info
+    Write-WzLog (Get-WzText 'clean.logDismRunning') -Level Info
     $result = Invoke-WzProcess -FilePath 'dism.exe' -Arguments $arguments -TimeoutSeconds 1800
 
     if ($result.ExitCode -eq 0) {
-        Write-WzLog '  Komponentenspeicher aufgeräumt' -Level Ok
+        Write-WzLog (Get-WzText 'clean.logComponentStoreDone') -Level Ok
         return [pscustomobject]@{ Removed = 1; Failed = 0 }
     }
-    Write-WzLog "  DISM endete mit Code $($result.ExitCode) — Einzelheiten in %windir%\Logs\DISM\dism.log" -Level Warn
+    Write-WzLog (Get-WzText 'clean.logDismFailed' @{ code = $result.ExitCode }) -Level Warn
     return [pscustomobject]@{ Removed = 0; Failed = 1 }
 }
 
@@ -384,12 +384,12 @@ function Remove-WzWindowsOld {
 
     $target = Expand-WzUserPath $Path
     if (-not (Test-Path -LiteralPath $target)) {
-        Write-WzLog '  nicht vorhanden' -Level Info
+        Write-WzLog (Get-WzText 'clean.logNotPresent') -Level Info
         return [pscustomobject]@{ Removed = 0; Failed = 0 }
     }
 
     if ($syncHash.DryRun) {
-        Write-WzLog "  [Test] $target würde entfernt" -Level Test
+        Write-WzLog (Get-WzText 'clean.logWouldRemoveTarget' @{ ziel = $target }) -Level Test
         return [pscustomobject]@{ Removed = 0; Failed = 0 }
     }
 
@@ -400,14 +400,14 @@ function Remove-WzWindowsOld {
             Set-ItemProperty -Path $stateKey -Name 'StateFlags0117' -Value 2 -Type DWord -ErrorAction Stop
             $result = Invoke-WzProcess -FilePath 'cleanmgr.exe' -Arguments '/sagerun:117' -TimeoutSeconds 1800
             if ($result.ExitCode -eq 0 -and -not (Test-Path -LiteralPath $target)) {
-                Write-WzLog '  über die Datenträgerbereinigung entfernt' -Level Ok
+                Write-WzLog (Get-WzText 'clean.logRemovedViaCleanmgr') -Level Ok
                 return [pscustomobject]@{ Removed = 1; Failed = 0 }
             }
         }
     } catch { }
 
     # Weg 2: Besitzrechte übernehmen und löschen
-    Write-WzLog '  übernehme Besitzrechte...' -Level Info
+    Write-WzLog (Get-WzText 'clean.logTakingOwnership') -Level Info
     Invoke-WzTakeOwnership -Path $target
 
     try {
@@ -415,7 +415,7 @@ function Remove-WzWindowsOld {
         Write-WzLog '  entfernt' -Level Ok
         return [pscustomobject]@{ Removed = 1; Failed = 0 }
     } catch {
-        Write-WzLog "  konnte nicht vollständig entfernt werden: $($_.Exception.Message)" -Level Warn
+        Write-WzLog (Get-WzText 'clean.logPartialRemove' @{ grund = $_.Exception.Message }) -Level Warn
         return [pscustomobject]@{ Removed = 0; Failed = 1 }
     }
 }

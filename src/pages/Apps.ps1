@@ -26,7 +26,7 @@ function Update-WzAppsPage {
     if ($syncHash.AppsChecked) { return }
     $syncHash.AppsChecked = $true
 
-    Invoke-WzTask -Name 'winget prüfen' -Silent -ScriptBlock {
+    Invoke-WzTask -Name (Get-WzText 'apps.taskCheckWinget') -Silent -ScriptBlock {
         [pscustomobject]@{
             Winget  = Test-WzWinget
             Offline = Get-WzOfflineInstallerInfo
@@ -45,22 +45,22 @@ function Write-WzAppsStatus {
     $notices.Items.Clear()
 
     if ($Info.Winget.Available) {
-        Write-WzLog "winget gefunden: $($Info.Winget.Version)" -Level Info
+        Write-WzLog (Get-WzText 'apps.logWingetFound' @{ version = $Info.Winget.Version }) -Level Info
         $syncHash.AppsBtnWinget.Visibility = [Windows.Visibility]::Collapsed
         $syncHash.AppsBtnInstall.IsEnabled = $true
     } else {
         [void]$notices.Items.Add((New-WzNotice -Kind 'warn' `
-            -Text 'winget ist auf diesem PC nicht vorhanden. Das kommt bei LTSC-Versionen und älteren Windows-10-Ständen vor. Über "winget nachinstallieren" wird es eingerichtet — dafür ist einmalig Internet nötig.'))
+            -Text (Get-WzText 'apps.noticeNoWinget')))
         $syncHash.AppsBtnWinget.Visibility = [Windows.Visibility]::Visible
         $syncHash.AppsBtnInstall.IsEnabled = $false
-        Write-WzLog 'winget nicht gefunden.' -Level Warn
+        Write-WzLog (Get-WzText 'apps.logWingetMissing') -Level Warn
     }
 
     if ($Info.Offline.Count -gt 0) {
         $syncHash.AppsOfflineHint.Text =
-            "$($Info.Offline.Count) Programm(e) liegen bereits auf dem Datenträger ($(Format-WzBytes $Info.Offline.Bytes))"
+            Get-WzText 'apps.offlineHave' @{ anzahl = $Info.Offline.Count; groesse = (Format-WzBytes $Info.Offline.Bytes) }
     } else {
-        $syncHash.AppsOfflineHint.Text = 'noch nichts auf dem Datenträger zwischengespeichert'
+        $syncHash.AppsOfflineHint.Text = Get-WzText 'apps.offlineNone'
     }
 }
 
@@ -100,7 +100,7 @@ function New-WzAppList {
 
 function Update-WzAppsSelection {
     $count = @($syncHash.AppsRows | Where-Object { $_.CheckBox.IsChecked }).Count
-    $syncHash.AppsSelectionCount.Text = "$count ausgewählt"
+    $syncHash.AppsSelectionCount.Text = Get-WzText 'apps.selectedCount' @{ anzahl = $count }
     $syncHash.AppsBtnDownload.IsEnabled = ($count -gt 0)
 }
 
@@ -111,49 +111,49 @@ function Get-WzSelectedApps {
 function Start-WzAppInstall {
     $selected = Get-WzSelectedApps
     if ($selected.Count -eq 0) {
-        Show-WzInfo -Title 'Nichts ausgewählt' -Message 'Bitte zuerst mindestens ein Programm anhaken.'
+        Show-WzInfo -Title (Get-WzText 'apps.nothingSelectedTitle') -Message (Get-WzText 'apps.nothingSelectedMessage')
         return
     }
 
     # Vorher sagen, was aus dem Vorrat kommt und was aus dem Netz — das
     # entscheidet darüber, ob der Vorgang auch ohne Verbindung durchläuft.
     $fromVault = @($selected | Where-Object { Get-WzOfflineInstallerPath -App $_ })
-    $message = "$($selected.Count) Programm(e) werden über winget installiert. Das kann je nach Umfang und Verbindung einige Minuten dauern."
+    $message = Get-WzText 'apps.installMessage' @{ anzahl = $selected.Count }
     if ($fromVault.Count -eq $selected.Count) {
-        $message = "$($selected.Count) Programm(e) werden aus dem Vorrat auf dem Datenträger installiert — dafür wird kein Internet gebraucht."
+        $message = Get-WzText 'apps.installFromVault' @{ anzahl = $selected.Count }
     } elseif ($fromVault.Count -gt 0) {
-        $message += " $($fromVault.Count) davon kommen aus dem Vorrat auf dem Datenträger, der Rest aus dem Netz."
+        $message += Get-WzText 'apps.installMixed' @{ anzahl = $fromVault.Count }
     }
-    if ($syncHash.DryRun) { $message = "Testmodus: Es wird nur aufgelistet, was installiert würde. $message" }
+    if ($syncHash.DryRun) { $message = Get-WzText 'apps.installDryRun' @{ rest = $message } }
 
-    $answer = Show-WzConfirm -Title 'Programme installieren' -Message $message `
+    $answer = Show-WzConfirm -Title (Get-WzText 'apps.installTitle') -Message $message `
         -Items @($selected | ForEach-Object {
-            if (Get-WzOfflineInstallerPath -App $_) { "$($_.name) — vom Datenträger" } else { $_.name }
+            if (Get-WzOfflineInstallerPath -App $_) { Get-WzText 'apps.itemFromVault' @{ name = $_.name } } else { $_.name }
         }) `
-        -ConfirmText $(if ($syncHash.DryRun) { 'Testlauf starten' } else { 'Installieren' })
+        -ConfirmText $(if ($syncHash.DryRun) { Get-WzText 'apps.btnDryRun' } else { Get-WzText 'apps.btnInstallNow' })
     if (-not $answer.Confirmed) { return }
 
-    Invoke-WzTask -Name 'Programme installieren' -ArgumentList (, $selected) -ScriptBlock {
+    Invoke-WzTask -Name (Get-WzText 'apps.taskInstall') -ArgumentList (, $selected) -ScriptBlock {
         param($apps)
         Install-WzApps -Apps $apps
     } -OnComplete {
         param($summary)
         if (-not $summary) { return }
 
-        $lines = @("$($summary.Installed) installiert")
-        if ($summary.Skipped -gt 0) { $lines += "$($summary.Skipped) übersprungen (bereits vorhanden)" }
-        if ($summary.Failed -gt 0) { $lines += "$($summary.Failed) fehlgeschlagen" }
-        if ($summary.RebootRequired) { $lines += 'ein Neustart schließt die Einrichtung ab' }
+        $lines = @(Get-WzText 'apps.lineInstalled' @{ anzahl = $summary.Installed })
+        if ($summary.Skipped -gt 0) { $lines += Get-WzText 'apps.lineSkipped' @{ anzahl = $summary.Skipped } }
+        if ($summary.Failed -gt 0) { $lines += Get-WzText 'apps.lineFailed' @{ anzahl = $summary.Failed } }
+        if ($summary.RebootRequired) { $lines += Get-WzText 'apps.lineReboot' }
 
         # Nur festhalten, was wirklich angekommen ist — vorher wanderte die
         # ganze Auswahl ins Übergabeblatt, auch die gescheiterten Programme.
         if ($summary.Installed -gt 0) {
             Add-WzAction -Area 'Programme' `
-                -Summary "$($summary.Installed) Programm(e) installiert$(if ($summary.Failed -gt 0) { ", $($summary.Failed) ohne Erfolg" })" `
+                -Summary ((Get-WzText 'apps.actionInstalled' @{ anzahl = $summary.Installed }) + $(if ($summary.Failed -gt 0) { Get-WzText 'apps.actionFailedSuffix' @{ anzahl = $summary.Failed } })) `
                 -Detail @($summary.InstalledNames) -RebootRequired:$summary.RebootRequired
         }
 
-        Show-WzInfo -Title $(if ($summary.Failed -gt 0) { 'Teilweise abgeschlossen' } else { 'Installation abgeschlossen' }) `
+        Show-WzInfo -Title $(if ($summary.Failed -gt 0) { Get-WzText 'apps.donePartialTitle' } else { Get-WzText 'apps.doneTitle' }) `
             -Message ($lines -join ' · ') -Items @($summary.Details)
     }.GetNewClosure()
 }
@@ -163,24 +163,24 @@ function Start-WzAppDownload {
     if ($selected.Count -eq 0) { return }
 
     $volume = Get-WzVolumeInfo
-    $answer = Show-WzConfirm -Title 'Auf Datenträger laden' `
-        -Message "$($selected.Count) Programm(e) werden auf den WinZii-Datenträger geladen und lassen sich danach ohne Internet installieren. Frei: $(Format-WzBytes $volume.FreeBytes)." `
-        -Items @($selected | ForEach-Object { $_.name }) -ConfirmText 'Laden'
+    $answer = Show-WzConfirm -Title (Get-WzText 'apps.downloadTitle') `
+        -Message (Get-WzText 'apps.downloadMessage' @{ anzahl = $selected.Count; frei = (Format-WzBytes $volume.FreeBytes) }) `
+        -Items @($selected | ForEach-Object { $_.name }) -ConfirmText (Get-WzText 'apps.btnDownload2')
     if (-not $answer.Confirmed) { return }
 
-    Invoke-WzTask -Name 'Installationsdateien laden' -ArgumentList (, $selected) -ScriptBlock {
+    Invoke-WzTask -Name (Get-WzText 'apps.taskDownload') -ArgumentList (, $selected) -ScriptBlock {
         param($apps)
         Save-WzOfflineInstallers -Apps $apps
     } -OnComplete {
         param($summary)
         if (-not $summary) { return }
-        $message = "$($summary.Saved) Programm(e) gespeichert ($(Format-WzBytes $summary.Bytes))"
-        if ($summary.Failed -gt 0) { $message += ", $($summary.Failed) fehlgeschlagen" }
+        $message = Get-WzText 'apps.downloadDone' @{ anzahl = $summary.Saved; groesse = (Format-WzBytes $summary.Bytes) }
+        if ($summary.Failed -gt 0) { $message += Get-WzText 'apps.downloadFailedSuffix' @{ anzahl = $summary.Failed } }
         if ($summary.Saved -gt 0) {
             Add-WzAction -Area 'Programme' `
-                -Summary "$($summary.Saved) Installationsdatei(en) auf den Datenträger gelegt ($(Format-WzBytes $summary.Bytes))"
+                -Summary (Get-WzText 'apps.actionDownloaded' @{ anzahl = $summary.Saved; groesse = (Format-WzBytes $summary.Bytes) })
         }
-        Show-WzInfo -Title $(if ($summary.Failed -gt 0) { 'Teilweise abgelegt' } else { 'Ablage abgeschlossen' }) `
+        Show-WzInfo -Title $(if ($summary.Failed -gt 0) { Get-WzText 'apps.downloadPartialTitle' } else { Get-WzText 'apps.downloadDoneTitle' }) `
             -Message $message -Items @($summary.Details)
         $syncHash.AppsChecked = $false
         Update-WzAppsPage
@@ -193,18 +193,18 @@ function Start-WzWingetBootstrap {
     # »drei Pakete« verharmlost werden, wenn jemand im Hotel-WLAN sitzt.
     $cached = Test-Path -LiteralPath (Join-Path (Join-Path (Get-WzOfflineDir) 'winget') 'AppInstaller.msixbundle')
     $sizeNote = if ($cached) {
-        'Die Pakete liegen bereits auf dem Datenträger — es wird nichts geladen und es dauert nur Sekunden.'
+        Get-WzText 'apps.bootstrapCached'
     } else {
-        'Beim ersten Mal werden dafür rund 315 MB geladen. Über WLAN kann das einige Minuten dauern; das Fenster ist so lange gesperrt und lässt sich nicht abbrechen.'
+        Get-WzText 'apps.bootstrapDownload'
     }
 
-    $answer = Show-WzConfirm -Title 'winget nachinstallieren' `
-        -Message "WinZii richtet den App-Installer von Microsoft ein. $sizeNote Danach liegen die Pakete auf dem Datenträger und stehen beim nächsten PC ohne Internet bereit." `
-        -Items @('App Installer (winget)', 'Abhängigkeitspaket von Microsoft') `
-        -ConfirmText 'Einrichten'
+    $answer = Show-WzConfirm -Title (Get-WzText 'apps.bootstrapTitle') `
+        -Message (Get-WzText 'apps.bootstrapMessage' @{ hinweis = $sizeNote }) `
+        -Items @((Get-WzText 'apps.bootstrapItem1'), (Get-WzText 'apps.bootstrapItem2')) `
+        -ConfirmText (Get-WzText 'apps.btnBootstrapGo')
     if (-not $answer.Confirmed) { return }
 
-    Invoke-WzTask -Name 'winget einrichten' -ScriptBlock {
+    Invoke-WzTask -Name (Get-WzText 'apps.taskBootstrap') -ScriptBlock {
         Install-WzWingetBootstrap
     } -OnComplete {
         param($ok)
@@ -213,15 +213,15 @@ function Start-WzWingetBootstrap {
         if ($syncHash.DryRun) {
             # Im Testmodus liefert der Vorgang immer $false — das las sich bisher
             # wie ein Fehlschlag, obwohl gar nichts versucht wurde.
-            Show-WzInfo -Title 'Testlauf beendet' `
-                -Message 'Es wurde nichts eingerichtet. Im Protokoll steht, was passiert wäre.'
+            Show-WzInfo -Title (Get-WzText 'apps.dryRunDoneTitle') `
+                -Message (Get-WzText 'apps.dryRunDoneMessage')
             return
         }
         if ($ok) {
-            Show-WzInfo -Title 'winget eingerichtet' -Message 'Programme lassen sich jetzt installieren.'
+            Show-WzInfo -Title (Get-WzText 'apps.bootstrapOkTitle') -Message (Get-WzText 'apps.bootstrapOkMessage')
         } else {
-            Show-WzInfo -Title 'Nicht abgeschlossen' `
-                -Message 'winget konnte nicht eingerichtet werden. Einzelheiten stehen im Protokoll. Nach einem Neustart klappt es oft.'
+            Show-WzInfo -Title (Get-WzText 'apps.bootstrapFailTitle') `
+                -Message (Get-WzText 'apps.bootstrapFailMessage')
         }
     }
 }
