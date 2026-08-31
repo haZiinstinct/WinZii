@@ -19,34 +19,34 @@ function Get-WzDeviceClassName {
     if (-not $Class) { return '' }
 
     $names = @{
-        'display'          = 'Grafik'
-        'net'              = 'Netzwerk'
-        'media'            = 'Audio'
-        'audioendpoint'    = 'Audio'
-        'hidclass'         = 'Eingabegerät'
-        'mouse'            = 'Maus'
-        'keyboard'         = 'Tastatur'
-        'usb'              = 'USB'
-        'system'           = 'System'
-        'printer'          = 'Drucker'
-        'diskdrive'        = 'Datenträger'
-        'scsiadapter'      = 'Speicher-Controller'
-        'hdc'              = 'Speicher-Controller'
-        'bluetooth'        = 'Bluetooth'
-        'image'            = 'Bildverarbeitung'
-        'monitor'          = 'Bildschirm'
-        'firmware'         = 'Firmware'
-        'securitydevices'  = 'Sicherheit'
-        'battery'          = 'Akku'
-        'ports'            = 'Anschlüsse'
-        'smartcardreader'  = 'Kartenleser'
-        'camera'           = 'Kamera'
-        'volume'           = 'Laufwerk'
-        'computer'         = 'Computer'
-        'processor'        = 'Prozessor'
-        'sensor'           = 'Sensor'
-        'softwarecomponent' = 'Herstellersoftware'
-        'softwaredevice'   = 'Softwaregerät'
+        'display'          = (Get-WzText 'drv.classDisplay')
+        'net'              = (Get-WzText 'drv.classNet')
+        'media'            = (Get-WzText 'drv.classAudio')
+        'audioendpoint'    = (Get-WzText 'drv.classAudio')
+        'hidclass'         = (Get-WzText 'drv.classInput')
+        'mouse'            = (Get-WzText 'drv.classMouse')
+        'keyboard'         = (Get-WzText 'drv.classKeyboard')
+        'usb'              = (Get-WzText 'drv.classUsb')
+        'system'           = (Get-WzText 'drv.classSystem')
+        'printer'          = (Get-WzText 'drv.classPrinter')
+        'diskdrive'        = (Get-WzText 'drv.classDisk')
+        'scsiadapter'      = (Get-WzText 'drv.classStorageController')
+        'hdc'              = (Get-WzText 'drv.classStorageController')
+        'bluetooth'        = (Get-WzText 'drv.classBluetooth')
+        'image'            = (Get-WzText 'drv.classImaging')
+        'monitor'          = (Get-WzText 'drv.classMonitor')
+        'firmware'         = (Get-WzText 'drv.classFirmware')
+        'securitydevices'  = (Get-WzText 'drv.classSecurity')
+        'battery'          = (Get-WzText 'drv.classBattery')
+        'ports'            = (Get-WzText 'drv.classPorts')
+        'smartcardreader'  = (Get-WzText 'drv.classCardReader')
+        'camera'           = (Get-WzText 'drv.classCamera')
+        'volume'           = (Get-WzText 'drv.classVolume')
+        'computer'         = (Get-WzText 'drv.classComputer')
+        'processor'        = (Get-WzText 'drv.classProcessor')
+        'sensor'           = (Get-WzText 'drv.classSensor')
+        'softwarecomponent' = (Get-WzText 'drv.classVendorSoftware')
+        'softwaredevice'   = (Get-WzText 'drv.classSoftwareDevice')
     }
 
     $key = $Class.ToLowerInvariant()
@@ -65,21 +65,21 @@ function Get-WzProblemDevices {
 
     # Die Fehlercodes des Geräte-Managers, die im Alltag wirklich vorkommen
     $meanings = @{
-        1  = @{ Text = 'Das Gerät ist nicht richtig eingerichtet.'; Fix = 'Treiber neu installieren.' }
-        3  = @{ Text = 'Der Treiber ist beschädigt oder der Speicher reicht nicht.'; Fix = 'Treiber neu installieren, danach Arbeitsspeicher prüfen.' }
-        10 = @{ Text = 'Das Gerät lässt sich nicht starten.'; Fix = 'Meist ein falscher oder veralteter Treiber. Neueren Treiber vom Hersteller einspielen.' }
-        12 = @{ Text = 'Es sind nicht genügend freie Ressourcen vorhanden.'; Fix = 'Eine andere Steckkarte entfernen oder im BIOS Ressourcen freigeben.' }
-        14 = @{ Text = 'Das Gerät arbeitet erst nach einem Neustart richtig.'; Fix = 'PC neu starten.' }
-        18 = @{ Text = 'Die Treiber müssen neu installiert werden.'; Fix = 'Treiber entfernen und neu einspielen.' }
-        19 = @{ Text = 'Die Konfiguration in der Registry ist beschädigt.'; Fix = 'Gerät deinstallieren und neu erkennen lassen.' }
-        22 = @{ Text = 'Das Gerät ist abgeschaltet.'; Fix = 'Im Geräte-Manager aktivieren.' }
-        28 = @{ Text = 'Für dieses Gerät ist kein Treiber installiert.'; Fix = 'Das ist der Klassiker nach einer Neuinstallation — Treiber vom Hersteller oder aus der Sicherung einspielen.' }
-        31 = @{ Text = 'Windows kann die nötigen Treiber nicht laden.'; Fix = 'Treiber neu installieren.' }
-        37 = @{ Text = 'Der Treiber ließ sich nicht starten.'; Fix = 'Anderen Treiberstand versuchen.' }
-        39 = @{ Text = 'Der Treiber fehlt oder ist beschädigt.'; Fix = 'Treiber neu installieren.' }
-        43 = @{ Text = 'Windows hat das Gerät wegen eines gemeldeten Fehlers angehalten.'; Fix = 'Häufig ein Hardwaredefekt oder ein fehlerhafter Treiberstand. Bei USB-Geräten zuerst einen anderen Anschluss versuchen.' }
-        45 = @{ Text = 'Das Gerät ist zurzeit nicht angeschlossen.'; Fix = 'Nur ein Hinweis auf ein früher genutztes Gerät — kein Fehler.' }
-        52 = @{ Text = 'Die Signatur des Treibers lässt sich nicht prüfen.'; Fix = 'Unsignierter Treiber. Nur vom Hersteller nachladen.' }
+        1  = @{ Text = (Get-WzText 'drv.err1Text'); Fix = (Get-WzText 'drv.err1Fix') }
+        3  = @{ Text = (Get-WzText 'drv.err3Text'); Fix = (Get-WzText 'drv.err3Fix') }
+        10 = @{ Text = (Get-WzText 'drv.err10Text'); Fix = (Get-WzText 'drv.err10Fix') }
+        12 = @{ Text = (Get-WzText 'drv.err12Text'); Fix = (Get-WzText 'drv.err12Fix') }
+        14 = @{ Text = (Get-WzText 'drv.err14Text'); Fix = (Get-WzText 'drv.err14Fix') }
+        18 = @{ Text = (Get-WzText 'drv.err18Text'); Fix = (Get-WzText 'drv.err18Fix') }
+        19 = @{ Text = (Get-WzText 'drv.err19Text'); Fix = (Get-WzText 'drv.err19Fix') }
+        22 = @{ Text = (Get-WzText 'drv.err22Text'); Fix = (Get-WzText 'drv.err22Fix') }
+        28 = @{ Text = (Get-WzText 'drv.err28Text'); Fix = (Get-WzText 'drv.err28Fix') }
+        31 = @{ Text = (Get-WzText 'drv.err31Text'); Fix = (Get-WzText 'drv.err31Fix') }
+        37 = @{ Text = (Get-WzText 'drv.err37Text'); Fix = (Get-WzText 'drv.err37Fix') }
+        39 = @{ Text = (Get-WzText 'drv.err39Text'); Fix = (Get-WzText 'drv.err39Fix') }
+        43 = @{ Text = (Get-WzText 'drv.err43Text'); Fix = (Get-WzText 'drv.err43Fix') }
+        45 = @{ Text = (Get-WzText 'drv.err45Text'); Fix = (Get-WzText 'drv.err45Fix') }
+        52 = @{ Text = (Get-WzText 'drv.err52Text'); Fix = (Get-WzText 'drv.err52Fix') }
     }
 
     $devices = @()
@@ -91,19 +91,19 @@ function Get-WzProblemDevices {
             $code = [int]$device.ConfigManagerErrorCode
             $info = $meanings[$code]
             $devices += [pscustomobject]@{
-                Name         = if ($device.Name) { $device.Name } else { 'Unbekanntes Gerät' }
-                Class        = if ($device.PNPClass) { Get-WzDeviceClassName $device.PNPClass } else { 'ohne Kategorie' }
+                Name         = if ($device.Name) { $device.Name } else { Get-WzText 'drv.unknownDevice' }
+                Class        = if ($device.PNPClass) { Get-WzDeviceClassName $device.PNPClass } else { Get-WzText 'drv.noCategory' }
                 Manufacturer = $device.Manufacturer
                 Code         = $code
-                Meaning      = if ($info) { $info.Text } else { "Fehlercode $code" }
-                Fix          = if ($info) { $info.Fix } else { 'Im Geräte-Manager nachsehen und den Treiber erneuern.' }
+                Meaning      = if ($info) { $info.Text } else { Get-WzText 'drv.errCodeGeneric' @{ code = $code } }
+                Fix          = if ($info) { $info.Fix } else { Get-WzText 'drv.fixGeneric' }
                 DeviceId     = $device.DeviceID
                 # Code 45 heißt nur "gerade nicht angesteckt" und ist harmlos
                 IsCritical   = ($code -ne 45)
             }
         }
     } catch {
-        Write-WzLog "Geräteliste nicht abfragbar: $($_.Exception.Message.Split([char]10)[0])" -Level Warn
+        Write-WzLog (Get-WzText 'drv.logDevicesUnreadable' @{ grund = $_.Exception.Message.Split([char]10)[0] }) -Level Warn
     }
 
     return @($devices | Sort-Object -Property @{ Expression = 'IsCritical'; Descending = $true }, Name)
@@ -149,7 +149,7 @@ function Get-WzDriverInventory {
             }
         }
     } catch {
-        Write-WzLog "Treiberliste nicht abfragbar: $($_.Exception.Message.Split([char]10)[0])" -Level Warn
+        Write-WzLog (Get-WzText 'drv.logDriversUnreadable' @{ grund = $_.Exception.Message.Split([char]10)[0] }) -Level Warn
     }
 
     return @($drivers | Sort-Object -Property @{ Expression = { $_.Date }; Ascending = $true })
@@ -234,12 +234,12 @@ function Export-WzDrivers {
     $result = [pscustomobject]@{ Success = $false; Path = $target; Packages = 0; Bytes = 0 }
 
     if ($syncHash.DryRun) {
-        Write-WzLog "[Test] Treiber würden nach $target gesichert" -Level Test
+        Write-WzLog (Get-WzText 'drv.logExportTest' @{ ziel = $target }) -Level Test
         $result.Success = $true
         return $result
     }
 
-    Write-WzLog 'Treiber werden gesichert — das dauert je nach Umfang einige Minuten...' -Level Action
+    Write-WzLog (Get-WzText 'drv.logExportRunning') -Level Action
 
     if ($ThirdPartyOnly) {
         # Export-WindowsDriver liefert genau die Fremdtreiber
@@ -248,14 +248,14 @@ function Export-WzDrivers {
             $result.Packages = $exported.Count
             $result.Success = ($exported.Count -gt 0)
         } catch {
-            Write-WzLog "Treibersicherung fehlgeschlagen: $($_.Exception.Message.Split([char]10)[0])" -Level Error
+            Write-WzLog (Get-WzText 'drv.logExportFailedReason' @{ grund = $_.Exception.Message.Split([char]10)[0] }) -Level Error
             return $result
         }
     } else {
         $process = Invoke-WzProcess -FilePath 'pnputil.exe' `
             -Arguments "/export-driver * `"$target`"" -TimeoutSeconds 1800
         if ($process.ExitCode -ne 0) {
-            Write-WzLog "Treibersicherung endete mit Code $($process.ExitCode)" -Level Warn
+            Write-WzLog (Get-WzText 'drv.logExportCode' @{ code = $process.ExitCode }) -Level Warn
         }
         $result.Packages = @(Get-ChildItem -LiteralPath $target -Directory -ErrorAction SilentlyContinue).Count
         $result.Success = ($result.Packages -gt 0)
@@ -266,7 +266,7 @@ function Export-WzDrivers {
     $result.Bytes = [int64]$bytes
 
     if ($result.Success) {
-        Write-WzLog "$($result.Packages) Treiberpaket(e) gesichert ($(Format-WzBytes $result.Bytes)) nach $target" -Level Ok
+        Write-WzLog (Get-WzText 'drv.logExportOk' @{ anzahl = $result.Packages; groesse = (Format-WzBytes $result.Bytes); ziel = $target }) -Level Ok
     }
     return $result
 }
@@ -282,18 +282,18 @@ function Import-WzDrivers {
     $result = [pscustomobject]@{ Success = $false; Summary = '' }
 
     if (-not (Test-Path -LiteralPath $Path)) {
-        $result.Summary = "Der Ordner $Path ist nicht vorhanden."
+        $result.Summary = Get-WzText 'drv.summaryNoFolder' @{ pfad = $Path }
         return $result
     }
 
     if ($syncHash.DryRun) {
-        Write-WzLog "[Test] Treiber aus $Path würden eingespielt" -Level Test
+        Write-WzLog (Get-WzText 'drv.logImportTest' @{ pfad = $Path }) -Level Test
         $result.Success = $true
         $result.Summary = 'Testmodus'
         return $result
     }
 
-    Write-WzLog 'Treiber werden eingespielt...' -Level Action
+    Write-WzLog (Get-WzText 'drv.logImportRunning') -Level Action
     $process = Invoke-WzProcess -FilePath 'pnputil.exe' `
         -Arguments "/add-driver `"$Path\*.inf`" /subdirs /install" -TimeoutSeconds 1800 -LogOutput
 
@@ -305,10 +305,10 @@ function Import-WzDrivers {
 
     $result.Success = ($process.ExitCode -eq 0)
     $result.Summary = if ($result.Success) {
-        if ($added -gt 0) { "$added Treiberpaket(e) eingespielt. Ein Neustart wird empfohlen." }
-        else { 'Der Vorgang lief durch. Es waren offenbar keine neuen Treiber dabei.' }
+        if ($added -gt 0) { Get-WzText 'drv.importedCount' @{ anzahl = $added } }
+        else { Get-WzText 'drv.importedNone' }
     } else {
-        "Das Einspielen endete mit Code $($process.ExitCode)."
+        Get-WzText 'drv.importFailed' @{ code = $process.ExitCode }
     }
 
     Write-WzLog $result.Summary -Level $(if ($result.Success) { 'Ok' } else { 'Warn' })

@@ -7,7 +7,7 @@ function Initialize-WzDriversPage {
     $syncHash.DrvShowMicrosoft.Add_Click({ Write-WzDriverList })
 
     [void]$syncHash.DrvNotices.Items.Add((New-WzNotice -Kind 'info' `
-        -Text 'Eine Treibersicherung vor dem Neuaufsetzen erspart die Suche nach Downloads, die es für ältere Notebooks oft gar nicht mehr gibt.'))
+        -Text (Get-WzText 'drv.noticeBackup')))
 }
 
 function Update-WzDriversPage {
@@ -17,17 +17,17 @@ function Update-WzDriversPage {
 }
 
 function Start-WzDriverScan {
-    $syncHash.DrvTitle.Text = 'wird geprüft...'
+    $syncHash.DrvTitle.Text = Get-WzText 'drv.checking'
     foreach ($name in @('DrvProblems', 'DrvList', 'DrvBackupInfo', 'DrvBackups')) {
         $syncHash[$name].Children.Clear()
     }
 
-    Invoke-WzTask -Name 'Geräte prüfen' -Cancelable -ScriptBlock {
+    Invoke-WzTask -Name (Get-WzText 'drv.taskScan') -Cancelable -ScriptBlock {
         $problems = Get-WzProblemDevices
         $inventory = Get-WzDriverInventory -IncludeMicrosoft
         # Der Treiberspeicher braucht knapp zehn Sekunden — ohne Zwischenmeldung
         # sieht es aus, als hänge die Seite
-        Write-WzLog 'Treiberspeicher wird vermessen...' -Level Info
+        Write-WzLog (Get-WzText 'drv.logMeasuringStore') -Level Info
         [pscustomobject]@{
             Problems = $problems
             Drivers  = $inventory
@@ -47,11 +47,11 @@ function Start-WzDriverScan {
 
         $critical = @($scan.Problems | Where-Object { $_.IsCritical })
         $syncHash.DrvTitle.Text = if ($critical.Count -eq 0) {
-            'Alle Geräte laufen'
+            Get-WzText 'drv.allDevicesOk'
         } elseif ($critical.Count -eq 1) {
-            'Ein Gerät hat ein Problem'
+            Get-WzText 'drv.oneDeviceProblem'
         } else {
-            "$($critical.Count) Geräte haben ein Problem"
+            Get-WzText 'drv.nDevicesProblem' @{ anzahl = $critical.Count }
         }
     }
 }
@@ -63,11 +63,11 @@ function Write-WzDriverProblems {
     $critical = @($Devices | Where-Object { $_.IsCritical })
 
     $syncHash.DrvProblemsTitle.Text = if ($Devices.Count -eq 0) {
-        'Kein Gerät meldet einen Fehler'
+        Get-WzText 'drv.noDeviceError'
     } elseif ($critical.Count -eq 0) {
-        'Nur abgesteckte Geräte — kein Handlungsbedarf'
+        Get-WzText 'drv.onlyUnplugged'
     } else {
-        "$($critical.Count) von $($Devices.Count) Meldung(en) sind echte Fehler"
+        Get-WzText 'drv.realErrors' @{ kritisch = $critical.Count; gesamt = $Devices.Count }
     }
 
     foreach ($device in $Devices) {
@@ -79,7 +79,7 @@ function Write-WzDriverProblems {
     }
 
     if ($critical.Count -gt 0) {
-        Write-WzLog "$($critical.Count) Gerät(e) mit Fehlercode gefunden." -Level Warn
+        Write-WzLog (Get-WzText 'drv.logDevicesWithError' @{ anzahl = $critical.Count }) -Level Warn
     }
 }
 
@@ -97,9 +97,9 @@ function Write-WzDriverList {
     # auch alte Fassungen und Pakete ohne passendes Gerät liegen.
     $total = @($syncHash.DrvScan.Drivers).Count
     $syncHash.DrvListTitle.Text = if ($showMicrosoft) {
-        "$total Treiber für angeschlossene Geräte"
+        Get-WzText 'drv.driversForDevices' @{ anzahl = $total }
     } else {
-        "$($drivers.Count) von $total Treibern stammen von Geräteherstellern"
+        Get-WzText 'drv.driversFromVendors' @{ anzahl = $drivers.Count; gesamt = $total }
     }
 
     $container = $syncHash.DrvList
@@ -107,7 +107,7 @@ function Write-WzDriverList {
 
     # Nur die ältesten zeigen — die vollständige Liste hilft am Bildschirm niemandem
     foreach ($driver in ($drivers | Select-Object -First 15)) {
-        $age = if ($null -ne $driver.AgeYears) { Format-WzNumber $driver.AgeYears 'Jahre' } else { 'ohne Datum' }
+        $age = if ($null -ne $driver.AgeYears) { Format-WzNumber $driver.AgeYears (Get-WzText 'drv.unitYears') } else { Get-WzText 'drv.noDate' }
         $kind = if ($null -ne $driver.AgeYears -and $driver.AgeYears -ge 5 -and -not $driver.IsMicrosoft) { 'warn' } else { 'normal' }
         # Die Kategorie davor macht aus »irgendein Treiber ist sieben Jahre alt«
         # ein »der Grafiktreiber ist sieben Jahre alt« — erst das ist eine Aussage.
@@ -119,12 +119,12 @@ function Write-WzDriverList {
     }
 
     if ($drivers.Count -gt 15) {
-        [void]$container.Children.Add((New-WzInfoRow 'weitere' `
-            "$($drivers.Count - 15) jüngere Treiber sind hier nicht aufgeführt" -LabelWidth 250))
+        [void]$container.Children.Add((New-WzInfoRow (Get-WzText 'drv.lblMore') `
+            (Get-WzText 'drv.driversHidden' @{ anzahl = ($drivers.Count - 15) }) -LabelWidth 250))
     }
     if ($drivers.Count -eq 0) {
-        [void]$container.Children.Add((New-WzInfoRow 'Nichts gefunden' `
-            'Die Treiberliste ließ sich nicht abfragen.' -Kind 'warn' -LabelWidth 250))
+        [void]$container.Children.Add((New-WzInfoRow (Get-WzText 'drv.lblNothingFound') `
+            (Get-WzText 'drv.driverListFailed') -Kind 'warn' -LabelWidth 250))
     }
 }
 
@@ -135,30 +135,30 @@ function Write-WzDriverBackupInfo {
     )
 
     $container = $syncHash.DrvBackupInfo
-    [void]$container.Children.Add((New-WzInfoRow 'Treiberspeicher gesamt' `
-        "$(Format-WzBytes $Store.TotalBytes) in $($Store.TotalPackages) Paket(en)" -LabelWidth 250))
+    [void]$container.Children.Add((New-WzInfoRow (Get-WzText 'drv.lblStoreTotal') `
+        (Get-WzText 'drv.storeValue' @{ groesse = (Format-WzBytes $Store.TotalBytes); anzahl = $Store.TotalPackages }) -LabelWidth 250))
 
     if ($Store.ThirdPartyKnown) {
-        [void]$container.Children.Add((New-WzInfoRow 'davon nachträglich eingespielt' `
-            "$(Format-WzBytes $Store.ThirdPartyBytes) in $($Store.ThirdPartyPackages) Paket(en)" `
+        [void]$container.Children.Add((New-WzInfoRow (Get-WzText 'drv.lblThirdParty') `
+            (Get-WzText 'drv.storeValue' @{ groesse = (Format-WzBytes $Store.ThirdPartyBytes); anzahl = $Store.ThirdPartyPackages }) `
             -Kind 'ok' -LabelWidth 250))
     } else {
-        [void]$container.Children.Add((New-WzInfoRow 'davon nachträglich eingespielt' `
-            'nicht ermittelbar — dafür fehlen die Administratorrechte' -Kind 'warn' -LabelWidth 250))
+        [void]$container.Children.Add((New-WzInfoRow (Get-WzText 'drv.lblThirdParty') `
+            (Get-WzText 'drv.thirdPartyUnknown') -Kind 'warn' -LabelWidth 250))
     }
 
     $needed = if ($Store.ThirdPartyKnown) { $Store.ThirdPartyBytes } else { $Store.TotalBytes }
     $freeKind = if ($Volume.FreeBytes -lt $needed) { 'error' } else { 'ok' }
-    [void]$container.Children.Add((New-WzInfoRow "Frei auf $($Volume.DisplayName)" `
+    [void]$container.Children.Add((New-WzInfoRow (Get-WzText 'drv.lblFreeOn' @{ laufwerk = $Volume.DisplayName }) `
         (Format-WzBytes $Volume.FreeBytes) -Kind $freeKind -LabelWidth 250))
 
     if ($Volume.FreeBytes -lt $Store.TotalBytes) {
         $hint = if ($Volume.FreeBytes -lt $needed) {
-            'Der Platz reicht auch für die kleine Sicherung nicht.'
+            Get-WzText 'drv.hintNoRoomAtAll'
         } else {
-            'Für alle Treiber reicht der Platz nicht — die kleine Sicherung passt.'
+            Get-WzText 'drv.hintRoomForSmall'
         }
-        [void]$container.Children.Add((New-WzInfoRow 'Hinweis' $hint -Kind 'warn' -LabelWidth 250))
+        [void]$container.Children.Add((New-WzInfoRow (Get-WzText 'drv.lblHint') $hint -Kind 'warn' -LabelWidth 250))
     }
 }
 
@@ -166,15 +166,15 @@ function Write-WzDriverBackups {
     param([Parameter(Mandatory = $true)][AllowEmptyCollection()][array]$Backups)
 
     $syncHash.DrvBackupsTitle.Text = if ($Backups.Count -eq 0) {
-        'Auf diesem Datenträger liegt noch keine Sicherung'
+        Get-WzText 'drv.noBackupYet'
     } else {
-        "$($Backups.Count) Sicherung(en) vorhanden"
+        Get-WzText 'drv.nBackups' @{ anzahl = $Backups.Count }
     }
 
     $container = $syncHash.DrvBackups
     foreach ($backup in $Backups) {
         [void]$container.Children.Add((New-WzInfoRow $backup.Host `
-            "$($backup.Packages) Paket(e) · $(Format-WzBytes $backup.Bytes) · $($backup.Created.ToString('dd.MM.yyyy'))" `
+            (Get-WzText 'drv.backupValue' @{ pakete = $backup.Packages; groesse = (Format-WzBytes $backup.Bytes); datum = $backup.Created.ToString('d', (Get-WzLanguageCulture)) }) `
             -Kind 'ok' -LabelWidth 180))
     }
 
@@ -190,37 +190,37 @@ function Start-WzDriverExport {
     $store = $syncHash.DrvScan.Store
     $free = $syncHash.DrvScan.Volume.FreeBytes
     $thirdPartyLabel = if ($store.ThirdPartyKnown) {
-        "nur nachträglich eingespielte Treiber — $(Format-WzBytes $store.ThirdPartyBytes) (empfohlen)"
+        Get-WzText 'drv.choiceThirdPartySize' @{ groesse = (Format-WzBytes $store.ThirdPartyBytes) }
     } else {
-        'nur nachträglich eingespielte Treiber (empfohlen)'
+        Get-WzText 'drv.choiceThirdParty'
     }
 
-    $answer = Show-WzConfirm -Title 'Treiber sichern' `
-        -Message ("Die Treiber werden nach offline\treiber\$env:COMPUTERNAME geschrieben. Je nach Umfang dauert das einige Minuten.`n`n" +
-            'Die empfohlene Auswahl lässt weg, was Windows von sich aus mitbringt — nur die bringt eine ' +
-            "Neuinstallation nicht selbst wieder mit.`n`nFrei auf dem Datenträger: $(Format-WzBytes $free)") `
-        -Choices @($thirdPartyLabel, "alle Treiber — $(Format-WzBytes $store.TotalBytes)") `
-        -ChoiceLabel 'Umfang' -ChoiceDefault 0 `
-        -ConfirmText 'Sichern'
+    $answer = Show-WzConfirm -Title (Get-WzText 'drv.exportTitle') `
+        -Message ((Get-WzText 'drv.exportMessage' @{ computer = $env:COMPUTERNAME }) + "`n`n" +
+            (Get-WzText 'drv.exportMessage2') + "`n`n" +
+            (Get-WzText 'drv.exportFree' @{ frei = (Format-WzBytes $free) })) `
+        -Choices @($thirdPartyLabel, (Get-WzText 'drv.choiceAll' @{ groesse = (Format-WzBytes $store.TotalBytes) })) `
+        -ChoiceLabel (Get-WzText 'drv.lblScope') -ChoiceDefault 0 `
+        -ConfirmText (Get-WzText 'drv.btnBackupGo')
     if (-not $answer.Confirmed) { return }
 
-    Invoke-WzTask -Name 'Treiber sichern' -ArgumentList @(($answer.SelectedIndex -eq 0)) -ScriptBlock {
+    Invoke-WzTask -Name (Get-WzText 'drv.taskExport') -ArgumentList @(($answer.SelectedIndex -eq 0)) -ScriptBlock {
         param($thirdPartyOnly)
         if ($thirdPartyOnly) { Export-WzDrivers -ThirdPartyOnly } else { Export-WzDrivers }
     } -OnComplete {
         param($result)
         if (-not $result) { return }
         $message = if ($result.Success) {
-            "$($result.Packages) Treiberpaket(e) gesichert ($(Format-WzBytes $result.Bytes))."
+            Get-WzText 'drv.exportOk' @{ anzahl = $result.Packages; groesse = (Format-WzBytes $result.Bytes) }
         } else {
-            'Es wurde nichts gesichert. Für den Treiberexport sind Administratorrechte nötig.'
+            Get-WzText 'drv.exportFailed'
         }
         if ($result.Success) {
             Add-WzAction -Area 'Treiber' `
-                -Summary "$($result.Packages) Treiberpaket(e) auf den Datenträger gesichert ($(Format-WzBytes $result.Bytes))" `
+                -Summary (Get-WzText 'drv.actionExport' @{ anzahl = $result.Packages; groesse = (Format-WzBytes $result.Bytes) }) `
                 -Detail @($result.Path)
         }
-        Show-WzInfo -Title 'Treibersicherung' -Message $message -Items @($result.Path)
+        Show-WzInfo -Title (Get-WzText 'drv.exportDoneTitle') -Message $message -Items @($result.Path)
         Start-WzDriverScan
     }
 }
@@ -230,33 +230,32 @@ function Start-WzDriverImport {
     if ($backups.Count -eq 0) { return }
 
     $labels = @($backups | ForEach-Object {
-        $marker = if ($_.Host -ne $env:COMPUTERNAME) { ' — ANDERER PC' } else { '' }
-        "$($_.Host)$marker — $($_.Packages) Paket(e), $(Format-WzBytes $_.Bytes), $($_.Created.ToString('dd.MM.yyyy'))"
+        $marker = if ($_.Host -ne $env:COMPUTERNAME) { Get-WzText 'drv.markerOtherPc' } else { '' }
+        Get-WzText 'drv.backupChoice' @{ rechner = $_.Host; markierung = $marker; pakete = $_.Packages
+            groesse = (Format-WzBytes $_.Bytes); datum = $_.Created.ToString('d', (Get-WzLanguageCulture)) }
     })
 
     # Der Stick sammelt Sicherungen mehrerer Rechner — Treiber vom falschen PC
     # gehören nicht ungefragt auf fremde Hardware.
-    $message = 'Die Treiber aus der gewählten Sicherung werden in Windows aufgenommen und für passende Geräte installiert. ' +
-        'Vorhandene, neuere Treiber ersetzt Windows dabei nicht. Nach dem Einspielen ist ein Neustart sinnvoll.'
+    $message = Get-WzText 'drv.importMessage'
     if (@($backups | Where-Object { $_.Host -ne $env:COMPUTERNAME }).Count -gt 0) {
-        $message += "`n`nAchtung: Es liegen auch Sicherungen anderer Rechner auf dem Datenträger (dieser PC heißt $env:COMPUTERNAME). " +
-            'Treiber eines anderen Geräts nur einspielen, wenn es wirklich dieselbe Hardware ist.'
+        $message += "`n`n" + (Get-WzText 'drv.importWarnOther' @{ computer = $env:COMPUTERNAME })
     }
 
-    $answer = Show-WzConfirm -Title 'Treiber zurückspielen' -Message $message `
-        -Choices $labels -ChoiceLabel 'Sicherung' -ChoiceDefault 0 `
-        -ConfirmText 'Einspielen' -Danger
+    $answer = Show-WzConfirm -Title (Get-WzText 'drv.importTitle') -Message $message `
+        -Choices $labels -ChoiceLabel (Get-WzText 'drv.lblBackup') -ChoiceDefault 0 `
+        -ConfirmText (Get-WzText 'drv.btnImport') -Danger
     if (-not $answer.Confirmed) { return }
 
     $selected = $backups[$answer.SelectedIndex]
-    Invoke-WzTask -Name 'Treiber einspielen' -ArgumentList @($selected.Path) -ScriptBlock {
+    Invoke-WzTask -Name (Get-WzText 'drv.taskImport') -ArgumentList @($selected.Path) -ScriptBlock {
         param($path)
         Import-WzDrivers -Path $path
     } -OnComplete {
         param($result)
         if (-not $result) { return }
         if ($result.Success) {
-            Add-WzAction -Area 'Treiber' -RebootRequired -Summary "Treibersicherung eingespielt: $($result.Summary)"
+            Add-WzAction -Area 'Treiber' -RebootRequired -Summary (Get-WzText 'drv.actionImport' @{ ergebnis = $result.Summary })
         }
         Show-WzInfo -Title 'Treiber eingespielt' -Message $result.Summary
     }
