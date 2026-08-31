@@ -4,12 +4,12 @@ function Initialize-WzProtocolPage {
     $syncHash.ProtoBtnExport.Add_Click({
         try {
             $file = Export-WzProtocol
-            Show-WzInfo -Title 'Protokoll gesichert' `
-                -Message 'Der Bericht liegt auf dem WinZii-Datenträger und lässt sich in jedem Browser öffnen.' `
+            Show-WzInfo -Title (Get-WzText 'log.savedTitle') `
+                -Message (Get-WzText 'log.savedMessage') `
                 -Items @($file)
             Start-Process $file
         } catch {
-            Write-WzLog "Protokoll konnte nicht gesichert werden: $($_.Exception.Message)" -Level Error
+            Write-WzLog (Get-WzText 'log.logSaveFailed' @{ grund = $_.Exception.Message }) -Level Error
         }
     })
 
@@ -23,7 +23,7 @@ function Initialize-WzProtocolPage {
         if ($syncHash.LogFile -and (Test-Path -LiteralPath $syncHash.LogFile)) {
             Start-Process notepad.exe -ArgumentList $syncHash.LogFile
         } else {
-            Write-WzLog 'Es gibt keine Protokolldatei (Datenträger schreibgeschützt?).' -Level Warn
+            Write-WzLog (Get-WzText 'log.logNoFile') -Level Warn
         }
     })
 }
@@ -31,9 +31,9 @@ function Initialize-WzProtocolPage {
 function Start-WzHandoverReport {
     $actions = Get-WzActions
     if ($actions.Count -eq 0) {
-        $answer = Show-WzConfirm -Title 'Noch keine Arbeiten' `
-            -Message 'In dieser Sitzung wurde bisher nichts am PC verändert. Das Übergabeblatt hält dann nur den Zustand des Geräts fest — als Geräteblatt ist das durchaus brauchbar.' `
-            -ConfirmText 'Trotzdem erstellen'
+        $answer = Show-WzConfirm -Title (Get-WzText 'log.noWorkTitle') `
+            -Message (Get-WzText 'log.noWorkMessage') `
+            -ConfirmText (Get-WzText 'log.btnCreateAnyway')
         if (-not $answer.Confirmed) { return }
     }
 
@@ -43,14 +43,14 @@ function Start-WzHandoverReport {
         $syncHash.ProtoOrderNumber.Text.Trim()
     )
 
-    Invoke-WzTask -Name 'Übergabeblatt erstellen' -ArgumentList $arguments -ScriptBlock {
+    Invoke-WzTask -Name (Get-WzText 'log.taskHandover') -ArgumentList $arguments -ScriptBlock {
         param($technician, $customer, $orderNumber)
         New-WzHandoverReport -Technician $technician -Customer $customer -OrderNumber $orderNumber
     } -OnComplete {
         param($file)
         if (-not $file) { return }
-        Show-WzInfo -Title 'Übergabeblatt erstellt' `
-            -Message 'Das Blatt liegt im Berichtsordner. Zum Ausdrucken im Browser öffnen und dort »Drucken« wählen — dabei lässt es sich auch als PDF speichern.' `
+        Show-WzInfo -Title (Get-WzText 'log.handoverDoneTitle') `
+            -Message (Get-WzText 'log.handoverDoneMessage') `
             -Items @($file)
         Start-Process $file
     }
@@ -61,11 +61,11 @@ function Update-WzProtocolPage {
 
     $actions = Get-WzActions
     $syncHash.ProtoHandoverTitle.Text = if ($actions.Count -eq 0) {
-        'Übergabeblatt für den Kunden'
+        Get-WzText 'log.handoverForCustomer'
     } elseif ($actions.Count -eq 1) {
-        'Ein Arbeitsschritt zum Übergeben'
+        Get-WzText 'log.oneStep'
     } else {
-        "$($actions.Count) Arbeitsschritte zum Übergeben"
+        Get-WzText 'log.nSteps' @{ anzahl = $actions.Count }
     }
 
     $syncHash.ProtoCount.Text = [string]$entries.Count
@@ -79,13 +79,13 @@ function Update-WzProtocolPage {
 
     if ($syncHash.SessionStart) {
         $syncHash.ProtoDuration.Text = Format-WzUptime ((Get-Date) - $syncHash.SessionStart)
-        $syncHash.ProtoStart.Text = "seit $($syncHash.SessionStart.ToString('HH:mm'))"
+        $syncHash.ProtoStart.Text = Get-WzText 'log.since' @{ zeit = $syncHash.SessionStart.ToString('t', (Get-WzLanguageCulture)) }
     }
 
     $syncHash.ProtoPathHint.Text = if ($syncHash.LogFile) {
-        "Textprotokoll: $($syncHash.LogFile)`nBerichte: $(Get-WzReportDir)"
+        Get-WzText 'log.pathHint' @{ protokoll = $syncHash.LogFile; berichte = (Get-WzReportDir) }
     } else {
-        'Der Datenträger ist schreibgeschützt — es kann nichts gespeichert werden.'
+        Get-WzText 'log.readOnlyDrive'
     }
 
     # Nur die letzten Einträge zeigen, neueste zuerst

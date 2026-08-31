@@ -125,10 +125,10 @@ function Set-WzAutostartItem {
         [Parameter(Mandatory = $true)][bool]$Enabled
     )
 
-    $action = if ($Enabled) { 'aktiviert' } else { 'deaktiviert' }
+    $action = if ($Enabled) { Get-WzText 'auto.actionEnabled' } else { Get-WzText 'auto.actionDisabled' }
 
     if ($syncHash.DryRun) {
-        Write-WzLog "[Test] $($Item.Name) würde $action" -Level Test
+        Write-WzLog (Get-WzText 'auto.logToggleTest' @{ name = $Item.Name; aktion = $action }) -Level Test
         return $true
     }
 
@@ -157,10 +157,10 @@ function Set-WzAutostartItem {
             }
             Set-ItemProperty -LiteralPath $approvedPath -Name $name -Value $bytes -Type Binary -ErrorAction Stop
         }
-        Write-WzLog "$($Item.Name) $action" -Level Ok
+        Write-WzLog (Get-WzText 'auto.logToggled' @{ name = $Item.Name; aktion = $action }) -Level Ok
         return $true
     } catch {
-        Write-WzLog "$($Item.Name) konnte nicht $($action) werden: $($_.Exception.Message)" -Level Warn
+        Write-WzLog (Get-WzText 'auto.logToggleFailed' @{ name = $Item.Name; aktion = $action; grund = $_.Exception.Message }) -Level Warn
         return $false
     }
 }

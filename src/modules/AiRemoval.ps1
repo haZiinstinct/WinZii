@@ -48,7 +48,7 @@ function Get-WzAiStatus {
             }
         }
     } catch {
-        Write-WzLog "App-Pakete nicht abfragbar: $($_.Exception.Message)" -Level Warn
+        Write-WzLog (Get-WzText 'ai.logAppxUnreadable' @{ grund = $_.Exception.Message }) -Level Warn
     }
 
     try {
@@ -73,9 +73,10 @@ function Get-WzAiStatus {
              @($status.Features | Where-Object { $_.State -eq 'Enabled' }).Count
 
     $status.Summary = if ($found -eq 0) {
-        'Auf diesem PC sind keine KI-Bestandteile installiert. Die Sperren wirken vorbeugend, damit nach Funktionsupdates nichts nachrutscht.'
+        Get-WzText 'ai.summaryNone'
     } else {
-        "$found KI-Bestandteil(e) gefunden: $($status.Packages.Count) App-Paket(e), $($status.Capabilities.Count) Systemfunktion(en), $($status.Tasks.Count) geplante Aufgabe(n)."
+        Get-WzText 'ai.summaryFound' @{ anzahl = $found; pakete = $status.Packages.Count
+            funktionen = $status.Capabilities.Count; aufgaben = $status.Tasks.Count }
     }
 
     return [pscustomobject]$status
@@ -95,7 +96,7 @@ function Get-WzAllAppxPackages {
     } catch {
         # Ohne Administratorrechte geht nur das eigene Profil — das gehört
         # gesagt, sonst wirkt die Liste vollständig, obwohl sie es nicht ist.
-        Write-WzLog 'App-Pakete: ohne Administratorrechte ist nur das eigene Konto sichtbar — bei anderen Benutzern kann mehr installiert sein.' -Level Warn
+        Write-WzLog (Get-WzText 'ai.logAppxOwnAccount') -Level Warn
         try { $packages = @(Get-AppxPackage -ErrorAction Stop) } catch { }
     }
     $script:WzAppxCache = $packages
@@ -139,19 +140,19 @@ function Invoke-WzAppxAction {
     }
 
     if ($found.Count -eq 0 -and $provisioned.Count -eq 0) {
-        Write-WzLog "  keine passenden Pakete installiert ($($Action.patterns -join ', '))" -Level Info
+        Write-WzLog (Get-WzText 'ai.logNoMatchingPackages' @{ muster = ($Action.patterns -join ', ') }) -Level Info
         return
     }
 
     if ($syncHash.DryRun) {
-        foreach ($package in $found) { Write-WzLog "  [Test] App entfernen: $($package.Name)" -Level Test }
-        foreach ($package in $provisioned) { Write-WzLog "  [Test] Bereitstellung entfernen: $($package.DisplayName)" -Level Test }
+        foreach ($package in $found) { Write-WzLog (Get-WzText 'ai.logRemoveAppTest' @{ name = $package.Name }) -Level Test }
+        foreach ($package in $provisioned) { Write-WzLog (Get-WzText 'ai.logRemoveProvisionTest' @{ name = $package.DisplayName }) -Level Test }
         return
     }
 
     Save-WzUndoState -Session $Session -ItemId $Tweak.id -ItemName $Tweak.name -Action $Action -Previous @{
         packages = @($found | ForEach-Object { $_.PackageFullName })
-        note     = 'App-Pakete lassen sich nur über den Microsoft Store neu installieren'
+        note     = (Get-WzText 'ai.noteStoreOnly')
     }
 
     foreach ($package in $found) {
@@ -160,13 +161,13 @@ function Invoke-WzAppxAction {
                 Set-WzAppxEndOfLife -PackageFullName $package.PackageFullName
             }
             Remove-AppxPackage -Package $package.PackageFullName -AllUsers -ErrorAction Stop
-            Write-WzLog "  entfernt: $($package.Name)" -Level Ok
+            Write-WzLog (Get-WzText 'ai.logRemovedPackage' @{ name = $package.Name }) -Level Ok
         } catch {
             # Der Fehler wird hier abgefangen, damit die Reihe weiterläuft —
             # aber er muss zurückgemeldet werden, sonst zählt der Eintrag als
             # erledigt, obwohl nichts entfernt wurde.
             if ($Session) { $Session.ActionFailed = $true }
-            Write-WzLog "  konnte nicht entfernt werden: $($package.Name) — $($_.Exception.Message)" -Level Warn
+            Write-WzLog (Get-WzText 'ai.logRemoveFailed' @{ name = $package.Name; grund = $_.Exception.Message }) -Level Warn
         }
     }
 
@@ -216,23 +217,23 @@ function Invoke-WzCapabilityAction {
             $_.State -eq 'Installed' -and @($Action.patterns | Where-Object { $name -like $_ }).Count -gt 0
         })
     } catch {
-        Write-WzLog "  Systemfunktionen nicht abfragbar: $($_.Exception.Message)" -Level Warn
+        Write-WzLog (Get-WzText 'ai.logCapUnreadable' @{ grund = $_.Exception.Message }) -Level Warn
         return
     }
 
     if ($capabilities.Count -eq 0) {
-        Write-WzLog '  keine passende Systemfunktion installiert' -Level Info
+        Write-WzLog (Get-WzText 'ai.logNoMatchingCap') -Level Info
         return
     }
 
     if ($syncHash.DryRun) {
-        foreach ($capability in $capabilities) { Write-WzLog "  [Test] Funktion entfernen: $($capability.Name)" -Level Test }
+        foreach ($capability in $capabilities) { Write-WzLog (Get-WzText 'ai.logRemoveCapTest' @{ name = $capability.Name }) -Level Test }
         return
     }
 
     Save-WzUndoState -Session $Session -ItemId $Tweak.id -ItemName $Tweak.name -Action $Action -Previous @{
         capabilities = @($capabilities | ForEach-Object { $_.Name })
-        note         = 'Über Einstellungen > Optionale Features wieder installierbar'
+        note         = (Get-WzText 'ai.noteOptionalFeatures')
     }
 
     foreach ($capability in $capabilities) {

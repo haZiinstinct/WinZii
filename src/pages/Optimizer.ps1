@@ -36,7 +36,7 @@ function Initialize-WzOptimizerPage {
 
     $notices = $syncHash.OptNotices
     [void]$notices.Items.Add((New-WzNotice -Kind 'info' `
-        -Text 'Vor dem Anwenden wird jeder betroffene Registry-Schlüssel gesichert. Über "Änderungen zurücknehmen" lässt sich der Zustand davor wiederherstellen.'))
+        -Text (Get-WzText 'opt.noticeBackup')))
 
     Update-WzOptimizerSelection
 }
@@ -56,6 +56,6 @@ function Update-WzOptimizerStates {
 
 function Update-WzOptimizerSelection {
     $count = @($syncHash.OptRows | Where-Object { $_.CheckBox.IsChecked }).Count
-    $syncHash.OptSelectionCount.Text = "$count ausgewählt"
+    $syncHash.OptSelectionCount.Text = Get-WzText 'opt.selectedCount' @{ anzahl = $count }
     $syncHash.OptBtnApply.IsEnabled = ($count -gt 0)
 }

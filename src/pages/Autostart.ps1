@@ -4,7 +4,7 @@ function Initialize-WzAutostartPage {
     $syncHash.AutoBtnRefresh.Add_Click({ Update-WzAutostartPage -Force })
 
     [void]$syncHash.AutoNotices.Items.Add((New-WzNotice -Kind 'info' `
-        -Text 'Im Zweifel abschalten statt löschen: Der Eintrag bleibt bestehen und lässt sich mit einem Klick zurückholen. Programme wie Virenschutz oder Cloud-Speicher sollten anbleiben.'))
+        -Text (Get-WzText 'auto.noticeDisable')))
 }
 
 function Update-WzAutostartPage {
@@ -13,9 +13,9 @@ function Update-WzAutostartPage {
     if ($syncHash.AutoLoaded -and -not $Force) { return }
     $syncHash.AutoLoaded = $true
 
-    $syncHash.AutoCountHint.Text = 'wird geladen...'
+    $syncHash.AutoCountHint.Text = Get-WzText 'auto.loading'
 
-    Invoke-WzTask -Name 'Autostart einlesen' -Silent -ScriptBlock {
+    Invoke-WzTask -Name (Get-WzText 'auto.taskLoad') -Silent -ScriptBlock {
         Get-WzAutostartItems
     } -OnComplete {
         param($items)
@@ -28,21 +28,21 @@ function Write-WzAutostartList {
     param([Parameter(Mandatory = $true)]$Items)
 
     $active = @($Items | Where-Object { $_.Enabled })
-    $syncHash.AutoCount.Text = "$($active.Count) aktiv"
-    $syncHash.AutoCountHint.Text = "von $($Items.Count) Einträgen insgesamt"
+    $syncHash.AutoCount.Text = Get-WzText 'auto.activeCount' @{ anzahl = $active.Count }
+    $syncHash.AutoCountHint.Text = Get-WzText 'auto.ofTotal' @{ anzahl = $Items.Count }
 
     $container = $syncHash.AutoItems
     $container.Children.Clear()
 
     if ($Items.Count -eq 0) {
-        [void]$container.Children.Add((New-WzInfoRow 'Ergebnis' 'keine Autostart-Einträge gefunden' -Kind 'ok'))
+        [void]$container.Children.Add((New-WzInfoRow (Get-WzText 'auto.lblResult') (Get-WzText 'auto.noEntries') -Kind 'ok'))
         return
     }
 
     foreach ($item in $Items) {
         [void]$container.Children.Add((New-WzAutostartRow -Item $item))
     }
-    Write-WzLog "Autostart: $($active.Count) von $($Items.Count) Einträgen aktiv" -Level Info
+    Write-WzLog (Get-WzText 'auto.logActive' @{ aktiv = $active.Count; gesamt = $Items.Count }) -Level Info
 }
 
 function New-WzAutostartRow {
@@ -109,7 +109,7 @@ function New-WzAutostartRow {
     $commandBlock.Foreground = $syncHash.Window.FindResource('WzTextDim')
     $commandBlock.TextTrimming = 'CharacterEllipsis'
     $commandBlock.Margin = New-Object Windows.Thickness(0, 3, 12, 0)
-    $commandBlock.ToolTip = "$($Item.Command)`n`nQuelle: $($Item.Path)`nGilt für: $($Item.Scope)"
+    $commandBlock.ToolTip = Get-WzText 'auto.tipCommand' @{ befehl = $Item.Command; pfad = $Item.Path; bereich = $Item.Scope }
     [void]$stack.Children.Add($commandBlock)
 
     [void]$grid.Children.Add($stack)
@@ -124,6 +124,6 @@ function Update-WzAutostartCounts {
         if ($grid -and $grid.Children.Count -gt 0) { $toggles += $grid.Children[0] }
     }
     $active = @($toggles | Where-Object { $_.IsChecked }).Count
-    $syncHash.AutoCount.Text = "$active aktiv"
-    $syncHash.AutoCountHint.Text = "von $($toggles.Count) Einträgen insgesamt"
+    $syncHash.AutoCount.Text = Get-WzText 'auto.activeCount' @{ anzahl = $active }
+    $syncHash.AutoCountHint.Text = Get-WzText 'auto.ofTotal' @{ anzahl = $toggles.Count }
 }

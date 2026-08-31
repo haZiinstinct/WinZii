@@ -30,7 +30,7 @@ function Initialize-WzAiRemovalPage {
     })
 
     [void]$syncHash.AiNotices.Items.Add((New-WzNotice -Kind 'info' `
-        -Text 'Die Sperren unter "KI abschalten" sind jederzeit umkehrbar. Was unter "KI entfernen" gelöscht wird, kommt nur über den Microsoft Store oder ein Funktionsupdate zurück.'))
+        -Text (Get-WzText 'ai.noticeReversible')))
 
     Update-WzAiSelection
 }
@@ -54,7 +54,7 @@ function Update-WzAiScan {
         return
     }
 
-    $syncHash.AiScanTitle.Text = 'Wird geprüft...'
+    $syncHash.AiScanTitle.Text = Get-WzText 'ai.checking'
     $syncHash.AiScanRows.Children.Clear()
 
     Invoke-WzTask -Name 'KI-Bestandteile suchen' -Silent -ScriptBlock {
@@ -77,26 +77,26 @@ function Write-WzAiScanResult {
 
     $found = $Status.Packages.Count + $Status.Capabilities.Count + $Status.Tasks.Count
     $syncHash.AiScanTitle.Text = if ($found -eq 0) {
-        'Keine KI-Bestandteile installiert'
+        Get-WzText 'ai.noneInstalled'
     } else {
-        "$found KI-Bestandteil(e) gefunden"
+        Get-WzText 'ai.foundCount' @{ anzahl = $found }
     }
 
     $rows = $syncHash.AiScanRows
     $rows.Children.Clear()
 
     if ($found -eq 0) {
-        [void]$rows.Children.Add((New-WzInfoRow 'Ergebnis' 'sauber — es ist nichts zu entfernen' -Kind 'ok'))
-        [void]$rows.Children.Add((New-WzInfoRow 'Empfehlung' 'Sperren trotzdem setzen, damit nach Updates nichts nachrutscht'))
+        [void]$rows.Children.Add((New-WzInfoRow (Get-WzText 'ai.lblResult') (Get-WzText 'ai.cleanValue') -Kind 'ok'))
+        [void]$rows.Children.Add((New-WzInfoRow (Get-WzText 'ai.lblRecommendation') (Get-WzText 'ai.recommendBlock')))
         return
     }
 
     foreach ($package in $Status.Packages) {
-        $suffix = if ($package.NonRemovable) { ' · als nicht entfernbar markiert' } else { '' }
-        [void]$rows.Children.Add((New-WzInfoRow 'App-Paket' "$($package.Name)$suffix" -Kind 'warn'))
+        $suffix = if ($package.NonRemovable) { Get-WzText 'ai.suffixNonRemovableDot' } else { '' }
+        [void]$rows.Children.Add((New-WzInfoRow (Get-WzText 'ai.lblAppPackage') "$($package.Name)$suffix" -Kind 'warn'))
     }
     foreach ($capability in $Status.Capabilities) {
-        [void]$rows.Children.Add((New-WzInfoRow 'Systemfunktion' $capability.Name -Kind 'warn'))
+        [void]$rows.Children.Add((New-WzInfoRow (Get-WzText 'ai.lblCapability') $capability.Name -Kind 'warn'))
     }
     foreach ($feature in $Status.Features) {
         $kind = if ($feature.State -eq 'Enabled') { 'warn' } else { 'normal' }
@@ -115,6 +115,6 @@ function Update-WzAiStates {
 
 function Update-WzAiSelection {
     $count = @($syncHash.AiRows | Where-Object { $_.CheckBox.IsChecked }).Count
-    $syncHash.AiSelectionCount.Text = "$count ausgewählt"
+    $syncHash.AiSelectionCount.Text = Get-WzText 'ai.selectedCount' @{ anzahl = $count }
     $syncHash.AiBtnApply.IsEnabled = ($count -gt 0)
 }
