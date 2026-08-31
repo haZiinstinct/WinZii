@@ -71,7 +71,7 @@ function Invoke-WzTask {
     }
 
     Set-WzBusy -On -Status $Name -Cancelable:$Cancelable
-    if (-not $Silent) { Write-WzLog "$Name gestartet..." -Level Action }
+    if (-not $Silent) { Write-WzLog (Get-WzText 'core.taskStarted' @{ name = $Name }) -Level Action }
 
     $runspace = [runspacefactory]::CreateRunspace($syncHash.SessionState)
     $runspace.ApartmentState = 'MTA'
@@ -143,7 +143,7 @@ function Invoke-WzTask {
             } elseif ($failed) {
                 Write-WzLog (Get-WzText 'core.taskFailed' @{ name = $state.Name; sekunden = $seconds }) -Level Warn
             } else {
-                Write-WzLog "$($state.Name) abgeschlossen ($seconds s)." -Level Ok
+                Write-WzLog (Get-WzText 'core.taskDone' @{ name = $state.Name; sekunden = $seconds }) -Level Ok
             }
         }
 

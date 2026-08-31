@@ -91,7 +91,7 @@ function Get-WzUserProfiles {
         if ($IncludeSizes) {
             # Bei großen Profilen dauert das Vermessen — die Zeile zeigt, dass
             # es vorangeht und welches Konto gerade dran ist
-            Write-WzLog "Vermesse Profil $account..." -Level Info
+            Write-WzLog (Get-WzText 'data.logMeasuringProfile' @{ konto = $account }) -Level Info
             foreach ($folder in $known) {
                 $folderPath = Join-Path $path $folder.Key
                 if (-not (Test-Path -LiteralPath $folderPath -ErrorAction SilentlyContinue)) { continue }

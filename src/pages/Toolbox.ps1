@@ -24,7 +24,7 @@ function Initialize-WzToolboxPage {
     }
 
     [void]$syncHash.ToolNotices.Items.Add((New-WzNotice -Kind 'info' `
-        -Text 'Alle Eingriffe hier fragen vorher nach und schreiben mit, was sie tun. Im Testmodus wird nur protokolliert.'))
+        -Text (Get-WzText 'tool.noticeAsksFirst')))
 }
 
 function Update-WzToolboxPage {
@@ -36,11 +36,11 @@ function Update-WzToolboxPage {
 # --- Netzwerk prüfen -------------------------------------------------------
 
 function Start-WzNetworkDiagnosis {
-    $syncHash.NetDiagTitle.Text = 'wird geprüft...'
+    $syncHash.NetDiagTitle.Text = Get-WzText 'tool.checking'
     $syncHash.NetDiagSteps.Children.Clear()
     $syncHash.NetDiagVerdict.Items.Clear()
 
-    Invoke-WzTask -Name 'Verbindung prüfen' -ScriptBlock {
+    Invoke-WzTask -Name (Get-WzText 'tool.taskNetDiag') -ScriptBlock {
         Invoke-WzNetworkDiagnosis
     } -OnComplete {
         param($diagnosis)
@@ -54,11 +54,11 @@ function Write-WzNetworkDiagnosis {
 
     $failed = @($Diagnosis.Steps | Where-Object { $_.Status -eq 'fail' })
     $syncHash.NetDiagTitle.Text = if ($Diagnosis.Ok) {
-        'Verbindung in Ordnung'
+        Get-WzText 'tool.netOk'
     } elseif ($failed.Count -gt 0) {
-        "Es hängt bei: $($failed[0].Name)"
+        Get-WzText 'tool.netStuckAt' @{ schritt = $failed[0].Name }
     } else {
-        'Auffälligkeit gefunden'
+        Get-WzText 'tool.netOdd'
     }
 
     $container = $syncHash.NetDiagSteps
@@ -85,51 +85,51 @@ function Write-WzNetworkDiagnosis {
 }
 
 function Start-WzDefenderQuickScan {
-    $answer = Show-WzConfirm -Title 'Virenschnellprüfung' `
-        -Message 'Der Windows-Defender prüft die üblichen Verstecke von Schadsoftware. Das dauert je nach PC fünf bis fünfzehn Minuten; solange lässt sich WinZii nicht weiter bedienen.' `
+    $answer = Show-WzConfirm -Title (Get-WzText 'tool.scanTitle') `
+        -Message (Get-WzText 'tool.scanMessage') `
         -ConfirmText 'Starten'
     if (-not $answer.Confirmed) { return }
 
-    Invoke-WzTask -Name 'Virenschnellprüfung' -ScriptBlock {
+    Invoke-WzTask -Name (Get-WzText 'tool.scanTitle') -ScriptBlock {
         Start-WzDefenderScan
     } -OnComplete {
         param($scan)
         if (-not $scan) { return }
-        Add-WzAction -Area 'Sicherheit' -Summary "Virenschnellprüfung durchgeführt: $($scan.Summary)"
-        Show-WzInfo -Title 'Virenschnellprüfung' -Message $scan.Summary -Items @($scan.Threats)
+        Add-WzAction -Area 'Sicherheit' -Summary (Get-WzText 'tool.actionScan' @{ ergebnis = $scan.Summary })
+        Show-WzInfo -Title (Get-WzText 'tool.scanTitle') -Message $scan.Summary -Items @($scan.Threats)
     }
 }
 
 # --- Netzwerk reparieren ---------------------------------------------------
 
 function Start-WzNetworkRenew {
-    Invoke-WzTask -Name 'IP-Adresse auffrischen' -ScriptBlock {
+    Invoke-WzTask -Name (Get-WzText 'tool.taskRenew') -ScriptBlock {
         Repair-WzNetworkAdapter
     } -OnComplete {
         param($result)
         if (-not $result) { return }
-        Add-WzAction -Area 'Reparatur' -Summary 'Netzwerkverbindung aufgefrischt'
-        Show-WzInfo -Title 'Netzwerk aufgefrischt' `
-            -Message "$($result.Done) Schritt(e) ausgeführt. Prüfe, ob die Verbindung jetzt steht — sonst hilft der vollständige Reset."
+        Add-WzAction -Area 'Reparatur' -Summary (Get-WzText 'tool.actionRenew')
+        Show-WzInfo -Title (Get-WzText 'tool.renewTitle') `
+            -Message (Get-WzText 'tool.renewMessage' @{ anzahl = $result.Done })
     }
 }
 
 function Start-WzNetworkReset {
-    $answer = Show-WzConfirm -Title 'Netzwerk zurücksetzen' `
-        -Message 'Winsock und der IP-Stapel werden auf die Werkseinstellung zurückgesetzt, der DNS-Zwischenspeicher geleert und der Proxy entfernt. Danach ist ein Neustart nötig. VPN-Programme müssen ihre Treiber danach eventuell neu einrichten.' `
-        -Items @('Winsock zurücksetzen', 'IPv4 und IPv6 zurücksetzen', 'DNS-Zwischenspeicher leeren', 'Proxy zurücksetzen') `
-        -ConfirmText 'Zurücksetzen' -Danger
+    $answer = Show-WzConfirm -Title (Get-WzText 'tool.resetTitle') `
+        -Message (Get-WzText 'tool.resetMessage') `
+        -Items @((Get-WzText 'tool.resetItem1'), (Get-WzText 'tool.resetItem2'), (Get-WzText 'tool.resetItem3'), (Get-WzText 'tool.resetItem4')) `
+        -ConfirmText (Get-WzText 'tool.btnReset') -Danger
     if (-not $answer.Confirmed) { return }
 
-    Invoke-WzTask -Name 'Netzwerk zurücksetzen' -ScriptBlock {
+    Invoke-WzTask -Name (Get-WzText 'tool.resetTitle') -ScriptBlock {
         Invoke-WzNetworkReset -Winsock -IpStack -FlushDns -ResetProxy
     } -OnComplete {
         param($result)
         if (-not $result) { return }
         Add-WzAction -Area 'Reparatur' -RebootRequired `
-            -Summary 'Netzwerkeinstellungen auf den Auslieferungszustand zurückgesetzt'
-        Show-WzInfo -Title 'Netzwerk zurückgesetzt' `
-            -Message "$($result.Done) Schritt(e) erledigt. Der PC muss neu gestartet werden, damit die Änderungen greifen."
+            -Summary (Get-WzText 'tool.actionReset')
+        Show-WzInfo -Title (Get-WzText 'tool.resetDoneTitle') `
+            -Message (Get-WzText 'tool.resetDoneMessage' @{ anzahl = $result.Done })
     }
 }
 
@@ -137,34 +137,31 @@ function Start-WzDnsChange {
     param([string]$Provider)
 
     $description = switch ($Provider) {
-        'Cloudflare' { '1.1.1.1 — schnell, keine Protokollierung der Anfragen' }
-        'Quad9'      { '9.9.9.9 — blockiert bekannte Schadseiten, Betrieb in der Schweiz' }
-        'Google'     { '8.8.8.8 — sehr zuverlässig erreichbar' }
-        default      { 'Die Einstellungen kommen wieder vom Router' }
+        'Cloudflare' { Get-WzText 'tool.dnsCloudflare' }
+        'Quad9'      { Get-WzText 'tool.dnsQuad9' }
+        'Google'     { Get-WzText 'tool.dnsGoogle' }
+        default      { Get-WzText 'tool.dnsRouter' }
     }
 
     # Bewusst genau formuliert: »zurück auf Router« stellt auf DHCP um und ist
     # nicht dasselbe wie ein von Hand eingetragener Server. Die bisherigen Werte
     # landen deshalb vorher als Datei im Sicherungsordner.
-    $answer = Show-WzConfirm -Title "DNS auf $Provider umstellen" `
-        -Message ("$description`n`nDie Änderung gilt für alle aktiven Netzwerkkarten. Die bisherigen " +
-            "Einstellungen werden vorher unter backups\ abgelegt — bei einem PC mit fest eingetragenem " +
-            'Server (Firmennetz, eigener Router) ist das der einzige Weg zurück, denn »zurück auf Router« ' +
-            'bedeutet nur: wieder automatisch beziehen.') `
-        -ConfirmText 'Umstellen'
+    $answer = Show-WzConfirm -Title (Get-WzText 'tool.dnsDialogTitle' @{ anbieter = $Provider }) `
+        -Message ("$description`n`n" + (Get-WzText 'tool.dnsMessage')) `
+        -ConfirmText (Get-WzText 'tool.btnSwitch')
     if (-not $answer.Confirmed) { return }
 
-    Invoke-WzTask -Name "DNS auf $Provider" -ArgumentList @($Provider) -ScriptBlock {
+    Invoke-WzTask -Name (Get-WzText 'tool.taskDns' @{ anbieter = $Provider }) -ArgumentList @($Provider) -ScriptBlock {
         param($provider)
         Set-WzDnsServers -Provider $provider
     } -OnComplete {
         param($result)
         if (-not $result) { return }
-        Add-WzAction -Area 'Reparatur' -Summary "Namensauflösung auf $Provider umgestellt" `
+        Add-WzAction -Area 'Reparatur' -Summary (Get-WzText 'tool.actionDns' @{ anbieter = $Provider }) `
             -Detail @($result.Adapters)
-        $message = "$($result.Changed) Netzwerkkarte(n) geändert."
-        if ($result.BackupFile) { $message += ' Die bisherigen Einstellungen liegen als Datei bereit.' }
-        Show-WzInfo -Title 'DNS umgestellt' -Message $message `
+        $message = Get-WzText 'tool.dnsChanged' @{ anzahl = $result.Changed }
+        if ($result.BackupFile) { $message += Get-WzText 'tool.dnsBackupHint' }
+        Show-WzInfo -Title (Get-WzText 'tool.dnsDoneTitle') -Message $message `
             -Items @(@($result.Adapters) + @($result.BackupFile | Where-Object { $_ }))
     }.GetNewClosure()
 }
@@ -172,73 +169,73 @@ function Start-WzDnsChange {
 # --- Windows Update und Drucker -------------------------------------------
 
 function Start-WzUpdateReset {
-    $answer = Show-WzConfirm -Title 'Update-Zwischenspeicher zurücksetzen' `
-        -Message 'Die Update-Dienste werden angehalten, die Ordner SoftwareDistribution und catroot2 umbenannt und die Dienste wieder gestartet. Windows legt beide Ordner beim nächsten Update neu an. Bereits geladene Updates werden erneut heruntergeladen.' `
-        -ConfirmText 'Zurücksetzen' -Danger
+    $answer = Show-WzConfirm -Title (Get-WzText 'tool.wuTitle') `
+        -Message (Get-WzText 'tool.wuMessage') `
+        -ConfirmText (Get-WzText 'tool.btnReset') -Danger
     if (-not $answer.Confirmed) { return }
 
-    Invoke-WzTask -Name 'Windows Update zurücksetzen' -ScriptBlock {
+    Invoke-WzTask -Name (Get-WzText 'tool.taskWu') -ScriptBlock {
         Repair-WzWindowsUpdate
     } -OnComplete {
         param($result)
         if (-not $result) { return }
         $message = if ($result.Success) {
-            'Der Zwischenspeicher wurde zurückgesetzt. Jetzt in den Einstellungen erneut nach Updates suchen.'
+            Get-WzText 'tool.wuOk'
         } else {
-            'Es konnte nichts umbenannt werden — die Ordner waren gesperrt. Nach einem Neustart erneut versuchen.'
+            Get-WzText 'tool.wuFail'
         }
         if ($result.Success) {
-            Add-WzAction -Area 'Reparatur' -Summary 'Zwischenspeicher von Windows Update zurückgesetzt'
+            Add-WzAction -Area 'Reparatur' -Summary (Get-WzText 'tool.actionWu')
         }
         Show-WzInfo -Title 'Windows Update' -Message $message -Items @($result.Messages)
     }
 }
 
 function Start-WzSpoolerRepair {
-    $answer = Show-WzConfirm -Title 'Druckwarteschlange leeren' `
-        -Message 'Alle wartenden Druckaufträge werden verworfen und der Druckdienst neu gestartet. Installierte Drucker bleiben erhalten.' `
-        -ConfirmText 'Leeren'
+    $answer = Show-WzConfirm -Title (Get-WzText 'tool.spoolerTitle') `
+        -Message (Get-WzText 'tool.spoolerMessage') `
+        -ConfirmText (Get-WzText 'tool.btnClear')
     if (-not $answer.Confirmed) { return }
 
-    Invoke-WzTask -Name 'Druckwarteschlange leeren' -ScriptBlock {
+    Invoke-WzTask -Name (Get-WzText 'tool.taskSpooler') -ScriptBlock {
         Repair-WzSpooler
     } -OnComplete {
         param($result)
         if (-not $result) { return }
         Add-WzAction -Area 'Reparatur' `
-            -Summary "Druckwarteschlange geleert ($($result.Removed) Auftrag/Aufträge)"
-        Show-WzInfo -Title 'Druckwarteschlange' `
-            -Message "$($result.Removed) Auftrag/Aufträge entfernt, Dienst neu gestartet."
+            -Summary (Get-WzText 'tool.actionSpooler' @{ anzahl = $result.Removed })
+        Show-WzInfo -Title (Get-WzText 'tool.spoolerDoneTitle') `
+            -Message (Get-WzText 'tool.spoolerDoneMessage' @{ anzahl = $result.Removed })
     }
 }
 
 function Start-WzRestorePoint {
-    $answer = Show-WzConfirm -Title 'Wiederherstellungspunkt anlegen' `
-        -Message 'Windows legt einen Systemwiederherstellungspunkt an. Das dauert bis zu einer Minute und braucht etwas Speicherplatz. Ist der Systemschutz für C: ausgeschaltet, wird er dafür eingeschaltet und bleibt an.' `
-        -ConfirmText 'Anlegen'
+    $answer = Show-WzConfirm -Title (Get-WzText 'tool.rpTitle') `
+        -Message (Get-WzText 'tool.rpMessage') `
+        -ConfirmText (Get-WzText 'tool.btnCreate')
     if (-not $answer.Confirmed) { return }
 
-    Invoke-WzTask -Name 'Wiederherstellungspunkt anlegen' -ScriptBlock {
-        New-WzRestorePoint -Description 'WinZii — manuell angelegt'
+    Invoke-WzTask -Name (Get-WzText 'tool.taskRp') -ScriptBlock {
+        New-WzRestorePoint -Description (Get-WzText 'tool.rpDescription')
     } -OnComplete {
         param($ok)
-        if ($ok) { Add-WzAction -Area 'Sicherung' -Summary 'Systemwiederherstellungspunkt angelegt' }
+        if ($ok) { Add-WzAction -Area 'Sicherung' -Summary (Get-WzText 'tool.actionRp') }
         $message = if ($ok) {
-            'Der Wiederherstellungspunkt wurde angelegt.'
+            Get-WzText 'tool.rpOk'
         } else {
-            'Der Punkt konnte nicht angelegt werden. Häufigste Ursache: Der Systemschutz ist für das Laufwerk C: abgeschaltet.'
+            Get-WzText 'tool.rpFail'
         }
-        Show-WzInfo -Title 'Wiederherstellungspunkt' -Message $message
+        Show-WzInfo -Title (Get-WzText 'tool.rpDoneTitle') -Message $message
     }
 }
 
 # --- Vorinstallierte Apps --------------------------------------------------
 
 function Start-WzBloatwareScan {
-    $syncHash.ToolBloatTitle.Text = 'wird geprüft...'
+    $syncHash.ToolBloatTitle.Text = Get-WzText 'tool.checking'
     $syncHash.ToolBloatList.Children.Clear()
 
-    Invoke-WzTask -Name 'Vorinstallierte Apps suchen' -Silent -ScriptBlock {
+    Invoke-WzTask -Name (Get-WzText 'tool.taskBloatScan') -Silent -ScriptBlock {
         Get-WzBloatwareList -Level 'extended'
     } -OnComplete {
         param($packages)
@@ -246,9 +243,9 @@ function Start-WzBloatwareScan {
         $syncHash.ToolBloatPackages = $packages
 
         $syncHash.ToolBloatTitle.Text = if ($packages.Count -eq 0) {
-            'Nichts gefunden — der PC ist bereits aufgeräumt'
+            Get-WzText 'tool.bloatNone'
         } else {
-            "$($packages.Count) App(s) gefunden"
+            Get-WzText 'tool.bloatCount' @{ anzahl = $packages.Count }
         }
 
         $container = $syncHash.ToolBloatList
@@ -269,7 +266,7 @@ function Start-WzBloatwareScan {
 
         Update-WzBloatwareSelection
         if ($packages.Count -gt 0) {
-            Write-WzLog "$($packages.Count) vorinstallierte App(s) gefunden, die entfernt werden können." -Level Info
+            Write-WzLog (Get-WzText 'tool.logBloatFound' @{ anzahl = $packages.Count }) -Level Info
         }
     }
 }
@@ -283,25 +280,25 @@ function Start-WzBloatwareRemove {
     $selected = @($syncHash.ToolBloatBoxes | Where-Object { $_.IsChecked } | ForEach-Object { $_.Tag })
     if ($selected.Count -eq 0) { return }
 
-    $answer = Show-WzConfirm -Title 'Apps entfernen' `
-        -Message "$($selected.Count) App(s) werden für alle Benutzer entfernt und auch für neu angelegte Konten nicht mehr bereitgestellt. Über den Microsoft Store lassen sie sich bei Bedarf wieder installieren." `
+    $answer = Show-WzConfirm -Title (Get-WzText 'tool.bloatDialogTitle') `
+        -Message (Get-WzText 'tool.bloatMessage' @{ anzahl = $selected.Count }) `
         -Items @($selected | ForEach-Object { $_.DisplayName }) `
-        -ConfirmText 'Entfernen' -Danger
+        -ConfirmText (Get-WzText 'tool.btnRemove2') -Danger
     if (-not $answer.Confirmed) { return }
 
-    Invoke-WzTask -Name 'Apps entfernen' -ArgumentList (, $selected) -ScriptBlock {
+    Invoke-WzTask -Name (Get-WzText 'tool.taskBloatRemove') -ArgumentList (, $selected) -ScriptBlock {
         param($packages)
         Remove-WzBloatware -Packages $packages
     } -OnComplete {
         param($result)
         if (-not $result) { return }
         Add-WzAction -Area 'Vorinstallierte Apps' `
-            -Summary "$($result.Removed) mitgelieferte App(s) entfernt" `
+            -Summary (Get-WzText 'tool.actionBloat' @{ anzahl = $result.Removed }) `
             -Detail @($selected | ForEach-Object { $_.DisplayName })
 
-        $message = "$($result.Removed) App(s) entfernt, $($result.Failed) fehlgeschlagen."
-        if ($result.RecordFile) { $message += ' Was entfernt wurde, steht in der Liste darunter.' }
-        Show-WzInfo -Title 'Fertig' -Message $message `
+        $message = Get-WzText 'tool.bloatDoneMessage' @{ entfernt = $result.Removed; fehlgeschlagen = $result.Failed }
+        if ($result.RecordFile) { $message += Get-WzText 'tool.bloatRecordHint' }
+        Show-WzInfo -Title (Get-WzText 'tool.doneTitle') -Message $message `
             -Items @($result.RecordFile | Where-Object { $_ })
         Start-WzBloatwareScan
     }.GetNewClosure()

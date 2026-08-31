@@ -14,13 +14,13 @@ function Invoke-WzNetworkReset {
     )
 
     $steps = @()
-    if ($Winsock) { $steps += @{ Name = 'Winsock zurücksetzen'; File = 'netsh.exe'; Args = 'winsock reset' } }
+    if ($Winsock) { $steps += @{ Name = (Get-WzText 'tool.stepWinsock'); File = 'netsh.exe'; Args = 'winsock reset' } }
     if ($IpStack) {
-        $steps += @{ Name = 'IPv4 zurücksetzen'; File = 'netsh.exe'; Args = 'int ip reset' }
-        $steps += @{ Name = 'IPv6 zurücksetzen'; File = 'netsh.exe'; Args = 'int ipv6 reset' }
+        $steps += @{ Name = (Get-WzText 'tool.stepIpv4'); File = 'netsh.exe'; Args = 'int ip reset' }
+        $steps += @{ Name = (Get-WzText 'tool.stepIpv6'); File = 'netsh.exe'; Args = 'int ipv6 reset' }
     }
     if ($FlushDns) { $steps += @{ Name = 'DNS-Zwischenspeicher leeren'; File = 'ipconfig.exe'; Args = '/flushdns' } }
-    if ($ResetProxy) { $steps += @{ Name = 'Proxy zurücksetzen'; File = 'netsh.exe'; Args = 'winhttp reset proxy' } }
+    if ($ResetProxy) { $steps += @{ Name = (Get-WzText 'tool.stepProxy'); File = 'netsh.exe'; Args = 'winhttp reset proxy' } }
 
     $result = [pscustomobject]@{ Done = 0; Failed = 0; RebootRequired = ($Winsock -or $IpStack) }
 
@@ -57,9 +57,9 @@ function Save-WzDnsState {
     param()
 
     $lines = @(
-        'DNS-Konfiguration vor der Änderung durch WinZii'
-        "Computer: $env:COMPUTERNAME"
-        "Zeitpunkt: $(Get-Date -Format 'dd.MM.yyyy HH:mm:ss')"
+        (Get-WzText 'tool.dnsBackupHeader')
+        (Get-WzText 'core.fileComputer' @{ name = $env:COMPUTERNAME })
+        (Get-WzText 'core.fileTimestamp' @{ zeit = (Get-Date).ToString('G', (Get-WzLanguageCulture)) })
         ''
     )
     $found = 0
@@ -71,31 +71,31 @@ function Save-WzDnsState {
             $lines += if ($addresses.Count -gt 0) {
                 "  $($addresses -join ', ')"
             } else {
-                '  automatisch (vom Router)'
+                (Get-WzText 'tool.dnsAuto')
             }
-            $lines += "  Zurücksetzen: Set-DnsClientServerAddress -InterfaceIndex $($entry.InterfaceIndex) " + $(
+            $lines += (Get-WzText 'tool.dnsBackupRestore' @{ index = $entry.InterfaceIndex }) + $(
                 if ($addresses.Count -gt 0) { "-ServerAddresses $($addresses -join ',')" } else { '-ResetServerAddresses' })
             $lines += ''
             $found++
         }
     } catch {
-        Write-WzLog "DNS-Konfiguration nicht auslesbar: $($_.Exception.Message.Split([char]10)[0])" -Level Warn
+        Write-WzLog (Get-WzText 'tool.logDnsUnreadable' @{ grund = $_.Exception.Message.Split([char]10)[0] }) -Level Warn
         return ''
     }
 
     if ($found -eq 0) { return '' }
     if ($syncHash.DryRun) {
-        Write-WzLog '[Test] DNS-Konfiguration würde gesichert' -Level Test
+        Write-WzLog (Get-WzText 'tool.logDnsBackupTest') -Level Test
         return ''
     }
 
     try {
         $target = Join-Path (Get-WzBackupDir -Stamp "$(Get-Date -Format 'yyyy-MM-dd_HHmmss')-dns") 'dns-vorher.txt'
         [IO.File]::WriteAllText($target, ($lines -join [Environment]::NewLine), [Text.Encoding]::UTF8)
-        Write-WzLog "Bisherige DNS-Einstellungen gesichert: $target" -Level Ok
+        Write-WzLog (Get-WzText 'tool.logDnsBackupSaved' @{ ziel = $target }) -Level Ok
         return $target
     } catch {
-        Write-WzLog "DNS-Sicherung nicht schreibbar: $($_.Exception.Message.Split([char]10)[0])" -Level Warn
+        Write-WzLog (Get-WzText 'tool.logDnsBackupFailed' @{ grund = $_.Exception.Message.Split([char]10)[0] }) -Level Warn
         return ''
     }
 }
@@ -126,7 +126,7 @@ function Set-WzDnsServers {
     try {
         $adapters = @(Get-NetAdapter -Physical -ErrorAction Stop | Where-Object { $_.Status -eq 'Up' })
     } catch {
-        Write-WzLog "Netzwerkkarten nicht abfragbar: $($_.Exception.Message)" -Level Error
+        Write-WzLog (Get-WzText 'tool.logAdaptersUnreadable' @{ grund = $_.Exception.Message }) -Level Error
         return $result
     }
 
@@ -171,12 +171,12 @@ function Repair-WzWindowsUpdate {
     $result = [pscustomobject]@{ Success = $false; Renamed = @(); Messages = @() }
 
     if ($syncHash.DryRun) {
-        Write-WzLog '[Test] Windows-Update-Zwischenspeicher würde zurückgesetzt' -Level Test
+        Write-WzLog (Get-WzText 'tool.logWuTest') -Level Test
         $result.Success = $true
         return $result
     }
 
-    Write-WzLog 'Halte Update-Dienste an...' -Level Action
+    Write-WzLog (Get-WzText 'tool.logStopUpdateServices') -Level Action
     foreach ($serviceName in $services) {
         Stop-Service -Name $serviceName -Force -ErrorAction SilentlyContinue
     }
@@ -193,21 +193,21 @@ function Repair-WzWindowsUpdate {
         try {
             Rename-Item -LiteralPath $folder.Path -NewName $newName -ErrorAction Stop
             $result.Renamed += $newName
-            Write-WzLog "  $($folder.Name) umbenannt in $newName" -Level Ok
+            Write-WzLog (Get-WzText 'tool.logFolderRenamed' @{ name = $folder.Name; neu = $newName }) -Level Ok
         } catch {
-            $result.Messages += "$($folder.Name) ist gesperrt und blieb unverändert"
-            Write-WzLog "  $($folder.Name) konnte nicht umbenannt werden: $($_.Exception.Message)" -Level Warn
+            $result.Messages += Get-WzText 'tool.msgFolderLocked' @{ name = $folder.Name }
+            Write-WzLog (Get-WzText 'tool.logFolderRename' @{ name = $folder.Name; grund = $_.Exception.Message }) -Level Warn
         }
     }
 
-    Write-WzLog 'Starte Update-Dienste...' -Level Action
+    Write-WzLog (Get-WzText 'tool.logStartUpdateServices') -Level Action
     foreach ($serviceName in $services) {
         Start-Service -Name $serviceName -ErrorAction SilentlyContinue
     }
 
     $result.Success = ($result.Renamed.Count -gt 0)
     if ($result.Success) {
-        $result.Messages += 'Windows legt die Ordner beim nächsten Update neu an. Die alten Ordner können nach ein paar Tagen gelöscht werden.'
+        $result.Messages += Get-WzText 'tool.msgFoldersRecreated'
     }
     return $result
 }
@@ -222,13 +222,13 @@ function Repair-WzSpooler {
 
     if ($syncHash.DryRun) {
         $jobs = @(Get-ChildItem -LiteralPath $spoolPath -File -ErrorAction SilentlyContinue)
-        Write-WzLog "[Test] $($jobs.Count) Druckauftrag/-aufträge würden entfernt" -Level Test
+        Write-WzLog (Get-WzText 'tool.logSpoolerTest' @{ anzahl = $jobs.Count }) -Level Test
         $result.Success = $true
         return $result
     }
 
     try {
-        Write-WzLog 'Halte Druckwarteschlange an...' -Level Action
+        Write-WzLog (Get-WzText 'tool.logStopSpooler') -Level Action
         Stop-Service -Name 'Spooler' -Force -ErrorAction Stop
         Start-Sleep -Seconds 1
 
@@ -241,10 +241,10 @@ function Repair-WzSpooler {
         }
 
         Start-Service -Name 'Spooler' -ErrorAction Stop
-        Write-WzLog "$($result.Removed) hängende(r) Druckauftrag/-aufträge entfernt, Dienst neu gestartet" -Level Ok
+        Write-WzLog (Get-WzText 'tool.logSpoolerDone' @{ anzahl = $result.Removed }) -Level Ok
         $result.Success = $true
     } catch {
-        Write-WzLog "Druckwarteschlange: $($_.Exception.Message)" -Level Error
+        Write-WzLog (Get-WzText 'tool.logSpoolerError' @{ grund = $_.Exception.Message }) -Level Error
         Start-Service -Name 'Spooler' -ErrorAction SilentlyContinue
     }
 
@@ -322,7 +322,7 @@ function Remove-WzBloatware {
 
     foreach ($package in $Packages) {
         if ($syncHash.DryRun) {
-            Write-WzLog "[Test] $($package.DisplayName) würde entfernt" -Level Test
+            Write-WzLog (Get-WzText 'tool.logBloatTest' @{ name = $package.DisplayName }) -Level Test
             continue
         }
 
@@ -366,11 +366,11 @@ function Save-WzRemovedAppsRecord {
     if ($list.Count -eq 0) { return '' }
 
     $lines = @(
-        'Von WinZii entfernte mitgelieferte Apps'
-        "Computer: $env:COMPUTERNAME"
-        "Zeitpunkt: $(Get-Date -Format 'dd.MM.yyyy HH:mm:ss')"
+        (Get-WzText 'tool.recordHeader')
+        (Get-WzText 'core.fileComputer' @{ name = $env:COMPUTERNAME })
+        (Get-WzText 'core.fileTimestamp' @{ zeit = (Get-Date).ToString('G', (Get-WzLanguageCulture)) })
         ''
-        'Zurückholen: über den Microsoft Store suchen und neu installieren.'
+        (Get-WzText 'tool.recordRestore')
         ''
     )
     foreach ($package in $list) {
@@ -382,10 +382,10 @@ function Save-WzRemovedAppsRecord {
     try {
         $target = Join-Path (Get-WzBackupDir -Stamp "$(Get-Date -Format 'yyyy-MM-dd_HHmmss')-apps") 'entfernte-apps.txt'
         [IO.File]::WriteAllText($target, ($lines -join [Environment]::NewLine), [Text.Encoding]::UTF8)
-        Write-WzLog "Liste der entfernten Apps gesichert: $target" -Level Ok
+        Write-WzLog (Get-WzText 'tool.logRecordSaved' @{ ziel = $target }) -Level Ok
         return $target
     } catch {
-        Write-WzLog "Liste der entfernten Apps nicht schreibbar: $($_.Exception.Message.Split([char]10)[0])" -Level Warn
+        Write-WzLog (Get-WzText 'tool.logRecordFailed' @{ grund = $_.Exception.Message.Split([char]10)[0] }) -Level Warn
         return ''
     }
 }
