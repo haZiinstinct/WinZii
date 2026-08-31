@@ -45,7 +45,7 @@ function Get-WzSystemInfo {
     # --- System und Bauform -----------------------------------------------
     $cs = try { Get-CimInstance -Query 'SELECT Manufacturer,Model,Domain,Workgroup,PartOfDomain,TotalPhysicalMemory FROM Win32_ComputerSystem' -ErrorAction Stop } catch { $null }
     $info.Domain = if ($cs) {
-        if ($cs.PartOfDomain) { $cs.Domain } else { "Arbeitsgruppe $($cs.Workgroup)" }
+        if ($cs.PartOfDomain) { $cs.Domain } else { Get-WzText 'core.workgroup' @{ name = $cs.Workgroup } }
     } else { 'n/v' }
     $info.Manufacturer = if ($cs) { $cs.Manufacturer } else { 'n/v' }
     $info.Model = if ($cs) { $cs.Model } else { 'n/v' }
@@ -436,12 +436,18 @@ function Get-WzSecurityInfo {
     param()
 
     $info = [ordered]@{}
-    $info.Activation = Get-WzActivationStatus
+    # Text UND sprachneutraler Zustand: Ob Windows aktiviert ist, wurde vorher
+    # am deutschen Wort »aktiviert« erkannt. Sobald die Oberflaeche Englisch
+    # spricht, traf der Vergleich nie mehr — das Dashboard meldete auf einem
+    # aktivierten Rechner »Bitte pruefen«.
+    $activation = Get-WzActivationStatus
+    $info.Activation = $activation.Text
+    $info.ActivationOk = $activation.Ok
     $info.BitLocker = Get-WzBitLockerStatus
 
     $info.SecureBoot = try {
-        if (Confirm-SecureBootUEFI -ErrorAction Stop) { 'aktiv' } else { 'aus' }
-    } catch { 'n/v (kein UEFI oder gesperrt)' }
+        if (Confirm-SecureBootUEFI -ErrorAction Stop) { Get-WzText 'core.secureBootOn' } else { Get-WzText 'core.secureBootOff' }
+    } catch { Get-WzText 'core.secureBootNa' }
 
     $info.Tpm = Get-WzTpmStatus
 
@@ -453,15 +459,14 @@ function Get-WzSecurityInfo {
         # Weiches Trennzeichen (U+00AD): Am Fenster-Mindestmaß ist die Karte
         # schmaler als das Wort, und WPF trennte mitten drin (»Echtzeitschut z«).
         # So wird daraus bei Platznot »Echtzeit-schutz«, sonst bleibt es unsichtbar.
-        $echtzeitschutz = "Echtzeit$([char]0xAD)schutz"
         if ($mp.RealTimeProtectionEnabled) {
-            $parts += "$echtzeitschutz an"
+            $parts += Get-WzText 'core.defenderRtOn'
         } else {
-            $parts += "$echtzeitschutz AUS"
+            $parts += Get-WzText 'core.defenderRtOff'
             $info.DefenderOk = $false
         }
         if ($null -ne $mp.AntivirusSignatureAge) {
-            $parts += "Signaturen $($mp.AntivirusSignatureAge) Tag(e) alt"
+            $parts += Get-WzText 'core.defenderSignatures' @{ tage = $mp.AntivirusSignatureAge }
             if ($mp.AntivirusSignatureAge -gt 7) { $info.DefenderOk = $false }
         }
         $info.Defender = $parts -join ' · '
@@ -590,22 +595,22 @@ function Get-WzActivationStatus {
         $query = "SELECT LicenseStatus,ProductKeyChannel FROM SoftwareLicensingProduct " +
                  "WHERE PartialProductKey IS NOT NULL AND ApplicationID='55c92734-d682-4d71-983e-d6ec3f16059f'"
         $product = Get-CimInstance -Query $query -ErrorAction Stop | Select-Object -First 1
-        if (-not $product) { return Get-WzText 'core.actNotDeterminable' }
+        if (-not $product) { return [pscustomobject]@{ Text = (Get-WzText 'core.actNotDeterminable'); Ok = $false } }
 
         $state = switch ($product.LicenseStatus) {
             0 { Get-WzText 'core.actUnlicensed' }
-            1 { 'aktiviert' }
-            2 { 'Karenzzeit' }
+            1 { Get-WzText 'core.actActivated' }
+            2 { Get-WzText 'core.actGrace' }
             3 { Get-WzText 'core.actGraceOut' }
-            4 { 'unlizenzierte Karenzzeit' }
+            4 { Get-WzText 'core.actUnlicensedGrace' }
             5 { Get-WzText 'core.actNotification' }
             6 { Get-WzText 'core.actExtraGrace' }
-            default { "Status $($product.LicenseStatus)" }
+            default { Get-WzText 'core.actStatus' @{ code = $product.LicenseStatus } }
         }
         $channel = if ($product.ProductKeyChannel) { " · $($product.ProductKeyChannel)" } else { '' }
-        return "$state$channel"
+        return [pscustomobject]@{ Text = "$state$channel"; Ok = ([int]$product.LicenseStatus -eq 1) }
     } catch {
-        return Get-WzText 'core.actNotDeterminable'
+        return [pscustomobject]@{ Text = (Get-WzText 'core.actNotDeterminable'); Ok = $false }
     }
 }
 
@@ -693,11 +698,11 @@ function Format-WzUptime {
         TimeSpan als "3 T 4 Std 12 Min".
     #>
     param($TimeSpan)
-    if (-not $TimeSpan) { return 'n/v' }
+    if (-not $TimeSpan) { return Get-WzText 'core.uptimeNa' }
     $parts = @()
-    if ($TimeSpan.Days -gt 0) { $parts += "$($TimeSpan.Days) T" }
-    if ($TimeSpan.Hours -gt 0) { $parts += "$($TimeSpan.Hours) Std" }
-    $parts += "$($TimeSpan.Minutes) Min"
+    if ($TimeSpan.Days -gt 0) { $parts += Get-WzText 'core.uptimeDays' @{ tage = $TimeSpan.Days } }
+    if ($TimeSpan.Hours -gt 0) { $parts += Get-WzText 'core.uptimeHours' @{ stunden = $TimeSpan.Hours } }
+    $parts += Get-WzText 'core.uptimeMinutes' @{ minuten = $TimeSpan.Minutes }
     return ($parts -join ' ')
 }
 

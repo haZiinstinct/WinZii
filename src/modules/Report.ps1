@@ -226,7 +226,7 @@ function New-WzDiagReport {
             "Laufzeit|$(Format-WzUptime $info.Uptime)"
         )
         if ($security) {
-            $activationKind = if ($security.Activation -like 'aktiviert*') { 'ok' } else { 'warn' }
+            $activationKind = if ($security.ActivationOk) { 'ok' } else { 'warn' }
             $systemRows += "Aktivierung|$($security.Activation)|$activationKind"
             $systemRows += "Virenschutz|$($security.Defender)|$(if ($security.DefenderOk) { 'ok' } else { 'warn' })"
         }
@@ -512,7 +512,7 @@ function New-WzHandoverReport {
 
     $securityRows = @()
     if ($security) {
-        $securityRows += "Aktivierung|$($security.Activation)|$(if ($security.Activation -like 'aktiviert*') { 'ok' } else { 'warn' })"
+        $securityRows += "Aktivierung|$($security.Activation)|$(if ($security.ActivationOk) { 'ok' } else { 'warn' })"
         $securityRows += "Virenschutz|$($security.Defender)|$(if ($security.DefenderOk) { 'ok' } else { 'warn' })"
         $securityRows += "BitLocker|$($security.BitLocker)"
         $securityRows += "Secure Boot|$($security.SecureBoot)"
@@ -579,7 +579,7 @@ function Get-WzHandoverRecommendations {
         if (-not $Security.DefenderOk) {
             $result += @{ Kind = 'warn'; Text = "Der Virenschutz ist nicht auf dem aktuellen Stand: $($Security.Defender)." }
         }
-        if ($Security.Activation -notlike 'aktiviert*') {
+        if (-not $Security.ActivationOk) {
             $result += @{ Kind = 'warn'; Text = "Windows ist nicht aktiviert ($($Security.Activation)). Dafür wird ein gültiger Lizenzschlüssel gebraucht." }
         }
         foreach ($disk in @($Security.PhysicalDisks)) {

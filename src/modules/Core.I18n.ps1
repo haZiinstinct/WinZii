@@ -172,7 +172,13 @@ function Get-WzLanguageCulture {
     .SYNOPSIS
         Die .NET-Kultur zu einem Sprachcode, für Zahlen- und Datumsformate.
     #>
-    param([Parameter(Mandatory = $true)][string]$Code)
+    param([string]$Code)
+
+    # Ohne Angabe die gerade eingestellte Sprache: Die Zahlen- und
+    # Datumsformate im Code fragen nicht nach einem Code, sie wollen einfach
+    # die Kultur, in der die Oberflaeche gerade spricht.
+    if (-not $Code) { $Code = $syncHash.Language }
+    if (-not $Code) { $Code = 'de' }
 
     $map = @{
         de = 'de-DE'; en = 'en-GB'; es = 'es-ES'; fr = 'fr-FR'; pt = 'pt-PT'

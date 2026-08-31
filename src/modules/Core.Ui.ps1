@@ -740,6 +740,11 @@ function New-WzInfoRow {
     [void]$grid.ColumnDefinitions.Add($labelColumn)
     [void]$grid.ColumnDefinitions.Add($valueColumn)
 
+    # »n/v« ist der sprachneutrale Platzhalter der Systemabfragen — im Code wird
+    # dagegen verglichen, angezeigt wird er uebersetzt. Deshalb hier und nicht
+    # schon bei der Abfrage.
+    if ($Value -eq 'n/v') { $Value = Get-WzText 'core.na' }
+
     $labelBlock = New-Object Windows.Controls.TextBlock
     $labelBlock.Text = $Label
     $labelBlock.Style = $syncHash.Window.FindResource('WzLabel')
@@ -939,7 +944,9 @@ function Format-WzBytes {
     if ($index -ge $units.Count) { $index = $units.Count - 1 }
     $value = $Bytes / [math]::Pow(1024, $index)
     $decimals = if ($index -le 1) { 0 } else { 1 }
-    $culture = [Globalization.CultureInfo]::GetCultureInfo('de-DE')
+    # Kultur der gewählten Sprache: »15,4 GB« im Deutschen, »15.4 GB« im
+    # Englischen. Fest de-DE stand vorher neben englischem Text.
+    $culture = Get-WzLanguageCulture
     return ('{0} {1}' -f [math]::Round($value, $decimals).ToString($culture), $units[$index])
 }
 
@@ -956,7 +963,7 @@ function Format-WzNumber {
         [Parameter(Position = 1)][string]$Unit,
         [int]$Decimals = 1
     )
-    $culture = [Globalization.CultureInfo]::GetCultureInfo('de-DE')
+    $culture = Get-WzLanguageCulture
     $text = [math]::Round($Value, $Decimals).ToString($culture)
     if ($Unit) { return "$text $Unit" }
     return $text
@@ -1002,5 +1009,5 @@ function Format-WzAgo {
         elseif ($days -lt 730) { Get-WzText 'core.agoOverYear' }
         else { Get-WzText 'core.agoOverYears' @{ jahre = [int][math]::Floor($days / 365) } }
 
-    return "$span ($($stamp.ToString('dd.MM.yyyy')))"
+    return "$span ($($stamp.ToString('d', (Get-WzLanguageCulture))))"
 }
