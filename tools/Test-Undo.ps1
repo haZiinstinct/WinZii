@@ -154,12 +154,18 @@ Write-Host '4. Fehlschläge werden auch als solche gezählt' -ForegroundColor Wh
 
 # Ein Pfad, den es nicht geben kann: New-Item scheitert, die Ausnahme muss
 # durchschlagen. Früher zählte alles als »angewendet«, was keine Ausnahme warf.
+#
+# Der Pfad zeigt bewusst auf ein Laufwerk, das es in keiner Registry gibt.
+# Vorher stand hier »HKLM:\SOFTWARE\Classes\*\GibtEsNicht« — der Stern ist
+# aber ein echter Schlüssel (die Zuordnung für alle Dateitypen), und auf dem
+# CI-Läufer ließ sich darunter tatsächlich etwas anlegen. Der Test prüfte
+# damit nicht die Fehlerzählung, sondern eine Eigenheit dieses Rechners.
 $kaputt = [pscustomobject]@{
     id             = 'selbsttest-kaputt'
     name           = 'Selbsttest — unmöglicher Pfad'
     requiresReboot = $true
     actions        = @(
-        [pscustomobject]@{ type = 'registry'; path = 'HKLM:\SOFTWARE\Classes\*\GibtEsNicht'; name = 'X'; valueType = 'DWord'; value = 1 }
+        [pscustomobject]@{ type = 'registry'; path = 'HKGibtEsNichtSelbsttest:\WinZii'; name = 'X'; valueType = 'DWord'; value = 1 }
     )
 }
 $kaputtSummary = Invoke-WzTweaks -Tweaks @($kaputt) -Scope 'selbsttest-kaputt'

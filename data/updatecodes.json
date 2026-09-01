@@ -1,0 +1,71 @@
+{
+  "schemaVersion": 1,
+  "_hinweis": "Rückgabewerte der Windows-Update-Schnittstelle in Klartext. Der Code steht als achtstellige Hexzahl, so wie Windows ihn meldet. outcome steuert die Zählung: ok = eingespielt, skip = nichts zu tun, reboot = erfolgreich, Neustart nötig, fail = Fehlschlag. Unbekannte Codes gelten als fail und werden mit ihrer Zahl angezeigt.",
+  "codes": [
+    {
+      "code": "0x00000000",
+      "outcome": "ok",
+      "text": "eingespielt"
+    },
+    {
+      "code": "0x00240006",
+      "outcome": "skip",
+      "text": "war bereits eingespielt"
+    },
+    {
+      "code": "0x80240044",
+      "outcome": "fail",
+      "text": "Administratorrechte fehlen. WinZii muss eleviert laufen, damit Windows Updates einspielen darf."
+    },
+    {
+      "code": "0x80070422",
+      "outcome": "fail",
+      "text": "Der Windows-Update-Dienst ist abgeschaltet. Ein Aufräumwerkzeug oder eine Richtlinie hat ihn deaktiviert — er muss erst wieder auf »Manuell« stehen."
+    },
+    {
+      "code": "0x8024001E",
+      "outcome": "fail",
+      "text": "Der Vorgang wurde abgebrochen, weil der Dienst gerade heruntergefahren wird. Nach einem Neustart erneut versuchen."
+    },
+    {
+      "code": "0x8024402C",
+      "outcome": "fail",
+      "text": "Der Update-Dienst ist nicht erreichbar — meist ein Proxy oder eine Namensauflösung, die dazwischensteht. Auf der Seite »Reparatur« erst die Verbindung prüfen."
+    },
+    {
+      "code": "0x80244022",
+      "outcome": "fail",
+      "text": "Der Server hat die Anfrage abgewiesen, weil er ausgelastet ist. In ein paar Minuten erneut versuchen."
+    },
+    {
+      "code": "0x80072EE2",
+      "outcome": "fail",
+      "text": "Zeitüberschreitung beim Server. Bei langsamen Verbindungen normal — erneut versuchen."
+    },
+    {
+      "code": "0x800705B4",
+      "outcome": "fail",
+      "text": "Zeitüberschreitung. Das Update ist meist trotzdem angekommen und wird beim nächsten Lauf angezeigt."
+    },
+    {
+      "code": "0x80240017",
+      "outcome": "skip",
+      "text": "gilt für diesen PC nicht"
+    },
+    {
+      "code": "0x80246007",
+      "outcome": "fail",
+      "text": "Das Update wurde nicht vollständig geladen. Der Update-Zwischenspeicher ist wahrscheinlich beschädigt — auf der Seite »Reparatur« lässt er sich leeren."
+    },
+    {
+      "code": "0x8024500C",
+      "outcome": "fail",
+      "text": "Eine Gruppenrichtlinie steuert Windows Update auf diesem Gerät. Was eingespielt wird, entscheidet die Verwaltung, nicht der PC."
+    },
+    {
+      "code": "0x80248007",
+      "outcome": "fail",
+      "text": "Die Lizenzbedingungen des Updates fehlen oder der Update-Speicher ist beschädigt. Erst den Zwischenspeicher leeren, dann erneut suchen."
+    }
+  ]
+}

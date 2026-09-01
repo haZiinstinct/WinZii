@@ -8,9 +8,15 @@ $global:syncHash = [hashtable]::Synchronized(@{})
 $syncHash.LogEntries = [Collections.ArrayList]::Synchronized((New-Object Collections.ArrayList))
 . (Join-Path $src 'version.ps1')
 $syncHash.Version = $script:WzVersion
-foreach ($m in 'Core.Paths', 'Core.Logging', 'Core.Json', 'Core.Runspace') {
+foreach ($m in 'Core.Paths', 'Core.Logging', 'Core.Json', 'Core.I18n', 'Core.Runspace') {
     . (Join-Path $src "modules\$m.ps1")
 }
+
+# Ohne Sprachtabelle wirft Get-WzText — und zwar erst im Zeitlimit-Zweig von
+# Invoke-WzProcess, den dieser Rechner nie erreicht hat. Auf dem CI-Laeufer
+# fiel der Test beim allerersten Lauf um.
+$syncHash.Language = 'de'
+[void](Import-WzLanguage)
 
 $fehler = 0
 function Assert-Wz {

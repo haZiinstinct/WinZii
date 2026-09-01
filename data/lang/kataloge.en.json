@@ -1,4 +1,4 @@
-{
+﻿{
   "office": {
     "variants": {
       "m365home": {
@@ -1027,6 +1027,49 @@
       "ai-appx-force": {
         "name": "Force removal of blocked AI packages",
         "description": "Some AI packages are marked as non-removable. This entry lifts that block and deletes them anyway. Only use it when the previous entry achieved nothing — the only way back is a feature update."
+      }
+    }
+  },
+  "updatecodes": {
+    "codes": {
+      "0x00000000": {
+        "text": "installed"
+      },
+      "0x00240006": {
+        "text": "was already installed"
+      },
+      "0x80240044": {
+        "text": "Administrator rights are missing. WinZii has to run elevated for Windows to install updates."
+      },
+      "0x80070422": {
+        "text": "The Windows Update service is switched off. A cleanup tool or a policy has disabled it — it has to be set back to “Manual” first."
+      },
+      "0x8024001E": {
+        "text": "The operation was cancelled because the service is shutting down. Try again after a restart."
+      },
+      "0x8024402C": {
+        "text": "The update service cannot be reached — usually a proxy or a name resolution getting in the way. Check the connection on the “Repair” page first."
+      },
+      "0x80244022": {
+        "text": "The server refused the request because it is busy. Try again in a few minutes."
+      },
+      "0x80072EE2": {
+        "text": "The server timed out. Normal on slow connections — try again."
+      },
+      "0x800705B4": {
+        "text": "Timed out. The update has usually arrived anyway and will show up on the next run."
+      },
+      "0x80240017": {
+        "text": "does not apply to this PC"
+      },
+      "0x80246007": {
+        "text": "The update was not downloaded in full. The update cache is probably damaged — it can be emptied on the “Repair” page."
+      },
+      "0x8024500C": {
+        "text": "A group policy controls Windows Update on this device. What gets installed is decided by the management, not by the PC."
+      },
+      "0x80248007": {
+        "text": "The licence terms for the update are missing, or the update store is damaged. Empty the cache first, then search again."
       }
     }
   }

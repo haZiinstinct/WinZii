@@ -274,6 +274,7 @@ $felder = @(
     @{ Katalog = 'office';      Liste = 'apps';       Key = 'id';         Felder = @('name') }
     @{ Katalog = 'tweaks';      Liste = 'categories'; Key = 'id';         Felder = @('name', 'description') }
     @{ Katalog = 'tweaks';      Liste = 'tweaks';     Key = 'id';         Felder = @('name', 'description') }
+    @{ Katalog = 'updatecodes'; Liste = 'codes';      Key = 'code';       Felder = @('text') }
     @{ Katalog = 'wingetcodes'; Liste = 'codes';      Key = 'code';       Felder = @('text') }
 )
 $einzelfelder = @(

@@ -17,6 +17,7 @@ function Get-WzCatalogIdentity {
         eventmap    = @{ entries = 'provider+id' }
         office      = @{ variants = 'id'; languages = 'id'; apps = 'id' }
         tweaks      = @{ categories = 'id'; tweaks = 'id' }
+        updatecodes = @{ codes = 'code' }
         wingetcodes = @{ codes = 'code' }
     }
 }

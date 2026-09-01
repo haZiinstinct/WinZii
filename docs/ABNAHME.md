@@ -10,10 +10,18 @@ bequemen Zweig. Genau daraus sind die drei Symptome entstanden, die den Audit au
 haben. Alles unten ist der Teil, der auf dem Entwicklungsrechner **grundsätzlich nicht**
 prüfbar ist.
 
-Stand: **0.5.1** — im Quelltext, im Changelog und in beiden Readme-Dateien. Der letzte
-Tag ist `v0.5.0`, das letzte Release ebenfalls: **0.5.1 ist noch nicht veröffentlicht.**
-Alle neun Prüfwerkzeuge grün, Sandbox-Lauf mit dem 0.5.1-Stand bestanden, Start aus
-sauberer Kopie mit leerem `offline\` geprüft.
+Stand: **0.5.1** im Quelltext; `main` ist seither weiter (Mehrsprachigkeit vollständig,
+Auffangnetz für die Oberfläche, CI). Alle neun Prüfwerkzeuge grün, Sandbox-Lauf mit dem
+0.5.1-Stand bestanden, Start aus sauberer Kopie mit leerem `offline\` geprüft.
+
+> **Was die CI seither abnimmt.** Seit `.github/workflows/pruefung.yml` laufen die neun
+> Werkzeuge bei jedem Push auf einem **englischen** Windows-Server, und die Oberfläche
+> wird dort in beiden Sprachen gestartet und abgebildet. Damit ist der statische Teil
+> von »nicht-deutsches Windows« dauerhaft gedeckt — Zahlen- und Datumsformate,
+> Sprachtabellen, Kataloge, Seitenaufbau. **Was die CI nicht kann:** echte
+> Windows-Werkzeuge laufen lassen. `sfc`, `DISM`, `chkdsk`, `manage-bde` und `takeown`
+> geben auf einem englischen System englischen Text zurück, und WinZii wertet ihn aus.
+> Genau dafür ist Punkt 13 unten da.
 
 Im Lauf zu 0.5.1 sind sechs Punkte auf einem zweiten Notebook abgearbeitet — Punkt 12
 hat dabei zwei Fehler gefunden, beide behoben. Damit hier niemand nachzählen muss, was
@@ -35,11 +43,27 @@ auch nicht als offen da:
 | 10 — Sandbox | **Halb.** Auf dem Notebook nicht möglich, Windows Sandbox ist dort nicht eingeschaltet (`Containers-DisposableClientVM: Disabled`). Auf dem Entwicklungsrechner ist der 0.5.1-Stand gelaufen: 39 Prüfungen grün. Der Netzweg des Laptops bleibt ungeprüft. |
 | 11 — Akku, BitLocker, OneDrive | **Halb.** Der Akku ist geprüft. Ein verschlüsselter Datenträger und ein OneDrive mit Platzhaltern fehlen weiterhin — beides gibt es auf keinem der zwei Geräte. |
 | 12 — Restesuche | **Erledigt** (Notebook, 0.5.1) und der ergiebigste Punkt: zwei echte Fehler. |
+| 13 — englisches Windows | **Offen, neu.** Erst seit der Mehrsprachigkeit prüfbar. Die CI deckt den statischen Teil; die Auswertung echter Windows-Ausgaben nicht. |
+| 14 — Sprachwechsel im Betrieb | **Offen, neu.** `Update-WzMeasuredTexts` ist frisch und auf keinem echten Gerät gelaufen. |
+| 15 — Windows 10 | **Offen.** Steht seit der ersten Fassung als Grenze im README, ein vollständiger Durchlauf fehlt. |
+| 16 — schreibgeschützter Stick, FAT32 | **Offen.** Beide Pfade sind im Code vorgesehen und nie ausgelöst worden. |
+| 17 — Domänen-PC mit Richtlinien | **Offen.** Der Launcher warnt davor, geprüft ist es nie. Firmenkunden sind der Normalfall. |
+| 18 — Start ohne Rechte | **Offen.** `-NoElevate` wird für den Selbsttest benutzt, aber nie als Anwenderfall betrachtet. |
+| 19 — langsames Gerät | **Offen.** Alle Zeitlimits sind auf schneller Hardware gemessen. |
+| 20 — fremder Virenscanner | **Offen.** Auf Neugeräten immer da, hier nie. |
+| 21 — hohe Skalierung, zweiter Monitor | **Offen.** Geprüft ist nur klein bei 125 %. |
+| 22 — ARM64 | **Offen.** An zwei Stellen im Code berücksichtigt, nie auf einem Gerät gesehen. |
 
 Was davon nur ein Kundengerät klären kann: **5** (OEM-Office), **9** (Sicherheitsprogramme
-wirklich installieren), **11** (BitLocker, OneDrive) und **2** (zweites Konto). **4** und
-**10** ließen sich dagegen jederzeit nachholen — für 4 reicht ein leerer Stick, für 10 das
-Einschalten von Windows Sandbox auf dem Notebook.
+wirklich installieren), **11** (BitLocker, OneDrive), **2** (zweites Konto), **17**
+(Domäne), **20** (fremder Virenscanner) und **22** (ARM64). **4** und **10** ließen sich
+jederzeit nachholen — für 4 reicht ein leerer Stick, für 10 das Einschalten von Windows
+Sandbox auf dem Notebook.
+
+**Ohne fremdes Gerät machbar, hier und heute:** **13** und **14** brauchen nur ein
+englisches Windows in einer virtuellen Maschine oder die Sprachumstellung von Windows,
+**16** einen beliebigen Stick, **18** einen Doppelklick, **21** die Anzeigeeinstellungen.
+Das sind fünf der zehn neuen Punkte.
 
 > **`main` ist weiter als der Tag.** Auf dem Entwicklungsrechner wird parallel gearbeitet.
 > Vor dem ersten Commit hier immer `git pull --rebase origin main` — sonst wird der Push
@@ -255,6 +279,142 @@ Dann drei Fälle, in dieser Reihenfolge:
 Danach die Sicherung nachsehen: unter `backups\<rechnername>\<zeitstempel>-Programmreste`
 müssen `undo.json` und je entferntem Schlüssel eine `.reg`-Datei liegen, und der Eintrag
 muss auf der Seite **Rücknahme** auftauchen.
+
+---
+
+## 13. Englisches Windows (neu, erst seit der Mehrsprachigkeit prüfbar)
+
+Die CI prüft bei jedem Push auf einem englischen Windows-Server, was sich ohne Eingriff
+prüfen lässt. Was dort nicht geht: die **Windows-Werkzeuge wirklich laufen lassen**.
+Genau dort liegt die Fehlerklasse, die in den drei Übersetzungsetappen dreimal
+aufgetaucht ist — ein Vergleich gegen ein deutsches Wort, das auf Englisch nie zutrifft.
+
+Auf einem englischen Windows, WinZii auf Englisch gestellt:
+
+- **Diagnose → Systemdateien prüfen (sfc).** WinZii liest die Ausgabe und entscheidet
+  daran, ob repariert wurde. Steht danach ein sinnvolles Urteil da, oder »unbekannt«?
+- **Diagnose → Abbild prüfen (DISM)** und **chkdsk**: dasselbe.
+- **Dashboard:** Aktivierung, BitLocker, Secure Boot, TPM, Datenträgerzustand. Alle fünf
+  entstehen aus WMI-Werten und werden zu Sätzen — sind sie englisch und stimmen sie?
+- **Reparatur → Verbindung prüfen:** Das Urteil kommt aus einer Auswertung mehrerer
+  Messungen. Plausibel?
+- **Deinstallieren:** Die Programmliste kommt aus der Registry und enthält englische
+  Namen. Die Restesuche darf davon nicht abhängen.
+- **Übergabeblatt schreiben** und ganz lesen. Kein deutsches Wort, keine deutschen
+  Zahlen- oder Datumsformate.
+
+**Worauf achten:** Ein Wert, der »n/a« zeigt, wo auf Deutsch etwas stand, ist ein Befund —
+dann hat eine Abfrage eine übersetzte Zeichenkette erwartet.
+
+## 14. Sprachwechsel mitten in der Sitzung (neu)
+
+Aktivierung, BitLocker und Virenschutz sind fertige Sätze aus einer Messung. Sie
+entstehen in der Sprache, die beim Messen galt — ein Wörterbuchtausch erreicht sie nicht.
+Dafür gibt es seit 0.5.2 `Update-WzMeasuredTexts`, das nach einem Wechsel im Hintergrund
+neu misst. Auf einem echten Gerät ist das nie gelaufen.
+
+1. WinZii auf Deutsch starten, Dashboard abwarten, bis die Sicherheitskarte gefüllt ist.
+2. Unten links auf Englisch umstellen.
+3. Die Sicherheitskarte ansehen: Innerhalb weniger Sekunden müssen **alle fünf Zeilen**
+   englisch sein — nicht nur die Beschriftungen, auch die Werte.
+4. Ein Übergabeblatt schreiben und den Abschnitt »Security and disks« lesen.
+5. Zurück auf Deutsch, dasselbe.
+
+**Worauf achten:** Bleibt eine Zeile deutsch, ist das Nachziehen nicht angelaufen. Und:
+Die Protokollzeilen von **vorher** bleiben in ihrer Sprache — das ist gewollt, ein
+Protokoll ist ein Verlauf.
+
+## 15. Windows 10, vollständiger Durchlauf
+
+Die Versionsweiche greift (33 Einträge für beide Systeme, 7 nur für 11, 1 nur für 10),
+aber es lief dort nie ein ganzer Ablauf. Auf einem Windows-10-Gerät einmal alles:
+Dashboard, Diagnose, Optimierung anwenden **und zurücknehmen**, Bereinigung, Autostart,
+Übergabeblatt.
+
+**Worauf achten:** `priv-newsinterests-win10` ist der einzige Eintrag nur für Windows 10 —
+er muss dort erscheinen und wirken. Die sieben Windows-11-Einträge dürfen **nicht**
+erscheinen.
+
+## 16. Schreibgeschützter Stick und FAT32
+
+Beide Fälle sind im Code vorgesehen und nie ausgelöst worden.
+
+- **Schreibschutz:** Einen Stick mit Schreibschutzschalter benutzen, oder den Ordner
+  schreibgeschützt machen. WinZii muss starten, im Protokoll »der Datenträger ist
+  schreibgeschützt« melden und das Protokoll im Speicher führen. Die Sprachwahl darf
+  nicht abstürzen, wenn `einstellungen.json` nicht schreibbar ist.
+- **FAT32:** Ein FAT32-Stick. Der Hinweis auf die 4-GB-Grenze muss kommen, bevor jemand
+  Office darauf lädt — nicht erst, wenn die Datei abbricht.
+
+## 17. Domänen-PC mit Gruppenrichtlinien
+
+Der Launcher warnt, wenn die Ausführungsrichtlinie per Richtlinie gesetzt ist. Geprüft
+wurde das nie, und Firmenkunden sind der Normalfall.
+
+- Startet WinZii überhaupt, oder greift `-Bypass` nicht?
+- **Optimierung:** Ein per Richtlinie verwalteter Wert lässt sich zwar setzen, wird aber
+  bei der nächsten Richtlinienaktualisierung überschrieben. Sagt WinZii das, oder meldet
+  es Erfolg?
+- **Telemetrie:** `tele-diagtrack` bricht auf verwalteten Geräten die Synchronisierung
+  mit Intune. Das steht in der Beschreibung — steht es deutlich genug da?
+- Das Dashboard muss die Domäne statt einer Arbeitsgruppe zeigen.
+
+## 18. Start ohne Administratorrechte
+
+`-NoElevate` gibt es für den Selbsttest. Als Anwenderfall ist es nie betrachtet worden —
+dabei landet dort jeder, der die Rechteabfrage wegklickt.
+
+- `Start.bat -NoElevate` starten. Läuft die Oberfläche?
+- Auf jede der vierzehn Seiten wechseln. Keine darf mit einer Ausnahme abbrechen.
+- Etwas anstoßen, das Rechte braucht (Optimierung, Bereinigung). WinZii muss **sagen**,
+  dass die Rechte fehlen — nicht stumm nichts tun und nicht »erledigt« melden.
+
+**Worauf achten:** Genau hier lohnt sich das Auffangnetz aus 0.5.2. Fliegt etwas, muss es
+im Protokoll stehen und als Dialog kommen.
+
+## 19. Langsames Gerät: Festplatte, wenig Arbeitsspeicher
+
+Alle Zeitlimits sind auf einem Ryzen 9 mit NVMe gemessen. Auf einem alten Gerät mit
+Festplatte und 4 GB:
+
+- Wie lange dauert es vom Doppelklick bis zum Dashboard?
+- Die Bestandsaufnahme im Hintergrund: Läuft sie durch, oder greift ein Zeitlimit?
+- **Deinstallieren:** Die Programmliste auf einem gewachsenen System. Wie lange?
+- **Daten:** Die Profilgrößen. Auf einer Festplatte mit einem großen Profil ist das die
+  langsamste Messung im ganzen Programm.
+
+**Worauf achten:** Reagiert die Oberfläche währenddessen? Lässt sich die Bestandsaufnahme
+abbrechen, oder hängt der Abbruch-Knopf?
+
+## 20. Fremder Virenscanner
+
+Auf Neugeräten liegt fast immer eine Norton- oder McAfee-Testfassung. Die greifen tief
+ein und mögen Skripte nicht.
+
+- Startet WinZii, oder hält der Scanner die PowerShell an?
+- Die Bereinigung fasst Zwischenspeicher an, die der Scanner beobachtet.
+- Das Dashboard muss den **fremden** Scanner erkennen und nicht »Defender ist aus« melden.
+
+## 21. Hohe Skalierung und zweiter Monitor
+
+Geprüft ist klein bei 125 %. Der andere Rand fehlt.
+
+- **200 % Skalierung** auf einem 4K-Bildschirm: Passt das Fenster noch auf die
+  Arbeitsfläche, oder wird es größer als der Bildschirm?
+- Das Fenster auf einen **zweiten Monitor mit anderer Skalierung** ziehen. WPF rechnet
+  dabei neu — bleiben Schriften und Abstände stimmig?
+- Skalierung während des Betriebs ändern.
+
+## 22. ARM64
+
+An zwei Stellen ist die Architektur berücksichtigt (`Apps.ps1` beim Nachinstallieren von
+winget, `Core.System.ps1` beim Paketnamen). Ein Gerät gab es nie.
+
+- Auf einem Surface oder einem Snapdragon-Notebook: Startet WinZii unter der
+  x86-Emulation?
+- **winget nachinstallieren:** Wird das ARM64-Paket geholt, nicht das x64?
+- **Office:** Das Bereitstellungswerkzeug hat eine eigene ARM-Fassung.
+
 
 ---
 

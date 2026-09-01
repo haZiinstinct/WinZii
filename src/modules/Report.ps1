@@ -208,6 +208,7 @@ function Get-WzAreaLabel {
         'Sicherung'           { return Get-WzText 'rep.areaRestorePoint' }
         'Speicherplatz'       { return Get-WzText 'rep.areaDiskSpace' }
         'Treiber'             { return Get-WzText 'rep.areaDrivers' }
+        'Updates'             { return Get-WzText 'rep.areaUpdates' }
         'Vorinstallierte Apps' { return Get-WzText 'rep.areaPreinstalled' }
         'Zurückspielen'       { return Get-WzText 'rep.areaRestore' }
         default               { return $Area }
