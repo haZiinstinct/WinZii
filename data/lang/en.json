@@ -64,7 +64,8 @@
     "languageLabel": "Language",
     "languageConfirm": "Switch",
     "themeFailed": "The theme could not be loaded:",
-    "windowFailed": "The main window could not be loaded:"
+    "windowFailed": "The main window could not be loaded:",
+    "cancel": "Cancel"
   },
   "ai": {
     "eyebrow": "// AI REMOVAL",
@@ -339,7 +340,11 @@
     "taskStarted": "{name} started...",
     "taskDone": "{name} finished ({sekunden} s).",
     "fileComputer": "Computer: {name}",
-    "fileTimestamp": "Time: {zeit}"
+    "fileTimestamp": "Time: {zeit}",
+    "catalogLangBroken": "Catalogue translation '{code}' is malformed: {grund}",
+    "badgeRemoved": "REMOVES",
+    "riskMedium": "MEDIUM",
+    "riskHigh": "HIGH"
   },
   "auto": {
     "eyebrow": "// STARTUP",
@@ -420,7 +425,8 @@
     "logPartialRemove": "  could not be removed completely: {grund}",
     "taskAnalyse": "Analysing disk space",
     "doneTitle": "Cleanup finished",
-    "logRemovedShort": "  removed"
+    "logRemovedShort": "  removed",
+    "badgeReportOnly": "REPORT ONLY"
   },
   "dash": {
     "eyebrow": "// OVERVIEW",
@@ -1034,7 +1040,10 @@
     "sumFeature": "Windows feature {name} -> {ziel}",
     "sumCommand": "Command: {befehl}",
     "sumPowerSetting": "{name} mains={ac} battery={dc}",
-    "sumPowerPlan": "Create and activate power plan “{name}”: {werte}"
+    "sumPowerPlan": "Create and activate power plan “{name}”: {werte}",
+    "badgeActive": "ACTIVE",
+    "badgePartial": "PARTIAL",
+    "btnToggleAll": "toggle"
   },
   "log": {
     "eyebrow": "// LOG",

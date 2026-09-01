@@ -242,6 +242,17 @@ foreach ($dir in $codeDirs) {
             }
             if (-not $treffer -and $zeile -match "Invoke-WzTask -Name '([^']{2,})'") { $treffer = $Matches[1] }
             if (-not $treffer -and $zeile -match "Write-WzLog '([^']{2,})'") { $treffer = $Matches[1] }
+            # Streng, ohne Leerzeichenregel: Bei einem Anzeigeelement ist auch ein
+            # einzelnes Wort Text — »AKTIV«, »umschalten«, »Aufgabe«. Genau die
+            # sind mir in Etappe 1 durchgerutscht, weil sie kein Leerzeichen haben.
+            foreach ($muster in @("New-WzBadge -Text '([^']{2,})'", "\.Text = '([^']{2,})'", "\.Content = '([^']{2,})'")) {
+                if ($zeile -match $muster) {
+                    $fund += ('{0}:{1}  {2}' -f $datei.Name, ($i + 1), $Matches[1])
+                    $treffer = $null
+                    break
+                }
+            }
+            if ($fund.Count -gt 0 -and $fund[-1] -like ("{0}:{1}  *" -f $datei.Name, ($i + 1))) { continue }
             # Bei einer Infozeile ist auch ein einzelnes Wort Anzeigetext
             # (»Version«, »Aufgabe«), deshalb entfaellt die Leerzeichenregel.
             if (-not $treffer -and $zeile -match "New-WzInfoRow '([^']{2,})'") {

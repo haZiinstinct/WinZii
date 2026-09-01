@@ -95,7 +95,7 @@ function New-WzCleanupRow {
         [void]$headerRow.Children.Add((New-WzBadge -Text $Category.risk.ToUpper() -Kind $Category.risk))
     }
     if ($Category.method -eq 'reportOnly') {
-        [void]$headerRow.Children.Add((New-WzBadge -Text 'NUR ANZEIGE' -Kind 'info'))
+        [void]$headerRow.Children.Add((New-WzBadge -Text (Get-WzText 'clean.badgeReportOnly') -Kind 'info'))
     }
     [void]$textStack.Children.Add($headerRow)
 
@@ -160,7 +160,7 @@ function Start-WzCleanupScan {
     $syncHash.CleanTotal.Text = Get-WzText 'clean.calculating'
     $syncHash.CleanTotalHint.Text = Get-WzText 'clean.calculatingHint'
     foreach ($entry in $syncHash.CleanRows) {
-        $entry.SizeBlock.Text = '...'
+        $entry.SizeBlock.Text = '...'  # lang-ok: drei Punkte sind in jeder Sprache drei Punkte
         $entry.SizeBlock.Foreground = $syncHash.Window.FindResource('WzTextFaint')
     }
 

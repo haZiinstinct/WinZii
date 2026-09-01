@@ -250,6 +250,88 @@ if ($bloatware) {
     Write-Host "  bloatware   $($bloatware.safe.Count) unstrittig, $($bloatware.extended.Count) erweitert" -ForegroundColor Gray
 }
 
+# --- Uebersetzung der Kataloge ---------------------------------------------
+# Die Katalogdateien sind deutsch; data\lang\kataloge.<code>.json legt die
+# uebersetzten Anzeigefelder darueber. Fehlt dort ein Eintrag, faellt WinZii
+# sichtbar auf Deutsch zurueck — das ist gewollt, soll aber nicht unbemerkt
+# bleiben.
+#
+# Geprueft wird nur, was ueberhaupt Uebersetzung braucht: Ein Feld gilt als
+# uebersetzungsbeduerftig, wenn der deutsche Text ein deutsches Merkmal traegt
+# — Umlaut, ß oder ein deutsches Funktionswort. »Visual Studio Code« und
+# »MEMORY_MANAGEMENT« lauten im Englischen gleich und werden nicht verlangt.
+$felder = @(
+    @{ Katalog = 'apps';        Liste = 'categories'; Key = 'id';         Felder = @('name', 'description') }
+    @{ Katalog = 'apps';        Liste = 'apps';       Key = 'id';         Felder = @('name', 'description') }
+    @{ Katalog = 'bloatware';   Liste = 'safe';       Key = 'pattern';    Felder = @('name', 'description') }
+    @{ Katalog = 'bloatware';   Liste = 'extended';   Key = 'pattern';    Felder = @('name', 'description') }
+    @{ Katalog = 'bugcheckmap'; Liste = 'entries';    Key = 'code';       Felder = @('name', 'cause', 'recommendation') }
+    @{ Katalog = 'cleanup';     Liste = 'groups';     Key = 'id';         Felder = @('name', 'description') }
+    @{ Katalog = 'cleanup';     Liste = 'categories'; Key = 'id';         Felder = @('name', 'description') }
+    @{ Katalog = 'eventmap';    Liste = 'entries';    Key = 'provider+id'; Felder = @('title', 'explanation', 'recommendation') }
+    @{ Katalog = 'office';      Liste = 'variants';   Key = 'id';         Felder = @('name', 'description', 'note') }
+    @{ Katalog = 'office';      Liste = 'languages';  Key = 'id';         Felder = @('name') }
+    @{ Katalog = 'office';      Liste = 'apps';       Key = 'id';         Felder = @('name') }
+    @{ Katalog = 'tweaks';      Liste = 'categories'; Key = 'id';         Felder = @('name', 'description') }
+    @{ Katalog = 'tweaks';      Liste = 'tweaks';     Key = 'id';         Felder = @('name', 'description') }
+    @{ Katalog = 'wingetcodes'; Liste = 'codes';      Key = 'code';       Felder = @('text') }
+)
+$einzelfelder = @(
+    @{ Katalog = 'apps';   Feld = 'wingetBootstrap'; Felder = @('note') }
+    @{ Katalog = 'office'; Feld = 'libreOffice';     Felder = @('name', 'description') }
+)
+$deutsch = [regex]'(?i)[äöüßÄÖÜ]|\b(der|die|das|und|oder|wird|werden|nicht|kann|keine|eine|einen|ist|sind|dem|den|von|mit|auf|sich|f[üu]r|beim|noch|nur|auch)\b'
+
+$langDir = Join-Path $root 'data\lang'
+foreach ($sprachdatei in (Get-ChildItem -LiteralPath $langDir -Filter 'kataloge.*.json' -File -ErrorAction SilentlyContinue)) {
+    $code = $sprachdatei.BaseName -replace '^kataloge\.', ''
+    $uebersetzung = $null
+    try {
+        $uebersetzung = [IO.File]::ReadAllText($sprachdatei.FullName, [Text.Encoding]::UTF8) | ConvertFrom-Json
+    } catch {
+        Add-Problem "kataloge.$code" "nicht lesbar: $($_.Exception.Message)"
+        continue
+    }
+
+    $luecken = @()
+    foreach ($regel in $felder) {
+        $katalog = Read-Catalog $regel.Katalog
+        if (-not $katalog) { continue }
+        foreach ($eintrag in $katalog.($regel.Liste)) {
+            $kennung = if ($regel.Key -eq 'provider+id') { "$($eintrag.provider)/$($eintrag.id)" } else { [string]$eintrag.($regel.Key) }
+            $vorhanden = $uebersetzung.($regel.Katalog).($regel.Liste).$kennung
+            foreach ($feld in $regel.Felder) {
+                $wert = [string]$eintrag.$feld
+                if (-not $wert) { continue }
+                if (-not $deutsch.IsMatch($wert)) { continue }
+                $checked++
+                if (-not $vorhanden -or -not $vorhanden.$feld) {
+                    $luecken += "$($regel.Katalog)/$($regel.Liste)[$kennung].$feld"
+                }
+            }
+        }
+    }
+    foreach ($regel in $einzelfelder) {
+        $katalog = Read-Catalog $regel.Katalog
+        if (-not $katalog) { continue }
+        $vorhanden = $uebersetzung.($regel.Katalog).($regel.Feld)
+        foreach ($feld in $regel.Felder) {
+            $wert = [string]$katalog.($regel.Feld).$feld
+            if (-not $wert -or -not $deutsch.IsMatch($wert)) { continue }
+            $checked++
+            if (-not $vorhanden -or -not $vorhanden.$feld) {
+                $luecken += "$($regel.Katalog)/$($regel.Feld).$feld"
+            }
+        }
+    }
+
+    if ($luecken.Count -gt 0) {
+        Add-Problem "kataloge.$code" "$($luecken.Count) Feld(er) ohne Uebersetzung, erstes: $($luecken[0])"
+    } else {
+        Write-Host "  kataloge.$code  vollstaendig" -ForegroundColor Gray
+    }
+}
+
 # --- Ergebnis --------------------------------------------------------------
 Write-Host ''
 if ($problems.Count -eq 0) {

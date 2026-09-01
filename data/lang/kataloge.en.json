@@ -1,0 +1,1033 @@
+{
+  "office": {
+    "variants": {
+      "m365home": {
+        "name": "Microsoft 365 Personal / Family",
+        "description": "The subscription edition for private customers. Matches “Microsoft 365 Personal” and “Family” from the shops.",
+        "note": "The right choice for private customers. The business edition below cannot be unlocked with a private subscription."
+      },
+      "m365": {
+        "name": "Microsoft 365 Apps (business)",
+        "description": "Subscription edition for companies. Signing in with the Microsoft 365 business account unlocks the licence.",
+        "note": "Only with a business or school subscription. With a private “Microsoft 365 Personal” Office stays in read-only mode — that is what the edition above is for."
+      },
+      "office2024": {
+        "name": "Office LTSC 2024",
+        "description": "Purchase edition without a subscription, volume licence. The current perpetual-licence release.",
+        "note": "Needs a volume licence key (KMS or MAK)."
+      },
+      "office2021": {
+        "name": "Office LTSC 2021",
+        "description": "The previous purchase edition — matching existing 2021 licences.",
+        "note": "Needs a volume licence key (KMS or MAK)."
+      }
+    },
+    "languages": {
+      "de-de": {
+        "name": "German"
+      },
+      "en-us": {
+        "name": "English (US)"
+      },
+      "tr-tr": {
+        "name": "Turkish"
+      },
+      "fr-fr": {
+        "name": "French"
+      },
+      "it-it": {
+        "name": "Italian"
+      }
+    },
+    "apps": {
+      "Groove": {
+        "name": "OneDrive for Business (old)"
+      },
+      "Bing": {
+        "name": "Bing extension for Edge"
+      }
+    },
+    "libreOffice": {
+      "description": "A free alternative with no licence costs. Opens and saves the Office formats too."
+    }
+  },
+  "wingetcodes": {
+    "codes": {
+      "0": {
+        "text": "installed"
+      },
+      "-1978335189": {
+        "text": "already present in the current version"
+      },
+      "-1978335135": {
+        "text": "no update available"
+      },
+      "-1978335188": {
+        "text": "the package is already installed"
+      },
+      "-1978334972": {
+        "text": "installed — a restart completes the setup"
+      },
+      "-1978335216": {
+        "text": "no suitable installer for this scope"
+      },
+      "-1978335212": {
+        "text": "not found in the winget sources"
+      },
+      "-1978335215": {
+        "text": "the installer was cancelled"
+      },
+      "-1978335210": {
+        "text": "the download failed"
+      },
+      "-1978335209": {
+        "text": "the download's checksum does not match — the file is damaged or was altered in transit"
+      },
+      "-1978335231": {
+        "text": "the winget sources are invalid — winget source reset usually helps"
+      },
+      "-1978335230": {
+        "text": "no winget sources are set up"
+      },
+      "-1978335138": {
+        "text": "this package lacks the entitlement in the Microsoft Store"
+      },
+      "-1978335140": {
+        "text": "the package demands an interactive installation and cannot be set up silently"
+      },
+      "-1978335143": {
+        "text": "the installation needs administrator rights"
+      },
+      "-1978335146": {
+        "text": "the installation must not run elevated — this package wants a normal user account"
+      },
+      "-1978334969": {
+        "text": "not enough free disk space"
+      },
+      "-1978335211": {
+        "text": "the installer is already running, or another operation is blocking"
+      },
+      "1602": {
+        "text": "the installation was cancelled"
+      },
+      "1603": {
+        "text": "the installation stopped with a fatal error"
+      },
+      "1618": {
+        "text": "another installation is running — try again later"
+      },
+      "3010": {
+        "text": "installed — a restart completes the setup"
+      }
+    }
+  },
+  "cleanup": {
+    "groups": {
+      "system": {
+        "name": "Windows",
+        "description": "Caches and leftovers of the operating system."
+      },
+      "user": {
+        "name": "User",
+        "description": "Temporary files and recycle bin of the signed-in account."
+      },
+      "browser": {
+        "name": "Browsers",
+        "description": "Browser caches. Sign-ins and bookmarks are kept."
+      },
+      "deep": {
+        "name": "Deep clean",
+        "description": "The big chunks. Read first what gets lost along the way."
+      }
+    },
+    "categories": {
+      "temp-user": {
+        "name": "Temporary files (user)",
+        "description": "The %TEMP% folder. Programs drop working files here and often do not tidy up."
+      },
+      "temp-system": {
+        "name": "Temporary files (Windows)",
+        "description": "The folder C:\\Windows\\Temp. Used by services and installers."
+      },
+      "recycle-bin": {
+        "name": "Recycle bin",
+        "description": "Permanently deletes every file in the recycle bin — including those of other user accounts."
+      },
+      "wu-cache": {
+        "name": "Windows Update cache",
+        "description": "Downloaded update packages. Windows fetches them again when needed — often several gigabytes."
+      },
+      "delivery-optimization": {
+        "name": "Delivery optimisation",
+        "description": "The cache Windows uses to pass updates on to other PCs on the network."
+      },
+      "wer-reports": {
+        "name": "Error reports",
+        "description": "Crashes Windows collected to send to Microsoft."
+      },
+      "thumbnail-cache": {
+        "name": "Thumbnails",
+        "description": "Explorer's preview images. They are rebuilt the next time a folder is opened. The first look into a picture folder takes noticeably longer afterwards, because every preview is calculated again."
+      },
+      "windows-logs": {
+        "name": "Windows logs",
+        "description": "Log files of component servicing and installations. Occasionally useful for troubleshooting."
+      },
+      "prefetch": {
+        "name": "Prefetch data",
+        "description": "Startup data of programs. After deleting, programs start slightly slower the first few times."
+      },
+      "crash-dumps": {
+        "name": "Crash dumps",
+        "description": "Memory dumps of bluescreens. Only delete once the diagnosis is finished — they are often several gigabytes."
+      },
+      "edge-cache": {
+        "name": "Microsoft Edge",
+        "description": "Edge's cache. Sign-ins, bookmarks and passwords are kept. Familiar pages load more slowly the first time afterwards, because everything is fetched from the internet again."
+      },
+      "chrome-cache": {
+        "name": "Google Chrome",
+        "description": "Chrome's cache. Sign-ins, bookmarks and passwords are kept. Familiar pages load more slowly the first time afterwards, because everything is fetched from the internet again."
+      },
+      "firefox-cache": {
+        "name": "Mozilla Firefox",
+        "description": "Firefox's cache. Sign-ins, bookmarks and passwords are kept. Familiar pages load more slowly the first time afterwards. Firefox is hit harder: its startup cache is cleared too, so the next launch takes noticeably longer."
+      },
+      "component-store": {
+        "name": "Clean up the component store",
+        "description": "Removes superseded versions of Windows components (DISM). Runs for several minutes and needs no restart afterwards."
+      },
+      "windows-old": {
+        "name": "Previous Windows installation",
+        "description": "The Windows.old folder from the last major update. Once deleted, going back to the previous version is no longer possible."
+      },
+      "downloads-old": {
+        "name": "Show old downloads",
+        "description": "Only shows how much sits in the Downloads folder and what is older than 90 days. WinZii deletes nothing here on its own."
+      }
+    }
+  },
+  "bugcheckmap": {
+    "entries": {
+      "0x0000000A": {
+        "cause": "A driver accessed an invalid area of memory.",
+        "recommendation": "Roll back recently installed or updated drivers. On older PCs, test the memory too."
+      },
+      "0x0000001A": {
+        "cause": "Memory management hit a serious fault.",
+        "recommendation": "Test the memory with MemTest86 (several passes). The most common bluescreen with faulty RAM modules."
+      },
+      "0x0000003B": {
+        "cause": "A system call failed, usually triggered by a driver.",
+        "recommendation": "Reinstall the graphics driver, then the chipset drivers."
+      },
+      "0x00000050": {
+        "cause": "An access to memory that is not there.",
+        "recommendation": "Test the memory. If the fault only appears with certain programs, a third-party antivirus is often behind it."
+      },
+      "0x0000007E": {
+        "cause": "A system process did not catch an error — almost always a driver problem.",
+        "recommendation": "The file name in the bluescreen often names the guilty driver. Update or remove it."
+      },
+      "0x0000009F": {
+        "cause": "A driver blocked the switch into power-saving mode.",
+        "recommendation": "Typically happens when closing the lid or waking up. Update network and graphics drivers, switch fast startup off."
+      },
+      "0x00000116": {
+        "cause": "The graphics card did not answer in time and was reset.",
+        "recommendation": "Reinstall the graphics driver cleanly, check the card's temperature, undo any overclocking."
+      },
+      "0x00000124": {
+        "cause": "The hardware itself reports an uncorrectable error.",
+        "recommendation": "Usually the processor, the power supply or overclocking. Reset all overclocking and check temperatures."
+      },
+      "0x00000133": {
+        "cause": "A driver blocked the system for too long.",
+        "recommendation": "Often outdated SSD firmware or old SATA drivers. Update firmware and chipset drivers."
+      },
+      "0x00000139": {
+        "cause": "An internal security check failed, often through damaged memory or drivers.",
+        "recommendation": "Check the system files (sfc and DISM) and test the memory."
+      },
+      "0x000000D1": {
+        "cause": "A driver accessed invalid memory.",
+        "recommendation": "Network drivers are the most common cause here — update those first."
+      },
+      "0x000000EF": {
+        "cause": "A process Windows cannot do without was terminated.",
+        "recommendation": "Check the system files (sfc and DISM). If it repeats, check the disk health."
+      },
+      "0x000000C4": {
+        "cause": "Driver Verifier detected a fault.",
+        "recommendation": "If Driver Verifier is still running, it should be switched off (verifier /reset)."
+      },
+      "0x000000F4": {
+        "cause": "An important system process ended unexpectedly.",
+        "recommendation": "Common with failing disks. Check the SMART values and back up."
+      },
+      "0x000000C2": {
+        "cause": "A driver requested or released memory incorrectly.",
+        "recommendation": "Remove recently installed drivers and software."
+      },
+      "0x0000007B": {
+        "cause": "Windows cannot find the disk at startup.",
+        "recommendation": "Check the SATA mode in the BIOS (AHCI versus RAID), check the disk and its cables."
+      },
+      "0x000000C5": {
+        "cause": "A driver damaged the system memory.",
+        "recommendation": "Test the memory and update the drivers."
+      }
+    }
+  },
+  "eventmap": {
+    "entries": {
+      "Microsoft-Windows-Kernel-Power/41": {
+        "title": "PC was not shut down cleanly",
+        "explanation": "The machine went off without saying goodbye properly — a power cut, a hard crash, or a press on the power button.",
+        "recommendation": "If these entries pile up, the power supply, the memory or overheating come into question. The crash dumps further down often give the decisive clue."
+      },
+      "Microsoft-Windows-WHEA-Logger/1": {
+        "title": "Hardware error reported",
+        "explanation": "The hardware's error correction reported a fault. Usually the processor, the memory or PCIe devices are affected.",
+        "recommendation": "Test the memory (MemTest86), undo overclocking, check temperatures."
+      },
+      "Microsoft-Windows-WHEA-Logger/17": {
+        "title": "Corrected hardware error",
+        "explanation": "An error occurred but was corrected automatically. Usually PCIe transmission errors.",
+        "recommendation": "Individual entries are harmless. If they pile up, reseat expansion cards and update drivers."
+      },
+      "Microsoft-Windows-WHEA-Logger/18": {
+        "title": "Uncorrectable hardware error",
+        "explanation": "A hardware error could not be fixed. Such errors almost always end in a bluescreen.",
+        "recommendation": "Check the memory and the processor. If it happens repeatedly, there is a real defect."
+      },
+      "Microsoft-Windows-WHEA-Logger/47": {
+        "title": "Memory error corrected",
+        "explanation": "An error occurred in the memory that could be corrected.",
+        "recommendation": "If it repeats, run a memory test and test the modules one at a time."
+      },
+      "disk/7": {
+        "title": "Bad block on the disk",
+        "explanation": "Windows could not read or write an area of the disk.",
+        "recommendation": "Check the SMART values and back up promptly. This is often the first sign of a coming failure."
+      },
+      "disk/51": {
+        "title": "Error accessing the disk",
+        "explanation": "A read or write operation had to be repeated.",
+        "recommendation": "Check the cable and the port. If it piles up, check the SMART values."
+      },
+      "disk/153": {
+        "title": "Command to the disk was retried",
+        "explanation": "The disk did not answer in time, so Windows tried again.",
+        "recommendation": "Common with USB disks that get too little power, or with ageing SSDs."
+      },
+      "Ntfs/55": {
+        "title": "File system damaged",
+        "explanation": "The NTFS structure is damaged. The cause is usually unclean shutdowns or hardware faults.",
+        "recommendation": "Run a disk check (chkdsk). Back up first."
+      },
+      "storahci/129": {
+        "title": "Disk stopped responding (reset)",
+        "explanation": "The controller had to be reset because a drive did not answer.",
+        "recommendation": "Swap the SATA cable, update the SSD firmware, check the power options for hard disks."
+      },
+      "stornvme/129": {
+        "title": "NVMe drive stopped responding",
+        "explanation": "The NVMe SSD did not answer a command in time.",
+        "recommendation": "Update the firmware and check the power management for PCIe."
+      },
+      "Service Control Manager/7000": {
+        "title": "Service could not be started",
+        "explanation": "A Windows service failed to start at system startup.",
+        "recommendation": "Look at the service name in the detail. Often it belongs to uninstalled software and can be disabled."
+      },
+      "Service Control Manager/7001": {
+        "title": "Service depends on another one",
+        "explanation": "A service did not start because another service was missing or failed as well.",
+        "recommendation": "Fix the service that caused it first."
+      },
+      "Service Control Manager/7009": {
+        "title": "Timeout while starting a service",
+        "explanation": "A service did not answer within the given time.",
+        "recommendation": "Normal with slow hard disks. If it piles up, check the disk health."
+      },
+      "Service Control Manager/7031": {
+        "title": "Service terminated unexpectedly",
+        "explanation": "A service crashed and was restarted.",
+        "recommendation": "Check the service concerned. If it repeats, reinstalling the matching software helps."
+      },
+      "Service Control Manager/7034": {
+        "title": "Service terminated unexpectedly (no restart)",
+        "explanation": "A service crashed and was not started again.",
+        "recommendation": "Check or reinstall the matching software."
+      },
+      "DCOM/10016": {
+        "title": "DCOM permission missing (usually harmless)",
+        "explanation": "One component wanted to reach another and had no permission. Windows handles that internally.",
+        "recommendation": "Can be ignored. Microsoft itself classes this message as harmless — it is the most common false alarm in Event Viewer."
+      },
+      "DistributedCOM/10010": {
+        "title": "COM server did not answer in time (usually harmless)",
+        "explanation": "A component did not register quickly enough. Windows carries on normally afterwards.",
+        "recommendation": "Can be ignored. It appears in large numbers on almost every Windows and is no sign of a defect."
+      },
+      "DistributedCOM/10001": {
+        "title": "Application could not be started",
+        "explanation": "A COM application failed to start, usually for lack of permission.",
+        "recommendation": "Only worth chasing if a program genuinely does not work."
+      },
+      "Service Control Manager/7023": {
+        "title": "Service ended with an error",
+        "explanation": "A service was ended and reports an error code while doing so.",
+        "recommendation": "Often affects services belonging to uninstalled software. If the service is not needed, it can be set to “Disabled”."
+      },
+      "Microsoft-Windows-Security-SPP/8198": {
+        "title": "Licence activation failed",
+        "explanation": "Windows could not confirm the activation — often a missing connection to the activation server.",
+        "recommendation": "Check the activation state on the dashboard. With volume licences, check that the KMS server can be reached."
+      },
+      "VSS/8193": {
+        "title": "Shadow copy service reports an error",
+        "explanation": "The shadow copy service could not carry out a task. This affects backups and restore points.",
+        "recommendation": "Only matters if backups or restore points fail. Otherwise of no significance."
+      },
+      "VSS/13": {
+        "title": "Shadow copy service could not start",
+        "explanation": "A service involved had already ended during shutdown.",
+        "recommendation": "Typically appears when switching off and is meaningless then."
+      },
+      "Microsoft-Windows-DeviceAssociationService/3502": {
+        "title": "Device disconnect failed",
+        "explanation": "A device paired over Bluetooth or USB could not be disconnected cleanly.",
+        "recommendation": "Of no significance as long as the devices work."
+      },
+      "CertificateServicesClient-CertEnroll/87": {
+        "title": "Certificate request failed",
+        "explanation": "Windows wanted to request a certificate and received no answer.",
+        "recommendation": "Of no significance on home networks. On company networks, check the certificate authority."
+      },
+      "Microsoft-Windows-Kernel-EventTracing/2": {
+        "title": "Tracing could not be started",
+        "explanation": "An internal logging session failed to start, usually because it is already running.",
+        "recommendation": "Of no significance for day-to-day use."
+      },
+      "Application Error/1000": {
+        "title": "Program crashed",
+        "explanation": "A program was ended by a fault.",
+        "recommendation": "Note the name of the program and of the faulting module. With system files check the drivers, otherwise reinstall the program."
+      },
+      "Application Hang/1002": {
+        "title": "Program stopped responding",
+        "explanation": "A program stopped answering and had to be closed.",
+        "recommendation": "If it piles up, check memory usage and disk health."
+      },
+      "Microsoft-Windows-WER-SystemErrorReporting/1001": {
+        "title": "Bluescreen occurred",
+        "explanation": "Windows was forced to restart by a serious fault. The stop code is in the entry.",
+        "recommendation": "The crash dumps section further down translates the stop code into plain language."
+      },
+      "EventLog/6008": {
+        "title": "Unexpected shutdown",
+        "explanation": "The previous shutdown was not orderly.",
+        "recommendation": "Read together with Kernel-Power 41 — both describe the same incident."
+      },
+      "Microsoft-Windows-DNS-Client/1014": {
+        "title": "Name resolution failed",
+        "explanation": "The DNS server did not answer a query.",
+        "recommendation": "Normal now and then. If it piles up, enter a different DNS server — possible in the Repair section."
+      },
+      "Microsoft-Windows-GroupPolicy/1085": {
+        "title": "Group policy could not be applied",
+        "explanation": "A policy extension failed.",
+        "recommendation": "Usually of no significance on home networks. On company networks, check the connection to the domain controller."
+      },
+      "ESENT/455": {
+        "title": "Database error of a Windows component",
+        "explanation": "An internal database (the search index, for instance) could not open a file.",
+        "recommendation": "Usually sorts itself out. If search problems persist, rebuild the search index."
+      },
+      "Microsoft-Windows-Kernel-PnP/219": {
+        "title": "Driver could not be loaded",
+        "explanation": "A device driver failed to load.",
+        "recommendation": "Look in Device Manager for devices with an exclamation mark and reinstall the driver."
+      },
+      "Microsoft-Windows-Winlogon/6006": {
+        "title": "Sign-in took unusually long",
+        "explanation": "The sign-in was delayed by a service or a startup program.",
+        "recommendation": "Check the startup entries — the Startup section shows them along with where they come from."
+      }
+    }
+  },
+  "bloatware": {
+    "safe": {
+      "Microsoft.BingNews*": {
+        "name": "Bing News",
+        "description": "Microsoft's news app."
+      },
+      "Microsoft.BingWeather*": {
+        "name": "Weather",
+        "description": "Weather app, fetches data in the background."
+      },
+      "Microsoft.BingFinance*": {
+        "name": "Finance",
+        "description": "Stock market and finance app."
+      },
+      "Microsoft.BingSports*": {
+        "name": "Sport",
+        "description": "Sports app."
+      },
+      "Microsoft.BingSearch*": {
+        "name": "Web search in the Start menu",
+        "description": "Puts Bing results into Windows Search."
+      },
+      "Microsoft.MicrosoftSolitaireCollection*": {
+        "name": "Solitaire Collection",
+        "description": "Card games with adverts and subscription offers."
+      },
+      "Microsoft.GetHelp*": {
+        "name": "Get Help",
+        "description": "Microsoft's support app."
+      },
+      "Microsoft.Getstarted*": {
+        "name": "Tips",
+        "description": "Introductory app for Windows."
+      },
+      "Microsoft.MicrosoftOfficeHub*": {
+        "name": "Office Hub",
+        "description": "An advertising tile for Microsoft 365, not actual Office."
+      },
+      "Microsoft.People*": {
+        "name": "People",
+        "description": "Contacts app, barely used in practice."
+      },
+      "Microsoft.WindowsFeedbackHub*": {
+        "name": "Feedback Hub",
+        "description": "Feedback to Microsoft."
+      },
+      "Microsoft.Todos*": {
+        "name": "Microsoft To Do",
+        "description": "Task list app."
+      },
+      "Clipchamp.Clipchamp*": {
+        "name": "Clipchamp",
+        "description": "Video editing on a subscription model."
+      },
+      "MicrosoftTeams*": {
+        "name": "Teams (personal)",
+        "description": "The personal Teams edition, not the business one."
+      },
+      "Microsoft.MicrosoftStickyNotes*": {
+        "name": "Sticky Notes",
+        "description": "Note-taking app."
+      },
+      "Microsoft.WindowsMaps*": {
+        "name": "Maps",
+        "description": "Microsoft's maps app."
+      },
+      "Microsoft.YourPhone*": {
+        "name": "Phone Link",
+        "description": "Pairing with a mobile phone."
+      },
+      "Microsoft.549981C3F5F10*": {
+        "name": "Cortana",
+        "description": "The old voice assistant."
+      },
+      "Microsoft.MixedReality.Portal*": {
+        "name": "Mixed Reality Portal",
+        "description": "For VR headsets that barely exist any more."
+      },
+      "Microsoft.OutlookForWindows*": {
+        "name": "New Outlook",
+        "description": "The web edition of Outlook, often unwanted."
+      },
+      "MicrosoftCorporationII.QuickAssist*": {
+        "name": "Quick Assist",
+        "description": "Remote assistance from Microsoft."
+      }
+    },
+    "extended": {
+      "Microsoft.XboxApp*": {
+        "name": "Xbox",
+        "description": "Xbox app. Not needed for games from the Store."
+      },
+      "Microsoft.XboxGamingOverlay*": {
+        "name": "Xbox Game Bar",
+        "description": "Overlay while gaming, costs a little performance."
+      },
+      "Microsoft.XboxGameOverlay*": {
+        "name": "Xbox Game Overlay",
+        "description": "An additional component of the Game Bar."
+      },
+      "Microsoft.XboxSpeechToTextOverlay*": {
+        "name": "Xbox speech to text",
+        "description": "Subtitle overlay for Xbox games."
+      },
+      "Microsoft.XboxIdentityProvider*": {
+        "name": "Xbox sign-in",
+        "description": "Needed if games from the Store are meant to run."
+      },
+      "Microsoft.ZuneMusic*": {
+        "name": "Media Player",
+        "description": "The Windows music app."
+      },
+      "Microsoft.ZuneVideo*": {
+        "name": "Films & TV",
+        "description": "Video app with purchase offers."
+      },
+      "Microsoft.WindowsSoundRecorder*": {
+        "name": "Sound Recorder",
+        "description": "Simple recording app."
+      },
+      "Microsoft.MicrosoftJournal*": {
+        "name": "Journal",
+        "description": "Note-taking app for pen input."
+      },
+      "Microsoft.Windows.DevHome*": {
+        "name": "Dev Home",
+        "description": "Developer start page, of no use to ordinary users."
+      },
+      "Microsoft.PowerAutomateDesktop*": {
+        "name": "Power Automate",
+        "description": "Automation, rarely relevant for private customers."
+      },
+      "MicrosoftWindows.CrossDevice*": {
+        "name": "Cross Device",
+        "description": "Linking with other devices."
+      },
+      "Microsoft.Microsoft3DViewer*": {
+        "name": "3D Viewer",
+        "description": "Viewer for 3D models."
+      },
+      "Microsoft.Print3D*": {
+        "name": "3D Print",
+        "description": "Print preparation for 3D printers."
+      },
+      "Microsoft.SkypeApp*": {
+        "name": "Skype",
+        "description": "The preinstalled Skype edition."
+      }
+    }
+  },
+  "apps": {
+    "wingetBootstrap": {
+      "note": "Only needed when winget is missing (LTSC, older Windows 10 builds, freshly installed systems). The dependency package comes from the same release as the App Installer and holds everything that release asks for (these days including the WindowsAppRuntime)."
+    },
+    "categories": {
+      "basis": {
+        "name": "The basics",
+        "description": "Belongs on every freshly installed PC."
+      },
+      "browser": {
+        "name": "Browsers",
+        "description": "Only install what the customer actually uses."
+      },
+      "technik": {
+        "name": "Technician's tools",
+        "description": "Diagnosis, disk space analysis, reading out hardware."
+      },
+      "sicherheit": {
+        "name": "Security",
+        "description": "A second opinion, cleaning up after an infection, protection afterwards. None of it is preselected — what belongs on the customer's PC is decided by the case, not by a list."
+      },
+      "fernwartung": {
+        "name": "Remote access and network",
+        "description": "Access to remote machines."
+      },
+      "rettung": {
+        "name": "Data recovery and backup",
+        "description": "When data is gone — or before it goes."
+      },
+      "belastung": {
+        "name": "Stress testing",
+        "description": "Brings sporadic crashes out into the open by putting the hardware under load."
+      },
+      "medien": {
+        "name": "Media and graphics",
+        "description": "Playback, recording, image editing."
+      },
+      "laufzeit": {
+        "name": "Runtimes",
+        "description": "The underpinning other programs need. Without it, applications start with an error about a missing DLL."
+      },
+      "entwicklung": {
+        "name": "Development",
+        "description": "Editors and tools for development."
+      }
+    },
+    "apps": {
+      "7zip": {
+        "description": "Packs and unpacks just about every archive format."
+      },
+      "notepadpp": {
+        "description": "Text editor with syntax highlighting, replaces Windows Notepad."
+      },
+      "sumatrapdf": {
+        "description": "A lean PDF viewer. Starts instantly and drags no background service along."
+      },
+      "acrobat": {
+        "description": "For when the customer needs forms or signatures."
+      },
+      "keepassxc": {
+        "description": "Password management that works without the cloud."
+      },
+      "powertoys": {
+        "description": "Microsoft's toolkit: window layouts, bulk renaming, colour picker."
+      },
+      "thunderbird": {
+        "description": "A mail program without an Office licence. Can take over Outlook accounts."
+      },
+      "firefox": {
+        "description": "The English edition."
+      },
+      "chrome": {
+        "description": "Widely used, many customers expect it."
+      },
+      "brave": {
+        "description": "Chromium-based with a built-in ad blocker."
+      },
+      "treesize": {
+        "description": "Shows graphically what is filling the disk."
+      },
+      "crystaldiskinfo": {
+        "description": "Reads the SMART values of hard disks and SSDs — shows failures before they happen."
+      },
+      "hwinfo": {
+        "description": "Reads every sensor: temperatures, voltages, clock speeds."
+      },
+      "revo": {
+        "description": "Removes programs along with their leftovers in the registry and the file system."
+      },
+      "everything": {
+        "description": "Finds files in a fraction of a second through the NTFS file index."
+      },
+      "bleachbit": {
+        "description": "Additional cleaning for programs WinZii does not cover."
+      },
+      "sysinternals": {
+        "description": "Autoruns, Process Explorer and company — the tools Microsoft itself searches with."
+      },
+      "bulkcrap": {
+        "description": "Removes many programs one after another and tidies up the leftovers afterwards."
+      },
+      "wiztree": {
+        "description": "Disk space analysis straight from the NTFS table — seconds where TreeSize is still searching."
+      },
+      "snappydriver": {
+        "description": "Adding drivers when there is no network after a reinstall. Driver packages can be downloaded in advance."
+      },
+      "aomeipartition": {
+        "description": "Create and move partitions and clone disks — when migrating to an SSD, for instance."
+      },
+      "rufus": {
+        "description": "Turns a USB stick into bootable Windows installation media."
+      },
+      "ventoy": {
+        "description": "Several ISO images on one stick: set it up once, then just copy files onto it."
+      },
+      "adwcleaner": {
+        "description": "Clears out adware, browser toolbars and hijacked start pages. Runs without installing, takes less than a minute, and is the first thing to reach for when the complaint is “adverts everywhere”."
+      },
+      "malwarebytes": {
+        "description": "A second opinion alongside Windows Defender. Careful: the free edition starts as a trial of the Premium version with real-time protection — after 14 days it falls back to scanning only. Until then two guards run side by side."
+      },
+      "emsisoftkit": {
+        "description": "A portable scanner with a second detection engine. Installs nothing permanently and can be started from the stick even when the existing antivirus has already been switched off."
+      },
+      "esetavremover": {
+        "description": "Removes remnants of old antivirus programs that can no longer be uninstalled through Control Panel. Those are exactly what stops the new protection from starting cleanly."
+      },
+      "osarmor": {
+        "description": "A behaviour block: it stops suspicious launches (scripts out of Office documents, PowerShell from the Downloads folder) before any detection would have to catch them. It needs follow-up work — it also stops harmless programs, and those have to be allowed by hand."
+      },
+      "defenderui": {
+        "description": "A front end for the Windows Defender settings Microsoft only offers through group policy. Three ready-made levels from “as it ships” to “strict”."
+      },
+      "firewallcontrol": {
+        "description": "Asks about every outgoing connection instead of silently allowing it. The first few days bring a lot of prompts — on a customer's PC only with warning."
+      },
+      "simplewall": {
+        "description": "The same thing, open source and with no vendor behind it. Lean, but the default setting blocks everything to start with."
+      },
+      "veracrypt": {
+        "description": "Encrypted containers and whole drives. For devices without BitLocker — that is, everything below Windows Pro."
+      },
+      "anydesk": {
+        "description": "Remote access, widely used in German-speaking countries."
+      },
+      "rustdesk": {
+        "description": "Open-source remote access, usable with your own server too."
+      },
+      "winscp": {
+        "description": "File transfer over SFTP, FTP and SCP."
+      },
+      "putty": {
+        "description": "SSH and Telnet access to routers, switches and servers."
+      },
+      "advancedipscanner": {
+        "description": "Finds every device on the network along with its name and MAC address."
+      },
+      "teamviewer": {
+        "description": "Remote access the customer probably already knows. Chargeable for commercial use."
+      },
+      "wireshark": {
+        "description": "Records network traffic. For cases where the connection is up but nothing arrives anyway."
+      },
+      "recuva": {
+        "description": "Brings back accidentally deleted files. Important: do not install it on the drive you want to recover from."
+      },
+      "testdisk": {
+        "description": "Restores lost partitions and fishes photos out of damaged file systems.",
+        "name": "TestDisk and PhotoRec"
+      },
+      "veeam": {
+        "description": "A complete image of the disk before a reinstall begins. Free for private use."
+      },
+      "duplicati": {
+        "description": "Encrypted, scheduled backup to an external disk or the cloud — as a lasting solution for the customer."
+      },
+      "occt": {
+        "description": "Puts the processor, memory and power supply under full load. Brings out crashes that only appear sporadically in everyday use."
+      },
+      "furmark": {
+        "description": "Loads the graphics card. With visual artefacts and crashes in games, the fastest route to certainty."
+      },
+      "crystaldiskmark": {
+        "description": "Measures how fast the disk really is — often the answer to “the PC is slow”."
+      },
+      "hwmonitor": {
+        "description": "Keeps an eye on temperatures, voltages and fan speeds while the test runs."
+      },
+      "vlc": {
+        "description": "Plays practically every video and audio format."
+      },
+      "sharex": {
+        "description": "Screenshots and screen recordings with post-processing."
+      },
+      "irfanview": {
+        "description": "A fast image viewer with batch processing."
+      },
+      "gimp": {
+        "description": "Image editing, a free alternative to Photoshop."
+      },
+      "handbrake": {
+        "description": "Converts videos into common formats and shrinks them along the way."
+      },
+      "vcredist": {
+        "name": "Visual C++ runtime 2015-2022",
+        "description": "By far the most commonly missing dependency. Without it many programs and games do not start."
+      },
+      "dotnetdesktop": {
+        "description": "Needed for newer Windows programs built on .NET."
+      },
+      "webview2": {
+        "description": "Displays web interfaces inside other programs. Usually already present on Windows 11."
+      },
+      "vscode": {
+        "description": "An editor with extensions for practically every language."
+      },
+      "git": {
+        "description": "Version control including Git Bash."
+      },
+      "pwsh": {
+        "description": "The current PowerShell version alongside the built-in 5.1."
+      },
+      "windowsterminal": {
+        "description": "A terminal with tabs for PowerShell, Command Prompt and WSL."
+      }
+    }
+  },
+  "tweaks": {
+    "categories": {
+      "performance": {
+        "name": "Speed",
+        "description": "Startup time, responsiveness and power settings."
+      },
+      "telemetry": {
+        "name": "Telemetry",
+        "description": "Diagnostic and usage data Windows sends to Microsoft."
+      },
+      "privacy": {
+        "name": "Privacy",
+        "description": "Advertising ID, activity history, suggestions and web search in the Start menu."
+      },
+      "security": {
+        "name": "Security",
+        "description": "Switching off outdated protocols, shrinking the attack surface."
+      },
+      "ai-policy": {
+        "name": "Switch AI off",
+        "description": "Blocks Copilot, Recall and the AI features in Windows programs by policy. Reversible, and worth doing even when nothing is installed yet."
+      },
+      "ai-remove": {
+        "name": "Remove AI",
+        "description": "Actually deletes the AI components from the system. Not reversible at the push of a button."
+      }
+    },
+    "tweaks": {
+      "perf-fast-startup-off": {
+        "name": "Switch fast startup off",
+        "description": "Fast startup only appears to shut Windows down. That causes problems with drivers, updates and dual boot — and restarts then no longer help with troubleshooting. The price: without fast startup every cold start takes ten to thirty seconds longer. With driver or update problems and with dual boot it is worth it — otherwise better left on."
+      },
+      "perf-startup-delay": {
+        "name": "Remove the delay before startup programs",
+        "description": "After signing in, Windows waits about ten seconds artificially before startup programs run. On fast PCs that is unnecessary. On weak hardware it is counterproductive: every startup program then launches together with the desktop, and the first minute after signing in feels sluggish. Takes effect at the next sign-in."
+      },
+      "perf-menu-delay": {
+        "name": "Open menus instantly",
+        "description": "Sets the delay before menus open from 400 to 0 milliseconds. Windows feels noticeably more direct."
+      },
+      "perf-gamedvr-off": {
+        "name": "Switch Xbox game recording off",
+        "description": "The background recording (Game DVR) runs along with ordinary programs too and costs performance. Not needed for games themselves."
+      },
+      "perf-transparency-off": {
+        "name": "Switch transparency effects off",
+        "description": "The frosted-glass effects of the Start menu and taskbar cost graphics performance. Noticeable on older PCs and notebooks."
+      },
+      "perf-animations-off": {
+        "name": "Switch window animations off",
+        "description": "Switches fade-in and fade-out effects off. Distinctly faster on weak hardware, but looks plainer for it."
+      },
+      "perf-power-profile": {
+        "name": "Performance on mains, endurance on battery",
+        "description": "Creates its own power plan that tells mains and battery apart. On the mains the fan may spin up instead of lowering the clock, and turbo kicks in without holding back. On battery, turbo is only used where it pays off, and cooling would rather lower the clock than get loud. The peak clock on mains does not rise as a result — that is not capped anyway; what changes is responsiveness and behaviour under sustained load. The gain is mainly on the battery side. The existing power plan is left untouched and is active again the moment this is undone."
+      },
+      "perf-sysmain-off": {
+        "name": "Switch SysMain (Superfetch) off",
+        "description": "SysMain preloads frequently used programs into memory. On SSDs that gains next to nothing and causes constant background load. On hard disks better left on."
+      },
+      "tele-allowtelemetry": {
+        "name": "Set diagnostic data to the minimum",
+        "description": "Sets the transmission of diagnostic data to the lowest level by policy. On Pro and Home a residue of security data remains; on Enterprise everything is off afterwards."
+      },
+      "tele-diagtrack": {
+        "name": "Switch telemetry services off",
+        "description": "Stops the services that collect and transmit usage data (DiagTrack and dmwappushservice). Side effect: Feedback Hub and Windows Insider stop working afterwards, and on managed devices synchronisation with Intune or another device management breaks."
+      },
+      "tele-ceip-tasks": {
+        "name": "Disable scheduled telemetry tasks",
+        "description": "Windows regularly starts tasks that gather usage data and send it off. These are switched off."
+      },
+      "tele-ceip": {
+        "name": "Switch the Customer Experience Improvement Program off",
+        "description": "Ends participation in the CEIP programme, through which Windows collects anonymised usage statistics."
+      },
+      "tele-error-reporting": {
+        "name": "Switch error reporting off",
+        "description": "Windows sends reports to Microsoft after crashes. Local crash logs are kept and can still be read through Diagnostics."
+      },
+      "tele-inking": {
+        "name": "Do not collect typing and inking data",
+        "description": "Stops Windows from analysing and transmitting keystrokes and handwriting to improve text recognition."
+      },
+      "priv-advertising-id": {
+        "name": "Switch the advertising ID off",
+        "description": "Without this identifier, apps can no longer build a cross-device advertising profile."
+      },
+      "priv-activity-feed": {
+        "name": "Switch activity history off",
+        "description": "Windows no longer remembers which files and programs were opened when, and does not transmit that history to the Microsoft account."
+      },
+      "priv-feedback": {
+        "name": "Switch feedback prompts off",
+        "description": "Windows no longer asks for ratings and feedback."
+      },
+      "priv-tailored-experiences": {
+        "name": "Switch personalised suggestions and adverts off",
+        "description": "Removes app suggestions in the Start menu, adverts on the lock screen and the “suggestions” in Settings."
+      },
+      "priv-web-search": {
+        "name": "Switch web search in the Start menu off",
+        "description": "Start menu search then only searches the PC. Search terms no longer go to Bing, and results appear noticeably faster."
+      },
+      "priv-widgets": {
+        "name": "Switch widgets off",
+        "description": "Removes the weather and news panel from the taskbar. It constantly fetches content in the background."
+      },
+      "priv-newsinterests-win10": {
+        "name": "Switch News and Interests off",
+        "description": "The counterpart to widgets on Windows 10. Windows 11 uses different keys for it, which is why these are two separate entries — otherwise one of them would have reported success on the other system without changing anything."
+      },
+      "priv-start-recommendations": {
+        "name": "Switch Start menu recommendations off",
+        "description": "Hides the recommendations and advertising entries Microsoft injects into the Start menu. The “Recommended” area itself only disappears on Enterprise and Education; on Home and Pro it stays, only the advertising inside it is gone."
+      },
+      "priv-app-tracking": {
+        "name": "Do not log program usage",
+        "description": "Windows no longer remembers which programs are started how often. The “Most used” list in the Start menu then stays empty."
+      },
+      "sec-smb1-off": {
+        "name": "Remove SMBv1",
+        "description": "SMBv1 is the protocol WannaCry spread through. Only very old devices still need it (network scanners from before 2010, for instance)."
+      },
+      "sec-psv2-off": {
+        "name": "Remove PowerShell 2.0",
+        "description": "The old PowerShell version knows no logging and is used deliberately by malware to get around protection mechanisms."
+      },
+      "sec-autorun-off": {
+        "name": "Switch AutoPlay off",
+        "description": "Stops programs on USB sticks and discs from starting automatically — a classic route of infection."
+      },
+      "sec-file-extensions": {
+        "name": "Always show file extensions",
+        "description": "Without a visible extension, “invoice.pdf.exe” looks like a PDF in Explorer. That is the most common trick with email attachments."
+      },
+      "sec-defender-pua": {
+        "name": "Switch protection against unwanted programs on",
+        "description": "Enables Defender's PUA detection. It blocks adware, toolbars and pushy “optimisers” that are not classic viruses."
+      },
+      "sec-remote-assistance": {
+        "name": "Switch Remote Assistance off",
+        "description": "Closes the built-in remote assistance access, which is practically never used. Remote access through AnyDesk or RustDesk is unaffected."
+      },
+      "sec-llmnr-off": {
+        "name": "Restrict LLMNR and NetBIOS name resolution",
+        "description": "LLMNR is used on networks to intercept credentials (responder attacks). On plain home networks without a server, switching it off is harmless; on company networks check first."
+      },
+      "sec-wdigest-off": {
+        "name": "Prevent plain-text credentials in memory",
+        "description": "Switches WDigest off. Otherwise attackers can read passwords in plain text out of memory with tools like Mimikatz."
+      },
+      "ai-copilot-policy": {
+        "name": "Block Copilot",
+        "description": "Switches Windows Copilot off by policy and removes the taskbar button. Also works preventively: Copilot stays off if a feature update reinstalls it."
+      },
+      "ai-recall-policy": {
+        "name": "Block Recall",
+        "description": "Stops Windows from continuously taking screenshots and filing them away for searching. Recall is blocked by policy and the storing of snapshots is prevented."
+      },
+      "ai-clicktodo-policy": {
+        "name": "Block Click to Do",
+        "description": "Click to Do analyses what is on screen in order to suggest actions. This analysis is switched off."
+      },
+      "ai-apps-policy": {
+        "name": "Switch AI in Windows programs off",
+        "description": "Removes the AI features from Notepad (rewrite), Paint (image generator, Cocreator) and the Snipping Tool."
+      },
+      "ai-edge-copilot": {
+        "name": "Switch Copilot in Edge off",
+        "description": "Removes the Copilot sidebar from Microsoft Edge and stops page content being transmitted for analysis."
+      },
+      "ai-cloud-search": {
+        "name": "Switch AI search and cloud content off",
+        "description": "Stops Windows Search sending content to the cloud for analysis, and switches the AI-backed search suggestions off."
+      },
+      "ai-tasks-off": {
+        "name": "Disable scheduled AI tasks",
+        "description": "Switches off the background tasks Windows uses to set up and update AI components."
+      },
+      "ai-appx-remove": {
+        "name": "Remove Copilot apps",
+        "description": "Deletes the Copilot app packages for all users and removes them from the provisioning for new accounts. After large feature updates they can come back — run it again then. After the removal Windows sets parts up again at the next sign-in — that costs a few minutes of processing time, once."
+      },
+      "ai-recall-remove": {
+        "name": "Remove Recall",
+        "description": "Removes Recall as an optional system feature. Afterwards the snapshot function is gone, not merely switched off."
+      },
+      "ai-appx-force": {
+        "name": "Force removal of blocked AI packages",
+        "description": "Some AI packages are marked as non-removable. This entry lifts that block and deletes them anyway. Only use it when the previous entry achieved nothing — the only way back is a feature update."
+      }
+    }
+  }
+}

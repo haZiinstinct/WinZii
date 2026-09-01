@@ -64,7 +64,8 @@
     "languageLabel": "Sprache",
     "languageConfirm": "Umstellen",
     "themeFailed": "Das Design konnte nicht geladen werden:",
-    "windowFailed": "Das Hauptfenster konnte nicht geladen werden:"
+    "windowFailed": "Das Hauptfenster konnte nicht geladen werden:",
+    "cancel": "Abbrechen"
   },
   "ai": {
     "eyebrow": "// KI-ENTFERNUNG",
@@ -339,7 +340,11 @@
     "taskStarted": "{name} gestartet...",
     "taskDone": "{name} abgeschlossen ({sekunden} s).",
     "fileComputer": "Computer: {name}",
-    "fileTimestamp": "Zeitpunkt: {zeit}"
+    "fileTimestamp": "Zeitpunkt: {zeit}",
+    "catalogLangBroken": "Katalog-Übersetzung '{code}' ist fehlerhaft: {grund}",
+    "badgeRemoved": "ENTFERNT",
+    "riskMedium": "MITTEL",
+    "riskHigh": "HOCH"
   },
   "auto": {
     "eyebrow": "// AUTOSTART",
@@ -420,7 +425,8 @@
     "logPartialRemove": "  konnte nicht vollständig entfernt werden: {grund}",
     "taskAnalyse": "Speicherplatz analysieren",
     "doneTitle": "Bereinigung abgeschlossen",
-    "logRemovedShort": "  entfernt"
+    "logRemovedShort": "  entfernt",
+    "badgeReportOnly": "NUR ANZEIGE"
   },
   "dash": {
     "eyebrow": "// ÜBERSICHT",
@@ -1034,7 +1040,10 @@
     "sumFeature": "Windows-Funktion {name} -> {ziel}",
     "sumCommand": "Befehl: {befehl}",
     "sumPowerSetting": "{name} Netz={ac} Akku={dc}",
-    "sumPowerPlan": "Energieplan »{name}« anlegen und aktivieren: {werte}"
+    "sumPowerPlan": "Energieplan »{name}« anlegen und aktivieren: {werte}",
+    "badgeActive": "AKTIV",
+    "badgePartial": "TEILWEISE",
+    "btnToggleAll": "umschalten"
   },
   "log": {
     "eyebrow": "// PROTOKOLL",

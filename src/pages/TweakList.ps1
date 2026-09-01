@@ -43,7 +43,7 @@ function New-WzTweakList {
         [void]$header.Children.Add($headerTitle)
 
         $toggleAll = New-Object Windows.Controls.Button
-        $toggleAll.Content = 'umschalten'
+        $toggleAll.Content = Get-WzText 'opt.btnToggleAll'
         $toggleAll.Style = $syncHash.Window.FindResource('WzBtnGhost')
         $toggleAll.HorizontalAlignment = 'Right'
         $toggleAll.VerticalAlignment = 'Top'
@@ -119,8 +119,8 @@ function Update-WzTweakStates {
             $state = $states[$entry.Tweak.id]
 
             $badgeText, $badgeKind = switch ($state) {
-                'Applied'    { 'AKTIV', 'ok' }
-                'Partial'    { 'TEILWEISE', 'warn' }
+                'Applied'    { (Get-WzText 'opt.badgeActive'), 'ok' }
+                'Partial'    { (Get-WzText 'opt.badgePartial'), 'warn' }
                 'NotApplied' { $null, $null }
                 default      { $null, $null }
             }

@@ -510,7 +510,7 @@ function Show-WzConfirm {
     $cancelButton = $null
     if (-not $HideCancel) {
         $cancelButton = New-Object Windows.Controls.Button
-        $cancelButton.Content = 'Abbrechen'
+        $cancelButton.Content = Get-WzText 'dialog.cancel'
         $cancelButton.Style = $syncHash.Window.FindResource('WzBtnSecondary')
         $cancelButton.Margin = New-Object Windows.Thickness(0, 0, 10, 0)
         $cancelButton.IsCancel = $true
@@ -677,10 +677,13 @@ function New-WzCheckRow {
     [void]$headerRow.Children.Add($nameBlock)
 
     if ($Item.PSObject.Properties['risk'] -and $Item.risk -ne 'low') {
-        [void]$headerRow.Children.Add((New-WzBadge -Text $Item.risk.ToUpper() -Kind $Item.risk))
+        # Ausgeschrieben statt ueber einen zusammengesetzten Schluessel: Test-Language
+        # gleicht benutzte gegen definierte Schluessel ab und findet nur Literale.
+        $risiko = if ($Item.risk -eq 'high') { Get-WzText 'core.riskHigh' } else { Get-WzText 'core.riskMedium' }
+        [void]$headerRow.Children.Add((New-WzBadge -Text $risiko -Kind $Item.risk))
     }
     if ($Item.PSObject.Properties['level'] -and $Item.level -eq 'hard') {
-        [void]$headerRow.Children.Add((New-WzBadge -Text 'ENTFERNT' -Kind 'hard'))
+        [void]$headerRow.Children.Add((New-WzBadge -Text (Get-WzText 'core.badgeRemoved') -Kind 'hard'))
     }
     if ($StatusText) {
         [void]$headerRow.Children.Add((New-WzBadge -Text $StatusText -Kind $StatusKind))
