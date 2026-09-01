@@ -132,6 +132,16 @@ function Update-WzProtocolPage {
         $syncHash.ProtoStart.Text = Get-WzText 'log.since' @{ zeit = $syncHash.SessionStart.ToString('t', (Get-WzLanguageCulture)) }
     }
 
+    # Auf einem schreibgeschuetzten Datentraeger scheitert jede Ausgabe. Der
+    # Hinweis darueber sagt es, aber ein Knopf, der zum Klicken einlaedt und
+    # dann fehlschlaegt, ist eine Zumutung — im Abnahmelauf zu Punkt 16
+    # aufgefallen.
+    $schreibbar = Test-WzWritableRoot
+    foreach ($knopf in @($syncHash.ProtoBtnExport, $syncHash.ProtoBtnOpenFolder,
+                         $syncHash.ProtoBtnOpenLog, $syncHash.ProtoBtnHandover)) {
+        if ($knopf) { $knopf.IsEnabled = $schreibbar }
+    }
+
     $syncHash.ProtoPathHint.Text = if ($syncHash.LogFile) {
         Get-WzText 'log.pathHint' @{ protokoll = $syncHash.LogFile; berichte = (Get-WzReportDir) }
     } else {

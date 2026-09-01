@@ -68,6 +68,13 @@ jobs:
         shell: powershell
         run: .\tools\Test-Pages.ps1
 
+      # Deutet WinZii die Ausgaben von sfc, pnputil und winget auch auf Englisch
+      # richtig? Geprueft gegen die echten Wortlaute beider Sprachen.
+      - name: Test-Parsers
+        if: always()
+        shell: powershell
+        run: .\tools\Test-Parsers.ps1
+
       - name: Test-Contrast
         if: always()
         shell: powershell

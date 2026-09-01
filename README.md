@@ -211,6 +211,7 @@ powershell -NoProfile -ExecutionPolicy Bypass -File tools\Test-Catalogs.ps1
 | `tools\Test-Undo.ps1` | Sicherung und Rücknahme an einem eigenen Registry-Schlüssel durchspielen |
 | `tools\Test-Language.ps1` | Sprachdateien auf gleiche Schlüssel, Platzhalter und Kulturen prüfen |
 | `tools\Test-LanguageSwitch.ps1` | Startet WinZii, schaltet im Betrieb um und prüft, ob auch die gemessenen Texte mitgehen |
+| `tools\Test-Parsers.ps1` | Deutungen von sfc-, pnputil- und winget-Ausgaben gegen deutsche **und** englische Wortlaute |
 | `tools\Invoke-Analyzer.ps1` | PSScriptAnalyzer mit Zielversion PowerShell 5.1 |
 | `tools\Repair-Encoding.ps1` | UTF-8 mit BOM erzwingen (Pflicht bei PowerShell 5.1 und Umlauten) |
 | `tools\New-Release.ps1` | Release-ZIP bauen und SHA256-Prüfsumme ausgeben |

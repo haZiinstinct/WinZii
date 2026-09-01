@@ -10,8 +10,7 @@ bequemen Zweig. Genau daraus sind die drei Symptome entstanden, die den Audit au
 haben. Alles unten ist der Teil, der auf dem Entwicklungsrechner **grundsätzlich nicht**
 prüfbar ist.
 
-Stand: **0.5.1** im Quelltext; `main` ist seither weiter (Mehrsprachigkeit vollständig,
-Auffangnetz für die Oberfläche, CI). Alle neun Prüfwerkzeuge grün, Sandbox-Lauf mit dem
+Stand: **0.5.2**, veröffentlicht am 01.09.2026. Alle neun Prüfwerkzeuge grün, Sandbox-Lauf mit dem
 0.5.1-Stand bestanden, Start aus sauberer Kopie mit leerem `offline\` geprüft.
 
 > **Was die CI seither abnimmt.** Seit `.github/workflows/pruefung.yml` laufen die neun
@@ -34,24 +33,24 @@ auch nicht als offen da:
 | 1 — winget nach Neuanmeldung | **Erledigt** (Notebook, 0.5.1). |
 | 2 — fremdes Konto | **Offen.** Es gab kein zweites Technikerkonto zum Elevieren. |
 | 3 — WLAN statt Kabel | **Erledigt** (Notebook, 0.5.1): 93 MB in 32 s, Installation samt Nachprüfung. |
-| 4 — leerer Stick | **Halb.** Der echte Downloadweg lief (`offline\` war leer), aber winget war schon eingerichtet — die Nachinstallation ohne Zwischenspeicher (~315 MB) steht weiter aus, ebenso Office. |
+| 4 — leerer Stick | **Halb.** Start aus dem entpackten 0.5.2-Archiv geprüft (01.09.): startet, `offline\` enthält nur `.gitkeep`, kein Rechnername im Archiv, winget wird gefunden. Offen bleibt die winget-Nachinstallation **ohne** Zwischenspeicher (~315 MB) und Office. |
 | 5 — OEM-Office | **Offen.** Auf keinem der beiden Geräte liegt ein vorinstalliertes OEM-Office; der Punkt braucht ein Kundengerät. |
 | 6 — Startdauer | **Erledigt** (Notebook, 0.4.1): 57,5 s im Mittel als Referenzwert. |
 | 7 — Energieplan | **Erledigt** (Notebook, 0.5.1), samt Kühlungsrichtlinie und Turbo-Verhalten. |
 | 8 — kleiner Bildschirm | **Erledigt** (Entwicklungsrechner, 0.5.1). `WZ_SELFTEST_SIZE` erzwingt das Format auch auf einem großen Bildschirm — bei 1092×614 und am Mindestmaß 1000×560 angesehen: Konsole startet eingeklappt, die Seitenleiste holt »Protokoll« als vierzehnten Eintrag ins Bild, keine Worttrennung mitten im Wort. Nur das Ziehen von Hand fehlt. |
 | 9 — Rubrik »Sicherheit« | **Offen.** Die neun Kennungen lösen sich über `winget show` auf, installiert wurde bis heute keine. |
-| 10 — Sandbox | **Halb.** Auf dem Notebook nicht möglich, Windows Sandbox ist dort nicht eingeschaltet (`Containers-DisposableClientVM: Disabled`). Auf dem Entwicklungsrechner ist der 0.5.1-Stand gelaufen: 39 Prüfungen grün. Der Netzweg des Laptops bleibt ungeprüft. |
+| 10 — Sandbox | **Halb.** Mit 0.5.2 gelaufen (01.09.): **39 Prüfungen, kein Fehler.** Diesmal war winget in der Sandbox vorhanden, deshalb wurde 7-Zip wirklich über winget installiert — von den vier erwarteten `[--]`-Zeilen bleibt nur der Drucker. Der Netzweg des Laptops bleibt ungeprüft (Sandbox dort abgeschaltet). |
 | 11 — Akku, BitLocker, OneDrive | **Halb.** Der Akku ist geprüft. Ein verschlüsselter Datenträger und ein OneDrive mit Platzhaltern fehlen weiterhin — beides gibt es auf keinem der zwei Geräte. |
 | 12 — Restesuche | **Erledigt** (Notebook, 0.5.1) und der ergiebigste Punkt: zwei echte Fehler. |
-| 13 — englisches Windows | **Offen, neu.** Erst seit der Mehrsprachigkeit prüfbar. Die CI deckt den statischen Teil; die Auswertung echter Windows-Ausgaben nicht. |
-| 14 — Sprachwechsel im Betrieb | **Offen, neu.** `Update-WzMeasuredTexts` ist frisch und auf keinem echten Gerät gelaufen. |
+| 13 — englisches Windows | **Halb.** Die CI deckt den statischen Teil bei jedem Push. Dazu prüft `tools\Test-Parsers.ps1` alle neun Stellen, die Windows-Ausgaben deuten, gegen die **echten** deutschen und englischen Wortlaute — alle treffen. `DISM` und `chkdsk` werten gar keinen Text aus, sondern Rückgabewerte, und können dort nicht brechen. Offen bleibt der Lauf auf einem wirklich englischen System. |
+| 14 — Sprachwechsel im Betrieb | **Erledigt** (01.09.) — **mit Befund.** `Update-WzMeasuredTexts` bewirkte nichts: zwei Hintergrundaufgaben gleichzeitig angestoßen, die zweite abgewiesen. Behoben, und `tools\Test-LanguageSwitch.ps1` prüft es seither bei jedem Push. |
 | 15 — Windows 10 | **Offen.** Steht seit der ersten Fassung als Grenze im README, ein vollständiger Durchlauf fehlt. |
-| 16 — schreibgeschützter Stick, FAT32 | **Offen.** Beide Pfade sind im Code vorgesehen und nie ausgelöst worden. |
+| 16 — schreibgeschützter Stick, FAT32 | **Halb, mit Befund.** Schreibschutz geprüft (01.09.): WinZii startet, meldet es in Konsole und auf der Protokollseite, legt nichts an. Befund: Die Ausgabeknöpfe luden weiter zum Klicken ein — jetzt abgeschaltet, wenn nichts geschrieben werden kann. FAT32 nur im Code geprüft (alle vier Zweige da, Texte in beiden Sprachen); ein FAT32-Datenträger fehlt. |
 | 17 — Domänen-PC mit Richtlinien | **Offen.** Der Launcher warnt davor, geprüft ist es nie. Firmenkunden sind der Normalfall. |
-| 18 — Start ohne Rechte | **Offen.** `-NoElevate` wird für den Selbsttest benutzt, aber nie als Anwenderfall betrachtet. |
+| 18 — Start ohne Rechte | **Erledigt** (01.09.) — **mit Befund.** Alle fünfzehn Seiten laden sauber, aber WinZii merkte gar nicht, dass ihm die Rechte fehlen. Der Hinweis steht jetzt in den ersten Protokollzeilen, mit der Liste der betroffenen Seiten. |
 | 19 — langsames Gerät | **Offen.** Alle Zeitlimits sind auf schneller Hardware gemessen. |
 | 20 — fremder Virenscanner | **Offen.** Auf Neugeräten immer da, hier nie. |
-| 21 — hohe Skalierung, zweiter Monitor | **Offen.** Geprüft ist nur klein bei 125 %. |
+| 21 — hohe Skalierung, zweiter Monitor | **Halb, ohne Befund.** 1920×1080 (200 % auf 4K), das Mindestmaß 1000×560 und ein sehr breites 2560×720 sitzen alle (01.09.). Ein zweiter Monitor mit abweichender Skalierung fehlt. |
 | 22 — ARM64 | **Offen.** An zwei Stellen im Code berücksichtigt, nie auf einem Gerät gesehen. |
 
 Was davon nur ein Kundengerät klären kann: **5** (OEM-Office), **9** (Sicherheitsprogramme
@@ -60,10 +59,13 @@ wirklich installieren), **11** (BitLocker, OneDrive), **2** (zweites Konto), **1
 jederzeit nachholen — für 4 reicht ein leerer Stick, für 10 das Einschalten von Windows
 Sandbox auf dem Notebook.
 
-**Ohne fremdes Gerät machbar, hier und heute:** **13** und **14** brauchen nur ein
-englisches Windows in einer virtuellen Maschine oder die Sprachumstellung von Windows,
-**16** einen beliebigen Stick, **18** einen Doppelklick, **21** die Anzeigeeinstellungen.
-Das sind fünf der zehn neuen Punkte.
+> **Abnahmelauf vom 01.09.2026 auf dem Entwicklungsrechner.** Abgearbeitet wurde alles,
+> was ohne fremdes Gerät geht: **4** (saubere Kopie), **10** (Sandbox), **13** (Deutung
+> der Werkzeugausgaben), **14**, **16** (Schreibschutz), **18** und **21**. Drei davon
+> haben einen Fehler gefunden — Punkt 14, 16 und 18 —, alle drei sind behoben.
+>
+> Nicht möglich waren: ein wirklich englisches Windows, ein FAT32-Datenträger (dafür
+> braucht es Administratorrechte für eine virtuelle Platte) und ein zweiter Monitor.
 
 > **`main` ist weiter als der Tag.** Auf dem Entwicklungsrechner wird parallel gearbeitet.
 > Vor dem ersten Commit hier immer `git pull --rebase origin main` — sonst wird der Push
