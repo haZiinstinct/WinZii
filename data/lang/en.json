@@ -66,7 +66,16 @@
     "languageBusy": "'{name}' is still running. The language can only be changed afterwards — switching rebuilds the page, which would not sit well with a survey in progress.",
     "fontsMissing": "Bundled fonts unavailable, falling back to system fonts.",
     "noAdmin": "WinZii is running WITHOUT administrator rights. Looking and analysing works, changing does not.",
-    "noAdminHint": "Affected are Optimisation, AI removal, Cleanup, Uninstall, Office, Drivers, Updates and Repair. To make changes, restart WinZii and confirm the request for rights."
+    "noAdminHint": "Affected are Optimisation, AI removal, Cleanup, Uninstall, Office, Drivers, Updates and Repair. To make changes, restart WinZii and confirm the request for rights.",
+    "checkTitle": "Check for a newer version?",
+    "checkMessage": "WinZii can check at every start whether a newer version exists. It contacts github.com for that — nothing else, and nothing about this PC is transmitted.",
+    "checkDetail": "You are asked this once only. The answer is then kept in einstellungen.json and can be changed there at any time.",
+    "checkYes": "Yes, check",
+    "checkDeclined": "Not checking for newer versions.",
+    "checkTask": "Check for a newer version",
+    "checkNewer": "WinZii {version} is available — this is {hier}.",
+    "checkWhere": "Available at: {adresse}",
+    "checkCurrent": "WinZii is up to date."
   },
   "dialog": {
     "busyTitle": "Task running",
@@ -1246,7 +1255,19 @@
     "nSteps": "{anzahl} steps to hand over",
     "since": "since {zeit}",
     "readOnlyDrive": "The drive is write-protected — nothing can be saved.",
-    "pathHint": "Text log: {protokoll}\nReports: {berichte}"
+    "pathHint": "Text log: {protokoll}\nReports: {berichte}",
+    "senderEyebrow": "// SENDER",
+    "senderTitle": "Your letterhead",
+    "senderHint": "Enter it once and it appears on every handover sheet. None of it leaves this drive.",
+    "companyLabel": "Company",
+    "phoneLabel": "Phone",
+    "mailLabel": "Email",
+    "logoLabel": "Logo (PNG, JPG, GIF or SVG)",
+    "btnLogo": "Choose file",
+    "btnLogoClear": "remove",
+    "logoDialogTitle": "Choose a logo for the handover sheet",
+    "logoFilter": "Image files|*.png;*.jpg;*.jpeg;*.gif;*.svg|All files|*.*",
+    "senderSaved": "Letterhead saved."
   },
   "rep": {
     "eyebrowDefault": "REPORT",
@@ -1493,7 +1514,10 @@
     "areaDrivers": "Drivers",
     "areaPreinstalled": "Preinstalled apps",
     "areaRestore": "Restoring",
-    "areaUpdates": "Updates"
+    "areaUpdates": "Updates",
+    "logoTooBig": "The logo “{datei}” is larger than a megabyte and is therefore left out.",
+    "logoUnknownType": "The logo “{datei}” is in a format a report cannot embed. Use PNG, JPG, GIF or SVG.",
+    "logoFailed": "The logo could not be read: {grund}"
   },
   "rest": {
     "eyebrow": "// TAKEOVER",

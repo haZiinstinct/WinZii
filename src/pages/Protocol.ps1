@@ -19,6 +19,38 @@ function Initialize-WzProtocolPage {
 
     $syncHash.ProtoBtnHandover.Add_Click({ Start-WzHandoverReport })
 
+    # Der Briefkopf wird gemerkt, sobald ein Feld verlassen wird. Ein eigener
+    # »Speichern«-Knopf waere eine Falle: Wer ihn uebersieht, tippt beim
+    # naechsten Auftrag alles noch einmal.
+    $felder = @{
+        ProtoCompany    = 'firma'
+        ProtoTechnician = 'techniker'
+        ProtoPhone      = 'telefon'
+        ProtoMail       = 'epost'
+    }
+    foreach ($paar in $felder.GetEnumerator()) {
+        $feld = $syncHash[$paar.Key]
+        if (-not $feld) { continue }
+        $feld.Tag = $paar.Value
+        $feld.Add_LostFocus({ Save-WzSetting -Name $this.Tag -Value $this.Text.Trim() })
+    }
+
+    $syncHash.ProtoBtnLogo.Add_Click({
+        $dialog = New-Object Microsoft.Win32.OpenFileDialog
+        $dialog.Title = Get-WzText 'log.logoDialogTitle'
+        $dialog.Filter = Get-WzText 'log.logoFilter'
+        if ($dialog.ShowDialog()) {
+            $syncHash.ProtoLogo.Text = $dialog.FileName
+            Save-WzSetting -Name 'logo' -Value $dialog.FileName
+            Write-WzLog (Get-WzText 'log.senderSaved') -Level Ok
+        }
+    })
+
+    $syncHash.ProtoBtnLogoClear.Add_Click({
+        $syncHash.ProtoLogo.Text = ''
+        Save-WzSetting -Name 'logo' -Value ''
+    })
+
     $syncHash.ProtoBtnOpenLog.Add_Click({
         if ($syncHash.LogFile -and (Test-Path -LiteralPath $syncHash.LogFile)) {
             Start-Process notepad.exe -ArgumentList $syncHash.LogFile
@@ -26,6 +58,19 @@ function Initialize-WzProtocolPage {
             Write-WzLog (Get-WzText 'log.logNoFile') -Level Warn
         }
     })
+}
+
+function Write-WzSenderFields {
+    <#
+    .SYNOPSIS
+        Fuellt den Briefkopf aus den gemerkten Einstellungen.
+    #>
+    $profil = Get-WzTechnicianProfile
+    $syncHash.ProtoCompany.Text = $profil.Company
+    $syncHash.ProtoTechnician.Text = $profil.Technician
+    $syncHash.ProtoPhone.Text = $profil.Phone
+    $syncHash.ProtoMail.Text = $profil.Mail
+    $syncHash.ProtoLogo.Text = $profil.LogoPath
 }
 
 function Start-WzHandoverReport {
@@ -37,6 +82,7 @@ function Start-WzHandoverReport {
         if (-not $answer.Confirmed) { return }
     }
 
+    # Der Techniker steht im Briefkopf und wird nicht je Auftrag getippt.
     $arguments = @(
         $syncHash.ProtoTechnician.Text.Trim()
         $syncHash.ProtoCustomer.Text.Trim()
@@ -57,6 +103,10 @@ function Start-WzHandoverReport {
 }
 
 function Update-WzProtocolPage {
+    # Beim Sprachwechsel wird die Seite neu aufgebaut — der Briefkopf muss
+    # dann wieder aus den Einstellungen kommen, sonst steht er leer da.
+    Write-WzSenderFields
+
     $entries = Get-WzLogEntries
 
     $actions = Get-WzActions

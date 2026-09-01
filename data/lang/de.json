@@ -66,7 +66,16 @@
     "languageBusy": "»{name}« läuft gerade. Die Sprache lässt sich erst danach wechseln — beim Wechsel wird die Seite neu aufgebaut, und das vertrüge sich nicht mit einer laufenden Abfrage.",
     "fontsMissing": "Mitgelieferte Schriften nicht nutzbar, System-Schriften werden verwendet.",
     "noAdmin": "WinZii läuft OHNE Administratorrechte. Ansehen und auswerten geht, Eingriffe nicht.",
-    "noAdminHint": "Betroffen sind Optimierung, KI-Entfernung, Bereinigung, Deinstallieren, Office, Treiber, Updates und Reparatur. Zum Ändern WinZii neu starten und die Rechteabfrage bestätigen."
+    "noAdminHint": "Betroffen sind Optimierung, KI-Entfernung, Bereinigung, Deinstallieren, Office, Treiber, Updates und Reparatur. Zum Ändern WinZii neu starten und die Rechteabfrage bestätigen.",
+    "checkTitle": "Nach einer neueren Fassung sehen?",
+    "checkMessage": "WinZii kann bei jedem Start nachsehen, ob es eine neuere Fassung gibt. Dafür wird github.com kontaktiert — sonst nichts, und übertragen wird nichts über diesen PC.",
+    "checkDetail": "Die Frage kommt nur dieses eine Mal. Die Antwort steht danach in einstellungen.json und lässt sich dort jederzeit ändern.",
+    "checkYes": "Ja, nachsehen",
+    "checkDeclined": "Es wird nicht nach neueren Fassungen gesehen.",
+    "checkTask": "Nach einer neueren Fassung sehen",
+    "checkNewer": "Es gibt WinZii {version} — hier läuft {hier}.",
+    "checkWhere": "Zu holen unter: {adresse}",
+    "checkCurrent": "WinZii ist auf dem aktuellen Stand."
   },
   "dialog": {
     "busyTitle": "Vorgang läuft",
@@ -1246,7 +1255,19 @@
     "nSteps": "{anzahl} Arbeitsschritte zum Übergeben",
     "since": "seit {zeit}",
     "readOnlyDrive": "Der Datenträger ist schreibgeschützt — es kann nichts gespeichert werden.",
-    "pathHint": "Textprotokoll: {protokoll}\nBerichte: {berichte}"
+    "pathHint": "Textprotokoll: {protokoll}\nBerichte: {berichte}",
+    "senderEyebrow": "// ABSENDER",
+    "senderTitle": "Dein Briefkopf",
+    "senderHint": "Einmal eintragen, dann steht es auf jedem Übergabeblatt. Nichts davon verlässt diesen Datenträger.",
+    "companyLabel": "Firma",
+    "phoneLabel": "Telefon",
+    "mailLabel": "E-Mail",
+    "logoLabel": "Logo (PNG, JPG, GIF oder SVG)",
+    "btnLogo": "Datei wählen",
+    "btnLogoClear": "entfernen",
+    "logoDialogTitle": "Logo für das Übergabeblatt wählen",
+    "logoFilter": "Bilddateien|*.png;*.jpg;*.jpeg;*.gif;*.svg|Alle Dateien|*.*",
+    "senderSaved": "Briefkopf gemerkt."
   },
   "rep": {
     "eyebrowDefault": "BERICHT",
@@ -1493,7 +1514,10 @@
     "areaDrivers": "Treiber",
     "areaPreinstalled": "Vorinstallierte Apps",
     "areaRestore": "Zurückspielen",
-    "areaUpdates": "Updates"
+    "areaUpdates": "Updates",
+    "logoTooBig": "Das Logo »{datei}« ist größer als ein Megabyte und bleibt deshalb weg.",
+    "logoUnknownType": "Das Logo »{datei}« hat ein Format, das ein Bericht nicht einbetten kann. PNG, JPG, GIF oder SVG nehmen.",
+    "logoFailed": "Das Logo konnte nicht gelesen werden: {grund}"
   },
   "rest": {
     "eyebrow": "// ÜBERNEHMEN",

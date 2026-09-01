@@ -189,6 +189,7 @@
     <h1>{{TITLE}}</h1>
     <p class="lead">{{SUBTITLE}}</p>
     <div class="meta">{{META}}</div>
+    {{SENDER}}
   </div>
 </header>
 
@@ -196,6 +197,14 @@
 {{CONTENT}}
 </main>
 
+<style>
+.sender { display:flex; align-items:center; gap:14px; margin-top:22px; padding-top:18px; border-top:1px solid var(--line, #1e293b); }
+.sender-logo { max-height:46px; max-width:180px; }
+.sender-text { display:flex; flex-direction:column; gap:2px; font-size:.9rem; line-height:1.45; }
+.sender-text strong { font-size:1rem; }
+.sender-text span { opacity:.7; }
+@media print { .sender { break-inside:avoid; } }
+</style>
 <footer class="wrap">
   <span>WinZii {{VERSION}} · {{CREATED}}</span>
   <a href="https://hazii.org" target="_blank" rel="noopener noreferrer" aria-label="{{CODELABEL}}"><span style="opacity:.65;color:#64748b">// code:</span> <span class="wordmark" style="color:#00d4ff">ha<span style="color:#f8fafc">Z</span>ii<span style="color:#00a8cc">.org</span></span></a>

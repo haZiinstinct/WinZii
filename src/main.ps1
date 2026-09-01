@@ -39,6 +39,7 @@ $syncHash.BuildDate = $script:WzBuildDate
 # --- Module laden ---------------------------------------------------------
 $moduleOrder = @(
     'Core.Paths', 'Core.I18n', 'Core.Logging', 'Core.Json', 'Core.Runspace', 'Core.Ui',
+    'Core.Version',
     'Core.System', 'Core.Backup',
     'Optimizer', 'AiRemoval', 'Cleanup', 'Apps', 'Office',
     'Diagnostics', 'NetworkDiag', 'Report', 'Autostart', 'Toolbox',
@@ -276,6 +277,9 @@ $window.Add_ContentRendered({
         Write-WzLog (Get-WzText 'start.noAdminHint') -Level Warn
     }
     Show-WzPage -Id 'Dashboard'
+
+    # Der Selbsttest darf hier nicht an einer Rueckfrage haengen bleiben.
+    if (-not $env:WZ_SELFTEST) { Start-WzVersionCheck }
 })
 
 $window.Add_Closed({

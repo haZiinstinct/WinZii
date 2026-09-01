@@ -84,14 +84,63 @@
                     <RowDefinition Height="Auto" />
                 </Grid.RowDefinitions>
 
-                <TextBlock Grid.Row="0" Grid.Column="0" Text="{DynamicResource L.log.technicianLabel}" Style="{DynamicResource WzLabel}" Margin="0,0,0,5" />
-                <TextBox Grid.Row="1" Grid.Column="0" Name="ProtoTechnician" Style="{DynamicResource WzTextBox}" />
+                <TextBlock Grid.Row="0" Grid.Column="0" Text="{DynamicResource L.log.customerLabel}" Style="{DynamicResource WzLabel}" Margin="0,0,0,5" />
+                <TextBox Grid.Row="1" Grid.Column="0" Name="ProtoCustomer" Style="{DynamicResource WzTextBox}" />
 
-                <TextBlock Grid.Row="0" Grid.Column="2" Text="{DynamicResource L.log.customerLabel}" Style="{DynamicResource WzLabel}" Margin="0,0,0,5" />
-                <TextBox Grid.Row="1" Grid.Column="2" Name="ProtoCustomer" Style="{DynamicResource WzTextBox}" />
+                <TextBlock Grid.Row="0" Grid.Column="2" Text="{DynamicResource L.log.orderLabel}" Style="{DynamicResource WzLabel}" Margin="0,0,0,5" />
+                <TextBox Grid.Row="1" Grid.Column="2" Name="ProtoOrderNumber" Style="{DynamicResource WzTextBox}" />
+            </Grid>
+        </StackPanel>
+    </Border>
 
-                <TextBlock Grid.Row="0" Grid.Column="4" Text="{DynamicResource L.log.orderLabel}" Style="{DynamicResource WzLabel}" Margin="0,0,0,5" />
-                <TextBox Grid.Row="1" Grid.Column="4" Name="ProtoOrderNumber" Style="{DynamicResource WzTextBox}" />
+    <Border Style="{DynamicResource WzCardStatic}" Margin="0,14,0,0">
+        <StackPanel>
+            <TextBlock Text="{DynamicResource L.log.senderEyebrow}" Style="{DynamicResource WzEyebrow}" />
+            <TextBlock Text="{DynamicResource L.log.senderTitle}" Style="{DynamicResource WzCardTitle}" />
+            <TextBlock Style="{DynamicResource WzHint}" Margin="0,0,0,14"
+                       Text="{DynamicResource L.log.senderHint}" />
+
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="12" />
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="12" />
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="12" />
+                    <ColumnDefinition Width="*" />
+                </Grid.ColumnDefinitions>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
+                </Grid.RowDefinitions>
+
+                <TextBlock Grid.Row="0" Grid.Column="0" Text="{DynamicResource L.log.companyLabel}" Style="{DynamicResource WzLabel}" Margin="0,0,0,5" />
+                <TextBox Grid.Row="1" Grid.Column="0" Name="ProtoCompany" Style="{DynamicResource WzTextBox}" />
+
+                <TextBlock Grid.Row="0" Grid.Column="2" Text="{DynamicResource L.log.technicianLabel}" Style="{DynamicResource WzLabel}" Margin="0,0,0,5" />
+                <TextBox Grid.Row="1" Grid.Column="2" Name="ProtoTechnician" Style="{DynamicResource WzTextBox}" />
+
+                <TextBlock Grid.Row="0" Grid.Column="4" Text="{DynamicResource L.log.phoneLabel}" Style="{DynamicResource WzLabel}" Margin="0,0,0,5" />
+                <TextBox Grid.Row="1" Grid.Column="4" Name="ProtoPhone" Style="{DynamicResource WzTextBox}" />
+
+                <TextBlock Grid.Row="0" Grid.Column="6" Text="{DynamicResource L.log.mailLabel}" Style="{DynamicResource WzLabel}" Margin="0,0,0,5" />
+                <TextBox Grid.Row="1" Grid.Column="6" Name="ProtoMail" Style="{DynamicResource WzTextBox}" />
+            </Grid>
+
+            <TextBlock Text="{DynamicResource L.log.logoLabel}" Style="{DynamicResource WzLabel}" Margin="0,12,0,5" />
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+                <TextBox Grid.Column="0" Name="ProtoLogo" Style="{DynamicResource WzTextBox}" IsReadOnly="True" />
+                <StackPanel Grid.Column="1" Orientation="Horizontal" Margin="10,0,0,0">
+                    <Button Name="ProtoBtnLogo" Style="{DynamicResource WzBtnSecondary}" Margin="0,0,8,0"
+                            Content="{DynamicResource L.log.btnLogo}" />
+                    <Button Name="ProtoBtnLogoClear" Style="{DynamicResource WzBtnGhost}"
+                            Content="{DynamicResource L.log.btnLogoClear}" />
+                </StackPanel>
             </Grid>
         </StackPanel>
     </Border>

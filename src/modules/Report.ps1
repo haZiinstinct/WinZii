@@ -3,6 +3,92 @@
 # landen unter reports\<hostname>\. Keine externen Ressourcen, damit die
 # Datei auch offline und auf fremden PCs unverändert aussieht.
 
+function Get-WzTechnicianProfile {
+    <#
+    .SYNOPSIS
+        Firma, Name, Telefon, E-Mail und Logo des Technikers.
+    .DESCRIPTION
+        Steht in einstellungen.json neben der Sprache und wird einmal
+        eingetragen statt bei jedem Auftrag. Das Uebergabeblatt bekommt damit
+        einen eigenen Briefkopf — fuer den Kunden ist es dann ein Papier von
+        seinem Techniker und nicht die Ausgabe eines Programms.
+    #>
+    [CmdletBinding()]
+    param()
+
+    return [pscustomobject]@{
+        Company    = [string](Get-WzSetting -Name 'firma')
+        Technician = [string](Get-WzSetting -Name 'techniker')
+        Phone      = [string](Get-WzSetting -Name 'telefon')
+        Mail       = [string](Get-WzSetting -Name 'epost')
+        LogoPath   = [string](Get-WzSetting -Name 'logo')
+    }
+}
+
+function Get-WzLogoDataUri {
+    <#
+    .SYNOPSIS
+        Bilddatei als eingebettete Datenadresse.
+    .DESCRIPTION
+        Berichte muessen auch dann noch aussehen wie am ersten Tag, wenn sie
+        per E-Mail weitergereicht werden und der Stick laengst weg ist.
+        Deshalb wird das Logo in die Datei hineingeschrieben statt verlinkt.
+
+        Faellt irgendetwas aus — Datei fehlt, unbekanntes Format, zu gross —
+        bleibt der Briefkopf einfach ohne Bild. Ein Bericht ohne Logo ist
+        brauchbar, ein Bericht mit einem kaputten Bildplatzhalter nicht.
+    #>
+    param([string]$Path)
+
+    if (-not $Path -or -not (Test-Path -LiteralPath $Path)) { return '' }
+    try {
+        $datei = Get-Item -LiteralPath $Path -ErrorAction Stop
+        # Ueber ein Megabyte blaeht jede Berichtsdatei unnoetig auf
+        if ($datei.Length -gt 1MB) {
+            Write-WzLog (Get-WzText 'rep.logoTooBig' @{ datei = $datei.Name }) -Level Warn
+            return ''
+        }
+        $typ = switch ($datei.Extension.ToLower()) {
+            '.png'  { 'image/png' }
+            '.jpg'  { 'image/jpeg' }
+            '.jpeg' { 'image/jpeg' }
+            '.gif'  { 'image/gif' }
+            '.svg'  { 'image/svg+xml' }
+            default { '' }
+        }
+        if (-not $typ) {
+            Write-WzLog (Get-WzText 'rep.logoUnknownType' @{ datei = $datei.Name }) -Level Warn
+            return ''
+        }
+        $bytes = [IO.File]::ReadAllBytes($datei.FullName)
+        return "data:$typ;base64,$([Convert]::ToBase64String($bytes))"
+    } catch {
+        Write-WzLog (Get-WzText 'rep.logoFailed' @{ grund = $_.Exception.Message }) -Level Warn
+        return ''
+    }
+}
+
+function New-WzSenderBlock {
+    <#
+    .SYNOPSIS
+        Der Briefkopf des Technikers als HTML — leer, wenn nichts hinterlegt ist.
+    #>
+    param($Profile)
+
+    if (-not $Profile) { return '' }
+    $zeilen = @()
+    foreach ($wert in @($Profile.Technician, $Profile.Phone, $Profile.Mail)) {
+        if ($wert) { $zeilen += ConvertTo-WzHtmlText $wert }
+    }
+    $logo = Get-WzLogoDataUri -Path $Profile.LogoPath
+    if (-not $Profile.Company -and $zeilen.Count -eq 0 -and -not $logo) { return '' }
+
+    $bild = if ($logo) { '<img class="sender-logo" src="' + $logo + '" alt="" />' } else { '' }
+    $firma = if ($Profile.Company) { '<strong>' + (ConvertTo-WzHtmlText $Profile.Company) + '</strong>' } else { '' }
+    $rest = if ($zeilen.Count -gt 0) { '<span>' + ($zeilen -join ' &middot; ') + '</span>' } else { '' }
+    return "<div class=`"sender`">$bild<div class=`"sender-text`">$firma$rest</div></div>"
+}
+
 function New-WzHtmlReport {
     <#
     .SYNOPSIS
@@ -45,6 +131,7 @@ function New-WzHtmlReport {
         Replace('{{EYEBROW}}', (ConvertTo-WzHtmlText $Eyebrow)).
         Replace('{{SUBTITLE}}', (ConvertTo-WzHtmlText $Subtitle)).
         Replace('{{META}}', $metaHtml).
+        Replace('{{SENDER}}', (New-WzSenderBlock -Profile (Get-WzTechnicianProfile))).
         Replace('{{CONTENT}}', $Content).
         Replace('{{VERSION}}', $syncHash.Version).
         Replace('{{CREATED}}', (Get-WzText 'rep.footerCreated' @{ zeit = (Get-Date).ToString('g', (Get-WzLanguageCulture)) })).
