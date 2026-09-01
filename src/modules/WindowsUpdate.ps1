@@ -112,6 +112,11 @@ function Find-WzUpdates {
                 Id             = $update.Identity.UpdateID
                 Title          = $update.Title
                 KB             = if ($kb) { "KB$kb" } else { '' }
+                # MaxDownloadSize ist eine OBERGRENZE, keine Vorhersage: Sie gilt
+                # fuer die groesste Variante des Pakets. Das taegliche
+                # Defender-Signaturupdate meldet hier 1,4 GB und laedt rund 100 MB.
+                # Deshalb steht in der Anzeige »bis zu« davor — eine nackte Zahl
+                # wuerde einen Techniker vom Einspielen abhalten.
                 SizeBytes      = [int64]$update.MaxDownloadSize
                 # UpdateType 2 ist ein Treiber
                 IsDriver       = ([int]$update.Type -eq 2)

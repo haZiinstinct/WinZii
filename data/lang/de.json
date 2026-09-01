@@ -729,12 +729,12 @@
     "btnNone": "keine",
     "btnInstall": "Auswahl einspielen",
     "selectionCount": "0 ausgewählt",
-    "selectedCount": "{anzahl} ausgewählt · {groesse}",
+    "selectedCount": "{anzahl} ausgewählt · bis zu {groesse}",
     "taskState": "Update-Zustand abfragen",
     "taskScan": "Nach Updates suchen",
     "taskInstall": "Updates einspielen",
     "upToDate": "Dieser PC ist auf dem aktuellen Stand.",
-    "foundCount": "{anzahl} Update(s) ausstehend · {groesse}",
+    "foundCount": "{anzahl} Update(s) ausstehend · bis zu {groesse}",
     "searchFailed": "Die Suche ist fehlgeschlagen.",
     "searchFailedTitle": "Suche fehlgeschlagen",
     "alreadyDownloaded": "schon geladen",
@@ -744,7 +744,7 @@
     "badgeCritical": "KRITISCH",
     "badgeImportant": "WICHTIG",
     "confirmTitle": "Updates einspielen",
-    "confirmMessage": "{anzahl} Update(s) mit zusammen {groesse} werden geladen und eingespielt. Das kann je nach Umfang und Verbindung eine Weile dauern.",
+    "confirmMessage": "{anzahl} Update(s) mit höchstens {groesse} werden geladen und eingespielt. Die Zahl ist eine Obergrenze — Windows nennt für jedes Paket die größte Variante, geladen wird oft deutlich weniger.",
     "confirmReboot": "{anzahl} davon verlangen einen Neustart. WinZii startet nicht von selbst neu — wann der PC neu startet, entscheidest du.",
     "confirmDriver": "{anzahl} Treiber sind dabei. Ein Treiber von Windows Update ist oft älter als der, der schon läuft — im Zweifel abwählen.",
     "confirmDryRun": "Testmodus: Es wird nur aufgelistet, was eingespielt würde.",
@@ -765,7 +765,8 @@
     "doneTitle": "Updates abgeschlossen",
     "actionInstalled": "{anzahl} Windows-Update(s) eingespielt",
     "codeUnknown": "unbekannter Fehler ({code})",
-    "codeNone": "kein Fehlercode gemeldet"
+    "codeNone": "kein Fehlercode gemeldet",
+    "sizeUpTo": "bis zu {groesse}"
   },
   "drv": {
     "eyebrow": "// ÜBERNEHMEN",

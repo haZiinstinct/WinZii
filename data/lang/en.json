@@ -729,12 +729,12 @@
     "btnNone": "none",
     "btnInstall": "Install selection",
     "selectionCount": "0 selected",
-    "selectedCount": "{anzahl} selected · {groesse}",
+    "selectedCount": "{anzahl} selected · up to {groesse}",
     "taskState": "Query update state",
     "taskScan": "Search for updates",
     "taskInstall": "Install updates",
     "upToDate": "This PC is up to date.",
-    "foundCount": "{anzahl} update(s) pending · {groesse}",
+    "foundCount": "{anzahl} update(s) pending · up to {groesse}",
     "searchFailed": "The search failed.",
     "searchFailedTitle": "Search failed",
     "alreadyDownloaded": "already downloaded",
@@ -744,7 +744,7 @@
     "badgeCritical": "CRITICAL",
     "badgeImportant": "IMPORTANT",
     "confirmTitle": "Install updates",
-    "confirmMessage": "{anzahl} update(s) totalling {groesse} will be downloaded and installed. Depending on the size and the connection this can take a while.",
+    "confirmMessage": "{anzahl} update(s) of at most {groesse} will be downloaded and installed. That figure is an upper bound — Windows reports the largest variant of each package, and the actual download is often much smaller.",
     "confirmReboot": "{anzahl} of them require a restart. WinZii never restarts on its own — when the PC restarts is your decision.",
     "confirmDriver": "{anzahl} drivers are included. A driver from Windows Update is often older than the one already running — when in doubt, untick it.",
     "confirmDryRun": "Test mode: it will only list what would be installed.",
@@ -765,7 +765,8 @@
     "doneTitle": "Updates finished",
     "actionInstalled": "{anzahl} Windows update(s) installed",
     "codeUnknown": "unknown error ({code})",
-    "codeNone": "no error code reported"
+    "codeNone": "no error code reported",
+    "sizeUpTo": "up to {groesse}"
   },
   "drv": {
     "eyebrow": "// TAKEOVER",

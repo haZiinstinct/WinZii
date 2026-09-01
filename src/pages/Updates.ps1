@@ -116,7 +116,7 @@ function Write-WzUpdateList {
     foreach ($update in ($normal + $treiber)) {
         $teile = @()
         if ($update.KB) { $teile += $update.KB }
-        if ($update.SizeBytes -gt 0) { $teile += Format-WzBytes $update.SizeBytes }
+        if ($update.SizeBytes -gt 0) { $teile += Get-WzText 'upd.sizeUpTo' @{ groesse = (Format-WzBytes $update.SizeBytes) } }
         if ($update.IsDownloaded) { $teile += Get-WzText 'upd.alreadyDownloaded' }
         if ($update.RebootRequired) { $teile += Get-WzText 'upd.needsReboot' }
         if ($update.IsDriver) { $teile += Get-WzText 'upd.driverHint' }
