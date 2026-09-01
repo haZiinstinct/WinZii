@@ -3,6 +3,75 @@
 Alle nennenswerten Änderungen an WinZii. Die Fassungen folgen
 [Semantic Versioning](https://semver.org/lang/de/).
 
+## [0.5.2] — 2026-09-01
+
+Die Oberfläche war seit 0.4.0 zweisprachig, alles andere nicht. Diese Fassung
+zieht den Rest nach — und hat dabei drei Fehlerklassen aufgedeckt, die im
+Quelltext nicht zu sehen waren.
+
+### Neu
+
+- **Windows-Updates** als eigene Seite. Ausstehende Updates anzeigen und
+  einspielen, über die COM-Schnittstelle von Windows — kein Modul
+  nachzuinstallieren. Treiber stehen unten und sind **nie vorausgewählt**:
+  Windows Update bietet dort gern ältere Herstellerstände an, die einen
+  neueren Treiber überschreiben. Eingespielt wird eines nach dem anderen,
+  damit im Protokoll steht, wo es hängt. Neu gestartet wird nie von selbst.
+  Dreizehn Fehlercodes stehen als Klartext im Katalog, mit dem nächsten
+  Schritt statt einer Hexzahl.
+- **Briefkopf für das Übergabeblatt.** Firma, Name, Telefon, E-Mail und ein
+  Logo werden einmal eingetragen und gemerkt. Das Logo wird in den Bericht
+  hineingeschrieben, nicht verlinkt — Berichte werden weitergereicht, und
+  dann ist der Stick weg. Das Technikerfeld ist aus dem Auftragsformular
+  verschwunden; es gehört in den Briefkopf.
+- **Versionshinweis beim Start.** Fragt genau einmal um Erlaubnis, weil
+  WinZii auf fremden Rechnern läuft und eine Verbindung nach draußen dort
+  nichts zu suchen hat, solange sie niemand angeordnet hat.
+- **Auffangnetz für die Oberfläche.** Fehler in Klick-Handlern verschwanden
+  bisher spurlos: kein Protokolleintrag, kein Dialog, das Fenster lief
+  weiter — und der Techniker hielt den Schritt für erledigt. Jetzt werden sie
+  protokolliert und gezeigt.
+- **Prüfung bei jedem Push** (`.github/workflows/pruefung.yml`): alle zehn
+  Werkzeuge und ein echter Start der Oberfläche in beiden Sprachen, auf einem
+  **englischen** Windows-Server. Beim allerersten Lauf hat sie zwei Fehler
+  gefunden, die auf dem Entwicklungsrechner nie auftraten.
+- **Test-LanguageSwitch** als zehntes Prüfwerkzeug: startet WinZii, schaltet
+  mitten in der Sitzung um und sieht nach, ob auch die gemessenen Statustexte
+  mitgehen.
+
+### Geändert
+
+- **Vollständig zweisprachig.** Berichte, Übergabeblatt, Sitzungsprotokoll,
+  Kataloge, Dialoge, der Launcher und der Kopf der `session.log` — 1900
+  Schlüssel in beiden Sprachen. Zahlen und Datumsangaben folgen der Kultur der
+  gewählten Sprache, die Berichtsvorlage trägt das passende `lang`-Attribut.
+- **Fehlende Administratorrechte werden gemeldet.** Wer die Rechteabfrage
+  wegklickt, bekam bisher ein Programm, das so tut, als wäre alles in Ordnung.
+
+### Behoben
+
+- **Drei Textvergleiche gegen deutsche Wörter**, die auf Englisch stumm falsch
+  entschieden hätten: der Datenträgerzustand (zweimal) und die
+  BitLocker-Erkennung im Übergabeblatt.
+- **Der Sprachwächter war selbst kaputt.** Sein Muster für `-Title`,
+  `-Message` und `-Summary` lautete `"\\s+"` — in PowerShell ein echter
+  Backslash gefolgt von `s`, das konnte nie treffen. Geprüft wurde ausserdem
+  nur `'einfach quotiert'`. Nach der Reparatur kamen 65 weitere Fundstellen
+  ans Licht.
+- **Ein Sprachwechsel im Betrieb erreichte die gemessenen Texte nicht.**
+  Aktivierung, BitLocker und Virenschutz sind fertige Sätze aus einer Messung;
+  ein Wörterbuchtausch geht an ihnen vorbei. Das Nachziehen wiederum bewirkte
+  im ersten Anlauf nichts, weil es zwei Hintergrundaufgaben gleichzeitig
+  anstiess und die zweite abgewiesen wurde — ausgerechnet die mit den drei
+  Werten.
+- **Die Downloadgrösse eines Updates** ist eine Obergrenze, keine Vorhersage:
+  Das tägliche Defender-Signaturupdate meldet 1,4 GB und lädt rund 100 MB.
+  Jetzt steht »bis zu« davor.
+- **»Wird per Gruppenrichtlinie gesteuert« war ein Fehlalarm.** Windows legt
+  beide Richtlinienzweige auch auf einem unverwalteten PC an, nur ohne Werte.
+- **Der Sammelcode eines fehlgeschlagenen Updates ist nutzlos** (immer
+  0x80240022). Der brauchbare Grund steht eine Ebene tiefer.
+
 ## [0.5.1] — 2026-08-29
 
 Der Abnahmelauf zu 0.5.0 auf fremder Hardware — ein Notebook mit Akku, WLAN und

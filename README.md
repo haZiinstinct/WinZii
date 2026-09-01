@@ -9,9 +9,10 @@ Vom USB-Stick starten, aufräumen, optimieren, einrichten — ohne Installation,
 
 **Deutsch** · [English](README.en.md)
 
-<sub>A Windows maintenance toolkit for IT technicians. Interface switchable between German and English; measured values, dialogs and log stay German for now.</sub>
+<sub>A Windows maintenance toolkit for IT technicians. Fully bilingual German/English — interface, dialogs, log, reports and handover sheet.</sub>
 
-![Version](https://img.shields.io/badge/Version-0.5.1-00d4ff?labelColor=0a0a0f&style=flat-square)
+![Version](https://img.shields.io/badge/Version-0.5.2-00d4ff?labelColor=0a0a0f&style=flat-square)
+[![Prüfung](https://github.com/haZiinstinct/WinZii/actions/workflows/pruefung.yml/badge.svg)](https://github.com/haZiinstinct/WinZii/actions/workflows/pruefung.yml)
 ![Windows](https://img.shields.io/badge/Windows-10%20%7C%2011-00d4ff?labelColor=0a0a0f&style=flat-square)
 ![PowerShell](https://img.shields.io/badge/PowerShell-5.1-00d4ff?labelColor=0a0a0f&style=flat-square)
 ![Installation](https://img.shields.io/badge/Installation-keine-00d4ff?labelColor=0a0a0f&style=flat-square)
@@ -28,6 +29,7 @@ Vom USB-Stick starten, aufräumen, optimieren, einrichten — ohne Installation,
 | --- | --- |
 | **Dashboard** | Windows-Version, Hardware, Grafik, Bildschirme, BIOS, RAM-Steckplätze und Akkuverschleiß, dazu Aktivierung, BitLocker, Virenschutz, Datenträger und Netzwerk — alles auf einen Blick beim Aufsetzen des PCs. |
 | **Diagnose** | Wertet die Ereignisprotokolle aus und übersetzt sie in Klartext: was passiert ist, was es bedeutet, was zu tun ist. Dazu Bluescreen-Stoppcodes, Datenträgerzustand und die Werkzeuge sfc, DISM und chkdsk. |
+| **Updates** | Zeigt, was Windows noch nachzuholen hat, und spielt es ein. Treiber stehen getrennt und sind nie vorausgewählt — Windows Update bietet dort gern ältere Herstellerstände an, die einen neueren Treiber überschreiben. Eingespielt wird eines nach dem anderen, damit im Protokoll steht, wo es hängt; neu gestartet wird nie von selbst. |
 | **Optimierung** | 41 Eingriffe für Geschwindigkeit, Telemetrie, Datenschutz und Sicherheit. Jeder mit Begründung, jeder einzeln zurücknehmbar. |
 | **KI-Entfernung** | Findet Copilot, Recall und Click to Do — sperrt sie per Richtlinie oder entfernt sie ganz. Die Sperren wirken auch vorbeugend gegen Funktionsupdates. |
 | **Bereinigung** | Zeigt erst, wo wie viel Platz liegt (Zwischenspeicher, Update-Reste, Browser-Caches, Windows.old), dann wird gezielt gelöscht. Persönliche Dateien sind ausgeschlossen. |
@@ -54,7 +56,7 @@ Das war alles. WinZii braucht keine Installation, keine Laufzeitumgebung und kei
 > **Windows meldet sich mit einem blauen Hinweis?**
 > Auf »Weitere Informationen« und dann »Trotzdem ausführen« klicken. Der Hinweis erscheint bei jeder Datei aus dem Internet, die nicht kostenpflichtig signiert wurde. Zu jedem Release gehört eine SHA256-Prüfsumme — damit lässt sich das Archiv vor dem Entpacken abgleichen:
 > ```powershell
-> Get-FileHash .\WinZii-0.5.1.zip -Algorithm SHA256
+> Get-FileHash .\WinZii-0.5.2.zip -Algorithm SHA256
 > ```
 
 **Voraussetzungen:** Windows 10 oder 11 mit Administratorrechten. PowerShell 5.1 und .NET Framework sind in Windows enthalten.
@@ -90,7 +92,7 @@ Ehrlich gesagt, damit niemand böse überrascht wird: WinZii wurde auf **einem**
 | Bereich | Stand |
 | --- | --- |
 | **Windows 10** | Die Versionsweiche greift (33 Einträge für beide Systeme, 7 nur für Windows 11, 1 nur für Windows 10), aber es lief dort nie ein vollständiger Durchlauf. |
-| **Nicht-deutsches Windows** | Die Stellen, die Windows-Ausgaben auswerten, kennen Deutsch und Englisch; `takeown` fragt die Oberflächensprache ab. Geprüft wurde nur die deutsche Seite. |
+| **Nicht-deutsches Windows** | Seit 0.5.2 laufen alle Prüfwerkzeuge bei jedem Push auf einem **englischen** Windows-Server, und die Oberfläche wird dort in beiden Sprachen gestartet. Ungeprüft bleibt, was echte Windows-Werkzeuge zurückgeben: `sfc`, `DISM`, `chkdsk` und `manage-bde` antworten dort englisch, und WinZii wertet das aus. Dafür ist Punkt 13 der Abnahme da. |
 | **Akku** | Auf dem Notebook geprüft: Verschleiß wird gemessen und im Dashboard angezeigt. Bis 0.4.0 meldete dasselbe Gerät »kein Akku vorhanden«, weil die Erkennung an einer einzigen WMI-Klasse hing. |
 | **WLAN** | Verbindungsprüfung, Internetzugang und seit 0.5.1 auch Downloads über WLAN geprüft, ohne Kabel im Gerät: 93 MB in 32 s, eine Installation über winget mitsamt Nachprüfung, und ein Fehlschlag lässt nichts Halbfertiges liegen. |
 | **BitLocker, OneDrive** | Der »nicht vorhanden«-Pfad ist geprüft und meldet sauber, auf dem Notebook zusätzlich gegen `manage-bde` gegengehalten. Ein verschlüsselter Datenträger und ein OneDrive mit Platzhaltern fehlen weiterhin. |
@@ -110,7 +112,7 @@ Rückmeldungen von anderen Systemen sind ausdrücklich willkommen — besonders 
 
 ## 🖼️ Oberfläche
 
-Dunkles Design im haZii-Stil, deutschsprachig, mit mitlaufender Konsole: Jede Aktion ist sichtbar, während sie läuft. Lange Vorgänge blockieren die Oberfläche nicht.
+Dunkles Design im haZii-Stil, deutsch oder englisch, mit mitlaufender Konsole: Jede Aktion ist sichtbar, während sie läuft. Lange Vorgänge blockieren die Oberfläche nicht.
 
 <img src="docs/screenshot-dashboard.png" alt="Dashboard von WinZii" width="100%">
 
@@ -208,6 +210,7 @@ powershell -NoProfile -ExecutionPolicy Bypass -File tools\Test-Catalogs.ps1
 | `tools\Test-Process.ps1` | Rückgabewerte externer Programme, auch im Hintergrund-Runspace |
 | `tools\Test-Undo.ps1` | Sicherung und Rücknahme an einem eigenen Registry-Schlüssel durchspielen |
 | `tools\Test-Language.ps1` | Sprachdateien auf gleiche Schlüssel, Platzhalter und Kulturen prüfen |
+| `tools\Test-LanguageSwitch.ps1` | Startet WinZii, schaltet im Betrieb um und prüft, ob auch die gemessenen Texte mitgehen |
 | `tools\Invoke-Analyzer.ps1` | PSScriptAnalyzer mit Zielversion PowerShell 5.1 |
 | `tools\Repair-Encoding.ps1` | UTF-8 mit BOM erzwingen (Pflicht bei PowerShell 5.1 und Umlauten) |
 | `tools\New-Release.ps1` | Release-ZIP bauen und SHA256-Prüfsumme ausgeben |

@@ -9,9 +9,10 @@ Run it from a USB stick: clean up, optimize, set up — no installation, no acco
 
 [Deutsch](README.md) · **English**
 
-<sub>The interface switches between **German and English** — the language button sits at the bottom of the sidebar and takes effect immediately. Measured values, dialogs, log messages and reports are still German only; that is being worked on step by step.</sub>
+<sub>**Fully bilingual, German and English** — interface, dialogs, log, reports and handover sheet. The language button sits at the bottom of the sidebar and takes effect immediately, including for values that were already measured.</sub>
 
-![Version](https://img.shields.io/badge/Version-0.5.1-00d4ff?labelColor=0a0a0f&style=flat-square)
+![Version](https://img.shields.io/badge/Version-0.5.2-00d4ff?labelColor=0a0a0f&style=flat-square)
+[![Prüfung](https://github.com/haZiinstinct/WinZii/actions/workflows/pruefung.yml/badge.svg)](https://github.com/haZiinstinct/WinZii/actions/workflows/pruefung.yml)
 ![Windows](https://img.shields.io/badge/Windows-10%20%7C%2011-00d4ff?labelColor=0a0a0f&style=flat-square)
 ![PowerShell](https://img.shields.io/badge/PowerShell-5.1-00d4ff?labelColor=0a0a0f&style=flat-square)
 ![Install](https://img.shields.io/badge/Install-none-00d4ff?labelColor=0a0a0f&style=flat-square)
@@ -28,6 +29,7 @@ Run it from a USB stick: clean up, optimize, set up — no installation, no acco
 | --- | --- |
 | **Dashboard** | Windows version, hardware, GPU, monitors, BIOS, RAM slots and battery wear, plus activation, BitLocker, antivirus, disks and network — everything at a glance when taking on a PC. |
 | **Diagnostics** | Reads the event logs and translates them into plain language: what happened, what it means, what to do. Plus bluescreen stop codes, disk health, and the sfc, DISM and chkdsk tools. |
+| **Updates** | Shows what Windows still has to catch up on, and installs it. Drivers are listed separately and never preselected — Windows Update likes to offer older manufacturer builds there that overwrite a newer driver. Updates are installed one at a time so the log shows where it sticks; the PC is never restarted on its own. |
 | **Optimization** | 41 tweaks for speed, telemetry, privacy and security. Each one explained, each one individually reversible. |
 | **AI removal** | Finds Copilot, Recall and Click to Do — blocks them by policy or removes them entirely. The blocks also act preventively against feature updates. |
 | **Cleanup** | First shows where the space went (caches, update leftovers, browser caches, Windows.old), then deletes selectively. Personal files are excluded. |
@@ -54,7 +56,7 @@ That is all. WinZii needs no installation, no runtime, no particular drive lette
 > **Windows shows a blue SmartScreen warning?**
 > Click "More info" and then "Run anyway". The warning appears for any unsigned file downloaded from the internet. Every release ships a SHA256 checksum so you can verify the archive before extracting:
 > ```powershell
-> Get-FileHash .\WinZii-0.5.1.zip -Algorithm SHA256
+> Get-FileHash .\WinZii-0.5.2.zip -Algorithm SHA256
 > ```
 
 **Requirements:** Windows 10 or 11 with administrator rights. PowerShell 5.1 and .NET Framework ship with Windows.
@@ -90,7 +92,7 @@ To be blunt, so nobody gets surprised: WinZii was developed on **one** machine �
 | Area | Status |
 | --- | --- |
 | **Windows 10** | The version switch works (33 tweaks for both systems, 7 Windows-11-only, 1 Windows-10-only), but a full run never happened there. |
-| **Non-German Windows** | The code that parses Windows output knows German and English; `takeown` adapts to the UI language. Only the German side has been exercised. |
+| **Non-German Windows** | Since 0.5.2 every check tool runs on an **English** Windows server on each push, and the interface is started there in both languages. What remains untested is what real Windows tools return: `sfc`, `DISM`, `chkdsk` and `manage-bde` answer in English there, and WinZii parses that. Point 13 of the acceptance list covers it. |
 | **Battery** | Verified on the notebook: wear is measured and shown on the dashboard. Up to 0.4.0 that same device reported "no battery present", because detection hung on a single WMI class. |
 | **Wi-Fi** | Connection check, internet access and, since 0.5.1, downloads verified over Wi-Fi with no cable in the machine: 93 MB in 32 s, an install through winget including the follow-up check, and a failed download leaves nothing half-finished behind. |
 | **BitLocker, OneDrive** | The "not present" path is verified and reports cleanly, on the notebook additionally cross-checked against `manage-bde`. An encrypted volume and a OneDrive with placeholders are still missing. |
