@@ -64,7 +64,9 @@
     "dryRunOff": "Dry run off — changes are carried out for real.",
     "languageChanged": "Language switched to {sprache}.",
     "languageBusy": "'{name}' is still running. The language can only be changed afterwards — switching rebuilds the page, which would not sit well with a survey in progress.",
-    "fontsMissing": "Bundled fonts unavailable, falling back to system fonts."
+    "fontsMissing": "Bundled fonts unavailable, falling back to system fonts.",
+    "noAdmin": "WinZii is running WITHOUT administrator rights. Looking and analysing works, changing does not.",
+    "noAdminHint": "Affected are Optimisation, AI removal, Cleanup, Uninstall, Office, Drivers, Updates and Repair. To make changes, restart WinZii and confirm the request for rights."
   },
   "dialog": {
     "busyTitle": "Task running",

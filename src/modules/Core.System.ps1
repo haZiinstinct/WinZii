@@ -10,6 +10,30 @@
 # Stufe 2 (Get-WzSecurityInfo) : Lizenz, Verschlüsselung, Virenschutz, Laufwerkszustand.
 # Jede Abfrage ist einzeln abgesichert: fehlt etwas, steht dort "n/v".
 
+function Test-WzElevated {
+    <#
+    .SYNOPSIS
+        Laeuft WinZii mit Administratorrechten?
+    .DESCRIPTION
+        Der Launcher fordert sie an — aber wer die Abfrage wegklickt, bekam
+        bisher ein Programm, das so tut, als waere alles in Ordnung. Die
+        Oberflaeche baut sich vollstaendig auf, jede Seite laedt, und erst
+        tief drinnen scheitert etwas stumm. Beim Kunden ist das die
+        unangenehmste Sorte Fehler: Der Techniker haelt den Schritt fuer
+        erledigt.
+    #>
+    [CmdletBinding()]
+    param()
+
+    try {
+        $identitaet = [Security.Principal.WindowsIdentity]::GetCurrent()
+        $rolle = New-Object Security.Principal.WindowsPrincipal($identitaet)
+        return $rolle.IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)
+    } catch {
+        return $false
+    }
+}
+
 function Get-WzSystemInfo {
     <#
     .SYNOPSIS
@@ -201,25 +225,34 @@ function Update-WzMeasuredTexts {
 
     if (-not $syncHash.SystemInfo) { return }
 
+    # Die zweite Stufe wird aus dem Abschluss der ersten angestossen, nicht
+    # daneben: Invoke-WzTask setzt sofort »beschaeftigt« und weist jeden
+    # weiteren Auftrag ab, solange einer laeuft. Zwei Aufrufe hintereinander
+    # haben deshalb genau das verworfen, worauf es hier ankommt — Aktivierung,
+    # BitLocker und Virenschutz stehen in der zweiten Stufe. Aufgefallen ist
+    # das erst beim Sprachwechsel auf echter Hardware; im Quelltext sah es
+    # richtig aus.
+    $mitSicherheit = [bool]$syncHash.SecurityInfo
+
     Invoke-WzTask -Name (Get-WzText 'dash.taskSystem') -Silent -ScriptBlock {
         Get-WzSystemInfo
     } -OnComplete {
         param($info)
-        if (-not $info) { return }
-        $syncHash.SystemInfo = $info
-        if ($syncHash.CurrentPage -eq 'Dashboard') { Write-WzDashboardCards -Info $info }
-    }
+        if ($info) {
+            $syncHash.SystemInfo = $info
+            if ($syncHash.CurrentPage -eq 'Dashboard') { Write-WzDashboardCards -Info $info }
+        }
+        if (-not $mitSicherheit) { return }
 
-    if (-not $syncHash.SecurityInfo) { return }
-
-    Invoke-WzTask -Name (Get-WzText 'dash.taskSecurity') -Silent -ScriptBlock {
-        Get-WzSecurityInfo
-    } -OnComplete {
-        param($security)
-        if (-not $security) { return }
-        $syncHash.SecurityInfo = $security
-        if ($syncHash.CurrentPage -eq 'Dashboard') { Write-WzDashboardSecurity -Security $security }
-    }
+        Invoke-WzTask -Name (Get-WzText 'dash.taskSecurity') -Silent -ScriptBlock {
+            Get-WzSecurityInfo
+        } -OnComplete {
+            param($security)
+            if (-not $security) { return }
+            $syncHash.SecurityInfo = $security
+            if ($syncHash.CurrentPage -eq 'Dashboard') { Write-WzDashboardSecurity -Security $security }
+        }
+    }.GetNewClosure()
 }
 
 function Get-WzGraphicsInfo {

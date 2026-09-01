@@ -64,7 +64,9 @@
     "dryRunOff": "Testmodus aus — Änderungen werden wirklich ausgeführt.",
     "languageChanged": "Sprache auf {sprache} umgestellt.",
     "languageBusy": "»{name}« läuft gerade. Die Sprache lässt sich erst danach wechseln — beim Wechsel wird die Seite neu aufgebaut, und das vertrüge sich nicht mit einer laufenden Abfrage.",
-    "fontsMissing": "Mitgelieferte Schriften nicht nutzbar, System-Schriften werden verwendet."
+    "fontsMissing": "Mitgelieferte Schriften nicht nutzbar, System-Schriften werden verwendet.",
+    "noAdmin": "WinZii läuft OHNE Administratorrechte. Ansehen und auswerten geht, Eingriffe nicht.",
+    "noAdminHint": "Betroffen sind Optimierung, KI-Entfernung, Bereinigung, Deinstallieren, Office, Treiber, Updates und Reparatur. Zum Ändern WinZii neu starten und die Rechteabfrage bestätigen."
   },
   "dialog": {
     "busyTitle": "Vorgang läuft",

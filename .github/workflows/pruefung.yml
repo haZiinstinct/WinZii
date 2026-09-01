@@ -98,6 +98,14 @@ jobs:
         shell: powershell
         run: powershell -NoProfile -ExecutionPolicy Bypass -STA -File .\tools\Test-Dialogs.ps1
 
+      # Startet das Programm wirklich, schaltet mitten in der Sitzung um und
+      # sieht nach, ob auch die gemessenen Statustexte mitgehen. Der einzige
+      # Weg, das zu pruefen — im Quelltext sah der Fehler richtig aus.
+      - name: Test-LanguageSwitch
+        if: always()
+        shell: powershell
+        run: .\tools\Test-LanguageSwitch.ps1
+
       - name: Invoke-Analyzer
         if: always()
         shell: powershell

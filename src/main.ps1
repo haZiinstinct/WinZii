@@ -268,6 +268,13 @@ $window.Add_ContentRendered({
     if (-not (Test-WzWritableRoot)) {
         Write-WzLog (Get-WzText 'start.readOnly') -Level Warn
     }
+    # Fehlende Rechte gehoeren an den Anfang, nicht in die erste Fehlermeldung
+    # einer halb ausgefuehrten Aufgabe.
+    $syncHash.IsElevated = Test-WzElevated
+    if (-not $syncHash.IsElevated) {
+        Write-WzLog (Get-WzText 'start.noAdmin') -Level Warn
+        Write-WzLog (Get-WzText 'start.noAdminHint') -Level Warn
+    }
     Show-WzPage -Id 'Dashboard'
 })
 
