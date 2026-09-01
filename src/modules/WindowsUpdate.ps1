@@ -53,10 +53,18 @@ function Get-WzUpdateState {
 
     # Wird Windows Update per Richtlinie gesteuert, entscheidet die Verwaltung,
     # was ankommt. Das gehört auf das Übergabeblatt, nicht in eine Fehlermeldung.
+    #
+    # Auf das blosse Vorhandensein des Schlüssels darf man sich dabei NICHT
+    # verlassen: Windows legt beide Zweige auch auf einem völlig unverwalteten
+    # PC an, nur ohne Werte. Die erste Fassung meldete deshalb auf dem
+    # Entwicklungsrechner eine Gruppenrichtlinie, die es dort nicht gibt.
     foreach ($pfad in @(
         'HKLM:\SOFTWARE\Policies\Microsoft\Windows\WindowsUpdate',
         'HKLM:\SOFTWARE\Policies\Microsoft\Windows\WindowsUpdate\AU')) {
-        if (Test-Path -LiteralPath $pfad) { $state.Managed = $true }
+        $werte = Get-ItemProperty -LiteralPath $pfad -ErrorAction SilentlyContinue
+        if (-not $werte) { continue }
+        $echte = @($werte.PSObject.Properties | Where-Object { $_.Name -notlike 'PS*' })
+        if ($echte.Count -gt 0) { $state.Managed = $true }
     }
 
     try {
@@ -136,24 +144,44 @@ function Find-WzUpdates {
     return $result
 }
 
+function Format-WzUpdateCode {
+    <#
+    .SYNOPSIS
+        Windows-Fehlercode als »0x80240044«.
+    .NOTES
+        Ohne Maske und ohne [uint32]: »-band 0xFFFFFFFF« liefert in PowerShell
+        nicht das, was man erwartet, und der Guss nach uint32 warf bei jedem
+        negativen HResult eine Ausnahme — die den ganzen Einspielvorgang mit
+        sich riss. .NET formatiert einen negativen Int32 mit »X8« ohnehin im
+        Zweierkomplement, also genau so, wie Windows den Code nennt.
+    #>
+    param($Value)
+
+    if ($null -eq $Value) { return '' }
+    return ('0x{0:X8}' -f [int]$Value)
+}
+
 function Get-WzUpdateHResult {
     <#
     .SYNOPSIS
         Holt den Windows-Fehlercode aus einer Ausnahme, als »0x8024402C«.
     .NOTES
         Die COM-Schnittstelle wirft gewöhnliche Ausnahmen; die eigentliche
-        Ursache steckt im HResult. Ohne diese Umrechnung stünde im Protokoll
-        eine negative Zahl, die niemand nachschlagen kann.
+        Ursache steckt weiter innen. Die äußere Ausnahme trägt nur den
+        Sammelcode von PowerShell (0x80131501), mit dem niemand etwas anfangen
+        kann — deshalb wird die Kette bis zur innersten Ursache verfolgt.
     #>
     param($ErrorRecord)
 
     $wert = $null
-    try { $wert = $ErrorRecord.Exception.HResult } catch { }
-    if ($null -eq $wert) {
-        try { $wert = $ErrorRecord.Exception.InnerException.HResult } catch { }
-    }
-    if ($null -eq $wert) { return '' }
-    return ('0x{0:X8}' -f [uint32]([int]$wert -band 0xFFFFFFFF))
+    try {
+        $ausnahme = $ErrorRecord.Exception
+        while ($ausnahme) {
+            $wert = $ausnahme.HResult
+            $ausnahme = $ausnahme.InnerException
+        }
+    } catch { }
+    return Format-WzUpdateCode $wert
 }
 
 function Get-WzUpdateCodeText {
@@ -182,6 +210,30 @@ function Get-WzUpdateCodeText {
         # Ohne Katalog bleibt die Zahl — besser als ein Absturz
     }
     return $result
+}
+
+function Get-WzUpdateResultCode {
+    <#
+    .SYNOPSIS
+        Der aussagekräftige Fehlercode eines Lade- oder Einspielergebnisses.
+    .DESCRIPTION
+        Das Sammelergebnis meldet bei jedem Fehlschlag nur »0x80240022 — alle
+        Updates fehlgeschlagen«. Das steht auf keinem Zettel, den ein Techniker
+        gebrauchen kann. Der eigentliche Grund liegt eine Ebene tiefer, beim
+        einzelnen Update: dort stand im ersten echten Versuch »0x80240044 —
+        Administratorrechte fehlen«, und damit war die Sache klar.
+
+        Da immer genau ein Update in der Sammlung liegt, ist das Feld 0 das
+        richtige. Fehlt es, bleibt der Sammelcode.
+    #>
+    param($Result)
+
+    try {
+        $einzeln = $Result.GetUpdateResult(0)
+        if ($einzeln -and [int]$einzeln.HResult -ne 0) { return Format-WzUpdateCode $einzeln.HResult }
+        if ($einzeln) { return Format-WzUpdateCode $einzeln.HResult }
+    } catch { }
+    return Format-WzUpdateCode $Result.HResult
 }
 
 function Install-WzUpdates {
@@ -256,15 +308,24 @@ function Install-WzUpdates {
             if (-not $update.IsDownloaded) {
                 $downloader = $session.CreateUpdateDownloader()
                 $downloader.Updates = $collection
-                [void]$downloader.Download()
+                $ladeErgebnis = $downloader.Download()
+                # Ein fehlgeschlagener Download macht das Einspielen sinnlos —
+                # und meldet einen anderen, nützlicheren Grund als der
+                # Installierer, der danach nur noch »nichts da« sagen kann.
+                if ([int]$ladeErgebnis.ResultCode -notin @(2, 3)) {
+                    $deutung = Get-WzUpdateCodeText -Code (Get-WzUpdateResultCode $ladeErgebnis)
+                    $summary.Failed++
+                    $summary.Details += Get-WzText 'upd.detailFailed' @{ name = $update.Title; grund = $deutung.Text }
+                    Write-WzLog (Get-WzText 'upd.logDownloadFailed' @{ name = $update.Title; grund = $deutung.Text }) -Level Error
+                    continue
+                }
             }
 
             $installer = $session.CreateUpdateInstaller()
             $installer.Updates = $collection
             $ergebnis = $installer.Install()
 
-            $code = ('0x{0:X8}' -f [uint32]([int]$ergebnis.HResult -band 0xFFFFFFFF))
-            $deutung = Get-WzUpdateCodeText -Code $code
+            $deutung = Get-WzUpdateCodeText -Code (Get-WzUpdateResultCode $ergebnis)
 
             # ResultCode 2 = erfolgreich, 3 = erfolgreich mit Anmerkungen.
             # Der HResult allein reicht nicht: Er ist auch bei 3 gleich null.

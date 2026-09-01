@@ -1070,6 +1070,9 @@
       },
       "0x80248007": {
         "text": "The licence terms for the update are missing, or the update store is damaged. Empty the cache first, then search again."
+      },
+      "0x80240022": {
+        "text": "The operation failed for all updates. The actual reason is reported for the individual update — usually missing rights or an interrupted download."
       }
     }
   }

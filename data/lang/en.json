@@ -766,7 +766,8 @@
     "actionInstalled": "{anzahl} Windows update(s) installed",
     "codeUnknown": "unknown error ({code})",
     "codeNone": "no error code reported",
-    "sizeUpTo": "up to {groesse}"
+    "sizeUpTo": "up to {groesse}",
+    "logDownloadFailed": "  Download failed: {name} — {grund}"
   },
   "drv": {
     "eyebrow": "// TAKEOVER",

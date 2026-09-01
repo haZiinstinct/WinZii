@@ -766,7 +766,8 @@
     "actionInstalled": "{anzahl} Windows-Update(s) eingespielt",
     "codeUnknown": "unbekannter Fehler ({code})",
     "codeNone": "kein Fehlercode gemeldet",
-    "sizeUpTo": "bis zu {groesse}"
+    "sizeUpTo": "bis zu {groesse}",
+    "logDownloadFailed": "  Download fehlgeschlagen: {name} — {grund}"
   },
   "drv": {
     "eyebrow": "// ÜBERNEHMEN",

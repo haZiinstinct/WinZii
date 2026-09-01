@@ -1,4 +1,4 @@
-{
+﻿{
   "schemaVersion": 1,
   "_hinweis": "Rückgabewerte der Windows-Update-Schnittstelle in Klartext. Der Code steht als achtstellige Hexzahl, so wie Windows ihn meldet. outcome steuert die Zählung: ok = eingespielt, skip = nichts zu tun, reboot = erfolgreich, Neustart nötig, fail = Fehlschlag. Unbekannte Codes gelten als fail und werden mit ihrer Zahl angezeigt.",
   "codes": [
@@ -66,6 +66,11 @@
       "code": "0x80248007",
       "outcome": "fail",
       "text": "Die Lizenzbedingungen des Updates fehlen oder der Update-Speicher ist beschädigt. Erst den Zwischenspeicher leeren, dann erneut suchen."
+    },
+    {
+      "code": "0x80240022",
+      "outcome": "fail",
+      "text": "Der Vorgang ist für alle Updates fehlgeschlagen. Der eigentliche Grund steht beim einzelnen Update — meist fehlende Rechte oder ein unterbrochener Download."
     }
   ]
 }
