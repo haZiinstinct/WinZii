@@ -405,7 +405,8 @@ function Update-WzLanguageUi {
         PowerShell-Code direkt geschrieben hat — Kartentitel, Infozeilen,
         Hinweise — bleibt dagegen stehen. Deshalb wird der Seiten-Zwischenspeicher
         verworfen und die aktive Seite neu aufgebaut. Die Messergebnisse liegen
-        im $syncHash und überleben das; es wird nichts neu gemessen.
+        im $syncHash und überleben das. Neu gemessen wird nur, was Text
+        enthält statt Zahlen — siehe Update-WzMeasuredTexts.
     #>
     [CmdletBinding()]
     param()
@@ -420,6 +421,11 @@ function Update-WzLanguageUi {
         $syncHash[$flag] = $false
     }
     if ($current) { Show-WzPage -Id $current }
+
+    # Aktivierung, BitLocker und Virenschutz sind fertige Sätze aus einer
+    # Messung — die schaltet kein Wörterbuch um. Sie werden im Hintergrund
+    # nachgezogen, sonst stünde im englischen Übergabeblatt weiter Deutsch.
+    Update-WzMeasuredTexts
 }
 
 # --- Einstellungen ---------------------------------------------------------

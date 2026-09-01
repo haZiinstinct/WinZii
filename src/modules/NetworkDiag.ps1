@@ -256,7 +256,7 @@ function Test-WzInternetAccess {
         if ($probe.Body.Trim() -ne 'Microsoft Connect Test') {
             $result.Kind = 'portal'
             $result.Status = 'warn'
-            $result.Detail = 'unerwartete Antwort — vermutlich ein Anmeldeportal'
+            $result.Detail = Get-WzText 'tool.detailPortal'
             return $result
         }
     } catch [Net.WebException] {
@@ -281,11 +281,11 @@ function Test-WzInternetAccess {
             # die verschlüsselte Verbindung stand. Genau darauf kommt es an.
             $result.Kind = 'ok'
             $result.Status = 'ok'
-            $result.Detail = 'HTTPS erreichbar'
+            $result.Detail = Get-WzText 'tool.detailHttpsOk'
         } elseif ($message -match 'SSL|TLS|Vertrauensstellung|Zertifikat|trust') {
             $result.Kind = 'certificate'
             $result.Status = 'fail'
-            $result.Detail = 'Sicherheitszertifikat abgelehnt'
+            $result.Detail = Get-WzText 'tool.detailCertRejected'
         } elseif ($_.Exception.Status -eq 'Timeout') {
             $result.Kind = 'blocked'
             $result.Status = 'fail'

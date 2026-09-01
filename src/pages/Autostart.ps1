@@ -69,8 +69,14 @@ function New-WzAutostartRow {
     $toggle.Add_Click({
         $target = [bool]$this.IsChecked
         if (Set-WzAutostartItem -Item $this.Tag -Enabled $target) {
-            $verb = if ($target) { 'eingeschaltet' } else { 'abgeschaltet' }
-            Add-WzAction -Area 'Autostart' -Summary "»$($this.Tag.Name)« beim Systemstart $verb"
+            # Beide Zweige ausgeschrieben: Test-Language findet nur wortwoertliche
+            # Schluessel, ein berechneter waere fuer die Pruefung unsichtbar.
+            $summary = if ($target) {
+                Get-WzText 'auto.actionOn' @{ name = $this.Tag.Name }
+            } else {
+                Get-WzText 'auto.actionOff' @{ name = $this.Tag.Name }
+            }
+            Add-WzAction -Area 'Autostart' -Summary $summary
         } else {
             $this.IsChecked = -not $target
         }

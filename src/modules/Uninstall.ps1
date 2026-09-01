@@ -25,9 +25,9 @@ function Get-WzInstalledPrograms {
     $userBranch = Resolve-WzRegistryPath 'HKCU:\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall'
 
     $roots = @(
-        @{ Path = 'HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\*'; Scope = 'alle Benutzer' }
-        @{ Path = 'HKLM:\SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Uninstall\*'; Scope = 'alle Benutzer (32 Bit)' }
-        @{ Path = "$userBranch\*"; Scope = 'nur dieses Konto' }
+        @{ Path = 'HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\*'; Scope = (Get-WzText 'unin.scopeAllUsers') }
+        @{ Path = 'HKLM:\SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Uninstall\*'; Scope = (Get-WzText 'unin.scopeAllUsers32') }
+        @{ Path = "$userBranch\*"; Scope = (Get-WzText 'unin.scopeThisUser') }
     )
 
     $programs = @()
@@ -485,6 +485,8 @@ function Find-WzUninstallLeftovers {
             } catch { }
 
             $leftovers += [pscustomobject]@{
+                # Kind steuert den Loeschweg und bleibt deshalb fest —
+                # uebersetzt wird erst in der Anzeige der Fundliste.
                 Kind       = 'Ordner'
                 Path       = $folder
                 TargetPath = $folder

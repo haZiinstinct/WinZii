@@ -116,7 +116,7 @@ function Invoke-WzTask {
                 # gewollt und kein Fehler.
             } else {
                 $failed = $true
-                Write-WzLog "$($state.Name) fehlgeschlagen: $($_.Exception.Message)" -Level Error
+        Write-WzLog (Get-WzText 'core.logTaskFailed' @{ name = $state.Name; grund = $_.Exception.Message }) -Level Error
             }
         }
 
@@ -139,7 +139,7 @@ function Invoke-WzTask {
         if (-not $state.Silent -or $state.Canceled) {
             $seconds = Format-WzNumber ((Get-Date) - $state.Started).TotalSeconds
             if ($state.Canceled) {
-                Write-WzLog "$($state.Name) abgebrochen ($seconds s)." -Level Warn
+            Write-WzLog (Get-WzText 'core.logTaskCancelled' @{ name = $state.Name; sekunden = $seconds }) -Level Warn
             } elseif ($failed) {
                 Write-WzLog (Get-WzText 'core.taskFailed' @{ name = $state.Name; sekunden = $seconds }) -Level Warn
             } else {
@@ -363,7 +363,7 @@ function Invoke-WzProcess {
             if ($frist -gt 0 -and $uhr.ElapsedMilliseconds -ge $frist) {
                 $result.TimedOut = $true
                 Stop-WzProcessTree -ProcessId $process.Id
-                Write-WzLog "$([IO.Path]::GetFileName($FilePath)) nach $TimeoutSeconds s abgebrochen." -Level Warn
+        Write-WzLog (Get-WzText 'core.logProcessTimeout' @{ datei = [IO.Path]::GetFileName($FilePath); sekunden = $TimeoutSeconds }) -Level Warn
                 [void]$process.WaitForExit(5000)
                 break
             }

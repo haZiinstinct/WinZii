@@ -180,6 +180,48 @@ function Get-WzSystemInfo {
     return [pscustomobject]$info
 }
 
+function Update-WzMeasuredTexts {
+    <#
+    .SYNOPSIS
+        Erhebt die Systemdaten neu, nachdem die Sprache gewechselt wurde.
+    .DESCRIPTION
+        Die beiden Abfragen liefern nicht nur Zahlen, sondern fertige Saetze —
+        »C: nicht verschluesselt«, »Windows ist aktiviert«. Die stehen in der
+        Sprache, die beim Messen galt, und ein Woerterbuchtausch erreicht sie
+        nicht. Ohne dieses Nachziehen zeigte das Uebergabeblatt nach einem
+        Wechsel auf Englisch weiter die deutschen Statuszeilen.
+
+        Gemessen wird im Hintergrund: Stufe 2 braucht auf manchen Rechnern
+        mehrere Sekunden. Angestossen wird nur, was schon einmal erhoben
+        wurde — sonst misst ein Sprachwechsel vor dem ersten Dashboard-Aufbau
+        doppelt.
+    #>
+    [CmdletBinding()]
+    param()
+
+    if (-not $syncHash.SystemInfo) { return }
+
+    Invoke-WzTask -Name (Get-WzText 'dash.taskSystem') -Silent -ScriptBlock {
+        Get-WzSystemInfo
+    } -OnComplete {
+        param($info)
+        if (-not $info) { return }
+        $syncHash.SystemInfo = $info
+        if ($syncHash.CurrentPage -eq 'Dashboard') { Write-WzDashboardCards -Info $info }
+    }
+
+    if (-not $syncHash.SecurityInfo) { return }
+
+    Invoke-WzTask -Name (Get-WzText 'dash.taskSecurity') -Silent -ScriptBlock {
+        Get-WzSecurityInfo
+    } -OnComplete {
+        param($security)
+        if (-not $security) { return }
+        $syncHash.SecurityInfo = $security
+        if ($syncHash.CurrentPage -eq 'Dashboard') { Write-WzDashboardSecurity -Security $security }
+    }
+}
+
 function Get-WzGraphicsInfo {
     <#
     .SYNOPSIS
@@ -306,7 +348,7 @@ function Get-WzBatteryHealth {
         DesignmWh    = 0
         FullmWh      = 0
         ChargePercent = $null
-        Verdict      = 'kein Akku vorhanden'
+        Verdict      = (Get-WzText 'core.batteryNone')
     }
 
     $static = @()
@@ -443,7 +485,11 @@ function Get-WzSecurityInfo {
     $activation = Get-WzActivationStatus
     $info.Activation = $activation.Text
     $info.ActivationOk = $activation.Ok
+    # Wie bei der Aktivierung: Ob verschluesselt ist, wurde im Uebergabeblatt am
+    # deutschen Wort »nicht« erkannt. Auf Englisch traf das nie, und der Hinweis
+    # »dieses Notebook ist nicht verschluesselt« blieb aus.
     $info.BitLocker = Get-WzBitLockerStatus
+    $info.BitLockerOn = Test-WzBitLockerActive
 
     $info.SecureBoot = try {
         if (Confirm-SecureBootUEFI -ErrorAction Stop) { Get-WzText 'core.secureBootOn' } else { Get-WzText 'core.secureBootOff' }
@@ -643,9 +689,9 @@ function Get-WzBitLockerStatus {
         foreach ($volume in $volumes) {
             if (-not $volume.DriveLetter) { continue }
             $state = switch ($volume.ProtectionStatus) {
-                0 { 'aus' }
-                1 { 'an' }
-                2 { 'unbekannt' }
+                0 { Get-WzText 'core.bdeOff' }
+                1 { Get-WzText 'core.bdeOn' }
+                2 { Get-WzText 'core.unknown' }
                 default { '?' }
             }
             $parts += "$($volume.DriveLetter) $state"
@@ -654,6 +700,28 @@ function Get-WzBitLockerStatus {
         return ($parts -join ' · ')
     } catch {
         return Get-WzText 'core.bdeNotQueryable'
+    }
+}
+
+function Test-WzBitLockerActive {
+    <#
+    .SYNOPSIS
+        Ist auf mindestens einem Laufwerk BitLocker eingeschaltet?
+    .DESCRIPTION
+        Sprachneutral, weil der Text aus Get-WzBitLockerStatus uebersetzt wird
+        und sich nicht vergleichen laesst. Fragt dieselbe WMI-Klasse ab.
+    #>
+    $bootStatus = (Get-ItemProperty 'HKLM:\SYSTEM\CurrentControlSet\Control\BitLockerStatus' -ErrorAction SilentlyContinue).BootStatus
+    $service = Get-Service BDESVC -ErrorAction SilentlyContinue
+    if (-not $service) { return $false }
+    if ($bootStatus -eq 0 -and $service.Status -ne 'Running') { return $false }
+
+    try {
+        $volumes = Get-CimInstance -Namespace 'root\cimv2\security\microsoftvolumeencryption' `
+            -Query 'SELECT ProtectionStatus FROM Win32_EncryptableVolume' -ErrorAction Stop
+        return (@($volumes | Where-Object { $_.ProtectionStatus -eq 1 }).Count -gt 0)
+    } catch {
+        return $false
     }
 }
 
@@ -669,7 +737,7 @@ function Get-WzTpmStatus {
 
     $service = Get-Service TPM -ErrorAction SilentlyContinue
     if ($service -and $service.Status -eq 'Running') { return Get-WzText 'core.tpmActive' }
-    return 'vorhanden, Dienst gestoppt'
+    return Get-WzText 'core.tpmStopped'
 }
 
 function Test-WzPendingReboot {
@@ -679,14 +747,14 @@ function Test-WzPendingReboot {
     #>
     $reasons = @()
     if (Test-Path 'HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Component Based Servicing\RebootPending') {
-        $reasons += 'Komponentenwartung'
+        $reasons += Get-WzText 'core.rebootServicing'
     }
     if (Test-Path 'HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\WindowsUpdate\Auto Update\RebootRequired') {
-        $reasons += 'Windows Update'
+        $reasons += Get-WzText 'core.rebootWindowsUpdate'
     }
     $sessionManager = Get-ItemProperty 'HKLM:\SYSTEM\CurrentControlSet\Control\Session Manager' -ErrorAction SilentlyContinue
     if ($sessionManager -and $sessionManager.PendingFileRenameOperations) {
-        $reasons += 'ausstehende Dateiumbenennungen'
+        $reasons += Get-WzText 'core.rebootFileRename'
     }
     if ($reasons.Count -eq 0) { return $null }
     return ($reasons -join ', ')

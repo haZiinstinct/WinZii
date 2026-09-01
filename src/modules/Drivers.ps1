@@ -230,6 +230,8 @@ function Export-WzDrivers {
     [CmdletBinding()]
     param([switch]$ThirdPartyOnly)
 
+    # »treiber« ist der Ordnername auf dem Datentraeger, keine Anzeige — er
+    # bleibt fest, sonst finden aeltere Sticks ihre Sicherungen nicht mehr.
     $target = New-WzDirectory (Get-WzPath 'offline' 'treiber' $env:COMPUTERNAME)
     $result = [pscustomobject]@{ Success = $false; Path = $target; Packages = 0; Bytes = 0 }
 
@@ -289,7 +291,7 @@ function Import-WzDrivers {
     if ($syncHash.DryRun) {
         Write-WzLog (Get-WzText 'drv.logImportTest' @{ pfad = $Path }) -Level Test
         $result.Success = $true
-        $result.Summary = 'Testmodus'
+        $result.Summary = Get-WzText 'core.dryRunSummary'
         return $result
     }
 

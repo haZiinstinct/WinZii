@@ -169,6 +169,12 @@ foreach ($file in (Get-ChildItem -LiteralPath (Join-Path $root 'src') -Filter '*
     foreach ($match in [regex]::Matches($code, "Get-WzText\s+(?:-Key\s+)?'([^']+)'")) {
         $used[$match.Groups[1].Value] = "$($file.Name)"
     }
+    # Der Launcher laeuft vor allen Modulen und hat deshalb eine eigene, winzige
+    # Textauswahl (Get-BootText). Ohne diese Zeile gaelten seine Schluessel als
+    # tot — und das erste, was der Anwender sieht, waere nicht abgesichert.
+    foreach ($match in [regex]::Matches($code, "Get-BootText\s+'([^']+)'")) {
+        $used["boot.$($match.Groups[1].Value)"] = "$($file.Name)"
+    }
 }
 
 $undefined = @($used.Keys | Where-Object { -not $reference.ContainsKey($_) } | Sort-Object)
@@ -225,11 +231,39 @@ $stellen = @(
     '-Title'; '-Message'; '-Text'; '-Summary'; '-ConfirmText'; '-ChoiceLabel'
     '-OptionText'; '-Recommendation'; '-Verdict'; '-Caption'; '-Detail'; '-Hint'
 )
+# Ein einzelner regulaerer Ausdruck je Aufrufstelle, beide Anfuehrungsarten.
+# In "..." wird die Einsetzung ($var, $(...)) vorher herausgeschnitten: was
+# danach an Buchstaben uebrig bleibt, ist fest verdrahteter Anzeigetext.
+function Get-FesterText {
+    param(
+        [string]$Zeile,
+        [string]$Vorspann,
+        [string]$Trenner = '\s+'
+    )
+    foreach ($anfuehrung in @("'([^']{2,})'", '"([^"]{2,})"')) {
+        if ($Zeile -match ($Vorspann + $Trenner + $anfuehrung)) { return $Matches[1] }
+    }
+    return $null
+}
+
+function Test-Anzeigetext {
+    param([string]$Wert, [switch]$Streng)
+    $rest = $Wert -replace '\$\([^)]*\)', '' -replace '\$\w+(\.\w+)*', ''
+    if ($rest -notmatch '[A-Za-zÄÖÜäöüß]{3,}') { return $false }
+    # Ein Wert ohne Leerzeichen ist meist eine Kennung, kein Satz — ausser bei
+    # einem Anzeigeelement, dort ist auch ein einzelnes Wort Text: »AKTIV«,
+    # »umschalten«, »Aufgabe«. Genau die sind in Etappe 1 durchgerutscht.
+    if (-not $Streng -and $rest -notmatch ' ') { return $false }
+    return $true
+}
+
+# Anzeigeelemente werden streng geprueft, alles andere mit Leerzeichenregel.
+$streng = @('New-WzBadge -Text', 'New-WzInfoRow', '\.Text =', '\.Content =')
+$locker = @('Invoke-WzTask -Name', 'Write-WzLog')
+
 $fund = @()
 foreach ($dir in $codeDirs) {
     foreach ($datei in (Get-ChildItem -LiteralPath $dir -Filter '*.ps1' -File -ErrorAction SilentlyContinue)) {
-        # Report.ps1 ist das Uebergabeblatt und gehoert zu Etappe 3
-        if ($datei.Name -eq 'Report.ps1') { continue }
         $zeilen = [IO.File]::ReadAllLines($datei.FullName, [Text.Encoding]::UTF8)
         for ($i = 0; $i -lt $zeilen.Count; $i++) {
             $zeile = $zeilen[$i]
@@ -237,34 +271,19 @@ foreach ($dir in $codeDirs) {
             if ($zeile -match '#\s*lang-ok') { continue }
 
             $treffer = $null
-            foreach ($stelle in $stellen) {
-                if ($zeile -match ([regex]::Escape($stelle) + "\\s+'([^']{2,})'")) { $treffer = $Matches[1]; break }
+            $istStreng = $false
+            foreach ($stelle in $streng) {
+                $treffer = Get-FesterText -Zeile $zeile -Vorspann $stelle -Trenner '\s*'
+                if ($treffer) { $istStreng = $true; break }
             }
-            if (-not $treffer -and $zeile -match "Invoke-WzTask -Name '([^']{2,})'") { $treffer = $Matches[1] }
-            if (-not $treffer -and $zeile -match "Write-WzLog '([^']{2,})'") { $treffer = $Matches[1] }
-            # Streng, ohne Leerzeichenregel: Bei einem Anzeigeelement ist auch ein
-            # einzelnes Wort Text — »AKTIV«, »umschalten«, »Aufgabe«. Genau die
-            # sind mir in Etappe 1 durchgerutscht, weil sie kein Leerzeichen haben.
-            foreach ($muster in @("New-WzBadge -Text '([^']{2,})'", "\.Text = '([^']{2,})'", "\.Content = '([^']{2,})'")) {
-                if ($zeile -match $muster) {
-                    $fund += ('{0}:{1}  {2}' -f $datei.Name, ($i + 1), $Matches[1])
-                    $treffer = $null
-                    break
+            if (-not $treffer) {
+                foreach ($stelle in ($stellen + $locker)) {
+                    $treffer = Get-FesterText -Zeile $zeile -Vorspann ([regex]::Escape($stelle))
+                    if ($treffer) { break }
                 }
             }
-            if ($fund.Count -gt 0 -and $fund[-1] -like ("{0}:{1}  *" -f $datei.Name, ($i + 1))) { continue }
-            # Bei einer Infozeile ist auch ein einzelnes Wort Anzeigetext
-            # (»Version«, »Aufgabe«), deshalb entfaellt die Leerzeichenregel.
-            if (-not $treffer -and $zeile -match "New-WzInfoRow '([^']{2,})'") {
-                $fund += ('{0}:{1}  {2}' -f $datei.Name, ($i + 1), $Matches[1])
-                continue
-            }
-            if (-not $treffer -and $zeile -match "\\.Text = '([^']{2,})'") { $treffer = $Matches[1] }
-            if (-not $treffer -and $zeile -match "\\.Content = '([^']{2,})'") { $treffer = $Matches[1] }
             if (-not $treffer) { continue }
-
-            # Ein Wert ohne Leerzeichen ist meist eine Kennung, kein Satz
-            if ($treffer -notmatch ' ') { continue }
+            if (-not (Test-Anzeigetext -Wert $treffer -Streng:$istStreng)) { continue }
             $fund += ('{0}:{1}  {2}' -f $datei.Name, ($i + 1), $treffer.Substring(0, [Math]::Min(58, $treffer.Length)))
         }
     }

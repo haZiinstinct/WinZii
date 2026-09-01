@@ -234,7 +234,7 @@ function Get-WzMinidumps {
             Path           = $file.FullName
             Time           = $file.LastWriteTime
             SizeBytes      = $file.Length
-            Code           = if ($code) { $code } else { 'unbekannt' }
+            Code           = if ($code) { $code } else { Get-WzText 'core.unknown' }
             Name           = if ($known) { $known.name } else { Get-WzText 'diag.dumpUnknownName' }
             Cause          = if ($known) { $known.cause } else { Get-WzText 'diag.dumpUnknownCause' }
             Recommendation = if ($known) { $known.recommendation } else { Get-WzText 'diag.dumpUnknownRec' }
@@ -317,7 +317,7 @@ function Get-WzSmartStatus {
             $entry = [pscustomobject]@{
                 Number       = $disk.DeviceId
                 Model        = $disk.FriendlyName
-                MediaType    = if ($disk.MediaType) { [string]$disk.MediaType } else { 'unbekannt' }
+                MediaType    = if ($disk.MediaType) { [string]$disk.MediaType } else { Get-WzText 'core.unknown' }
                 BusType      = [string]$disk.BusType
                 SizeBytes    = [int64]$disk.Size
                 Health       = [string]$disk.HealthStatus
@@ -433,8 +433,8 @@ function Invoke-WzDismRepair {
     param([ValidateSet('ScanHealth', 'RestoreHealth')][string]$Action = 'RestoreHealth')
 
     if ($syncHash.DryRun) {
-        Write-WzLog "[Test] dism /Online /Cleanup-Image /$Action" -Level Test
-        return [pscustomobject]@{ Success = $true; Summary = 'Testmodus' }
+        Write-WzLog (Get-WzText 'diag.logTestDism' @{ aktion = $Action }) -Level Test
+        return [pscustomobject]@{ Success = $true; Summary = (Get-WzText 'core.dryRunSummary') }
     }
 
     Write-WzLog (Get-WzText 'diag.logDismRunning' @{ aktion = $Action }) -Level Action
@@ -458,8 +458,8 @@ function Invoke-WzChkdsk {
     param([string]$Drive = $env:SystemDrive)
 
     if ($syncHash.DryRun) {
-        Write-WzLog "[Test] chkdsk $Drive /scan" -Level Test
-        return [pscustomobject]@{ Success = $true; Summary = 'Testmodus' }
+        Write-WzLog (Get-WzText 'diag.logTestChkdsk' @{ laufwerk = $Drive }) -Level Test
+        return [pscustomobject]@{ Success = $true; Summary = (Get-WzText 'core.dryRunSummary') }
     }
 
     Write-WzLog (Get-WzText 'diag.logChkdskRunning' @{ laufwerk = $Drive }) -Level Action
@@ -486,7 +486,7 @@ function New-WzBatteryReport {
     $result = Invoke-WzProcess -FilePath 'powercfg.exe' -Arguments "/batteryreport /output `"$outFile`"" -TimeoutSeconds 120
 
     if ($result.ExitCode -eq 0 -and (Test-Path -LiteralPath $outFile)) {
-        Write-WzLog "Akkubericht erstellt: $outFile" -Level Ok
+        Write-WzLog (Get-WzText 'diag.logBatteryReport' @{ datei = $outFile }) -Level Ok
         return $outFile
     }
     Write-WzLog (Get-WzText 'diag.logNoBattery') -Level Info

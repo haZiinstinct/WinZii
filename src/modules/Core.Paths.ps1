@@ -137,7 +137,7 @@ function Get-WzVolumeInfo {
     $result = [pscustomobject]@{
         DriveLetter = $driveLetter
         DisplayName = $displayName
-        FileSystem  = 'unbekannt'
+        FileSystem  = Get-WzText 'core.unknown'
         FreeBytes   = 0
         SizeBytes   = 0
         IsFat32     = $false

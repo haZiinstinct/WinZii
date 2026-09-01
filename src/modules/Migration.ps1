@@ -35,7 +35,7 @@ function Get-WzMigrationVolumes {
             if (-not $disk.Size) { continue }
             $volumes += [pscustomobject]@{
                 Letter      = $disk.DeviceID
-                Label       = $(if ($disk.VolumeName) { $disk.VolumeName } else { 'ohne Bezeichnung' })
+                Label       = $(if ($disk.VolumeName) { $disk.VolumeName } else { Get-WzText 'data.volumeNoLabel' })
                 FileSystem  = $disk.FileSystem
                 FreeBytes   = [int64]$disk.FreeSpace
                 SizeBytes   = [int64]$disk.Size
@@ -465,7 +465,7 @@ function Import-WzPrinters {
                 # der Treiber nachinstalliert werden muss oder der Name nicht stimmt.
                 $reason = $_.Exception.Message.Split([char]10)[0].Trim()
                 Write-WzLog (Get-WzText 'rest.logDriverUnavailable' @{ name = $printer.treiber; grund = $reason }) -Level Warn
-                $missingDriver += "$($printer.name) (Treiber »$($printer.treiber)«)"
+                $missingDriver += Get-WzText 'rest.driverMissingItem' @{ name = $printer.name; treiber = $printer.treiber }
                 continue
             }
         }
@@ -490,9 +490,9 @@ function Import-WzPrinters {
                     if ($printer.anschluss -match "^(?:IP_)?($octet(?:\.$octet){3})$") {
                         Add-PrinterPort -Name $printer.anschluss -PrinterHostAddress $Matches[1] -ErrorAction Stop
                         $createdPort = $printer.anschluss
-                        Write-WzLog "Netzwerkanschluss $($printer.anschluss) angelegt" -Level Ok
+                        Write-WzLog (Get-WzText 'rest.logPortCreated' @{ anschluss = $printer.anschluss }) -Level Ok
                     } else {
-                        $missingPort += "$($printer.name) (Anschluss »$($printer.anschluss)«)"
+                        $missingPort += Get-WzText 'rest.portMissingItem' @{ name = $printer.name; anschluss = $printer.anschluss }
                         continue
                     }
                 }
@@ -526,7 +526,7 @@ function Import-WzPrinters {
     }
 
     if ($applied.Count -gt 0) {
-        Write-WzLog "$($applied.Count) Drucker wieder eingerichtet" -Level Ok
+        Write-WzLog (Get-WzText 'rest.logPrintersDone' @{ anzahl = $applied.Count }) -Level Ok
         Add-WzAction -Area 'Zurückspielen' -Summary (Get-WzText 'rest.actionPrinters' @{ anzahl = $applied.Count }) -Detail $applied
     }
 
@@ -576,7 +576,7 @@ function Import-WzMappedDrives {
     }
 
     if ($applied.Count -gt 0) {
-        Write-WzLog "$($applied.Count) Netzlaufwerk(e) wieder verbunden" -Level Ok
+        Write-WzLog (Get-WzText 'rest.logDrivesDone' @{ anzahl = $applied.Count }) -Level Ok
         Add-WzAction -Area 'Zurückspielen' -Summary (Get-WzText 'rest.actionDrives' @{ anzahl = $applied.Count }) -Detail $applied
     }
 

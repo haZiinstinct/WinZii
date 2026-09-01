@@ -17,7 +17,7 @@ function New-WzHtmlReport {
     param(
         [Parameter(Mandatory = $true)][string]$Title,
         [Parameter(Mandatory = $true)][string]$Content,
-        [string]$Eyebrow = 'BERICHT',
+        [string]$Eyebrow = (Get-WzText 'rep.eyebrowDefault'),
         [string]$Subtitle = '',
         [string[]]$Meta = @(),
         [string]$FileName
@@ -25,7 +25,7 @@ function New-WzHtmlReport {
 
     $templatePath = Join-Path (Get-WzTemplateDir) 'report.html'
     if (-not (Test-Path -LiteralPath $templatePath)) {
-        throw "Berichtsvorlage fehlt: $templatePath"
+        throw (Get-WzText 'rep.templateMissing' @{ pfad = $templatePath })
     }
     $template = [IO.File]::ReadAllText($templatePath, [Text.Encoding]::UTF8)
 
@@ -40,13 +40,15 @@ function New-WzHtmlReport {
     }) -join "`n      "
 
     $html = $template.
+        Replace('{{LANG}}', $syncHash.Language).
         Replace('{{TITLE}}', (ConvertTo-WzHtmlText $Title)).
         Replace('{{EYEBROW}}', (ConvertTo-WzHtmlText $Eyebrow)).
         Replace('{{SUBTITLE}}', (ConvertTo-WzHtmlText $Subtitle)).
         Replace('{{META}}', $metaHtml).
         Replace('{{CONTENT}}', $Content).
         Replace('{{VERSION}}', $syncHash.Version).
-        Replace('{{CREATED}}', (Get-Date -Format 'dd.MM.yyyy HH:mm'))
+        Replace('{{CREATED}}', (Get-WzText 'rep.footerCreated' @{ zeit = (Get-Date).ToString('g', (Get-WzLanguageCulture)) })).
+        Replace('{{CODELABEL}}', (ConvertTo-WzHtmlText (Get-WzText 'rep.codeLink')))
 
     if (-not $FileName) {
         $slug = ($Title -replace '[^\w]+', '-').Trim('-').ToLower()
@@ -113,7 +115,7 @@ function New-WzHtmlTable {
     param(
         [Parameter(Mandatory = $true)]$Data,
         [Parameter(Mandatory = $true)][string[]]$Columns,
-        [string]$EmptyText = 'Keine Einträge.'
+        [string]$EmptyText = (Get-WzText 'rep.tableEmpty')
     )
 
     $rows = @($Data)
@@ -178,6 +180,40 @@ function New-WzHtmlSection {
     return "<h2>$(ConvertTo-WzHtmlText $Title)</h2>$leadHtml$Body"
 }
 
+function Get-WzAreaLabel {
+    <#
+    .SYNOPSIS
+        Uebersetzt den Bereichsnamen einer Aktion fuer die Anzeige.
+    .DESCRIPTION
+        Add-WzAction bekommt den Bereich als festen deutschen Bezeichner
+        uebergeben — er dient dem Gruppieren und darf sich mit der Sprache
+        nicht aendern. Uebersetzt wird deshalb erst hier, beim Ausgeben.
+
+        Die Zweige stehen einzeln da, damit Test-Language die Schluessel im
+        Code findet; ein zusammengesetzter Schluessel waere fuer die Pruefung
+        unsichtbar. Ein unbekannter Bereich geht unveraendert durch: die
+        Optimierungsseite reicht den bereits uebersetzten Kategorienamen
+        durch.
+    #>
+    param([string]$Area)
+
+    switch ($Area) {
+        'Autostart'           { return Get-WzText 'rep.areaAutostart' }
+        'Datensicherung'      { return Get-WzText 'rep.areaBackup' }
+        'Office'              { return Get-WzText 'rep.areaOffice' }
+        'Programme'           { return Get-WzText 'rep.areaPrograms' }
+        'Reparatur'           { return Get-WzText 'rep.areaRepair' }
+        'Rücknahme'           { return Get-WzText 'rep.areaUndo' }
+        'Sicherheit'          { return Get-WzText 'rep.areaSecurity' }
+        'Sicherung'           { return Get-WzText 'rep.areaRestorePoint' }
+        'Speicherplatz'       { return Get-WzText 'rep.areaDiskSpace' }
+        'Treiber'             { return Get-WzText 'rep.areaDrivers' }
+        'Vorinstallierte Apps' { return Get-WzText 'rep.areaPreinstalled' }
+        'Zurückspielen'       { return Get-WzText 'rep.areaRestore' }
+        default               { return $Area }
+    }
+}
+
 function New-WzDiagReport {
     <#
     .SYNOPSIS
@@ -194,51 +230,51 @@ function New-WzDiagReport {
     $disks = @($Result.Disks)
 
     $critical = @($events | Where-Object { $_.Severity -eq 'critical' })
-    $diskProblems = @($disks | Where-Object { $_.Assessment -ne 'unauffällig' })
+    $diskProblems = @($disks | Where-Object { -not $_.AssessmentOk })
 
     # --- Gesamteinschätzung -----------------------------------------------
     $verdict = if ($dumps.Count -gt 0 -or $diskProblems.Count -gt 0) {
-        @{ Kind = 'err'; Text = 'Es gibt ernsthafte Auffälligkeiten, die geprüft werden sollten. Die Einzelheiten stehen weiter unten.' }
+        @{ Kind = 'err'; Text = (Get-WzText 'rep.diagVerdictErr') }
     } elseif ($critical.Count -gt 0) {
-        @{ Kind = 'warn'; Text = 'Es wurden kritische Ereignisse gefunden. Sie deuten nicht zwingend auf einen Defekt hin, sollten aber angesehen werden.' }
+        @{ Kind = 'warn'; Text = (Get-WzText 'rep.diagVerdictWarn') }
     } elseif ($events.Count -gt 0) {
-        @{ Kind = 'info'; Text = 'Es gibt einzelne Fehlermeldungen, aber keine kritischen Vorfälle. Für ein laufendes System ist das normal.' }
+        @{ Kind = 'info'; Text = (Get-WzText 'rep.diagVerdictInfo') }
     } else {
-        @{ Kind = 'ok'; Text = 'Im geprüften Zeitraum wurden keine Fehler aufgezeichnet.' }
+        @{ Kind = 'ok'; Text = (Get-WzText 'rep.diagVerdictOk') }
     }
 
-    $content = New-WzHtmlSection -Title 'Einschätzung' `
-        -Body ((New-WzHtmlNote -Text $verdict.Text -Kind $verdict.Kind) + (New-WzHtmlCard -Title 'Auf einen Blick' -Rows @(
-            "Ereignisse|$($events.Count) Auffälligkeit(en), davon $($critical.Count) kritisch"
-            "Abstürze|$($dumps.Count) Bluescreen-Abbild(er) in den letzten 90 Tagen"
-            "Datenträger|$($disks.Count) geprüft, $($diskProblems.Count) auffällig"
-            "Zeitraum|letzte $($Result.Days) Tage"
+    $content = New-WzHtmlSection -Title (Get-WzText 'rep.secAssessment') `
+        -Body ((New-WzHtmlNote -Text $verdict.Text -Kind $verdict.Kind) + (New-WzHtmlCard -Title (Get-WzText 'rep.cardGlance') -Rows @(
+            "$(Get-WzText 'rep.rowEvents')|$(Get-WzText 'rep.valEvents' @{ anzahl = $events.Count; kritisch = $critical.Count })"
+            "$(Get-WzText 'rep.rowCrashes')|$(Get-WzText 'rep.valCrashes' @{ anzahl = $dumps.Count })"
+            "$(Get-WzText 'rep.rowDisks')|$(Get-WzText 'rep.valDisks' @{ anzahl = $disks.Count; auffaellig = $diskProblems.Count })"
+            "$(Get-WzText 'rep.rowPeriod')|$(Get-WzText 'rep.valPeriodDays' @{ tage = $Result.Days })"
         )))
 
     # --- System -----------------------------------------------------------
     if ($info) {
         $systemRows = @(
-            "Computer|$($info.ComputerName)"
-            "Windows|$($info.OsCaption) $($info.OsVersion) (Build $($info.OsBuild))"
-            "Gerät|$($info.Manufacturer) $($info.Model)"
-            "Prozessor|$($info.CpuName)"
-            "Arbeitsspeicher|$(Format-WzBytes $info.RamTotalBytes) ($($info.RamUsedPercent) % belegt)"
-            "Laufzeit|$(Format-WzUptime $info.Uptime)"
+            "$(Get-WzText 'rep.rowComputer')|$($info.ComputerName)"
+            "$(Get-WzText 'rep.rowWindows')|$(Get-WzText 'rep.valWindows' @{ name = $info.OsCaption; version = $info.OsVersion; build = $info.OsBuild })"
+            "$(Get-WzText 'rep.rowDevice')|$($info.Manufacturer) $($info.Model)"
+            "$(Get-WzText 'rep.rowCpu')|$($info.CpuName)"
+            "$(Get-WzText 'rep.rowRam')|$(Get-WzText 'rep.valRam' @{ groesse = (Format-WzBytes $info.RamTotalBytes); prozent = $info.RamUsedPercent })"
+            "$(Get-WzText 'rep.rowUptime')|$(Format-WzUptime $info.Uptime)"
         )
         if ($security) {
             $activationKind = if ($security.ActivationOk) { 'ok' } else { 'warn' }
-            $systemRows += "Aktivierung|$($security.Activation)|$activationKind"
-            $systemRows += "Virenschutz|$($security.Defender)|$(if ($security.DefenderOk) { 'ok' } else { 'warn' })"
+            $systemRows += "$(Get-WzText 'rep.rowActivation')|$($security.Activation)|$activationKind"
+            $systemRows += "$(Get-WzText 'rep.rowDefender')|$($security.Defender)|$(if ($security.DefenderOk) { 'ok' } else { 'warn' })"
         }
         if ($info.PendingReboot) {
-            $systemRows += "Neustart|steht aus ($($info.PendingReboot))|warn"
+            $systemRows += "$(Get-WzText 'rep.rowReboot')|$(Get-WzText 'rep.valRebootPending' @{ grund = $info.PendingReboot })|warn"
         }
-        $content += New-WzHtmlSection -Title 'System' -Body (New-WzHtmlCard -Title 'Eckdaten' -Rows $systemRows)
+        $content += New-WzHtmlSection -Title (Get-WzText 'rep.secSystem') -Body (New-WzHtmlCard -Title (Get-WzText 'rep.cardSpecs') -Rows $systemRows)
     }
 
     # --- Ereignisse -------------------------------------------------------
     $eventBody = if ($events.Count -eq 0) {
-        New-WzHtmlNote -Text 'Keine Fehler oder kritischen Ereignisse im geprüften Zeitraum.' -Kind 'ok'
+        New-WzHtmlNote -Text (Get-WzText 'rep.diagNoEvents') -Kind 'ok'
     } else {
         $rows = foreach ($event in $events) {
             $tagClass = switch ($event.Severity) {
@@ -247,35 +283,36 @@ function New-WzDiagReport {
                 default    { 'tag-info' }
             }
             $label = switch ($event.Severity) {
-                'critical' { 'kritisch' }
-                'error'    { 'Fehler' }
-                default    { 'Hinweis' }
+                'critical' { Get-WzText 'rep.sevCritical' }
+                'error'    { Get-WzText 'rep.sevError' }
+                default    { Get-WzText 'rep.sevNotice' }
             }
             [pscustomobject]@{
                 Stufe    = "<span class=`"tag $tagClass`">$label</span>"
                 Titel    = $event.Title
                 Anzahl   = $event.Count
-                Zuletzt  = $event.Last.ToString('dd.MM.yy HH:mm')
+                Zuletzt  = $event.Last.ToString('g', (Get-WzLanguageCulture))
                 Deutung  = if ($event.Explanation) { "$($event.Explanation) $($event.Recommendation)" } else { $event.Sample }
                 Quelle   = "$($event.Provider) / $($event.Id)"
             }
         }
         New-WzHtmlTable -Data $rows -Columns @(
-            'Stufe|Stufe', 'Titel|Ereignis', 'Anzahl|Anzahl|num', 'Zuletzt|Zuletzt|num',
-            'Deutung|Bedeutung und Empfehlung', 'Quelle|Quelle|mono'
+            "Stufe|$(Get-WzText 'rep.colLevel')", "Titel|$(Get-WzText 'rep.colEvent')",
+            "Anzahl|$(Get-WzText 'rep.colCount')|num", "Zuletzt|$(Get-WzText 'rep.colLast')|num",
+            "Deutung|$(Get-WzText 'rep.colMeaning')", "Quelle|$(Get-WzText 'rep.colSource')|mono"
         )
     }
-    $content += New-WzHtmlSection -Title 'Ereignisse' `
-        -Lead "Fehler und kritische Meldungen der letzten $($Result.Days) Tage, nach Häufigkeit zusammengefasst." `
+    $content += New-WzHtmlSection -Title (Get-WzText 'rep.secEvents') `
+        -Lead (Get-WzText 'rep.leadEvents' @{ tage = $Result.Days }) `
         -Body $eventBody
 
     # --- Abstürze ---------------------------------------------------------
     $dumpBody = if ($dumps.Count -eq 0) {
-        New-WzHtmlNote -Text 'Keine Bluescreen-Abbilder vorhanden — in den letzten 90 Tagen gab es keine Systemabstürze.' -Kind 'ok'
+        New-WzHtmlNote -Text (Get-WzText 'rep.diagNoDumps') -Kind 'ok'
     } else {
         $rows = foreach ($dump in $dumps) {
             [pscustomobject]@{
-                Zeit    = $dump.Time.ToString('dd.MM.yy HH:mm')
+                Zeit    = $dump.Time.ToString('g', (Get-WzLanguageCulture))
                 Code    = $dump.Code
                 Name    = $dump.Name
                 Ursache = "$($dump.Cause) $($dump.Recommendation)"
@@ -283,12 +320,13 @@ function New-WzDiagReport {
             }
         }
         New-WzHtmlTable -Data $rows -Columns @(
-            'Zeit|Zeitpunkt|num', 'Code|Stoppcode|mono', 'Name|Bezeichnung|mono',
-            'Ursache|Ursache und Empfehlung', 'Datei|Abbild|mono'
+            "Zeit|$(Get-WzText 'rep.colTime')|num", "Code|$(Get-WzText 'rep.colStopCode')|mono",
+            "Name|$(Get-WzText 'rep.colName')|mono", "Ursache|$(Get-WzText 'rep.colCauseRec')",
+            "Datei|$(Get-WzText 'rep.colDump')|mono"
         )
     }
-    $content += New-WzHtmlSection -Title 'Systemabstürze' `
-        -Lead 'Bluescreens der letzten 90 Tage mit übersetztem Stoppcode.' -Body $dumpBody
+    $content += New-WzHtmlSection -Title (Get-WzText 'rep.secCrashes') `
+        -Lead (Get-WzText 'rep.leadCrashes') -Body $dumpBody
 
     # --- Startdauer -------------------------------------------------------
     # Die Werte wurden schon immer erhoben und in den Bericht hineingereicht,
@@ -296,22 +334,23 @@ function New-WzDiagReport {
     # das den Kunden zum Aufräumen bewegt.
     $boot = $Result.Boot
     $bootBody = if (-not $boot -or @($boot.Runs).Count -eq 0) {
-        New-WzHtmlNote -Kind 'info' -Text $(if ($boot -and $boot.Hint) { $boot.Hint } else { 'Keine Startdaten verfügbar.' })
+        New-WzHtmlNote -Kind 'info' -Text $(if ($boot -and $boot.Hint) { $boot.Hint } else { Get-WzText 'rep.bootNone' })
     } else {
         $bootKind = if ($boot.AverageSeconds -lt 30) { 'ok' } elseif ($boot.AverageSeconds -lt 60) { 'warn' } else { 'err' }
-        $bootHtml = New-WzHtmlNote -Kind $bootKind -Text "Durchschnittlich $(Format-WzSeconds $boot.AverageSeconds -Unit 'Sekunden') bis zum benutzbaren Desktop. $($boot.Hint)"
+        $bootHtml = New-WzHtmlNote -Kind $bootKind -Text (Get-WzText 'rep.bootAverage' @{
+            dauer = (Format-WzSeconds $boot.AverageSeconds -Unit (Get-WzText 'diag.unitSeconds')); hinweis = $boot.Hint })
 
         $bootRows = @(foreach ($run in @($boot.Runs)) {
             [pscustomobject]@{
-                Zeit    = $run.Time.ToString('dd.MM.yy HH:mm')
+                Zeit    = $run.Time.ToString('g', (Get-WzLanguageCulture))
                 Gesamt  = Format-WzSeconds $run.TotalSeconds
                 Windows = Format-WzSeconds ($run.MainPathMs / 1000)
                 Danach  = Format-WzSeconds ([int]$run.DegradedBy / 1000)
             }
         })
         $bootHtml += New-WzHtmlTable -Data $bootRows -Columns @(
-            'Zeit|Startvorgang|num', 'Gesamt|Gesamt|num',
-            'Windows|davon Windows selbst|num', 'Danach|davon Autostart|num'
+            "Zeit|$(Get-WzText 'rep.colBootRun')|num", "Gesamt|$(Get-WzText 'rep.colTotal')|num",
+            "Windows|$(Get-WzText 'rep.colWindowsShare')|num", "Danach|$(Get-WzText 'rep.colAutostartShare')|num"
         )
 
         if (@($boot.Worst).Count -gt 0) {
@@ -319,17 +358,18 @@ function New-WzDiagReport {
                 [pscustomobject]@{
                     Name       = $culprit.Name
                     Verzoegert = Format-WzSeconds $culprit.DelaySeconds
-                    Zeit       = $culprit.Time.ToString('dd.MM.yy HH:mm')
+                    Zeit       = $culprit.Time.ToString('g', (Get-WzLanguageCulture))
                 }
             })
             $bootHtml += New-WzHtmlTable -Data $culpritRows -Columns @(
-                'Name|Bremst den Start', 'Verzoegert|Verzögerung|num', 'Zeit|Gemessen am|num'
+                "Name|$(Get-WzText 'rep.colSlowsStart')", "Verzoegert|$(Get-WzText 'rep.colDelay')|num",
+                "Zeit|$(Get-WzText 'rep.colMeasured')|num"
             )
         }
         $bootHtml
     }
-    $content += New-WzHtmlSection -Title 'Startdauer' `
-        -Lead 'Wie lange der PC vom Einschalten bis zum benutzbaren Desktop braucht — und was ihn dabei aufhält.' `
+    $content += New-WzHtmlSection -Title (Get-WzText 'rep.secBoot') `
+        -Lead (Get-WzText 'rep.leadBoot') `
         -Body $bootBody
 
     # --- Zuverlässigkeit --------------------------------------------------
@@ -339,25 +379,26 @@ function New-WzDiagReport {
     if ($reliability.Count -gt 0) {
         $reliabilityRows = @(foreach ($record in $reliability) {
             [pscustomobject]@{
-                Zeit    = $record.Time.ToString('dd.MM.yy HH:mm')
+                Zeit    = $record.Time.ToString('g', (Get-WzLanguageCulture))
                 Art     = $record.Type
                 Was     = $record.Source
                 Details = $record.Message
             }
         })
-        $content += New-WzHtmlSection -Title 'Zuverlässigkeitsverlauf' `
-            -Lead 'Abstürze, Programmfehler und Installationen der letzten 30 Tage in einer Zeitleiste — hier zeigt sich, ob ein Problem mit einer Installation zusammenfällt.' `
+        $content += New-WzHtmlSection -Title (Get-WzText 'rep.secReliability') `
+            -Lead (Get-WzText 'rep.leadReliability') `
             -Body (New-WzHtmlTable -Data $reliabilityRows -Columns @(
-                'Zeit|Zeitpunkt|num', 'Art|Art', 'Was|Quelle', 'Details|Einzelheiten'
+                "Zeit|$(Get-WzText 'rep.colTime')|num", "Art|$(Get-WzText 'rep.colKind')",
+                "Was|$(Get-WzText 'rep.colSource')", "Details|$(Get-WzText 'rep.colDetails')"
             ))
     }
 
     # --- Datenträger ------------------------------------------------------
     $diskBody = if ($disks.Count -eq 0) {
-        New-WzHtmlNote -Text 'Keine Datenträgerdaten verfügbar.' -Kind 'info'
+        New-WzHtmlNote -Text (Get-WzText 'rep.diagNoDisks') -Kind 'info'
     } else {
         $rows = foreach ($disk in $disks) {
-            $tag = if ($disk.Assessment -eq 'unauffällig') { 'tag-ok' } else { 'tag-warn' }
+            $tag = if ($disk.AssessmentOk) { 'tag-ok' } else { 'tag-warn' }
             [pscustomobject]@{
                 Modell      = $disk.Model
                 Art         = $disk.MediaType
@@ -369,27 +410,29 @@ function New-WzDiagReport {
             }
         }
         New-WzHtmlTable -Data $rows -Columns @(
-            'Modell|Modell', 'Art|Art', 'Groesse|Größe|num', 'Betrieb|Betriebszeit',
-            'Temperatur|Temperatur|num', 'Abnutzung|Abnutzung|num', 'Zustand|Zustand'
+            "Modell|$(Get-WzText 'rep.colModel')", "Art|$(Get-WzText 'rep.colKind')",
+            "Groesse|$(Get-WzText 'rep.colSize')|num", "Betrieb|$(Get-WzText 'rep.colPowerOn')",
+            "Temperatur|$(Get-WzText 'rep.colTemperature')|num", "Abnutzung|$(Get-WzText 'rep.colWear')|num",
+            "Zustand|$(Get-WzText 'rep.colHealth')"
         )
     }
-    $content += New-WzHtmlSection -Title 'Datenträger' `
-        -Lead 'Zustandswerte aus der Selbstüberwachung der Laufwerke. USB-Gehäuse geben diese Werte oft nicht weiter.' `
+    $content += New-WzHtmlSection -Title (Get-WzText 'rep.secDisks') `
+        -Lead (Get-WzText 'rep.leadDisks') `
         -Body $diskBody
 
     $meta = @(
-        "Computer|$env:COMPUTERNAME"
-        "Datum|$(Get-Date -Format 'dd.MM.yyyy HH:mm')"
-        "Zeitraum|$($Result.Days) Tage"
-        "Befunde|$($events.Count)"
+        "$(Get-WzText 'rep.rowComputer')|$env:COMPUTERNAME"
+        "$(Get-WzText 'rep.metaDate')|$((Get-Date).ToString('g', (Get-WzLanguageCulture)))"
+        "$(Get-WzText 'rep.rowPeriod')|$(Get-WzText 'rep.valPeriodDays' @{ tage = $Result.Days })"
+        "$(Get-WzText 'rep.metaFindings')|$($events.Count)"
     )
 
-    $file = New-WzHtmlReport -Title 'Diagnosebericht' -Eyebrow 'DIAGNOSE' `
-        -Subtitle "Auswertung der Ereignisprotokolle, Abstürze und Datenträger von $env:COMPUTERNAME." `
+    $file = New-WzHtmlReport -Title (Get-WzText 'rep.diagTitle') -Eyebrow (Get-WzText 'rep.diagEyebrow') `
+        -Subtitle (Get-WzText 'rep.diagSubtitle' @{ pc = $env:COMPUTERNAME }) `
         -Meta $meta -Content $content `
-        -FileName "diagnose-$(Get-Date -Format 'yyyy-MM-dd_HHmm').html"
+        -FileName "$(Get-WzText 'rep.diagFile')-$(Get-Date -Format 'yyyy-MM-dd_HHmm').html"
 
-    Write-WzLog "Diagnosebericht gespeichert: $file" -Level Ok
+    Write-WzLog (Get-WzText 'rep.logDiagSaved' @{ datei = $file }) -Level Ok
     return $file
 }
 
@@ -422,38 +465,37 @@ function New-WzHandoverReport {
     # --- Was wurde gemacht -------------------------------------------------
     $content = ''
     if ($actions.Count -eq 0) {
-        $content += New-WzHtmlNote -Kind 'info' -Text (
-            'In dieser Sitzung wurde nichts am PC verändert. Das Blatt hält nur den Zustand fest.')
+        $content += New-WzHtmlNote -Kind 'info' -Text (Get-WzText 'rep.hoNothingChanged')
     } elseif (@($actions | Where-Object { $_.IsTest }).Count -eq $actions.Count) {
-        $content += New-WzHtmlNote -Kind 'warn' -Text (
-            'Alle Schritte liefen im Testmodus — am PC wurde tatsächlich nichts geändert.')
+        $content += New-WzHtmlNote -Kind 'warn' -Text (Get-WzText 'rep.hoAllDryRun')
     }
 
     $groups = $actions | Group-Object Area
     $workBody = if ($actions.Count -eq 0) {
-        New-WzHtmlNote -Kind 'info' -Text 'Keine Änderungen.'
+        New-WzHtmlNote -Kind 'info' -Text (Get-WzText 'rep.hoNoWork')
     } else {
         $rows = @(foreach ($group in $groups) {
             $summaries = @($group.Group | ForEach-Object {
-                if ($_.IsTest) { "$($_.Summary) (nur Testlauf)" } else { $_.Summary }
+                if ($_.IsTest) { Get-WzText 'rep.hoDryRunItem' @{ text = $_.Summary } } else { $_.Summary }
             })
             # Add-WzAction sammelt seit jeher die Einzelposten mit ein — bisher
             # landeten sie nirgends. Der Kunde soll sehen, WELCHE Programme
             # entfernt wurden, nicht nur wie viele.
             $details = @($group.Group | ForEach-Object { $_.Detail } | Where-Object { $_ })
             [pscustomobject]@{
-                Bereich    = $group.Name
+                Bereich    = Get-WzAreaLabel $group.Name
                 Anzahl     = $group.Count
                 Was        = $summaries -join ' · '
                 Einzelnes  = if ($details.Count -gt 0) { $details -join ', ' } else { '—' }
             }
         })
         New-WzHtmlTable -Data $rows -Columns @(
-            'Bereich|Bereich', 'Anzahl|Schritte|num', 'Was|Was gemacht wurde', 'Einzelnes|Einzelposten'
+            "Bereich|$(Get-WzText 'rep.colArea')", "Anzahl|$(Get-WzText 'rep.colSteps')|num",
+            "Was|$(Get-WzText 'rep.colWhat')", "Einzelnes|$(Get-WzText 'rep.colItems')"
         )
     }
-    $content += New-WzHtmlSection -Title 'Durchgeführte Arbeiten' `
-        -Lead 'Alles, was in dieser Sitzung am PC verändert wurde.' -Body $workBody
+    $content += New-WzHtmlSection -Title (Get-WzText 'rep.secWork') `
+        -Lead (Get-WzText 'rep.leadWork') -Body $workBody
 
     # --- Vorher und nachher ------------------------------------------------
     if ($before) {
@@ -461,98 +503,111 @@ function New-WzHandoverReport {
             $old = $before.Volumes | Where-Object { $_.Letter -eq $volume.Letter } | Select-Object -First 1
             $gained = if ($old) { $volume.FreeBytes - $old.FreeBytes } else { 0 }
             $change = if (-not $old) {
-                'kein Vergleichswert'
+                Get-WzText 'rep.noBaseline'
             } elseif ($gained -gt 0) {
                 "<span class=`"tag tag-ok`">+$(Format-WzBytes $gained)</span>"
             } elseif ($gained -lt 0) {
                 "-$(Format-WzBytes ([math]::Abs($gained)))"
-            } else { 'unverändert' }
+            } else { Get-WzText 'rep.unchanged' }
 
             [pscustomobject]@{
                 Laufwerk = "$($volume.Letter) $($volume.Label)".Trim()
-                Vorher   = if ($old) { Format-WzBytes $old.FreeBytes } else { 'n/v' }
+                Vorher   = if ($old) { Format-WzBytes $old.FreeBytes } else { Get-WzText 'core.na' }
                 Nachher  = Format-WzBytes $volume.FreeBytes
                 Aenderung = $change
                 Belegt   = "$($volume.UsedPercent) %"
             }
         })
-        $content += New-WzHtmlSection -Title 'Speicherplatz vorher und nachher' `
-            -Lead 'Freier Platz zu Beginn der Sitzung im Vergleich zu jetzt.' `
+        $content += New-WzHtmlSection -Title (Get-WzText 'rep.secSpace') `
+            -Lead (Get-WzText 'rep.leadSpace') `
             -Body (New-WzHtmlTable -Data $diskRows -Columns @(
-                'Laufwerk|Laufwerk', 'Vorher|Vorher|num', 'Nachher|Nachher|num',
-                'Aenderung|Gewonnen', 'Belegt|Belegt|num'
+                "Laufwerk|$(Get-WzText 'rep.colDrive')", "Vorher|$(Get-WzText 'rep.colBefore')|num",
+                "Nachher|$(Get-WzText 'rep.colAfter')|num", "Aenderung|$(Get-WzText 'rep.colGained')",
+                "Belegt|$(Get-WzText 'rep.colUsed')|num"
             ))
     }
 
     # --- Geräteblatt -------------------------------------------------------
+    $chassis = if ($after.IsLaptop) { Get-WzText 'dash.chassisNotebook' } else { Get-WzText 'dash.chassisDesktop' }
+    $bios = if ($after.BiosDate) {
+        Get-WzText 'rep.valBiosDated' @{ version = $after.BiosVersion; datum = $after.BiosDate.ToString('d', (Get-WzLanguageCulture)) }
+    } else { $after.BiosVersion }
     $deviceRows = @(
-        "Computer|$($after.ComputerName)"
-        "Gerät|$($after.Manufacturer) $($after.Model) ($(if ($after.IsLaptop) { 'Notebook' } else { 'Desktop' }))"
-        "Windows|$($after.OsCaption) $($after.OsVersion), Build $($after.OsBuild)"
-        "Sprache|$($after.OsLanguage)"
-        "Prozessor|$($after.CpuName)"
-        "Arbeitsspeicher|$(Format-WzBytes $after.RamTotalBytes) · $($after.RamSlotsUsed) von $($after.RamSlots) Steckplätzen belegt · max. $(Format-WzBytes $after.RamMaxBytes)"
+        "$(Get-WzText 'rep.rowComputer')|$($after.ComputerName)"
+        "$(Get-WzText 'rep.rowDevice')|$(Get-WzText 'rep.valDevice' @{ hersteller = $after.Manufacturer; modell = $after.Model; bauform = $chassis })"
+        "$(Get-WzText 'rep.rowWindows')|$(Get-WzText 'rep.valWindows' @{ name = $after.OsCaption; version = $after.OsVersion; build = $after.OsBuild })"
+        "$(Get-WzText 'rep.rowLanguage')|$($after.OsLanguage)"
+        "$(Get-WzText 'rep.rowCpu')|$($after.CpuName)"
+        "$(Get-WzText 'rep.rowRam')|$(Get-WzText 'rep.valRamSlots' @{ groesse = (Format-WzBytes $after.RamTotalBytes)
+            belegt = $after.RamSlotsUsed; slots = $after.RamSlots; max = (Format-WzBytes $after.RamMaxBytes) })"
     )
-    if ($after.InstallDate) { $deviceRows += "Windows installiert am|$($after.InstallDate.ToString('dd.MM.yyyy'))" }
-    if (@($after.Gpus).Count -gt 0) { $deviceRows += "Grafik|$(@($after.Gpus)[0].Name)" }
+    if ($after.InstallDate) { $deviceRows += "$(Get-WzText 'rep.rowInstalledOn')|$($after.InstallDate.ToString('d', (Get-WzLanguageCulture)))" }
+    if (@($after.Gpus).Count -gt 0) { $deviceRows += "$(Get-WzText 'rep.rowGraphics')|$(@($after.Gpus)[0].Name)" }
     if (@($after.Monitors).Count -gt 0) {
-        $deviceRows += "Bildschirme|$((@($after.Monitors) | ForEach-Object { "$($_.Vendor) $($_.Name)".Trim() }) -join ', ')"
+        $deviceRows += "$(Get-WzText 'rep.rowMonitors')|$((@($after.Monitors) | ForEach-Object { "$($_.Vendor) $($_.Name)".Trim() }) -join ', ')"
     }
-    $deviceRows += "BIOS|$($after.BiosVersion)$(if ($after.BiosDate) { " vom $($after.BiosDate.ToString('dd.MM.yyyy'))" })"
-    if ($after.SerialNumber) { $deviceRows += "Seriennummer|$($after.SerialNumber)" }
-    if ($after.Battery.Present) { $deviceRows += "Akku|$($after.Battery.Verdict)" }
+    $deviceRows += "$(Get-WzText 'rep.rowBios')|$bios"
+    if ($after.SerialNumber) { $deviceRows += "$(Get-WzText 'rep.rowSerial')|$($after.SerialNumber)" }
+    if ($after.Battery.Present) { $deviceRows += "$(Get-WzText 'rep.rowBattery')|$($after.Battery.Verdict)" }
     # Die MAC-Adresse steht schon in der Abfrage und wird nirgends gezeigt —
     # dabei braucht sie jeder, der den PC in einem verwalteten Netz freischalten
     # oder eine feste Adresse im Router hinterlegen soll.
     foreach ($adapter in $after.Network) {
-        $line = "$($adapter.Adapter): $($adapter.IPv4)"
-        if ($adapter.Mac) { $line += " · MAC $($adapter.Mac)" }
-        $deviceRows += "Netzwerk|$line"
+        $line = if ($adapter.Mac) {
+            Get-WzText 'rep.valNetworkMac' @{ adapter = $adapter.Adapter; ip = $adapter.IPv4; mac = $adapter.Mac }
+        } else {
+            Get-WzText 'rep.valNetwork' @{ adapter = $adapter.Adapter; ip = $adapter.IPv4 }
+        }
+        $deviceRows += "$(Get-WzText 'rep.rowNetwork')|$line"
     }
 
     $securityRows = @()
     if ($security) {
-        $securityRows += "Aktivierung|$($security.Activation)|$(if ($security.ActivationOk) { 'ok' } else { 'warn' })"
-        $securityRows += "Virenschutz|$($security.Defender)|$(if ($security.DefenderOk) { 'ok' } else { 'warn' })"
-        $securityRows += "BitLocker|$($security.BitLocker)"
-        $securityRows += "Secure Boot|$($security.SecureBoot)"
-        $securityRows += "TPM|$($security.Tpm)"
+        $securityRows += "$(Get-WzText 'rep.rowActivation')|$($security.Activation)|$(if ($security.ActivationOk) { 'ok' } else { 'warn' })"
+        $securityRows += "$(Get-WzText 'rep.rowDefender')|$($security.Defender)|$(if ($security.DefenderOk) { 'ok' } else { 'warn' })"
+        $securityRows += "$(Get-WzText 'rep.rowBitLocker')|$($security.BitLocker)"
+        $securityRows += "$(Get-WzText 'rep.rowSecureBoot')|$($security.SecureBoot)"
+        $securityRows += "$(Get-WzText 'rep.rowTpm')|$($security.Tpm)"
         foreach ($disk in $security.PhysicalDisks) {
-            $health = if ($disk.Health -eq 'Healthy') { 'in Ordnung' } else { $disk.Health }
-            $securityRows += "$($disk.MediaType)|$($disk.Model) · $(Format-WzBytes $disk.SizeBytes) · $health|$(if ($disk.Health -eq 'Healthy') { 'ok' } else { 'warn' })"
+            # »Healthy« kommt so aus Windows und bleibt ein Vergleichswert,
+            # angezeigt wird die uebersetzte Fassung.
+            $health = if ($disk.Health -eq 'Healthy') { Get-WzText 'dash.diskHealthy' } else { $disk.Health }
+            $line = Get-WzText 'rep.valDiskLine' @{ modell = $disk.Model; groesse = (Format-WzBytes $disk.SizeBytes); zustand = $health }
+            $securityRows += "$($disk.MediaType)|$line|$(if ($disk.Health -eq 'Healthy') { 'ok' } else { 'warn' })"
         }
     } else {
-        $securityRows += 'Hinweis|Der Sicherheitsstatus wurde in dieser Sitzung nicht abgefragt.'
+        $securityRows += "$(Get-WzText 'rep.rowNote')|$(Get-WzText 'rep.hoNoSecurity')"
     }
 
-    $content += New-WzHtmlSection -Title 'Geräteblatt' `
-        -Lead 'Die Eckdaten dieses PCs zum Zeitpunkt der Übergabe.' `
-        -Body ((New-WzHtmlCard -Title 'Ausstattung' -Rows $deviceRows) +
-               (New-WzHtmlCard -Title 'Sicherheit und Datenträger' -Rows $securityRows))
+    $content += New-WzHtmlSection -Title (Get-WzText 'rep.secDevice') `
+        -Lead (Get-WzText 'rep.leadDevice') `
+        -Body ((New-WzHtmlCard -Title (Get-WzText 'rep.cardEquipment') -Rows $deviceRows) +
+               (New-WzHtmlCard -Title (Get-WzText 'rep.cardSecurity') -Rows $securityRows))
 
     # --- Empfehlungen ------------------------------------------------------
     $recommendations = Get-WzHandoverRecommendations -Info $after -Security $security -Actions $actions
     $recommendationBody = if ($recommendations.Count -eq 0) {
-        New-WzHtmlNote -Kind 'ok' -Text 'Es steht nichts weiter an — der PC ist einsatzbereit.'
+        New-WzHtmlNote -Kind 'ok' -Text (Get-WzText 'rep.recNothing')
     } else {
         ($recommendations | ForEach-Object { New-WzHtmlNote -Kind $_.Kind -Text $_.Text }) -join "`n"
     }
-    $content += New-WzHtmlSection -Title 'Was noch ansteht' `
-        -Lead 'Punkte, die der Kunde wissen sollte.' -Body $recommendationBody
+    $content += New-WzHtmlSection -Title (Get-WzText 'rep.secTodo') `
+        -Lead (Get-WzText 'rep.leadTodo') -Body $recommendationBody
 
     # --- Kopfdaten ---------------------------------------------------------
-    $meta = @("Computer|$env:COMPUTERNAME", "Datum|$(Get-Date -Format 'dd.MM.yyyy HH:mm')")
-    if ($Technician) { $meta += "Techniker|$Technician" }
-    if ($Customer) { $meta += "Kunde|$Customer" }
-    if ($OrderNumber) { $meta += "Auftrag|$OrderNumber" }
-    $meta += "Schritte|$($actions.Count)"
+    $meta = @("$(Get-WzText 'rep.rowComputer')|$env:COMPUTERNAME",
+              "$(Get-WzText 'rep.metaDate')|$((Get-Date).ToString('g', (Get-WzLanguageCulture)))")
+    if ($Technician) { $meta += "$(Get-WzText 'rep.metaTechnician')|$Technician" }
+    if ($Customer) { $meta += "$(Get-WzText 'rep.metaCustomer')|$Customer" }
+    if ($OrderNumber) { $meta += "$(Get-WzText 'rep.metaOrder')|$OrderNumber" }
+    $meta += "$(Get-WzText 'rep.metaSteps')|$($actions.Count)"
 
-    $file = New-WzHtmlReport -Title 'Übergabeblatt' -Eyebrow 'ÜBERGABE' `
-        -Subtitle "Was an $env:COMPUTERNAME gemacht wurde und wie der PC jetzt dasteht." `
+    $file = New-WzHtmlReport -Title (Get-WzText 'rep.hoTitle') -Eyebrow (Get-WzText 'rep.hoEyebrow') `
+        -Subtitle (Get-WzText 'rep.hoSubtitle' @{ pc = $env:COMPUTERNAME }) `
         -Meta $meta -Content $content `
-        -FileName "uebergabe-$(Get-Date -Format 'yyyy-MM-dd_HHmm').html"
+        -FileName "$(Get-WzText 'rep.hoFile')-$(Get-Date -Format 'yyyy-MM-dd_HHmm').html"
 
-    Write-WzLog "Übergabeblatt gespeichert: $file" -Level Ok
+    Write-WzLog (Get-WzText 'rep.logHoSaved' @{ datei = $file }) -Level Ok
     return $file
 }
 
@@ -566,34 +621,34 @@ function Get-WzHandoverRecommendations {
     $result = @()
 
     if ($Info.PendingReboot -or @($Actions | Where-Object { $_.RebootRequired }).Count -gt 0) {
-        $result += @{ Kind = 'warn'; Text = 'Der PC muss noch einmal neu gestartet werden. Erst danach greifen alle Änderungen.' }
+        $result += @{ Kind = 'warn'; Text = (Get-WzText 'rep.recReboot') }
     }
 
     foreach ($volume in $Info.Volumes) {
         if ($volume.UsedPercent -ge 90) {
-            $result += @{ Kind = 'warn'; Text = "Laufwerk $($volume.Letter) ist zu $($volume.UsedPercent) % voll. Windows wird langsam, wenn weniger als ein Zehntel frei bleibt." }
+            $result += @{ Kind = 'warn'; Text = (Get-WzText 'rep.recDiskFull' @{ laufwerk = $volume.Letter; prozent = $volume.UsedPercent }) }
         }
     }
 
     if ($Security) {
         if (-not $Security.DefenderOk) {
-            $result += @{ Kind = 'warn'; Text = "Der Virenschutz ist nicht auf dem aktuellen Stand: $($Security.Defender)." }
+            $result += @{ Kind = 'warn'; Text = (Get-WzText 'rep.recDefender' @{ status = $Security.Defender }) }
         }
         if (-not $Security.ActivationOk) {
-            $result += @{ Kind = 'warn'; Text = "Windows ist nicht aktiviert ($($Security.Activation)). Dafür wird ein gültiger Lizenzschlüssel gebraucht." }
+            $result += @{ Kind = 'warn'; Text = (Get-WzText 'rep.recActivation' @{ status = $Security.Activation }) }
         }
         foreach ($disk in @($Security.PhysicalDisks)) {
             if ($disk.Health -ne 'Healthy') {
-                $result += @{ Kind = 'err'; Text = "Der Datenträger $($disk.Model) meldet »$($disk.Health)«. Bitte zeitnah sichern und tauschen lassen." }
+                $result += @{ Kind = 'err'; Text = (Get-WzText 'rep.recDiskHealth' @{ modell = $disk.Model; zustand = $disk.Health }) }
             }
         }
-        if ($Info.IsLaptop -and $Security.BitLocker -like '*nicht*') {
-            $result += @{ Kind = 'info'; Text = 'Dieses Notebook ist nicht verschlüsselt. Bei Verlust kann jeder die Daten auslesen — BitLocker wäre einen Gedanken wert.' }
+        if ($Info.IsLaptop -and -not $Security.BitLockerOn) {
+            $result += @{ Kind = 'info'; Text = (Get-WzText 'rep.recBitLocker') }
         }
     }
 
     if ($Info.Battery.Present -and $null -ne $Info.Battery.WearPercent -and $Info.Battery.WearPercent -ge 40) {
-        $result += @{ Kind = 'warn'; Text = "Der Akku hat $($Info.Battery.WearPercent) % seiner Kapazität verloren. Ein Austausch bringt die Laufzeit zurück." }
+        $result += @{ Kind = 'warn'; Text = (Get-WzText 'rep.recBattery' @{ prozent = $Info.Battery.WearPercent }) }
     }
 
     # Aufrüsten: Beide Zahlen liegen längst vor. Nur wenn gar keine SSD verbaut
@@ -601,16 +656,16 @@ function Get-WzHandoverRecommendations {
     # neben einer SSD ist völlig in Ordnung und darf hier nichts auslösen.
     $disks = if ($Security) { @($Security.PhysicalDisks) } else { @() }
     if ($disks.Count -gt 0 -and -not ($disks | Where-Object { $_.MediaType -eq 'SSD' })) {
-        $result += @{ Kind = 'info'; Text = 'In diesem PC steckt keine SSD. Der Umstieg von Festplatte auf SSD bringt beim Arbeitstempo mehr als jede andere einzelne Maßnahme.' }
+        $result += @{ Kind = 'info'; Text = (Get-WzText 'rep.recNoSsd') }
     }
     if ($Info.RamTotalBytes -gt 0 -and $Info.RamTotalBytes -lt 8GB) {
         $free = $Info.RamSlots - $Info.RamSlotsUsed
         $where = if ($free -gt 0) {
-            "$free Steckplatz/Steckplätze sind noch frei"
+            Get-WzText 'rep.recRamFree' @{ anzahl = $free }
         } else {
-            "alle $($Info.RamSlots) Steckplätze sind belegt, die Riegel müssten getauscht werden"
+            Get-WzText 'rep.recRamAllUsed' @{ anzahl = $Info.RamSlots }
         }
-        $result += @{ Kind = 'info'; Text = "Mit $(Format-WzBytes $Info.RamTotalBytes) Arbeitsspeicher wird es bei mehreren offenen Programmen eng — $where." }
+        $result += @{ Kind = 'info'; Text = (Get-WzText 'rep.recRam' @{ groesse = (Format-WzBytes $Info.RamTotalBytes); wo = $where }) }
     }
 
     return @($result)
@@ -641,19 +696,18 @@ function New-WzUserDataReport {
     }
     if ($encrypted.Count -gt 0) {
         $content += New-WzHtmlNote -Kind 'warn' -Text (
-            "BitLocker ist auf $($encrypted -join ', ') aktiv. Ohne gesicherten Wiederherstellungsschlüssel " +
-            'ist das Laufwerk nach einem Mainboardtausch oder BIOS-Update nicht mehr zu öffnen.')
+            Get-WzText 'rep.udEncrypted' @{ laufwerke = ($encrypted -join ', ') })
     }
 
-    $content += New-WzHtmlSection -Title 'Umfang' `
-        -Lead 'Was gesichert werden muss, bevor der PC neu aufgesetzt wird.' `
-        -Body (New-WzHtmlCard -Title 'Auf einen Blick' -Rows @(
-            "Persönliche Daten|$(Format-WzBytes $totalBytes) in $($profiles.Count) Benutzerkonto/-konten"
-            "Outlook|$($outlook.Count) Datendatei(en)"
-            "Browser|$($browsers.Count) Profil(e) gefunden"
-            "WLAN-Netze|$($wlan.Count) gespeichert"
-            "Drucker|$($printers.Count)"
-            "Netzlaufwerke|$($netDrives.Count)"
+    $content += New-WzHtmlSection -Title (Get-WzText 'rep.secScope') `
+        -Lead (Get-WzText 'rep.leadScope') `
+        -Body (New-WzHtmlCard -Title (Get-WzText 'rep.cardGlance') -Rows @(
+            "$(Get-WzText 'rep.rowPersonalData')|$(Get-WzText 'rep.valPersonalData' @{ groesse = (Format-WzBytes $totalBytes); anzahl = $profiles.Count })"
+            "$(Get-WzText 'rep.rowOutlook')|$(Get-WzText 'rep.valOutlookFiles' @{ anzahl = $outlook.Count })"
+            "$(Get-WzText 'rep.rowBrowsers')|$(Get-WzText 'rep.valBrowserProfiles' @{ anzahl = $browsers.Count })"
+            "$(Get-WzText 'rep.rowWlan')|$(Get-WzText 'rep.valWlanSaved' @{ anzahl = $wlan.Count })"
+            "$(Get-WzText 'rep.rowPrinters')|$($printers.Count)"
+            "$(Get-WzText 'rep.rowNetDrives')|$($netDrives.Count)"
         ))
 
     # --- Benutzerprofile ---------------------------------------------------
@@ -664,9 +718,9 @@ function New-WzUserDataReport {
         $breakdown = if ($folders.Count -gt 0) {
             $folders -join ' · '
         } elseif ($profileEntry.Accessible) {
-            'vorhanden, aber leer'
+            Get-WzText 'rep.udFolderEmpty'
         } else {
-            'kein Zugriff'
+            Get-WzText 'rep.udNoAccess'
         }
         [pscustomobject]@{
             Konto   = $profileEntry.Account
@@ -675,32 +729,34 @@ function New-WzUserDataReport {
             Ordner  = $breakdown
         }
     })
-    $content += New-WzHtmlSection -Title 'Benutzerdaten' `
-        -Lead 'Größe der persönlichen Ordner je Konto.' `
+    $content += New-WzHtmlSection -Title (Get-WzText 'rep.secUserData') `
+        -Lead (Get-WzText 'rep.leadUserData') `
         -Body (New-WzHtmlTable -Data $profileRows -Columns @(
-            'Konto|Konto', 'Pfad|Ordner|mono', 'Groesse|Größe|num', 'Ordner|Aufteilung'
-        ) -EmptyText 'Keine Benutzerprofile gefunden.')
+            "Konto|$(Get-WzText 'rep.colAccount')", "Pfad|$(Get-WzText 'rep.colFolder')|mono",
+            "Groesse|$(Get-WzText 'rep.colSize')|num", "Ordner|$(Get-WzText 'rep.colBreakdown')"
+        ) -EmptyText (Get-WzText 'rep.udNoProfiles'))
 
     # --- OneDrive ----------------------------------------------------------
     $oneDriveBody = if (-not $Overview.OneDrive.Configured) {
-        New-WzHtmlNote -Text 'OneDrive ist auf diesem PC nicht eingerichtet.' -Kind 'info'
+        New-WzHtmlNote -Text (Get-WzText 'rep.udNoOneDrive') -Kind 'info'
     } else {
         $rows = @(foreach ($folder in $Overview.OneDrive.Folders) {
             [pscustomobject]@{
                 Konto  = $folder.Account
                 Pfad   = $folder.Path
-                Lokal  = "$(Format-WzBytes $folder.LocalBytes) · $($folder.LocalFiles) Datei(en)"
+                Lokal  = Get-WzText 'rep.udOneDriveLocal' @{ groesse = (Format-WzBytes $folder.LocalBytes); anzahl = $folder.LocalFiles }
                 Cloud  = if ($folder.CloudOnly -gt 0) {
-                    "<span class=`"tag tag-warn`">$($folder.CloudOnly) nur online</span>"
-                } else { 'keine' }
+                    "<span class=`"tag tag-warn`">$(Get-WzText 'rep.udCloudOnly' @{ anzahl = $folder.CloudOnly })</span>"
+                } else { Get-WzText 'rep.udNoPlaceholders' }
             }
         })
         New-WzHtmlTable -Data $rows -Columns @(
-            'Konto|Konto', 'Pfad|Ordner|mono', 'Lokal|Auf der Platte', 'Cloud|Platzhalter'
+            "Konto|$(Get-WzText 'rep.colAccount')", "Pfad|$(Get-WzText 'rep.colFolder')|mono",
+            "Lokal|$(Get-WzText 'rep.colOnDisk')", "Cloud|$(Get-WzText 'rep.colPlaceholders')"
         )
     }
-    $content += New-WzHtmlSection -Title 'OneDrive' `
-        -Lead 'Platzhalter sehen im Explorer aus wie Dateien, enthalten aber nichts. Vor dem Kopieren herunterladen.' `
+    $content += New-WzHtmlSection -Title (Get-WzText 'rep.secOneDrive') `
+        -Lead (Get-WzText 'rep.leadOneDrive') `
         -Body $oneDriveBody
 
     # --- Outlook und Browser ----------------------------------------------
@@ -712,69 +768,81 @@ function New-WzUserDataReport {
             Art     = $file.Kind
         }
     })
-    $content += New-WzHtmlSection -Title 'Outlook' `
-        -Lead 'PST-Dateien enthalten Daten, die es nur auf diesem PC gibt.' `
+    $content += New-WzHtmlSection -Title (Get-WzText 'rep.rowOutlook') `
+        -Lead (Get-WzText 'rep.leadOutlook') `
         -Body (New-WzHtmlTable -Data $outlookRows -Columns @(
-            'Datei|Datei|mono', 'Pfad|Pfad|mono', 'Groesse|Größe|num', 'Art|Bedeutung'
-        ) -EmptyText 'Keine Outlook-Datendateien gefunden.')
+            "Datei|$(Get-WzText 'rep.colFile')|mono", "Pfad|$(Get-WzText 'rep.colPath')|mono",
+            "Groesse|$(Get-WzText 'rep.colSize')|num", "Art|$(Get-WzText 'rep.colMeaning2')"
+        ) -EmptyText (Get-WzText 'rep.udNoOutlook'))
 
     $browserRows = @(foreach ($browser in $browsers) {
         [pscustomobject]@{
             Browser     = $browser.Name
             Pfad        = $browser.Path
             Groesse     = Format-WzBytes $browser.Bytes
-            Lesezeichen = "$(@($browser.BookmarkFiles).Count) Profil(e)"
+            Lesezeichen = Get-WzText 'rep.udProfiles' @{ anzahl = @($browser.BookmarkFiles).Count }
         }
     })
-    $content += New-WzHtmlSection -Title 'Browser' `
-        -Lead 'Gespeicherte Passwörter sind an den PC gebunden und lassen sich nicht mitnehmen.' `
+    $content += New-WzHtmlSection -Title (Get-WzText 'rep.rowBrowsers') `
+        -Lead (Get-WzText 'rep.leadBrowsers') `
         -Body (New-WzHtmlTable -Data $browserRows -Columns @(
-            'Browser|Browser', 'Pfad|Profilordner|mono', 'Groesse|Größe|num', 'Lesezeichen|Lesezeichen'
-        ) -EmptyText 'Keine Browser-Profile gefunden.')
+            "Browser|$(Get-WzText 'rep.colBrowser')", "Pfad|$(Get-WzText 'rep.colProfileDir')|mono",
+            "Groesse|$(Get-WzText 'rep.colSize')|num", "Lesezeichen|$(Get-WzText 'rep.colBookmarks')"
+        ) -EmptyText (Get-WzText 'rep.udNoBrowsers'))
 
     # --- Zugänge und Geräte ------------------------------------------------
     $keyRows = @()
     $keys = $Overview.Keys
     $keyRows += if ($keys.FirmwareKey) {
-        'Windows-Schlüssel im UEFI|vorhanden und auslesbar|ok'
+        "$(Get-WzText 'rep.udKeyUefi')|$(Get-WzText 'rep.udKeyPresent')|ok"
     } else {
-        'Windows-Schlüssel im UEFI|keiner hinterlegt (Volumen- oder Kontolizenz)'
+        "$(Get-WzText 'rep.udKeyUefi')|$(Get-WzText 'rep.udKeyNone')"
     }
-    if ($keys.Channel) { $keyRows += "Lizenzart|$($keys.Channel), endet auf $($keys.PartialKey)" }
-    foreach ($office in @($keys.Office)) { $keyRows += "Office|$($office.Name) ($($office.Channel))" }
-    $keyRows += if ($wlan.Count -gt 0) { "WLAN-Netze|$($wlan -join ', ')" } else { 'WLAN-Netze|keine gespeichert' }
-    $keyRows += if ($encrypted.Count -gt 0) {
-        "BitLocker|aktiv auf $($encrypted -join ', ')|warn"
+    if ($keys.Channel) {
+        $keyRows += "$(Get-WzText 'rep.udLicenseKind')|$(Get-WzText 'rep.udLicenseValue' @{ kanal = $keys.Channel; rest = $keys.PartialKey })"
+    }
+    foreach ($office in @($keys.Office)) {
+        $keyRows += "$(Get-WzText 'rep.rowOffice')|$(Get-WzText 'rep.udOfficeValue' @{ name = $office.Name; kanal = $office.Channel })"
+    }
+    $keyRows += if ($wlan.Count -gt 0) {
+        "$(Get-WzText 'rep.rowWlan')|$($wlan -join ', ')"
     } else {
-        'BitLocker|nicht aktiv'
+        "$(Get-WzText 'rep.rowWlan')|$(Get-WzText 'rep.udWlanNone')"
+    }
+    $keyRows += if ($encrypted.Count -gt 0) {
+        "$(Get-WzText 'rep.rowBitLocker')|$(Get-WzText 'rep.udBitlockerOn' @{ laufwerke = ($encrypted -join ', ') })|warn"
+    } else {
+        "$(Get-WzText 'rep.rowBitLocker')|$(Get-WzText 'rep.udBitlockerOff')"
     }
 
     $deviceRows = @()
     foreach ($printer in $printers) {
-        $marker = if ($printer.IsDefault) { ' (Standard)' } else { '' }
-        $deviceRows += "Drucker$marker|$($printer.Name) an $($printer.Port)"
+        $label = if ($printer.IsDefault) { Get-WzText 'rep.udPrinterDefault' } else { Get-WzText 'rep.udPrinterPlain' }
+        $deviceRows += "$label|$(Get-WzText 'rep.udPrinterValue' @{ name = $printer.Name; anschluss = $printer.Port })"
     }
-    foreach ($drive in $netDrives) { $deviceRows += "Laufwerk $($drive.Letter)|$($drive.Target)" }
-    if ($deviceRows.Count -eq 0) { $deviceRows += 'Geräte|kein Drucker, kein Netzlaufwerk eingerichtet' }
+    foreach ($drive in $netDrives) {
+        $deviceRows += "$(Get-WzText 'rep.udDriveLabel' @{ buchstabe = $drive.Letter })|$($drive.Target)"
+    }
+    if ($deviceRows.Count -eq 0) { $deviceRows += "$(Get-WzText 'rep.udDevices')|$(Get-WzText 'rep.udNoDevices')" }
 
-    $content += New-WzHtmlSection -Title 'Zugänge und Geräte' `
-        -Lead 'Damit der PC nach dem Neuaufsetzen wieder so arbeitet wie vorher.' `
-        -Body ((New-WzHtmlCard -Title 'Schlüssel und Zugänge' -Rows $keyRows) +
-               (New-WzHtmlCard -Title 'Drucker und Netzlaufwerke' -Rows $deviceRows))
+    $content += New-WzHtmlSection -Title (Get-WzText 'rep.secAccess') `
+        -Lead (Get-WzText 'rep.leadAccess') `
+        -Body ((New-WzHtmlCard -Title (Get-WzText 'rep.cardKeys') -Rows $keyRows) +
+               (New-WzHtmlCard -Title (Get-WzText 'rep.cardDevices') -Rows $deviceRows))
 
     $meta = @(
-        "Computer|$env:COMPUTERNAME"
-        "Datum|$(Get-Date -Format 'dd.MM.yyyy HH:mm')"
-        "Umfang|$(Format-WzBytes $totalBytes)"
-        "Konten|$($profiles.Count)"
+        "$(Get-WzText 'rep.rowComputer')|$env:COMPUTERNAME"
+        "$(Get-WzText 'rep.metaDate')|$((Get-Date).ToString('g', (Get-WzLanguageCulture)))"
+        "$(Get-WzText 'rep.metaScope')|$(Format-WzBytes $totalBytes)"
+        "$(Get-WzText 'rep.metaAccounts')|$($profiles.Count)"
     )
 
-    $file = New-WzHtmlReport -Title 'Übernahme-Bericht' -Eyebrow 'ÜBERNAHME' `
-        -Subtitle "Bestandsaufnahme der Daten auf $env:COMPUTERNAME vor der Neuinstallation." `
+    $file = New-WzHtmlReport -Title (Get-WzText 'rep.udTitle') -Eyebrow (Get-WzText 'rep.udEyebrow') `
+        -Subtitle (Get-WzText 'rep.udSubtitle' @{ pc = $env:COMPUTERNAME }) `
         -Meta $meta -Content $content `
-        -FileName "uebernahme-$(Get-Date -Format 'yyyy-MM-dd_HHmm').html"
+        -FileName "$(Get-WzText 'rep.udFile')-$(Get-Date -Format 'yyyy-MM-dd_HHmm').html"
 
-    Write-WzLog "Übernahme-Bericht gespeichert: $file" -Level Ok
+    Write-WzLog (Get-WzText 'rep.logUdSaved' @{ datei = $file }) -Level Ok
     return $file
 }
 
@@ -799,42 +867,42 @@ function Export-WzProtocol {
     $counts = $entries | Group-Object Level | ForEach-Object { "$($_.Name): $($_.Count)" }
     $duration = if ($syncHash.SessionStart) {
         Format-WzUptime ((Get-Date) - $syncHash.SessionStart)
-    } else { 'n/v' }
+    } else { Get-WzText 'core.na' }
 
     $summaryRows = @(
-        "Computer|$env:COMPUTERNAME"
-        "Benutzer|$env:USERDOMAIN\$env:USERNAME"
-        "Beginn|$(if ($syncHash.SessionStart) { $syncHash.SessionStart.ToString('dd.MM.yyyy HH:mm:ss') } else { 'n/v' })"
-        "Dauer|$duration"
-        "Einträge|$($entries.Count)  ($($counts -join ', '))"
+        "$(Get-WzText 'rep.rowComputer')|$env:COMPUTERNAME"
+        "$(Get-WzText 'rep.rowUser')|$env:USERDOMAIN\$env:USERNAME"
+        "$(Get-WzText 'rep.rowStart')|$(if ($syncHash.SessionStart) { $syncHash.SessionStart.ToString('G', (Get-WzLanguageCulture)) } else { Get-WzText 'core.na' })"
+        "$(Get-WzText 'rep.rowDuration')|$duration"
+        "$(Get-WzText 'rep.rowEntries')|$(Get-WzText 'rep.valEntries' @{ anzahl = $entries.Count; verteilung = ($counts -join ', ') })"
     )
     if ($info) {
-        $summaryRows += "Windows|$($info.OsCaption) $($info.OsVersion) (Build $($info.OsBuild))"
-        $summaryRows += "Gerät|$($info.Manufacturer) $($info.Model)"
+        $summaryRows += "$(Get-WzText 'rep.rowWindows')|$(Get-WzText 'rep.valWindows' @{ name = $info.OsCaption; version = $info.OsVersion; build = $info.OsBuild })"
+        $summaryRows += "$(Get-WzText 'rep.rowDevice')|$($info.Manufacturer) $($info.Model)"
     }
     if ($syncHash.DryRun) {
-        $summaryRows += 'Modus|Testmodus — keine Änderungen ausgeführt|warn'
+        $summaryRows += "$(Get-WzText 'rep.rowMode')|$(Get-WzText 'rep.protoDryRun')|warn"
     }
 
-    $content = New-WzHtmlSection -Title 'Zusammenfassung' `
-        -Body (New-WzHtmlCard -Title 'Sitzung' -Rows $summaryRows)
+    $content = New-WzHtmlSection -Title (Get-WzText 'rep.secSummary') `
+        -Body (New-WzHtmlCard -Title (Get-WzText 'rep.cardSession') -Rows $summaryRows)
 
-    $content += New-WzHtmlSection -Title 'Verlauf' `
-        -Lead 'Alle Schritte dieser Sitzung in zeitlicher Reihenfolge.' `
+    $content += New-WzHtmlSection -Title (Get-WzText 'rep.secHistory') `
+        -Lead (Get-WzText 'rep.leadHistory') `
         -Body ("<div class=`"card log`">`n  $($logLines -join "`n  ")`n</div>")
 
     $meta = @(
-        "Computer|$env:COMPUTERNAME"
-        "Datum|$(Get-Date -Format 'dd.MM.yyyy HH:mm')"
-        "Schritte|$($entries.Count)"
+        "$(Get-WzText 'rep.rowComputer')|$env:COMPUTERNAME"
+        "$(Get-WzText 'rep.metaDate')|$((Get-Date).ToString('g', (Get-WzLanguageCulture)))"
+        "$(Get-WzText 'rep.metaSteps')|$($entries.Count)"
     )
 
-    $file = New-WzHtmlReport -Title 'Sitzungsprotokoll' -Eyebrow 'PROTOKOLL' `
-        -Subtitle "Dokumentation aller Arbeitsschritte auf $env:COMPUTERNAME." `
+    $file = New-WzHtmlReport -Title (Get-WzText 'rep.protoTitle') -Eyebrow (Get-WzText 'rep.protoEyebrow') `
+        -Subtitle (Get-WzText 'rep.protoSubtitle' @{ pc = $env:COMPUTERNAME }) `
         -Meta $meta -Content $content `
-        -FileName "protokoll-$(Get-Date -Format 'yyyy-MM-dd_HHmm').html"
+        -FileName "$(Get-WzText 'rep.protoFile')-$(Get-Date -Format 'yyyy-MM-dd_HHmm').html"
 
-    Write-WzLog "Protokoll gespeichert: $file" -Level Ok
+    Write-WzLog (Get-WzText 'rep.logProtoSaved' @{ datei = $file }) -Level Ok
     if ($Open) { Start-Process $file }
     return $file
 }

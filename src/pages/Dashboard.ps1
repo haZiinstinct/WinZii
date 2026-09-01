@@ -37,7 +37,7 @@ function Update-WzDashboardPage {
         # damit später den freien Speicher.
         if (-not $syncHash.SessionStartInfo) { $syncHash.SessionStartInfo = $info }
         Write-WzDashboardCards -Info $info
-        Write-WzLog "$($info.OsCaption) · Version $($info.OsVersion) · Build $($info.OsBuild)" -Level Info
+        Write-WzLog (Get-WzText 'dash.logWindows' @{ name = $info.OsCaption; version = $info.OsVersion; build = $info.OsBuild }) -Level Info
 
         # Stufe 2 anstoßen (Lizenz, BitLocker, Virenschutz, Laufwerkszustand)
         Invoke-WzTask -Name (Get-WzText 'dash.taskSecurity') -Silent -ScriptBlock {
@@ -72,7 +72,7 @@ function Write-WzDashboardCards {
     # --- Hardware ---------------------------------------------------------
     $syncHash.DashHwTitle.Text = if ($Info.Model -and $Info.Model -ne 'n/v') {
         "$($Info.Manufacturer) $($Info.Model)".Trim()
-    } else { 'Unbekanntes System' }
+    } else { Get-WzText 'dash.unknownSystem' }
     $rows = $syncHash.DashHwRows
     $rows.Children.Clear()
     [void]$rows.Children.Add((New-WzInfoRow (Get-WzText 'dash.lblCpu') $Info.CpuName))
@@ -220,7 +220,7 @@ function Write-WzDashboardDevices {
     $rows = $syncHash.DashFirmwareRows
     $rows.Children.Clear()
     if ($Info.BiosDate) {
-        $years = Format-WzNumber (((Get-Date) - $Info.BiosDate).TotalDays / 365.25) 'Jahre alt'
+        $years = Format-WzNumber (((Get-Date) - $Info.BiosDate).TotalDays / 365.25) (Get-WzText 'dash.unitYearsOld')
         [void]$rows.Children.Add((New-WzInfoRow (Get-WzText 'dash.lblBiosDate') `
             "$($Info.BiosDate.ToString('d', (Get-WzLanguageCulture))) · $years"))
     }

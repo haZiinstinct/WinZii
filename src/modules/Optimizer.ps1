@@ -199,7 +199,7 @@ function Invoke-WzTweaks {
                     default         { $null }
                 }
                 if (-not $handler) {
-                    Write-WzLog "  Unbekannter Aktionstyp: $($action.type)" -Level Warn
+                Write-WzLog (Get-WzText 'opt.logUnknownAction' @{ typ = $action.type }) -Level Warn
                     continue
                 }
                 # Handler, die ihre Fehler selbst abfangen, melden über die
@@ -209,7 +209,7 @@ function Invoke-WzTweaks {
                 if ($session.ActionFailed) { $tweakFailed = $true }
             } catch {
                 $tweakFailed = $true
-                Write-WzLog "  Fehler: $($_.Exception.Message)" -Level Error
+            Write-WzLog (Get-WzText 'opt.logError' @{ grund = $_.Exception.Message }) -Level Error
             }
         }
 
@@ -245,12 +245,12 @@ function Invoke-WzRegistryAction {
     $path = Resolve-WzRegistryPath $Action.path
     $current = Get-WzRegistryValue -Path $path -Name $Action.name
     if ($current.Exists -and "$($current.Value)" -eq "$($Action.value)") {
-        Write-WzLog "  bereits gesetzt: $($Action.name)" -Level Info
+        Write-WzLog (Get-WzText 'opt.logAlreadySet' @{ name = $Action.name }) -Level Info
         return
     }
 
     if ($syncHash.DryRun) {
-        Write-WzLog "  [Test] $path\$($Action.name) = $($Action.value)" -Level Test
+        Write-WzLog (Get-WzText 'opt.logTestRegistry' @{ pfad = $path; name = $Action.name; wert = $Action.value }) -Level Test
         return
     }
 
@@ -269,7 +269,7 @@ function Invoke-WzRegistryAction {
         [void](New-Item -Path $path -Force -ErrorAction Stop)
     }
     Set-ItemProperty -Path $path -Name $Action.name -Value $Action.value -Type $Action.valueType -Force -ErrorAction Stop
-    Write-WzLog "  gesetzt: $($Action.name) = $($Action.value)" -Level Ok
+    Write-WzLog (Get-WzText 'opt.logSet' @{ name = $Action.name; wert = $Action.value }) -Level Ok
 }
 
 function Invoke-WzServiceAction {
@@ -283,12 +283,12 @@ function Invoke-WzServiceAction {
 
     $currentStartup = Get-WzServiceStartupType -Name $Action.serviceName
     if ($currentStartup -eq $Action.startupType -and $service.Status -ne 'Running') {
-        Write-WzLog "  bereits gesetzt: $($Action.serviceName)" -Level Info
+        Write-WzLog (Get-WzText 'opt.logAlreadySetService' @{ name = $Action.serviceName }) -Level Info
         return
     }
 
     if ($syncHash.DryRun) {
-        Write-WzLog "  [Test] Dienst $($Action.serviceName): $currentStartup -> $($Action.startupType)" -Level Test
+        Write-WzLog (Get-WzText 'opt.logTestService' @{ name = $Action.serviceName; vorher = $currentStartup; nachher = $Action.startupType }) -Level Test
         return
     }
 
@@ -322,7 +322,7 @@ function Invoke-WzServiceAction {
         Set-ItemProperty -Path "HKLM:\SYSTEM\CurrentControlSet\Services\$($Action.serviceName)" `
             -Name 'Start' -Value $startValue -Type DWord -ErrorAction Stop
     }
-    Write-WzLog "  Dienst $($Action.serviceName): $($Action.startupType)" -Level Ok
+    Write-WzLog (Get-WzText 'opt.logService' @{ name = $Action.serviceName; starttyp = $Action.startupType }) -Level Ok
 }
 
 function Invoke-WzScheduledTaskAction {
@@ -334,12 +334,12 @@ function Invoke-WzScheduledTaskAction {
         return
     }
     if ($Action.state -eq 'Disabled' -and $task.State -eq 'Disabled') {
-        Write-WzLog "  bereits deaktiviert: $($Action.taskName)" -Level Info
+        Write-WzLog (Get-WzText 'opt.logAlreadyDisabled' @{ name = $Action.taskName }) -Level Info
         return
     }
 
     if ($syncHash.DryRun) {
-        Write-WzLog "  [Test] Aufgabe $($Action.taskName) -> $($Action.state)" -Level Test
+        Write-WzLog (Get-WzText 'opt.logTestTask' @{ name = $Action.taskName; zustand = $Action.state }) -Level Test
         return
     }
 
@@ -352,7 +352,7 @@ function Invoke-WzScheduledTaskAction {
     } else {
         Enable-ScheduledTask -TaskPath $Action.taskPath -TaskName $Action.taskName -ErrorAction Stop | Out-Null
     }
-    Write-WzLog "  Aufgabe $($Action.taskName): $($Action.state)" -Level Ok
+    Write-WzLog (Get-WzText 'opt.logTask' @{ name = $Action.taskName; zustand = $Action.state }) -Level Ok
 }
 
 function Invoke-WzFeatureAction {
@@ -366,12 +366,12 @@ function Invoke-WzFeatureAction {
     $targetEnabled = ($Action.state -eq 'Enabled')
     $isEnabled = ($feature.State -eq 'Enabled')
     if ($targetEnabled -eq $isEnabled) {
-        Write-WzLog "  bereits im Zielzustand: $($Action.featureName)" -Level Info
+        Write-WzLog (Get-WzText 'opt.logAlreadyTarget' @{ name = $Action.featureName }) -Level Info
         return
     }
 
     if ($syncHash.DryRun) {
-        Write-WzLog "  [Test] Funktion $($Action.featureName) -> $($Action.state)" -Level Test
+        Write-WzLog (Get-WzText 'opt.logTestFeature' @{ name = $Action.featureName; zustand = $Action.state }) -Level Test
         return
     }
 
@@ -384,14 +384,14 @@ function Invoke-WzFeatureAction {
     } else {
         Disable-WindowsOptionalFeature -Online -FeatureName $Action.featureName -NoRestart -ErrorAction Stop | Out-Null
     }
-    Write-WzLog "  Funktion $($Action.featureName): $($Action.state)" -Level Ok
+    Write-WzLog (Get-WzText 'opt.logFeature' @{ name = $Action.featureName; zustand = $Action.state }) -Level Ok
 }
 
 function Invoke-WzCommandAction {
     param($Action, $Session, $Tweak)
 
     if ($syncHash.DryRun) {
-        Write-WzLog "  [Test] $($Action.exec) $($Action.args)" -Level Test
+        Write-WzLog (Get-WzText 'opt.logTestExec' @{ befehl = $Action.exec; argumente = $Action.args }) -Level Test
         return
     }
 
@@ -423,7 +423,7 @@ function Invoke-WzCommandAction {
     # einem Fehlschlag: »-duplicatescheme« würde sonst bei jedem Durchgang eine
     # weitere Kopie des Plans anlegen.
     if ($result.ExitCode -ne 0 -and $Action.fallback) {
-        Write-WzLog "  Voraussetzung fehlt — versuche $($Action.fallback.exec) $($Action.fallback.args)" -Level Info
+        Write-WzLog (Get-WzText 'opt.logFallback' @{ befehl = $Action.fallback.exec; argumente = $Action.fallback.args }) -Level Info
         $prepare = Invoke-WzProcess -FilePath $Action.fallback.exec `
             -Arguments $Action.fallback.args -TimeoutSeconds 120
         if ($prepare.ExitCode -eq 0) {

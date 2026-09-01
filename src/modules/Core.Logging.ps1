@@ -11,15 +11,18 @@ function Start-WzSession {
     $syncHash.LogFile = Join-Path $logDir 'session.log'
     $syncHash.SessionStart = Get-Date
 
-    $osCaption = try { (Get-CimInstance Win32_OperatingSystem -ErrorAction Stop).Caption } catch { 'unbekannt' }
+    $osCaption = try { (Get-CimInstance Win32_OperatingSystem -ErrorAction Stop).Caption } catch { Get-WzText 'core.unknown' }
+    # Die Sprache steht hier schon: main.ps1 laedt die Tabelle vor Start-WzSession.
+    # Die Beschriftungen sind unterschiedlich lang, deshalb wird die Spalte
+    # mit -f ausgerichtet statt mit festen Leerzeichen.
     $header = @(
         '======================================================================'
-        " WinZii $($syncHash.Version) — Sitzungsprotokoll"
-        " Start:    $($syncHash.SessionStart.ToString('dd.MM.yyyy HH:mm:ss'))"
-        " Computer: $env:COMPUTERNAME"
-        " Benutzer: $env:USERDOMAIN\$env:USERNAME"
-        " Windows:  $osCaption"
-        " Quelle:   $(Get-WzRoot)"
+        ' ' + (Get-WzText 'core.logHeadTitle' @{ version = $syncHash.Version })
+        ' {0,-10}{1}' -f ((Get-WzText 'core.logHeadStart') + ':'), $syncHash.SessionStart.ToString('G', (Get-WzLanguageCulture))
+        ' {0,-10}{1}' -f ((Get-WzText 'core.logHeadComputer') + ':'), $env:COMPUTERNAME
+        ' {0,-10}{1}' -f ((Get-WzText 'core.logHeadUser') + ':'), "$env:USERDOMAIN\$env:USERNAME"
+        ' {0,-10}{1}' -f ((Get-WzText 'core.logHeadWindows') + ':'), $osCaption
+        ' {0,-10}{1}' -f ((Get-WzText 'core.logHeadSource') + ':'), (Get-WzRoot)
         '======================================================================'
     ) -join [Environment]::NewLine
 

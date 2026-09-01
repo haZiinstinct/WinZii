@@ -263,11 +263,11 @@ function Invoke-WzCleanup {
                 $after = Measure-WzCleanupCategory -Category $category
                 $freed = [math]::Max(0, $before.Bytes - $after.Bytes)
                 $summary.FreedBytes += $freed
-                Write-WzLog "  $(Format-WzBytes $freed) freigegeben, $($result.Removed) Objekt(e) entfernt" -Level Ok
+            Write-WzLog (Get-WzText 'clean.logFreed' @{ groesse = (Format-WzBytes $freed); anzahl = $result.Removed }) -Level Ok
             }
         } catch {
             $summary.Failed++
-            Write-WzLog "  Fehler: $($_.Exception.Message)" -Level Error
+            Write-WzLog (Get-WzText 'clean.logError' @{ grund = $_.Exception.Message }) -Level Error
         } finally {
             foreach ($serviceName in $stoppedServices) {
                 Start-Service -Name $serviceName -ErrorAction SilentlyContinue
@@ -294,7 +294,7 @@ function Remove-WzPathSet {
 
         if ($syncHash.DryRun) {
             $measure = Measure-WzPathSet -Paths @($rawPath)
-            Write-WzLog "  [Test] $path — $($measure.Items) Objekt(e), $(Format-WzBytes $measure.Bytes)" -Level Test
+            Write-WzLog (Get-WzText 'clean.logTestPath' @{ pfad = $path; anzahl = $measure.Items; groesse = (Format-WzBytes $measure.Bytes) }) -Level Test
             continue
         }
 
@@ -358,7 +358,7 @@ function Invoke-WzComponentCleanup {
     }
 
     if ($syncHash.DryRun) {
-        Write-WzLog "  [Test] dism.exe $arguments" -Level Test
+        Write-WzLog (Get-WzText 'clean.logTestDism' @{ argumente = $arguments }) -Level Test
         return [pscustomobject]@{ Removed = 0; Failed = 0 }
     }
 

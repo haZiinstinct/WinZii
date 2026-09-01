@@ -174,9 +174,9 @@ function Invoke-WzAppxAction {
     foreach ($package in $provisioned) {
         try {
             Remove-AppxProvisionedPackage -Online -PackageName $package.PackageName -ErrorAction Stop | Out-Null
-            Write-WzLog "  Bereitstellung entfernt: $($package.DisplayName)" -Level Ok
+            Write-WzLog (Get-WzText 'ai.logProvRemoved' @{ name = $package.DisplayName }) -Level Ok
         } catch {
-            Write-WzLog "  Bereitstellung blieb bestehen: $($package.DisplayName)" -Level Warn
+            Write-WzLog (Get-WzText 'ai.logProvKept' @{ name = $package.DisplayName }) -Level Warn
         }
     }
 
@@ -197,9 +197,9 @@ function Set-WzAppxEndOfLife {
     try {
         if (-not (Test-Path -LiteralPath $path)) { [void](New-Item -Path $path -Force -ErrorAction Stop) }
         Set-ItemProperty -Path $path -Name 'EndOfLife' -Value 1 -Type DWord -ErrorAction Stop
-        Write-WzLog "  Paket als abgelaufen markiert: $PackageFullName" -Level Info
+        Write-WzLog (Get-WzText 'ai.logEolMarked' @{ name = $PackageFullName }) -Level Info
     } catch {
-        Write-WzLog "  Markierung fehlgeschlagen: $($_.Exception.Message)" -Level Warn
+        Write-WzLog (Get-WzText 'ai.logEolFailed' @{ grund = $_.Exception.Message }) -Level Warn
     }
 }
 
@@ -239,10 +239,10 @@ function Invoke-WzCapabilityAction {
     foreach ($capability in $capabilities) {
         try {
             Remove-WindowsCapability -Online -Name $capability.Name -ErrorAction Stop | Out-Null
-            Write-WzLog "  Funktion entfernt: $($capability.Name)" -Level Ok
+                Write-WzLog (Get-WzText 'ai.logCapRemoved' @{ name = $capability.Name }) -Level Ok
         } catch {
             if ($Session) { $Session.ActionFailed = $true }
-            Write-WzLog "  Funktion blieb bestehen: $($capability.Name)" -Level Warn
+                Write-WzLog (Get-WzText 'ai.logCapKept' @{ name = $capability.Name }) -Level Warn
         }
     }
 }

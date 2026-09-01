@@ -253,7 +253,7 @@ function New-WzFindingRow {
     [void]$stack.Children.Add($headerRow)
 
     $metaBlock = New-Object Windows.Controls.TextBlock
-    $metaBlock.Text = "zuletzt $($Finding.Last.ToString('dd.MM.yyyy HH:mm'))"
+    $metaBlock.Text = Get-WzText 'diag.findingLast' @{ zeit = $Finding.Last.ToString('g', (Get-WzLanguageCulture)) }
     $metaBlock.FontFamily = $syncHash.Window.FindResource('WzFontMono')
     $metaBlock.FontSize = 10.5
     $metaBlock.Foreground = $syncHash.Window.FindResource('WzTextFaint')

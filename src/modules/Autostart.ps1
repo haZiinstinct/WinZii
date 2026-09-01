@@ -15,9 +15,9 @@ function Get-WzAutostartItems {
     $items = New-Object Collections.ArrayList
 
     $registryLocations = @(
-        @{ Path = 'HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Run'; Scope = 'Alle Benutzer'; Approved = 'HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\StartupApproved\Run' }
-        @{ Path = 'HKLM:\SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Run'; Scope = 'Alle Benutzer (32 Bit)'; Approved = 'HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\StartupApproved\Run32' }
-        @{ Path = 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Run'; Scope = 'Dieser Benutzer'; Approved = 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer\StartupApproved\Run' }
+        @{ Path = 'HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Run'; Scope = (Get-WzText 'auto.scopeAllUsers'); Approved = 'HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\StartupApproved\Run' }
+        @{ Path = 'HKLM:\SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Run'; Scope = (Get-WzText 'auto.scopeAllUsers32'); Approved = 'HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\StartupApproved\Run32' }
+        @{ Path = 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Run'; Scope = (Get-WzText 'auto.scopeThisUser'); Approved = 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer\StartupApproved\Run' }
     )
 
     foreach ($location in $registryLocations) {
@@ -47,8 +47,8 @@ function Get-WzAutostartItems {
 
     # Startordner
     $folders = @(
-        @{ Path = [Environment]::GetFolderPath('Startup'); Scope = 'Dieser Benutzer'; Approved = 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer\StartupApproved\StartupFolder' }
-        @{ Path = [Environment]::GetFolderPath('CommonStartup'); Scope = 'Alle Benutzer'; Approved = 'HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\StartupApproved\StartupFolder' }
+        @{ Path = [Environment]::GetFolderPath('Startup'); Scope = (Get-WzText 'auto.scopeThisUser'); Approved = 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer\StartupApproved\StartupFolder' }
+        @{ Path = [Environment]::GetFolderPath('CommonStartup'); Scope = (Get-WzText 'auto.scopeAllUsers'); Approved = 'HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\StartupApproved\StartupFolder' }
     )
 
     foreach ($folder in $folders) {
@@ -85,7 +85,7 @@ function Get-WzAutostartItems {
                 Command    = if ($action) { "$($action.Execute) $($action.Arguments)".Trim() } else { '' }
                 Publisher  = $task.Author
                 Source     = 'Aufgabenplanung'
-                Scope      = 'Alle Benutzer'
+                Scope      = Get-WzText 'auto.scopeAllUsers'
                 Enabled    = ($task.State -ne 'Disabled')
                 Path       = $task.TaskPath
                 ApprovedPath = $null

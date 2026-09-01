@@ -10,7 +10,7 @@ function Initialize-WzOptimizerPage {
 
     $syncHash.OptBtnApply.Add_Click({
         Invoke-WzTweakSelection -Rows $syncHash.OptRows -Scope 'optimierung' `
-            -Title 'Windows optimieren' -OnDone { Update-WzOptimizerStates }
+            -Title (Get-WzText 'opt.applyTitle') -OnDone { Update-WzOptimizerStates }
     })
 
     $syncHash.OptBtnUndo.Add_Click({

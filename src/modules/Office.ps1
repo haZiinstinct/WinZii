@@ -239,7 +239,7 @@ function Test-WzOfficeCache {
     $path = Get-WzOfficeCachePath -VariantId $VariantId -Language $Language
     $result = [pscustomobject]@{ Available = $false; Path = $path; Bytes = [int64]0; Detail = '' }
     if (-not (Test-Path -LiteralPath $path)) {
-        $result.Detail = 'noch nichts geladen'
+        $result.Detail = Get-WzText 'off.cacheNotLoaded'
         return $result
     }
 
@@ -327,7 +327,7 @@ function Invoke-WzOfficeDownload {
         -IncludedApps $IncludedApps -SourcePath $cachePath
 
     if ($syncHash.DryRun) {
-        Write-WzLog "[Test] setup.exe /download `"$configFile`"" -Level Test
+        Write-WzLog (Get-WzText 'off.logTestDownload' @{ datei = $configFile }) -Level Test
         return $true
     }
 
@@ -416,7 +416,7 @@ function Invoke-WzOfficeInstall {
         -IncludedApps $IncludedApps -SourcePath $sourcePath -ProductKey $ProductKey -Edition $Edition
 
     if ($syncHash.DryRun) {
-        Write-WzLog "[Test] setup.exe /configure `"$configFile`"" -Level Test
+        Write-WzLog (Get-WzText 'off.logTestConfigure' @{ datei = $configFile }) -Level Test
         if ($ProductKey) { Remove-WzOfficeKeyFromConfig -Path $configFile }
         return $false
     }
@@ -498,7 +498,7 @@ function Get-WzOfficeChannelName {
         '7983bac0-e531-40cf-be00-fd24fe66619c' = 'LTSC 2024'
     }
     if ($names.ContainsKey($guid)) { return $names[$guid] }
-    return 'Kanal unbekannt'
+    return Get-WzText 'off.channelUnknown'
 }
 
 function Get-WzOfficeRemnants {
@@ -530,8 +530,8 @@ function Get-WzOfficeRemnants {
         if ($folder -and (Test-Path -LiteralPath $folder)) { $result.Folders += $folder }
     }
 
-    foreach ($app in $result.StoreApps) { $result.Items += "Store-Fassung: $($app.Name)" }
-    foreach ($folder in $result.Folders) { $result.Items += "Ordner: $folder" }
+    foreach ($app in $result.StoreApps) { $result.Items += Get-WzText 'off.itemStoreEdition' @{ name = $app.Name } }
+    foreach ($folder in $result.Folders) { $result.Items += Get-WzText 'off.itemFolder' @{ ordner = $folder } }
     return $result
 }
 
@@ -610,7 +610,7 @@ function Remove-WzOffice {
         if ($log.HasError) {
             Write-WzLog (Get-WzText 'off.logOdtCodesShort' @{ codes = ($log.Codes -join ', ') }) -Level Warn
         }
-        $summary.Steps += "Office entfernt: $($before.Name)"
+        $summary.Steps += Get-WzText 'off.actionRemoved' @{ name = $before.Name }
         Write-WzLog (Get-WzText 'off.logOdtDone') -Level Ok
     }
 
@@ -623,8 +623,8 @@ function Remove-WzOffice {
         foreach ($app in $remnants.StoreApps) {
             try {
                 Remove-AppxPackage -Package $app.PackageFullName -AllUsers -ErrorAction Stop
-                $summary.Steps += "Store-Fassung entfernt: $($app.Name)"
-                Write-WzLog "Store-Fassung entfernt: $($app.Name)" -Level Ok
+                $summary.Steps += Get-WzText 'off.logStoreRemoved' @{ name = $app.Name }
+                Write-WzLog (Get-WzText 'off.logStoreRemoved' @{ name = $app.Name }) -Level Ok
             } catch {
                 $summary.Details += "$($app.Name): $($_.Exception.Message.Split([char]10)[0])"
                 Write-WzLog (Get-WzText 'off.logAppRemoveFailed' @{ name = $app.Name; grund = $_.Exception.Message.Split([char]10)[0] }) -Level Warn
@@ -633,8 +633,8 @@ function Remove-WzOffice {
         foreach ($folder in $remnants.Folders) {
             try {
                 Remove-Item -LiteralPath $folder -Recurse -Force -ErrorAction Stop
-                $summary.Steps += "Ordner entfernt: $folder"
-                Write-WzLog "Ordner entfernt: $folder" -Level Ok
+                $summary.Steps += Get-WzText 'off.logFolderRemoved' @{ ordner = $folder }
+                Write-WzLog (Get-WzText 'off.logFolderRemoved' @{ ordner = $folder }) -Level Ok
             } catch {
                 $summary.Details += "$folder blieb liegen: $($_.Exception.Message.Split([char]10)[0])"
                 Write-WzLog (Get-WzText 'off.logFolderRemoveFailed' @{ pfad = $folder }) -Level Warn
@@ -648,7 +648,7 @@ function Remove-WzOffice {
     if ($summary.Ok) {
         Write-WzLog (Get-WzText 'off.logRemoved') -Level Ok
         if ($summary.Steps.Count -gt 0) {
-            Add-WzAction -Area 'Office' -Summary "Office entfernt: $($before.Name)" `
+            Add-WzAction -Area 'Office' -Summary (Get-WzText 'off.actionRemoved' @{ name = $before.Name }) `
                 -Detail $summary.Steps -RebootRequired
         }
     } else {

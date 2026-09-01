@@ -140,7 +140,10 @@ function Start-WzUninstallSelected {
                 entfernt = $summary.Removed; fehlgeschlagen = $summary.Failed
                 groesse  = (Format-WzBytes $bytes) }) `
             -Items @($leftovers | ForEach-Object {
-                "$($_.Kind): $($_.Path)$(if ($_.SizeBytes -gt 0) { " — $(Format-WzBytes $_.SizeBytes)" })"
+                # Kind steuert auch den Loeschweg und bleibt deshalb deutsch —
+                # uebersetzt wird nur die Anzeige.
+                $art = if ($_.Kind -eq 'Registry') { Get-WzText 'unin.kindRegistry' } else { Get-WzText 'unin.kindFolder' }
+                "$($art): $($_.Path)$(if ($_.SizeBytes -gt 0) { " — $(Format-WzBytes $_.SizeBytes)" })"
             }) `
             -ConfirmText (Get-WzText 'unin.btnRemoveLeftovers') -Danger
         if (-not $answer.Confirmed) {

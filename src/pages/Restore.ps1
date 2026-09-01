@@ -54,19 +54,19 @@ function Write-WzRestoreSources {
     $syncHash.RstSourceTitle.Text = if ($Sources.Count -eq 1) {
         Get-WzText 'rest.backupFrom' @{ rechner = $Sources[0].Computer }
     } else {
-        "$($Sources.Count) Sicherungen gefunden"
+        Get-WzText 'rest.sourcesFound' @{ anzahl = $Sources.Count }
     }
 
     foreach ($source in $Sources) {
         $parts = @()
-        if (@($source.Contents.WlanFiles).Count -gt 0) { $parts += "$(@($source.Contents.WlanFiles).Count) WLAN-Netz(e)" }
-        if (@($source.Contents.BookmarkFiles).Count -gt 0) { $parts += "$(@($source.Contents.BookmarkFiles).Count) Lesezeichen-Datei(en)" }
-        if (@($source.Contents.Printers).Count -gt 0) { $parts += "$(@($source.Contents.Printers).Count) Drucker" }
-        if (@($source.Contents.NetDrives).Count -gt 0) { $parts += "$(@($source.Contents.NetDrives).Count) Netzlaufwerk(e)" }
+        if (@($source.Contents.WlanFiles).Count -gt 0) { $parts += Get-WzText 'rest.itemWlan' @{ anzahl = @($source.Contents.WlanFiles).Count } }
+        if (@($source.Contents.BookmarkFiles).Count -gt 0) { $parts += Get-WzText 'rest.itemBookmarks' @{ anzahl = @($source.Contents.BookmarkFiles).Count } }
+        if (@($source.Contents.Printers).Count -gt 0) { $parts += Get-WzText 'rest.itemPrinters' @{ anzahl = @($source.Contents.Printers).Count } }
+        if (@($source.Contents.NetDrives).Count -gt 0) { $parts += Get-WzText 'rest.itemDrives' @{ anzahl = @($source.Contents.NetDrives).Count } }
 
-        $label = if ($source.IsCurrent) { "$($source.Computer) (dieser PC)" } else { $source.Computer }
+        $label = if ($source.IsCurrent) { Get-WzText 'rest.labelThisPc' @{ rechner = $source.Computer } } else { $source.Computer }
         [void]$container.Children.Add((New-WzInfoRow $label `
-            "$($parts -join ' · ') · gesichert $(Format-WzAgo $source.Saved)" `
+            (Get-WzText 'rest.sourceSummary' @{ teile = ($parts -join ' · '); wann = (Format-WzAgo $source.Saved) }) `
             -Kind $(if ($source.IsCurrent) { 'ok' } else { 'normal' }) -LabelWidth 250))
     }
 
@@ -216,10 +216,10 @@ function Write-WzRestoreDevices {
             "$($printer.anschluss) · $($printer.treiber)" -LabelWidth 250))
     }
     foreach ($drive in $drives) {
-        [void]$container.Children.Add((New-WzInfoRow "Laufwerk $($drive.buchstabe)" $drive.ziel -LabelWidth 250))
+        [void]$container.Children.Add((New-WzInfoRow (Get-WzText 'rest.rowDrive' @{ buchstabe = $drive.buchstabe }) $drive.ziel -LabelWidth 250))
     }
 
-    $syncHash.RstDevicesTitle.Text = "$($printers.Count) Drucker · $($drives.Count) Netzlaufwerk(e)"
+    $syncHash.RstDevicesTitle.Text = Get-WzText 'rest.devicesSummary' @{ drucker = $printers.Count; laufwerke = $drives.Count }
     $syncHash.RstBtnPrinters.IsEnabled = ($printers.Count -gt 0)
     $syncHash.RstBtnDrives.IsEnabled = ($drives.Count -gt 0)
 }

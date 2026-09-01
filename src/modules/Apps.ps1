@@ -154,7 +154,7 @@ function Install-WzWingetBootstrap {
     foreach ($package in $packages) {
         if (-not (Test-Path -LiteralPath $package.File)) {
             if (-not $package.Url) { continue }
-            Write-WzLog "Lade $($package.Name)..." -Level Info
+            Write-WzLog (Get-WzText 'apps.logDownloading' @{ name = $package.Name }) -Level Info
             if (-not (Get-WzDownload -Url $package.Url -TargetPath $package.File)) {
                 Write-WzLog (Get-WzText 'apps.logPackageFailed' @{ name = $package.Name }) -Level Error
                 return $false
@@ -165,13 +165,13 @@ function Install-WzWingetBootstrap {
 
         try {
             Add-AppxPackage -Path $package.File -ErrorAction Stop
-            Write-WzLog "$($package.Name) eingerichtet" -Level Ok
+                Write-WzLog (Get-WzText 'apps.logCached' @{ name = $package.Name }) -Level Ok
         } catch {
             # »Schon vorhanden« und »kaputtes Paket« sahen bisher gleich aus.
             # 0x80073D06 heißt: dieselbe oder eine neuere Fassung ist da.
             $message = $_.Exception.Message.Split([char]10)[0]
             if ($message -match '0x80073D06|höhere Version|higher version|already installed') {
-                Write-WzLog "$($package.Name) war bereits vorhanden" -Level Info
+                Write-WzLog (Get-WzText 'apps.logCachedAlready' @{ name = $package.Name }) -Level Info
             } else {
                 Write-WzLog (Get-WzText 'apps.logPackageSetupFailed' @{ name = $package.Name; grund = $message }) -Level Error
             }
@@ -226,7 +226,7 @@ function Get-WzDownload {
         if ($client.Proxy) { $client.Proxy.Credentials = [Net.CredentialCache]::DefaultCredentials }
         $client.DownloadFile($Url, $TargetPath)
     } catch {
-        Write-WzLog "Download fehlgeschlagen: $($_.Exception.Message.Split([char]10)[0])" -Level Error
+            Write-WzLog (Get-WzText 'apps.logDownloadFailed' @{ grund = $_.Exception.Message.Split([char]10)[0] }) -Level Error
         Remove-WzFailedDownload -Path $TargetPath
         return $false
     } finally {
@@ -398,10 +398,10 @@ function Install-WzApps {
     $index = 0
     foreach ($app in $Apps) {
         $index++
-        Write-WzLog "[$index/$(@($Apps).Count)] $($app.name)" -Level Action
+        Write-WzLog (Get-WzText 'apps.logStep' @{ nummer = $index; gesamt = @($Apps).Count; name = $app.name }) -Level Action
 
         if ($syncHash.DryRun) {
-            Write-WzLog "  [Test] winget install --id $($app.wingetId)" -Level Test
+            Write-WzLog (Get-WzText 'apps.logTestInstall' @{ id = $app.wingetId }) -Level Test
             $summary.Skipped++
             continue
         }

@@ -85,7 +85,7 @@ function Complete-WzUndoSession {
 
     $undoFile = Join-Path $Session.Directory 'undo.json'
     [void](Save-WzJson -InputObject $manifest -Path $undoFile -Depth 12)
-    Write-WzLog "Sicherung abgelegt: $($Session.Directory)" -Level Info
+    Write-WzLog (Get-WzText 'core.logBackupStored' @{ pfad = $Session.Directory }) -Level Info
     return $undoFile
 }
 
@@ -118,7 +118,7 @@ function Export-WzRegistryKey {
     if ($result.ExitCode -eq 0) {
         [void]$Session.ExportedKeys.Add($Path)
     } else {
-        Write-WzLog "Registry-Export fehlgeschlagen: $Path" -Level Warn
+        Write-WzLog (Get-WzText 'core.logRegExportFailed' @{ pfad = $Path }) -Level Warn
     }
 }
 
@@ -228,10 +228,10 @@ function New-WzRestorePoint {
         $frequencyChanged = $true
 
         Checkpoint-Computer -Description $Description -RestorePointType 'MODIFY_SETTINGS' -ErrorAction Stop
-        Write-WzLog "Wiederherstellungspunkt erstellt: $Description" -Level Ok
+        Write-WzLog (Get-WzText 'core.logRpCreated' @{ name = $Description }) -Level Ok
         return $true
     } catch {
-        Write-WzLog "Wiederherstellungspunkt fehlgeschlagen: $($_.Exception.Message)" -Level Warn
+        Write-WzLog (Get-WzText 'core.logRpFailed' @{ grund = $_.Exception.Message }) -Level Warn
         return $false
     } finally {
         if ($frequencyChanged) {

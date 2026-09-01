@@ -19,24 +19,24 @@ function Invoke-WzNetworkReset {
         $steps += @{ Name = (Get-WzText 'tool.stepIpv4'); File = 'netsh.exe'; Args = 'int ip reset' }
         $steps += @{ Name = (Get-WzText 'tool.stepIpv6'); File = 'netsh.exe'; Args = 'int ipv6 reset' }
     }
-    if ($FlushDns) { $steps += @{ Name = 'DNS-Zwischenspeicher leeren'; File = 'ipconfig.exe'; Args = '/flushdns' } }
+    if ($FlushDns) { $steps += @{ Name = (Get-WzText 'tool.stepFlushDns'); File = 'ipconfig.exe'; Args = '/flushdns' } }
     if ($ResetProxy) { $steps += @{ Name = (Get-WzText 'tool.stepProxy'); File = 'netsh.exe'; Args = 'winhttp reset proxy' } }
 
     $result = [pscustomobject]@{ Done = 0; Failed = 0; RebootRequired = ($Winsock -or $IpStack) }
 
     foreach ($step in $steps) {
         if ($syncHash.DryRun) {
-            Write-WzLog "[Test] $($step.Name)" -Level Test
+            Write-WzLog (Get-WzText 'tool.logTestStep' @{ schritt = $step.Name }) -Level Test
             continue
         }
         Write-WzLog $step.Name -Level Action
         $processResult = Invoke-WzProcess -FilePath $step.File -Arguments $step.Args -TimeoutSeconds 120
         if ($processResult.ExitCode -eq 0) {
             $result.Done++
-            Write-WzLog "  erledigt" -Level Ok
+            Write-WzLog (Get-WzText 'tool.logStepDone') -Level Ok
         } else {
             $result.Failed++
-            Write-WzLog "  fehlgeschlagen (Code $($processResult.ExitCode))" -Level Warn
+            Write-WzLog (Get-WzText 'tool.logStepFailed' @{ code = $processResult.ExitCode }) -Level Warn
         }
     }
 
@@ -132,15 +132,15 @@ function Set-WzDnsServers {
 
     foreach ($adapter in $adapters) {
         if ($syncHash.DryRun) {
-            $target = if ($servers.Count -gt 0) { $servers -join ', ' } else { 'automatisch' }
-            Write-WzLog "[Test] $($adapter.Name) -> $target" -Level Test
+            $target = if ($servers.Count -gt 0) { $servers -join ', ' } else { Get-WzText 'tool.dnsAuto' }
+            Write-WzLog (Get-WzText 'tool.logTestDns' @{ adapter = $adapter.Name; ziel = $target }) -Level Test
             continue
         }
 
         try {
             if ($Provider -eq 'Auto') {
                 Set-DnsClientServerAddress -InterfaceIndex $adapter.ifIndex -ResetServerAddresses -ErrorAction Stop
-                Write-WzLog "$($adapter.Name): DNS vom Router" -Level Ok
+                Write-WzLog (Get-WzText 'tool.logDnsRouter' @{ adapter = $adapter.Name }) -Level Ok
             } else {
                 Set-DnsClientServerAddress -InterfaceIndex $adapter.ifIndex -ServerAddresses $servers -ErrorAction Stop
                 Write-WzLog "$($adapter.Name): $($servers -join ', ')" -Level Ok
@@ -258,16 +258,16 @@ function Repair-WzNetworkAdapter {
         zurückzusetzen — der schnelle erste Versuch bei Verbindungsproblemen.
     #>
     $steps = @(
-        @{ Name = 'IP-Adresse freigeben'; File = 'ipconfig.exe'; Args = '/release' }
-        @{ Name = 'IP-Adresse neu anfordern'; File = 'ipconfig.exe'; Args = '/renew' }
-        @{ Name = 'DNS-Zwischenspeicher leeren'; File = 'ipconfig.exe'; Args = '/flushdns' }
-        @{ Name = 'DNS neu registrieren'; File = 'ipconfig.exe'; Args = '/registerdns' }
+        @{ Name = (Get-WzText 'tool.stepIpRelease'); File = 'ipconfig.exe'; Args = '/release' }
+        @{ Name = (Get-WzText 'tool.stepIpRenew'); File = 'ipconfig.exe'; Args = '/renew' }
+        @{ Name = (Get-WzText 'tool.stepFlushDns'); File = 'ipconfig.exe'; Args = '/flushdns' }
+        @{ Name = (Get-WzText 'tool.stepDnsRegister'); File = 'ipconfig.exe'; Args = '/registerdns' }
     )
 
     $result = [pscustomobject]@{ Done = 0; Failed = 0 }
     foreach ($step in $steps) {
         if ($syncHash.DryRun) {
-            Write-WzLog "[Test] $($step.Name)" -Level Test
+            Write-WzLog (Get-WzText 'tool.logTestStep' @{ schritt = $step.Name }) -Level Test
             continue
         }
         Write-WzLog $step.Name -Level Action
@@ -330,7 +330,7 @@ function Remove-WzBloatware {
             Remove-AppxPackage -Package $package.FullName -AllUsers -ErrorAction Stop
             $result.Removed++
             $removed += $package
-            Write-WzLog "$($package.DisplayName) entfernt" -Level Ok
+                Write-WzLog (Get-WzText 'tool.logAppxRemoved' @{ name = $package.DisplayName }) -Level Ok
         } catch {
             $result.Failed++
             Write-WzLog "$($package.DisplayName): $($_.Exception.Message)" -Level Warn

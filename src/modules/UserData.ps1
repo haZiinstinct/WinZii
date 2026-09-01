@@ -243,7 +243,7 @@ function Get-WzOneDriveState {
 
         $folders += [pscustomobject]@{
             Path       = $path
-            Account    = $(if ($account.UserEmail) { $account.UserEmail } else { 'unbekannt' })
+            Account    = $(if ($account.UserEmail) { $account.UserEmail } else { Get-WzText 'core.unknown' })
             LocalBytes = $localBytes
             LocalFiles = $localFiles
             CloudOnly  = $cloudOnly
@@ -384,7 +384,7 @@ function Export-WzWlanProfiles {
 
     if ($files.Count -gt 0) {
         $note = if ($IncludeKeys) { Get-WzText 'data.logWlanWithKeys' } else { Get-WzText 'data.logWlanNoKeys' }
-        Write-WzLog "$($files.Count) WLAN-Netz(e) gesichert$note" -Level Ok
+        Write-WzLog (Get-WzText 'data.logWlanSaved' @{ anzahl = $files.Count; zusatz = $note }) -Level Ok
     } else {
         Write-WzLog (Get-WzText 'data.logWlanNone' @{ code = $result.ExitCode }) -Level Warn
     }
@@ -508,8 +508,8 @@ function Save-WzBitLockerKeys {
     $target = Join-Path (Get-WzBackupDir -Stamp "$(Get-Date -Format 'yyyy-MM-dd_HHmmss')-bitlocker") 'bitlocker-schluessel.txt'
     $lines = @(
         (Get-WzText 'data.fileBitlockerHeader')
-        "Computer: $env:COMPUTERNAME"
-        "Gesichert am: $(Get-Date -Format 'dd.MM.yyyy HH:mm')"
+        (Get-WzText 'data.fileBitlockerComputer' @{ name = $env:COMPUTERNAME })
+        (Get-WzText 'data.fileBitlockerSaved' @{ zeit = (Get-Date).ToString('g', (Get-WzLanguageCulture)) })
         ''
         (Get-WzText 'data.fileBitlockerNote1')
         (Get-WzText 'data.fileBitlockerNote2')
@@ -644,6 +644,6 @@ function Export-WzBrowserBookmarks {
         }
     }
 
-    if ($count -gt 0) { Write-WzLog "$count Lesezeichen-Datei(en) gesichert nach $target" -Level Ok }
+    if ($count -gt 0) { Write-WzLog (Get-WzText 'data.logBookmarksSaved' @{ anzahl = $count; ziel = $target }) -Level Ok }
     return [pscustomobject]@{ Count = $count; Path = $target }
 }
