@@ -76,7 +76,10 @@
     "languageConfirm": "Switch",
     "themeFailed": "The theme could not be loaded:",
     "windowFailed": "The main window could not be loaded:",
-    "cancel": "Cancel"
+    "cancel": "Cancel",
+    "crashTitle": "Something went wrong",
+    "crashMessage": "WinZii caught an unexpected error and is still running. The last step may not have finished — please check before you carry on. The particulars are in the log.",
+    "crashWhere": "Location: {datei}, line {zeile}"
   },
   "ai": {
     "eyebrow": "// AI REMOVAL",
@@ -395,7 +398,9 @@
     "logHeadSource": "Source",
     "dryRunSummary": "Test mode",
     "busyRequested": "Requested: {name}",
-    "logTaskError": "{name}: {grund}"
+    "logTaskError": "{name}: {grund}",
+    "logCrash": "Unexpected error: {grund}",
+    "logCrashWhere": "  {datei}, line {zeile}: {befehl}"
   },
   "auto": {
     "eyebrow": "// STARTUP",

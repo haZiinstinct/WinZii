@@ -99,6 +99,10 @@ Register-WzNames -Root $window -Xml $mainXml
 # auf, und ein späterer Tausch schaltet die ganze Oberfläche live um.
 Update-WzLanguageResources
 
+# Ab hier steht das Fenster: Fehler in Klick-Handlern werden aufgefangen,
+# protokolliert und gezeigt, statt die Anwendung mitzunehmen.
+Register-WzCrashGuard -Window $window
+
 # --- Mitgelieferte Schriften einbinden ------------------------------------
 function Set-WzFonts {
     $fontDir = Get-WzFontDir

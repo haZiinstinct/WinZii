@@ -1,5 +1,8 @@
 ﻿# Dev-Werkzeug: prüft die Bestätigungsfenster.
 #
+# Dazu das Auffangnetz: Ein Fehler im UI-Faden muss protokolliert, gezeigt und
+# behandelt werden — das Fenster darf nicht mitgehen.
+#
 # Für jede Dialogvariante wird geprüft, dass sie sich auf dem jeweiligen Weg
 # schließen lässt — Escape, Klick auf die Abdunklung daneben, Schließkreuz.
 # Von jeder Variante entsteht ein Abbild zur Sichtprüfung.
@@ -191,6 +194,59 @@ $window.Add_ContentRendered({
         if (-not $ok) { $script:failed++ }
     }
 
+    # --- Auffangnetz -------------------------------------------------------
+    # Die Klick-Handler laufen im UI-Faden. Fliegt dort etwas, verschwand es
+    # bis 0.5.2 spurlos — kein Protokolleintrag, kein Dialog, und der
+    # Techniker hielt den Schritt fuer erledigt. Hier wird genau dieser Weg
+    # nachgestellt: ein Fehler, den niemand abfaengt, in einem Auftrag an den
+    # Dispatcher. Register-WzCrashGuard muss ihn protokollieren und zeigen.
+    #
+    # Die Gegenprobe gehoert dazu: Ist die naechste Zeile auskommentiert, muss
+    # dieser Fall auf »protokolliert=False« fallen. Sonst prueft er nichts.
+    Register-WzCrashGuard -Window $window
+    $vorher = $syncHash.LogEntries.Count
+
+    $schliesser = New-Object Windows.Threading.DispatcherTimer
+    $schliesser.Interval = [TimeSpan]::FromMilliseconds(700)
+    $schliesser.Add_Tick({
+        $schliesser.Stop()
+        $dialog = $syncHash.ActiveDialog
+        if (-not $dialog) { return }
+        $keyArgs = New-Object Windows.Input.KeyEventArgs(
+            [Windows.Input.Keyboard]::PrimaryDevice,
+            [Windows.PresentationSource]::FromVisual($dialog),
+            0, [Windows.Input.Key]::Escape)
+        $keyArgs.RoutedEvent = [Windows.Input.Keyboard]::PreviewKeyDownEvent
+        $dialog.RaiseEvent($keyArgs)
+    }.GetNewClosure())
+    $schliesser.Start()
+
+    # BeginInvoke statt Invoke: nur ein Auftrag aus der Warteschlange geht den
+    # Weg ueber UnhandledException — genau wie ein Klick-Handler. Invoke
+    # reichte die Ausnahme an den Aufrufer zurueck und pruefte nichts.
+    [void]$window.Dispatcher.BeginInvoke([action]{ throw 'Absichtlicher Testfehler im UI-Faden' })
+    Invoke-WzDoEvents
+    $grenze = (Get-Date).AddSeconds(10)
+    while ($syncHash.ActiveDialog -and (Get-Date) -lt $grenze) {
+        Invoke-WzDoEvents
+        Start-Sleep -Milliseconds 50
+    }
+
+    $lebt = $window.IsLoaded
+    $protokolliert = @($syncHash.LogEntries | Select-Object -Skip $vorher |
+        Where-Object { $_.Level -eq 'Error' -and $_.Message -match 'Testfehler' }).Count -gt 0
+    $zu = ($null -eq $syncHash.ActiveDialog)
+
+    [void]$script:results.Add([pscustomobject]@{
+        Name = 'auffangnetz'
+        Weg  = 'Dispatcher'
+        Bild = $lebt
+        Zu   = $zu
+        Abbr = $protokolliert
+        Ok   = ($lebt -and $zu -and $protokolliert)
+    })
+    if (-not ($lebt -and $zu -and $protokolliert)) { $script:failed++ }
+
     $window.Close()
 })
 
@@ -200,15 +256,20 @@ $window.Add_ContentRendered({
 foreach ($entry in $script:results) {
     $symbol = if ($entry.Ok) { '[ok]  ' } else { '[FEHL]' }
     $color = if ($entry.Ok) { 'Green' } else { 'Red' }
+    if ($entry.Weg -eq 'Dispatcher') {
+        Write-Host ("  {0} {1,-11} Fehler im UI-Faden   Fenster lebt={2,-5} Dialog zu={3,-5} protokolliert={4}" -f `
+            $symbol, $entry.Name, $entry.Bild, $entry.Zu, $entry.Abbr) -ForegroundColor $color
+        continue
+    }
     Write-Host ("  {0} {1,-11} schließen per {2,-9} Abbild={3,-5} geschlossen={4,-5} abgebrochen={5}" -f `
         $symbol, $entry.Name, $entry.Weg, $entry.Bild, $entry.Zu, $entry.Abbr) -ForegroundColor $color
 }
 
 Write-Host ''
 if ($script:failed -eq 0) {
-    Write-Host "  Ergebnis: alle $($script:results.Count) Dialogvarianten lassen sich schließen." -ForegroundColor Green
+    Write-Host "  Ergebnis: $($script:results.Count) Prüfungen bestanden — Dialoge schließen, das Auffangnetz trägt." -ForegroundColor Green
     Write-Host "  Abbilder: $shotDir" -ForegroundColor DarkGray
     exit 0
 }
-Write-Host "  Ergebnis: $script:failed von $($script:results.Count) Varianten fehlerhaft." -ForegroundColor Red
+Write-Host "  Ergebnis: $script:failed von $($script:results.Count) Prüfungen fehlerhaft." -ForegroundColor Red
 exit 1

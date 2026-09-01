@@ -76,7 +76,10 @@
     "languageConfirm": "Umstellen",
     "themeFailed": "Das Design konnte nicht geladen werden:",
     "windowFailed": "Das Hauptfenster konnte nicht geladen werden:",
-    "cancel": "Abbrechen"
+    "cancel": "Abbrechen",
+    "crashTitle": "Da ist etwas schiefgegangen",
+    "crashMessage": "WinZii hat einen unerwarteten Fehler abgefangen und läuft weiter. Der letzte Schritt wurde möglicherweise nicht zu Ende geführt — bitte nachsehen, bevor du weitermachst. Die Einzelheiten stehen im Protokoll.",
+    "crashWhere": "Stelle: {datei}, Zeile {zeile}"
   },
   "ai": {
     "eyebrow": "// KI-ENTFERNUNG",
@@ -395,7 +398,9 @@
     "logHeadSource": "Quelle",
     "dryRunSummary": "Testmodus",
     "busyRequested": "Angefordert: {name}",
-    "logTaskError": "{name}: {grund}"
+    "logTaskError": "{name}: {grund}",
+    "logCrash": "Unerwarteter Fehler: {grund}",
+    "logCrashWhere": "  {datei}, Zeile {zeile}: {befehl}"
   },
   "auto": {
     "eyebrow": "// AUTOSTART",

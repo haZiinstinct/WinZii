@@ -574,6 +574,88 @@ function Show-WzConfirm {
     return $result
 }
 
+function Register-WzCrashGuard {
+    <#
+    .SYNOPSIS
+        Faengt Fehler ab, die in der Oberflaeche entstehen.
+    .DESCRIPTION
+        Die Hintergrundarbeit ist abgesichert: Invoke-WzTask faengt sowohl den
+        Lauf als auch OnComplete. Die Klick-Handler sind es nicht — sie lesen
+        Kataloge, bauen Dialoge, fuellen Listen, alles im UI-Faden.
+
+        Gemessen (Test-Dialogs, Abschnitt Auffangnetz): Ohne diesen Fanghaken
+        verschwindet ein solcher Fehler spurlos. Kein Protokolleintrag, kein
+        Dialog, das Fenster laeuft weiter — der Techniker haelt den Schritt fuer
+        erledigt. Das ist schlimmer als ein Absturz, weil niemand nachsieht.
+
+        Der Dispatcher meldet solche Fehler hier. Sie werden protokolliert,
+        einmal gezeigt und als behandelt markiert.
+
+        Absichtlich nicht abgefangen wird ein Fehler beim Aufbau des Fensters:
+        dafuer gibt es in main.ps1 eigene Zweige, die ehrlich abbrechen.
+    #>
+    [CmdletBinding()]
+    param([Parameter(Mandatory = $true)]$Window)
+
+    $Window.Dispatcher.add_UnhandledException({
+        param($sender, $e)
+
+        # Wiedereintritt: Steckt der Fehler im Protokollieren oder im Dialog,
+        # loeste jeder Versuch den naechsten aus. Dann lieber nur behandeln.
+        if ($syncHash.CrashGuardBusy) { $e.Handled = $true; return }
+        $syncHash.CrashGuardBusy = $true
+
+        try {
+            $fehler = $e.Exception
+            $stelle = $null
+            try {
+                $aufruf = $fehler.ErrorRecord.InvocationInfo
+                if ($aufruf -and $aufruf.ScriptName) {
+                    $stelle = [pscustomobject]@{
+                        Datei  = [IO.Path]::GetFileName($aufruf.ScriptName)
+                        Zeile  = $aufruf.ScriptLineNumber
+                        Befehl = $aufruf.Line.Trim()
+                    }
+                }
+            } catch { }
+
+            try {
+                Write-WzLog (Get-WzText 'core.logCrash' @{ grund = $fehler.Message }) -Level Error
+                if ($stelle) {
+                    Write-WzLog (Get-WzText 'core.logCrashWhere' @{
+                        datei = $stelle.Datei; zeile = $stelle.Zeile; befehl = $stelle.Befehl }) -Level Error
+                }
+            } catch { }
+
+            # Haengt die Oberflaeche noch im Arbeitszustand, waere sie danach
+            # gesperrt. Nur zuruecksetzen, wenn wirklich nichts mehr laeuft —
+            # sonst liesse sich ein zweiter Auftrag ueber den ersten legen.
+            try {
+                if ($syncHash.Busy -and -not $syncHash.CurrentTask) { Set-WzBusy -Off }
+            } catch { }
+
+            try {
+                $zeilen = @()
+                if ($stelle) {
+                    $zeilen += Get-WzText 'dialog.crashWhere' @{ datei = $stelle.Datei; zeile = $stelle.Zeile }
+                }
+                $zeilen += $fehler.Message
+                Show-WzInfo -Title (Get-WzText 'dialog.crashTitle') `
+                    -Message (Get-WzText 'dialog.crashMessage') -Items $zeilen
+            } catch {
+                # Der eigene Dialog braucht ein gesundes Fenster. Ist das die
+                # Ursache, bleibt der Weg ueber Windows.
+                try {
+                    [Windows.Forms.MessageBox]::Show($fehler.Message, 'WinZii', 'OK', 'Error') | Out-Null
+                } catch { }
+            }
+        } finally {
+            $syncHash.CrashGuardBusy = $false
+            $e.Handled = $true
+        }
+    })
+}
+
 function Show-WzInfo {
     <#
     .SYNOPSIS

@@ -1,4 +1,4 @@
-* text=auto
+﻿* text=auto
 
 # Windows-Skripte brauchen CRLF.
 #
@@ -14,6 +14,7 @@
 *.wsb   text eol=crlf
 
 *.json  text eol=lf
+*.yml   text eol=lf
 *.md    text eol=lf
 *.html  text eol=lf
 

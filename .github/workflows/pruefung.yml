@@ -1,0 +1,139 @@
+# Prüfwerkzeuge bei jedem Push — auf einem fremden, englischen Windows.
+#
+# Warum das mehr ist als Bequemlichkeit: WinZii wurde auf EINEM deutschen
+# Windows 11 entwickelt. »Nicht-deutsches Windows« steht seit der ersten
+# Fassung als Grenze im README, weil es hier schlicht nicht prüfbar ist.
+# Die GitHub-Läufer sind englische Windows-Server — damit fällt diese Grenze
+# bei jedem Push, ohne dass jemand daran denken muss.
+#
+# Gesucht wird genau die Sorte Fehler, die auf dem Entwicklungsrechner nie
+# auftritt: Zahlen- und Datumsformate, Vergleiche gegen übersetzte
+# Windows-Ausgaben, Annahmen über den Suchpfad.
+#
+# shell: powershell ist Windows PowerShell 5.1 — das Ziel von WinZii.
+# pwsh (PowerShell 7) wäre eine andere Laufzeit und würde am Ziel vorbeiprüfen.
+
+name: Prüfung
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  pruefwerkzeuge:
+    name: Prüfwerkzeuge (englisches Windows)
+    runs-on: windows-latest
+
+    steps:
+      - name: Auschecken
+        uses: actions/checkout@v4
+
+      - name: Umgebung nennen
+        shell: powershell
+        run: |
+          Write-Host "Windows:  $((Get-CimInstance Win32_OperatingSystem).Caption)"
+          Write-Host "Sprache:  $((Get-UICulture).Name)"
+          Write-Host "Kultur:   $((Get-Culture).Name)"
+          Write-Host "PS:       $($PSVersionTable.PSVersion)"
+
+      - name: PSScriptAnalyzer einrichten
+        shell: powershell
+        run: |
+          Install-Module PSScriptAnalyzer -Scope CurrentUser -Force -SkipPublisherCheck
+          Write-Host "PSScriptAnalyzer $((Get-Module -ListAvailable PSScriptAnalyzer | Select-Object -First 1).Version)"
+
+      # Die Werkzeuge laufen einzeln, damit im Protokoll steht, welches
+      # gefallen ist. »if: always()« hält den Lauf am Leben, bis alle durch
+      # sind — ein Fehlschlag im ersten würde sonst die übrigen verdecken.
+      - name: Test-Smoke
+        if: always()
+        shell: powershell
+        run: .\tools\Test-Smoke.ps1
+
+      - name: Test-Language
+        if: always()
+        shell: powershell
+        run: .\tools\Test-Language.ps1
+
+      - name: Test-Catalogs
+        if: always()
+        shell: powershell
+        run: .\tools\Test-Catalogs.ps1
+
+      - name: Test-Pages
+        if: always()
+        shell: powershell
+        run: .\tools\Test-Pages.ps1
+
+      - name: Test-Contrast
+        if: always()
+        shell: powershell
+        run: .\tools\Test-Contrast.ps1
+
+      - name: Test-Office
+        if: always()
+        shell: powershell
+        run: .\tools\Test-Office.ps1
+
+      - name: Test-Process
+        if: always()
+        shell: powershell
+        run: .\tools\Test-Process.ps1
+
+      # Fasst die Registry und legt kurzzeitig einen Energieplan an. Auf einem
+      # Wegwerf-Läufer ist das unbedenklich; auf einem echten Gerät wäre es
+      # das auch, denn das Werkzeug stellt den Ausgangszustand wieder her.
+      - name: Test-Undo
+        if: always()
+        shell: powershell
+        run: .\tools\Test-Undo.ps1
+
+      # Braucht einen STA-Faden und baut echte WPF-Fenster. Ob das auf einem
+      # Läufer ohne angemeldete Sitzung trägt, entscheidet der erste Lauf.
+      - name: Test-Dialogs
+        if: always()
+        shell: powershell
+        run: powershell -NoProfile -ExecutionPolicy Bypass -STA -File .\tools\Test-Dialogs.ps1
+
+      - name: Invoke-Analyzer
+        if: always()
+        shell: powershell
+        run: .\tools\Invoke-Analyzer.ps1
+
+  oberflaeche:
+    name: Oberfläche starten und abbilden
+    runs-on: windows-latest
+
+    steps:
+      - name: Auschecken
+        uses: actions/checkout@v4
+
+      # Der Selbsttest baut das Fenster wirklich auf, wechselt auf eine Seite
+      # und legt ein Abbild ab. Auf einem fremden System ist das der Nachweis,
+      # dass WinZii nicht nur syntaktisch heil ist, sondern startet.
+      - name: Start in beiden Sprachen
+        shell: powershell
+        run: |
+          New-Item -ItemType Directory -Force abbilder | Out-Null
+          $fehler = 0
+          foreach ($sprache in 'de', 'en') {
+            $env:WZ_SELFTEST = '9000'
+            $env:WZ_SELFTEST_LANG = $sprache
+            $env:WZ_SELFTEST_PAGE = 'Dashboard'
+            $env:WZ_SELFTEST_OUT = (Join-Path $PWD "abbilder\dashboard-$sprache.png")
+            & powershell -NoProfile -ExecutionPolicy Bypass -File .\src\launcher.ps1 -NoElevate
+            if ($LASTEXITCODE -ne 0) { Write-Host "::error::Start auf $sprache endete mit $LASTEXITCODE"; $fehler++ }
+            if (-not (Test-Path $env:WZ_SELFTEST_OUT)) { Write-Host "::error::Kein Abbild für $sprache"; $fehler++ }
+          }
+          if ($fehler -gt 0) { exit 1 }
+
+      - name: Abbilder aufbewahren
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: dashboard-abbilder
+          path: abbilder/
+          if-no-files-found: warn
