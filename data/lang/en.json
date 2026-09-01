@@ -393,7 +393,9 @@
     "logHeadUser": "User",
     "logHeadWindows": "Windows",
     "logHeadSource": "Source",
-    "dryRunSummary": "Test mode"
+    "dryRunSummary": "Test mode",
+    "busyRequested": "Requested: {name}",
+    "logTaskError": "{name}: {grund}"
   },
   "auto": {
     "eyebrow": "// STARTUP",

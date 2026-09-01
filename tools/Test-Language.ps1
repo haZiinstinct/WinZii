@@ -230,6 +230,9 @@ $codeDirs = @((Join-Path $root 'src\modules'), (Join-Path $root 'src\pages'))
 $stellen = @(
     '-Title'; '-Message'; '-Text'; '-Summary'; '-ConfirmText'; '-ChoiceLabel'
     '-OptionText'; '-Recommendation'; '-Verdict'; '-Caption'; '-Detail'; '-Hint'
+    # -Items fuellt die Aufzaehlung in Dialogen. Ohne diesen Eintrag stand dort
+    # bis 0.5.2 »Angefordert: ...« auf Deutsch, mitten im englischen Dialog.
+    '-Items'
 )
 # Ein einzelner regulaerer Ausdruck je Aufrufstelle, beide Anfuehrungsarten.
 # In "..." wird die Einsetzung ($var, $(...)) vorher herausgeschnitten: was
