@@ -10,7 +10,7 @@ bequemen Zweig. Genau daraus sind die drei Symptome entstanden, die den Audit au
 haben. Alles unten ist der Teil, der auf dem Entwicklungsrechner **grundsätzlich nicht**
 prüfbar ist.
 
-Stand: **0.5.2**, veröffentlicht am 01.09.2026. Alle neun Prüfwerkzeuge grün, Sandbox-Lauf mit dem
+Stand: **0.5.3**, 05.09.2026. Alle elf Prüfwerkzeuge grün, Sandbox-Lauf mit dem
 0.5.1-Stand bestanden, Start aus sauberer Kopie mit leerem `offline\` geprüft.
 
 > **Was die CI seither abnimmt.** Seit `.github/workflows/pruefung.yml` laufen die neun
@@ -22,11 +22,9 @@ Stand: **0.5.2**, veröffentlicht am 01.09.2026. Alle neun Prüfwerkzeuge grün,
 > geben auf einem englischen System englischen Text zurück, und WinZii wertet ihn aus.
 > Genau dafür ist Punkt 13 unten da.
 
-Im Lauf zu 0.5.1 sind sechs Punkte auf einem zweiten Notebook abgearbeitet — Punkt 12
-hat dabei zwei Fehler gefunden, beide behoben. Damit hier niemand nachzählen muss, was
-noch aussteht, stehen **alle zwölf** Punkte in einer Tabelle. Zwei davon fehlten in der
-ersten Fassung dieser Übersicht ganz — sie sind nie abgearbeitet worden, standen aber
-auch nicht als offen da:
+Drei Läufe haben die Tabelle gefüllt: zwei auf dem zweiten Notebook (0.5.1 mit Rechten,
+0.5.3 ohne) und einer auf dem Entwicklungsrechner (0.5.2). Damit hier niemand nachzählen
+muss, was noch aussteht, stehen **alle 23** Punkte in einer Tabelle:
 
 | Punkt | Stand |
 | --- | --- |
@@ -37,27 +35,29 @@ auch nicht als offen da:
 | 5 — OEM-Office | **Offen.** Auf keinem der beiden Geräte liegt ein vorinstalliertes OEM-Office; der Punkt braucht ein Kundengerät. |
 | 6 — Startdauer | **Erledigt** (Notebook, 0.4.1): 57,5 s im Mittel als Referenzwert. |
 | 7 — Energieplan | **Erledigt** (Notebook, 0.5.1), samt Kühlungsrichtlinie und Turbo-Verhalten. |
-| 8 — kleiner Bildschirm | **Erledigt** (Entwicklungsrechner, 0.5.1). `WZ_SELFTEST_SIZE` erzwingt das Format auch auf einem großen Bildschirm — bei 1092×614 und am Mindestmaß 1000×560 angesehen: Konsole startet eingeklappt, die Seitenleiste holt »Protokoll« als vierzehnten Eintrag ins Bild, keine Worttrennung mitten im Wort. Nur das Ziehen von Hand fehlt. |
+| 8 — kleiner Bildschirm | **Erledigt** (Entwicklungsrechner 0.5.1, Notebook 0.5.3). `WZ_SELFTEST_SIZE` erzwingt das Format auch auf einem großen Bildschirm — bei 1092×614 und am Mindestmaß 1000×560 angesehen: Konsole startet eingeklappt, die Seitenleiste holt »Protokoll« als vierzehnten Eintrag ins Bild, keine Worttrennung mitten im Wort. Am 05.09. auf dem Notebook nachgeholt, was fehlte: das Fenster unter das Mindestmaß gezogen — es hält bei 1000×560 —, der Klick auf die Klappzeile zieht die Konsole auf, der Erststart-Dialog passt bei 1092×614 ins Fenster. |
 | 9 — Rubrik »Sicherheit« | **Offen.** Die neun Kennungen lösen sich über `winget show` auf, installiert wurde bis heute keine. |
 | 10 — Sandbox | **Halb.** Mit 0.5.2 gelaufen (01.09.): **39 Prüfungen, kein Fehler.** Diesmal war winget in der Sandbox vorhanden, deshalb wurde 7-Zip wirklich über winget installiert — von den vier erwarteten `[--]`-Zeilen bleibt nur der Drucker. Der Netzweg des Laptops bleibt ungeprüft (Sandbox dort abgeschaltet). |
 | 11 — Akku, BitLocker, OneDrive | **Halb.** Der Akku ist geprüft. Ein verschlüsselter Datenträger und ein OneDrive mit Platzhaltern fehlen weiterhin — beides gibt es auf keinem der zwei Geräte. |
 | 12 — Restesuche | **Erledigt** (Notebook, 0.5.1) und der ergiebigste Punkt: zwei echte Fehler. |
 | 13 — englisches Windows | **Halb.** Die CI deckt den statischen Teil bei jedem Push. Dazu prüft `tools\Test-Parsers.ps1` alle neun Stellen, die Windows-Ausgaben deuten, gegen die **echten** deutschen und englischen Wortlaute — alle treffen. `DISM` und `chkdsk` werten gar keinen Text aus, sondern Rückgabewerte, und können dort nicht brechen. Offen bleibt der Lauf auf einem wirklich englischen System. |
-| 14 — Sprachwechsel im Betrieb | **Erledigt** (01.09.) — **mit Befund.** `Update-WzMeasuredTexts` bewirkte nichts: zwei Hintergrundaufgaben gleichzeitig angestoßen, die zweite abgewiesen. Behoben, und `tools\Test-LanguageSwitch.ps1` prüft es seither bei jedem Push. |
+| 14 — Sprachwechsel im Betrieb | **Erledigt** (01.09.) — **mit Befund.** `Update-WzMeasuredTexts` bewirkte nichts: zwei Hintergrundaufgaben gleichzeitig angestoßen, die zweite abgewiesen. Behoben, und `tools\Test-LanguageSwitch.ps1` prüft es seither bei jedem Push. Am 05.09. ein zweiter Befund, am Werkzeug selbst: Es schaltete auf Englisch **ohne** `-NoSave` und hinterließ »en« in `einstellungen.json` — der nächste echte Start auf dem deutschen Notebook kam auf Englisch hoch. Behoben; belegt, dass die Datei nach dem Lauf wegbleibt. |
 | 15 — Windows 10 | **Offen.** Steht seit der ersten Fassung als Grenze im README, ein vollständiger Durchlauf fehlt. |
-| 16 — schreibgeschützter Stick, FAT32 | **Halb, mit Befund.** Schreibschutz geprüft (01.09.): WinZii startet, meldet es in Konsole und auf der Protokollseite, legt nichts an. Befund: Die Ausgabeknöpfe luden weiter zum Klicken ein — jetzt abgeschaltet, wenn nichts geschrieben werden kann. FAT32 nur im Code geprüft (alle vier Zweige da, Texte in beiden Sprachen); ein FAT32-Datenträger fehlt. |
+| 16 — schreibgeschützter Stick, FAT32 | **Halb, mit Befund.** Schreibschutz geprüft (01.09.): WinZii startet, meldet es in Konsole und auf der Protokollseite, legt nichts an. Befund: Die Ausgabeknöpfe luden weiter zum Klicken ein — jetzt abgeschaltet, wenn nichts geschrieben werden kann. FAT32 nur im Code geprüft (alle vier Zweige da, Texte in beiden Sprachen); ein FAT32-Datenträger fehlt. Ein Lauf auf einer virtuellen FAT32-Platte (diskpart, 600 MB, WinZii daraus starten) war am 05.09. vorbereitet — er braucht Administratorrechte, die Abfrage wurde nicht bestätigt. |
 | 17 — Domänen-PC mit Richtlinien | **Offen.** Der Launcher warnt davor, geprüft ist es nie. Firmenkunden sind der Normalfall. |
-| 18 — Start ohne Rechte | **Erledigt** (01.09.) — **mit Befund.** Alle fünfzehn Seiten laden sauber, aber WinZii merkte gar nicht, dass ihm die Rechte fehlen. Der Hinweis steht jetzt in den ersten Protokollzeilen, mit der Liste der betroffenen Seiten. |
+| 18 — Start ohne Rechte | **Erledigt** (01.09., Notebook 05.09.) — **mit zwei Befunden.** Alle fünfzehn Seiten laden sauber, aber WinZii merkte gar nicht, dass ihm die Rechte fehlen. Der Hinweis steht jetzt in den ersten Protokollzeilen, mit der Liste der betroffenen Seiten — auf dem Notebook bestätigt, als dritte und vierte Zeile, in beiden Sprachen. Zweiter Befund dort: Secure Boot meldete »n/v (kein UEFI oder gesperrt)« auf einem UEFI-Notebook, weil `Confirm-SecureBootUEFI` ohne Rechte den Zugriff verweigert. Jetzt »ohne Administratorrechte nicht abfragbar«. |
 | 19 — langsames Gerät | **Offen.** Alle Zeitlimits sind auf schneller Hardware gemessen. |
-| 20 — fremder Virenscanner | **Offen.** Auf Neugeräten immer da, hier nie. |
+| 20 — fremder Virenscanner | **Erledigt** (Notebook, 0.5.3) — **mit Befund.** Malwarebytes läuft neben Defender; das Sicherheitscenter kennt beide, die Karte »Virenschutz« nannte nur Defender. Der abgeleitete Fall wiegt schwerer: Neben Norton oder McAfee ist Defender passiv, `Get-MpComputerStatus` antwortet trotzdem — mit »Echtzeitschutz AUS« und einer Warnung im Übergabeblatt für einen geschützten PC. Behoben: erst das Sicherheitscenter, dann Defender; »Defender passiv« ohne Warnung, und Defenders Signaturalter zählt nur, wenn Defender der Schutz ist. Ungesehen bleibt ein Gerät, auf dem Defender wirklich passiv ist, und ob der Scanner WinZii selbst anhält. |
 | 21 — hohe Skalierung, zweiter Monitor | **Halb, ohne Befund.** 1920×1080 (200 % auf 4K), das Mindestmaß 1000×560 und ein sehr breites 2560×720 sitzen alle (01.09.). Ein zweiter Monitor mit abweichender Skalierung fehlt. |
 | 22 — ARM64 | **Offen.** An zwei Stellen im Code berücksichtigt, nie auf einem Gerät gesehen. |
+| 23 — Windows-Updates mit alten Herstellertreibern | **Halb, ohne Befund.** Das Notebook bekommt von Windows Update vier Intel-Treiber von 2017 und 2019 angeboten — genau der Fall, vor dem die Seite seit 0.5.2 warnt. Suche 4,3 s, alle vier als Treiber erkannt und unten einsortiert, keiner vorausgewählt, Größe 0 erscheint nicht als »bis zu 0 MB«. Eingespielt wurde nichts, mit Absicht: Ein Treiber von 2017 über den aktuellen ist genau das, was die Seite verhindern soll. Offen bleibt das Einspielen eines echten Updates mit Neustart. |
 
 Was davon nur ein Kundengerät klären kann: **5** (OEM-Office), **9** (Sicherheitsprogramme
-wirklich installieren), **11** (BitLocker, OneDrive), **2** (zweites Konto), **17**
-(Domäne), **20** (fremder Virenscanner) und **22** (ARM64). **4** und **10** ließen sich
-jederzeit nachholen — für 4 reicht ein leerer Stick, für 10 das Einschalten von Windows
-Sandbox auf dem Notebook.
+wirklich installieren), **11** (BitLocker, OneDrive), **2** (zweites Konto — auf dem
+Notebook ist »Administrator« abgeschaltet), **17** (Domäne) und **22** (ARM64). **4**, **10**
+und **16** ließen sich jederzeit nachholen — für 4 reicht ein leerer Stick, für 10 das
+Einschalten von Windows Sandbox auf dem Notebook (Neustart), für 16 eine virtuelle
+FAT32-Platte; alle drei brauchen Administratorrechte.
 
 > **Abnahmelauf vom 01.09.2026 auf dem Entwicklungsrechner.** Abgearbeitet wurde alles,
 > was ohne fremdes Gerät geht: **4** (saubere Kopie), **10** (Sandbox), **13** (Deutung
@@ -66,6 +66,18 @@ Sandbox auf dem Notebook.
 >
 > Nicht möglich waren: ein wirklich englisches Windows, ein FAT32-Datenträger (dafür
 > braucht es Administratorrechte für eine virtuelle Platte) und ein zweiter Monitor.
+
+> **Abnahmelauf vom 05.09.2026 auf dem Notebook, ohne Administratorrechte** (0.5.2 → 0.5.3).
+> Abgearbeitet: **8** (mit dem Auge, samt Ziehen unters Mindestmaß), **18** (Hinweis im
+> Protokoll), **20** (Malwarebytes neben Defender) und der neue Punkt **23** (vier alte
+> Intel-Treiber); dazu **14** am Werkzeug selbst. Drei Funde — 14, 18 und 20 —, alle
+> behoben.
+>
+> Vorbereitet, aber nicht gelaufen, weil die Rechteabfrage abgelehnt wurde: **4** (winget
+> ohne Zwischenspeicher, ~315 MB über WLAN) und **16** (FAT32 auf virtueller Platte).
+> Nicht möglich: **2** (»Administrator« abgeschaltet), **10** (Sandbox abgeschaltet,
+> Einschalten braucht einen Neustart), **13** (nur de-DE installiert), **21** (ein
+> Bildschirm).
 
 > **`main` ist weiter als der Tag.** Auf dem Entwicklungsrechner wird parallel gearbeitet.
 > Vor dem ersten Commit hier immer `git pull --rebase origin main` — sonst wird der Push

@@ -11,7 +11,7 @@ Run it from a USB stick: clean up, optimize, set up — no installation, no acco
 
 <sub>**Fully bilingual, German and English** — interface, dialogs, log, reports and handover sheet. The language button sits at the bottom of the sidebar and takes effect immediately, including for values that were already measured.</sub>
 
-![Version](https://img.shields.io/badge/Version-0.5.2-00d4ff?labelColor=0a0a0f&style=flat-square)
+![Version](https://img.shields.io/badge/Version-0.5.3-00d4ff?labelColor=0a0a0f&style=flat-square)
 [![Prüfung](https://github.com/haZiinstinct/WinZii/actions/workflows/pruefung.yml/badge.svg)](https://github.com/haZiinstinct/WinZii/actions/workflows/pruefung.yml)
 ![Windows](https://img.shields.io/badge/Windows-10%20%7C%2011-00d4ff?labelColor=0a0a0f&style=flat-square)
 ![PowerShell](https://img.shields.io/badge/PowerShell-5.1-00d4ff?labelColor=0a0a0f&style=flat-square)
@@ -56,7 +56,7 @@ That is all. WinZii needs no installation, no runtime, no particular drive lette
 > **Windows shows a blue SmartScreen warning?**
 > Click "More info" and then "Run anyway". The warning appears for any unsigned file downloaded from the internet. Every release ships a SHA256 checksum so you can verify the archive before extracting:
 > ```powershell
-> Get-FileHash .\WinZii-0.5.2.zip -Algorithm SHA256
+> Get-FileHash .\WinZii-0.5.3.zip -Algorithm SHA256
 > ```
 
 **Requirements:** Windows 10 or 11 with administrator rights. PowerShell 5.1 and .NET Framework ship with Windows.
@@ -96,13 +96,14 @@ To be blunt, so nobody gets surprised: WinZii was developed on **one** machine �
 | **Battery** | Verified on the notebook: wear is measured and shown on the dashboard. Up to 0.4.0 that same device reported "no battery present", because detection hung on a single WMI class. |
 | **Wi-Fi** | Connection check, internet access and, since 0.5.1, downloads verified over Wi-Fi with no cable in the machine: 93 MB in 32 s, an install through winget including the follow-up check, and a failed download leaves nothing half-finished behind. |
 | **BitLocker, OneDrive** | The "not present" path is verified and reports cleanly, on the notebook additionally cross-checked against `manage-bde`. An encrypted volume and a OneDrive with placeholders are still missing. |
+| **Third-party antivirus** | Since 0.5.3 the security card reads the Security Center first and names every enabled scanner — verified on the notebook with Malwarebytes running alongside Defender. The Norton or McAfee case with Defender in **passive mode** is derived from that, not observed: up to 0.5.2 it read "real-time protection OFF" with a warning on the handover sheet, now "Defender passive" with no warning. Whether such a scanner stops WinZii itself only a machine running one can tell. |
 | **Power plan** | Creating, activating, a second run without a duplicate copy, and undoing have been exercised on the notebook. What separates mains from battery are the cooling policy and the turbo behaviour — many vendors hide both from the power UI. They can still be set, you just cannot inspect them there afterwards. If a device cannot set them at all, WinZii says in the log that the plan achieves nothing. |
 | **Downloading Office** | Cancelling ends the deployment tool, **not** the download: the fetching is done by the Windows Click-to-Run service, which carries on in the background. During the acceptance run the folder grew from 39 MB to 2.5 GB after the cancel. WinZii says so in the log and names the folder to delete; since 0.4.1 a partial cache is reliably reported as incomplete. |
 | **Leftover cleanup after uninstalling** | The rules and the whole chain — find, back up, remove — are covered by 46 checks in `tools\Test-Undo.ps1`. Since 0.5.1 it has also faced real uninstallers, on a machine with 53 programs grown over the years; that run found two bugs, both fixed (see the [CHANGELOG](CHANGELOG.md)). Two things hold permanently: **deleted folders are gone for good** — only registry keys are backed up — and the search is deliberately narrow. It would rather miss a leftover than touch another program's folder — since 0.5.1 not even when the vendor itself records the whole family's shared folder as the install location. |
 | **Driver backup, Office install** | Verified read-only, never executed end to end. |
 | **Restoring printers** | Fully exercised in the Sandbox: pulling the driver from the driver store, creating the network port, adding the printer, and not duplicating it on a second run. What remains untested is a printer on real hardware — USB ports only appear once the device is attached and are deliberately skipped. |
 | **Restoring Wi-Fi** | Profile files are read correctly and a failure is reported cleanly. Actually creating a profile could never be verified — neither the development machine nor the Sandbox has a Wi-Fi adapter. |
-| **Small screens** | The window needs at least 1000 × 560 device-independent pixels and shrinks itself to the working area. At 1092 × 614 — a 1366-wide laptop at 125 % — everything checks out: the console starts collapsed, the sidebar scrolls the active entry into view, nothing sits outside the window. Since 0.5.0 no word breaks mid-card even at the exact minimum. |
+| **Small screens** | The window needs at least 1000 × 560 device-independent pixels and shrinks itself to the working area. At 1092 × 614 — a 1366-wide laptop at 125 % — everything checks out: the console starts collapsed, the sidebar scrolls the active entry into view, nothing sits outside the window. Since 0.5.0 no word breaks mid-card even at the exact minimum. With 0.5.3 checked on the notebook itself rather than forced: the window holds its minimum when dragged smaller, and the first-run dialog fits inside. |
 
 **Verified in Windows Sandbox** (`tools\Test-Sandbox.wsb`, a pristine Windows 11 24H2 without winget): launcher startup, applying real tweaks and reverting them, network diagnosis, the winget bootstrap, finding and reading a backup, adding a network printer including its driver, and a real file migration with subfolders — all on a system that knows nothing about this project.
 

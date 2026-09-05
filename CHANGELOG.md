@@ -3,6 +3,50 @@
 Alle nennenswerten Änderungen an WinZii. Die Fassungen folgen
 [Semantic Versioning](https://semver.org/lang/de/).
 
+## [0.5.3] — 2026-09-05
+
+Zweiter Abnahmelauf auf dem Notebook, diesmal ohne Administratorrechte — und auf
+dem ersten Gerät, auf dem ein fremder Virenscanner neben Defender läuft. Drei
+Funde, keiner davon auf dem Entwicklungsrechner zu sehen: Dort gibt es keinen
+zweiten Scanner, dort laufen die Rechte immer mit, und dort merkt niemand, was
+ein Prüfwerkzeug in `einstellungen.json` hinterlässt.
+
+### Behoben
+
+- **Die Sicherheitskarte verschwieg den fremden Virenscanner.** Malwarebytes
+  steht im Sicherheitscenter als eingeschaltet, die Karte »Virenschutz« nannte
+  nur Defender. Bis hierher zählte allein `Get-MpComputerStatus` — und das
+  antwortet auch neben Norton oder McAfee, dort aber mit »Echtzeitschutz AUS«,
+  weil Defender passiv ist: eine Warnung im Dashboard und im Übergabeblatt für
+  einen PC, der geschützt ist. Jetzt kommt zuerst das Sicherheitscenter zu Wort
+  (Name und Signaturstand jedes eingeschalteten Scanners), Defender steht als
+  »passiv« daneben, wenn ein anderer übernommen hat, und sein Signaturalter
+  zählt nur noch, wenn Defender auch der Schutz ist. Auf Server-Windows fehlt
+  der Namensraum — dann bleibt alles wie bisher.
+- **Ohne Administratorrechte meldete Secure Boot »kein UEFI oder gesperrt«** —
+  auf einem UEFI-Notebook. `Confirm-SecureBootUEFI` verweigert ohne Rechte den
+  Zugriff, und die Karte machte daraus eine Aussage über die Hardware. Jetzt
+  steht dort, dass die Rechte fehlen.
+- **`tools\Test-LanguageSwitch.ps1` stellte die Sprache des Anwenders um.** Das
+  Werkzeug schaltete im Programm auf Englisch, ohne `-NoSave` — »en« landete in
+  `einstellungen.json`, und der nächste echte Start auf einem deutschen Gerät
+  kam auf Englisch hoch. Ein Prüfwerkzeug darf nichts hinterlassen, was der
+  Anwender sieht.
+
+### Geprüft
+
+- Der kleine Bildschirm auf dem Notebook selbst, nicht nur erzwungen: Konsole
+  startet eingeklappt, der Klick zieht sie auf, das Fenster hält das Mindestmaß
+  1000×560, wenn man es kleiner zieht, der Erststart-Dialog passt bei 1092×614
+  ins Fenster, kein Wort bricht in einer Karte.
+- Der Start ohne Rechte: Der Hinweis aus 0.5.2 steht als dritte und vierte
+  Protokollzeile, auf Deutsch wie auf Englisch.
+- Die Updates-Seite auf einem Gerät, dem Windows Update vier Intel-Treiber von
+  2017 und 2019 anbietet — genau der Fall, vor dem sie warnt: alle vier als
+  Treiber erkannt, keiner vorausgewählt.
+- `tools\Test-Parsers.ps1` deutet jetzt auch die Zustände des Sicherheitscenters;
+  die beiden ersten Werte sind die echten vom Notebook.
+
 ## [0.5.2] — 2026-09-01
 
 Die Oberfläche war seit 0.4.0 zweisprachig, alles andere nicht. Diese Fassung
