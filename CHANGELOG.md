@@ -64,6 +64,10 @@ ein Prüfwerkzeug in `einstellungen.json` hinterlässt.
   Sprachen.
 - Die winget-Nachinstallation ohne Zwischenspeicher, über WLAN: 300 MB in
   40 s, winget antwortet danach im selben und in einem neuen Prozess.
+- Der Sandbox-Lauf über das WLAN des Notebooks, nach Einschalten des Features:
+  42 Prüfungen, kein Fehler, 2,3 Minuten — winget von null nachinstalliert,
+  samt Bereitstellung für alle Benutzer, die auf dem Host selbst am
+  `Appx`-Schlüssel scheitert. Nur der Drucker bleibt »nur berichtet«.
 
 ## [0.5.2] — 2026-09-01
 

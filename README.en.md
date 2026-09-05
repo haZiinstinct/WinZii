@@ -106,7 +106,7 @@ To be blunt, so nobody gets surprised: WinZii was developed on **one** machine �
 | **Restoring Wi-Fi** | Profile files are read correctly and a failure is reported cleanly. Actually creating a profile could never be verified — neither the development machine nor the Sandbox has a Wi-Fi adapter. |
 | **Small screens** | The window needs at least 1000 × 560 device-independent pixels and shrinks itself to the working area. At 1092 × 614 — a 1366-wide laptop at 125 % — everything checks out: the console starts collapsed, the sidebar scrolls the active entry into view, nothing sits outside the window. Since 0.5.0 no word breaks mid-card even at the exact minimum. With 0.5.3 checked on the notebook itself rather than forced: the window holds its minimum when dragged smaller, and the first-run dialog fits inside. |
 
-**Verified in Windows Sandbox** (`tools\Test-Sandbox.wsb`, a pristine Windows 11 24H2 without winget): launcher startup, applying real tweaks and reverting them, network diagnosis, the winget bootstrap, finding and reading a backup, adding a network printer including its driver, and a real file migration with subfolders — all on a system that knows nothing about this project.
+**Verified in Windows Sandbox** (`tools\Test-Sandbox.wsb`, a pristine Windows 11 without winget): launcher startup, applying real tweaks and reverting them, network diagnosis, the winget bootstrap, finding and reading a backup, adding a network printer including its driver, and a real file migration with subfolders — all on a system that knows nothing about this project. Most recently with 0.5.3 on the notebook, over its Wi-Fi: 42 checks, no failures.
 
 Feedback from other systems is very welcome — especially from Windows 10 and non-German installations.
 

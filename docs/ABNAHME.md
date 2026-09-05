@@ -37,7 +37,7 @@ muss, was noch aussteht, stehen **alle 23** Punkte in einer Tabelle:
 | 7 — Energieplan | **Erledigt** (Notebook, 0.5.1), samt Kühlungsrichtlinie und Turbo-Verhalten. |
 | 8 — kleiner Bildschirm | **Erledigt** (Entwicklungsrechner 0.5.1, Notebook 0.5.3). `WZ_SELFTEST_SIZE` erzwingt das Format auch auf einem großen Bildschirm — bei 1092×614 und am Mindestmaß 1000×560 angesehen: Konsole startet eingeklappt, die Seitenleiste holt »Protokoll« als vierzehnten Eintrag ins Bild, keine Worttrennung mitten im Wort. Am 05.09. auf dem Notebook nachgeholt, was fehlte: das Fenster unter das Mindestmaß gezogen — es hält bei 1000×560 —, der Klick auf die Klappzeile zieht die Konsole auf, der Erststart-Dialog passt bei 1092×614 ins Fenster. |
 | 9 — Rubrik »Sicherheit« | **Offen.** Die neun Kennungen lösen sich über `winget show` auf, installiert wurde bis heute keine. |
-| 10 — Sandbox | **Halb.** Mit 0.5.2 gelaufen (01.09.): **39 Prüfungen, kein Fehler.** Diesmal war winget in der Sandbox vorhanden, deshalb wurde 7-Zip wirklich über winget installiert — von den vier erwarteten `[--]`-Zeilen bleibt nur der Drucker. Der Netzweg des Laptops bleibt ungeprüft (Sandbox dort abgeschaltet). |
+| 10 — Sandbox | **Erledigt** (Entwicklungsrechner 01.09., Notebook 05.09.). Mit 0.5.2 gelaufen: **39 Prüfungen, kein Fehler.** Am 05.09. auf dem Notebook nach Einschalten des Features und Neustart: **42 Prüfungen, kein Fehler, 2,3 Minuten**, über das WLAN des Laptops (FRITZ!Box) — winget war in der Sandbox nicht vorhanden, die Nachinstallation lief den ganzen Weg samt Bereitstellung für alle Benutzer, 7-Zip danach über winget, Office-Werkzeug geladen. Von den vier erwarteten `[--]`-Zeilen bleibt nur der Drucker. Nebenbefund: Dass die Bereitstellung **in der Sandbox** gelingt und auf dem Host nicht, belegt den `Appx`-Schlüssel des Laptops als Ursache (Punkt 4). |
 | 11 — Akku, BitLocker, OneDrive | **Halb.** Der Akku ist geprüft. Ein verschlüsselter Datenträger und ein OneDrive mit Platzhaltern fehlen weiterhin — beides gibt es auf keinem der zwei Geräte. |
 | 12 — Restesuche | **Erledigt** (Notebook, 0.5.1) und der ergiebigste Punkt: zwei echte Fehler. |
 | 13 — englisches Windows | **Halb.** Die CI deckt den statischen Teil bei jedem Push. Dazu prüft `tools\Test-Parsers.ps1` alle neun Stellen, die Windows-Ausgaben deuten, gegen die **echten** deutschen und englischen Wortlaute — alle treffen. `DISM` und `chkdsk` werten gar keinen Text aus, sondern Rückgabewerte, und können dort nicht brechen. Offen bleibt der Lauf auf einem wirklich englischen System. |
@@ -54,9 +54,8 @@ muss, was noch aussteht, stehen **alle 23** Punkte in einer Tabelle:
 
 Was davon nur ein Kundengerät klären kann: **5** (OEM-Office), **9** (Sicherheitsprogramme
 wirklich installieren), **11** (BitLocker, OneDrive), **2** (zweites Konto — auf dem
-Notebook ist »Administrator« abgeschaltet), **17** (Domäne) und **22** (ARM64). **10** ließe
-sich jederzeit nachholen — das Einschalten von Windows Sandbox auf dem Notebook, mit
-Neustart. Für **16** fehlt nur noch ein echter Stick statt der virtuellen Platte.
+Notebook ist »Administrator« abgeschaltet), **17** (Domäne) und **22** (ARM64). Für **16**
+fehlt nur noch ein echter Stick statt der virtuellen Platte.
 
 > **Abnahmelauf vom 01.09.2026 auf dem Entwicklungsrechner.** Abgearbeitet wurde alles,
 > was ohne fremdes Gerät geht: **4** (saubere Kopie), **10** (Sandbox), **13** (Deutung
@@ -72,11 +71,11 @@ Neustart. Für **16** fehlt nur noch ein echter Stick statt der virtuellen Platt
 > Intel-Treiber); dazu **14** am Werkzeug selbst. Mit Rechten: **16** (FAT32 auf
 > virtueller Platte) und **4** (winget ohne Zwischenspeicher, über WLAN). Fünf Funde —
 > 14, 18, 20 und zwei in 4 —, alle behoben; der Lauf zu 4 danach wiederholt, das
-> Protokoll endet ohne Error-Zeile.
+> Protokoll endet ohne Error-Zeile. Zum Schluss **10**: Windows Sandbox eingeschaltet,
+> Neustart, Sandbox-Test über das WLAN des Notebooks — 42 Prüfungen, kein Fehler.
 >
-> Nicht möglich: **2** (»Administrator« abgeschaltet), **10** (Sandbox abgeschaltet,
-> Einschalten braucht einen Neustart), **13** (nur de-DE installiert), **21** (ein
-> Bildschirm).
+> Nicht möglich: **2** (»Administrator« abgeschaltet), **13** (nur de-DE installiert),
+> **21** (ein Bildschirm).
 
 > **`main` ist weiter als der Tag.** Auf dem Entwicklungsrechner wird parallel gearbeitet.
 > Vor dem ersten Commit hier immer `git pull --rebase origin main` — sonst wird der Push
