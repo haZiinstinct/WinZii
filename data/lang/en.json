@@ -219,6 +219,8 @@
     "logPackageSetupFailed": "{name} could not be set up: {grund}",
     "logProvisioned": "App Installer provisioned for all users of this PC",
     "logProvisionFailed": "Provisioning for all users not possible: {grund}",
+    "logProvisionDenied": "Provisioning for all users not possible: access denied, despite administrator rights. Windows keeps the provisioning service out of its key HKLM\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Appx — details in C:\\Windows\\Logs\\DISM\\dism.log. The signed-in account has winget regardless.",
+    "logPackageInUse": "{name} is currently in use — the installed version stays.",
     "logWingetReady": "winget is ready ({version})",
     "logWingetUnreachable": "winget cannot be reached despite the setup. Try again after a restart.",
     "logNoFileArrived": "Download finished, but no file arrived.",

@@ -92,6 +92,22 @@ $faelle = @(
        Treffer = @(
          'Der angegebene Pfad ist ungültig.'
          'The specified path is invalid.') }
+
+    # Beide vom Abnahmelaptop, Punkt 4: Die deutsche Zeile ist die echte
+    # Ausgabe von Add-AppxPackage, während dllhost und Fotos die VCLibs offen
+    # hielten. Bis 0.5.3 stand sie als Error im Protokoll — direkt vor
+    # »winget ist einsatzbereit«.
+    @{ Werkzeug = 'App Installer — Abhängigkeit in Benutzung'
+       Muster = '0x80073D02|derzeit verwendet|currently in use'
+       Treffer = @(
+         'Fehler bei Bereitstellung. HRESULT: 0x80073D02, Das Paket konnte nicht installiert werden, da die davon geänderten Ressourcen derzeit verwendet werden.'
+         'Deployment failed with HRESULT: 0x80073D02, The package could not be installed because resources it modifies are currently in use.') }
+
+    @{ Werkzeug = 'Bereitstellung — Zugriff verweigert'
+       Muster = '0x80070005|Zugriff verweigert|Access is denied'
+       Treffer = @(
+         'Zugriff verweigert'
+         'Access is denied.') }
 )
 
 Write-Host ''

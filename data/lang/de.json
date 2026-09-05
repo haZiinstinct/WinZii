@@ -219,6 +219,8 @@
     "logPackageSetupFailed": "{name} ließ sich nicht einrichten: {grund}",
     "logProvisioned": "App Installer für alle Benutzer dieses PCs bereitgestellt",
     "logProvisionFailed": "Bereitstellung für alle Benutzer nicht möglich: {grund}",
+    "logProvisionDenied": "Bereitstellung für alle Benutzer nicht möglich: Zugriff verweigert, trotz Administratorrechten. Windows lässt den Bereitstellungsdienst nicht an seinen Schlüssel HKLM\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Appx — Einzelheiten in C:\\Windows\\Logs\\DISM\\dism.log. Das angemeldete Konto hat winget trotzdem.",
+    "logPackageInUse": "{name} ist gerade in Benutzung — die vorhandene Fassung bleibt.",
     "logWingetReady": "winget ist einsatzbereit ({version})",
     "logWingetUnreachable": "winget ist trotz Einrichtung nicht erreichbar. Nach einem Neustart erneut versuchen.",
     "logNoFileArrived": "Download beendet, aber es kam keine Datei an.",

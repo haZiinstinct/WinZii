@@ -165,13 +165,19 @@ function Install-WzWingetBootstrap {
 
         try {
             Add-AppxPackage -Path $package.File -ErrorAction Stop
-                Write-WzLog (Get-WzText 'apps.logCached' @{ name = $package.Name }) -Level Ok
+            Write-WzLog (Get-WzText 'apps.logCached' @{ name = $package.Name }) -Level Ok
         } catch {
             # »Schon vorhanden« und »kaputtes Paket« sahen bisher gleich aus.
             # 0x80073D06 heißt: dieselbe oder eine neuere Fassung ist da.
+            # 0x80073D02 heißt: die vorhandene Fassung wird gerade benutzt —
+            # auf dem Abnahmelaptop hielten dllhost und Fotos die VCLibs offen.
+            # Beides ist kein Fehler. Der Lauf endete trotzdem mit »winget ist
+            # einsatzbereit«, und ein Error-Eintrag davor widerspricht dem nur.
             $message = $_.Exception.Message.Split([char]10)[0]
             if ($message -match '0x80073D06|höhere Version|higher version|already installed') {
                 Write-WzLog (Get-WzText 'apps.logCachedAlready' @{ name = $package.Name }) -Level Info
+            } elseif ($message -match '0x80073D02|derzeit verwendet|currently in use') {
+                Write-WzLog (Get-WzText 'apps.logPackageInUse' @{ name = $package.Name }) -Level Info
             } else {
                 Write-WzLog (Get-WzText 'apps.logPackageSetupFailed' @{ name = $package.Name; grund = $message }) -Level Error
             }
@@ -186,7 +192,18 @@ function Install-WzWingetBootstrap {
                 Add-AppxProvisionedPackage -Online -PackagePath $package.File -SkipLicense -ErrorAction Stop | Out-Null
                 Write-WzLog (Get-WzText 'apps.logProvisioned') -Level Ok
             } catch {
-                Write-WzLog (Get-WzText 'apps.logProvisionFailed' @{ grund = $_.Exception.Message.Split([char]10)[0] }) -Level Warn
+                # »Zugriff verweigert« trotz Administratorrechten: Der
+                # Bereitstellungsdienst kommt nicht an seinen Schlüssel unter
+                # HKLM\SOFTWARE\...\CurrentVersion\Appx — auf dem Abnahmelaptop
+                # haben Administratoren dort nur Leserecht. Das steht sonst nur
+                # in dism.log; zwei Wörter im Protokoll helfen niemandem weiter.
+                $grund = $_.Exception.Message.Split([char]10)[0]
+                $hresult = '{0:X8}' -f $_.Exception.HResult
+                if ($hresult -eq '80070005' -or $grund -match '0x80070005|Zugriff verweigert|Access is denied') {
+                    Write-WzLog (Get-WzText 'apps.logProvisionDenied') -Level Warn
+                } else {
+                    Write-WzLog (Get-WzText 'apps.logProvisionFailed' @{ grund = $grund }) -Level Warn
+                }
             }
         }
     }
