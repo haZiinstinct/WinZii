@@ -111,9 +111,29 @@ foreach ($fall in $faelle) {
     }
 }
 
+# --- Zahlen statt Wörter: der productState des Sicherheitscenters ---------
+# Punkt 20 der Abnahme, gefunden mit Malwarebytes neben Defender: Der Zustand
+# eines fremden Scanners kommt als Bitfeld, nicht als Text — trotzdem eine
+# Deutung, und eine, die auf dem Entwicklungsrechner nie einen fremden Scanner
+# zu sehen bekam. Die beiden ersten Werte sind die echten vom Abnahmelaptop.
+Write-Host ''
+. (Join-Path $root 'src\modules\Core.System.ps1')
+$zustaende = @(
+    @{ Wert = 0x061100; An = $true;  Alt = $false; Was = 'Defender an, aktuell (Abnahmelaptop)' }
+    @{ Wert = 0x061000; An = $true;  Alt = $false; Was = 'Malwarebytes an, aktuell (Abnahmelaptop)' }
+    @{ Wert = 0x040000; An = $false; Alt = $false; Was = 'Scanner abgeschaltet' }
+    @{ Wert = 0x041010; An = $true;  Alt = $true;  Was = 'an, aber Signaturen veraltet' }
+)
+foreach ($z in $zustaende) {
+    $deutung = ConvertFrom-WzAvProductState -State $z.Wert
+    Pruefe ('Sicherheitscenter 0x{0:X6}: {1}' -f $z.Wert, $z.Was) `
+        ($deutung.Enabled -eq $z.An -and $deutung.OutOfDate -eq $z.Alt) `
+        "an=$($deutung.Enabled) veraltet=$($deutung.OutOfDate)"
+}
+
 Write-Host ''
 if ($script:fehler -eq 0) {
-    Write-Host "  Ergebnis: alle $($faelle.Count) Deutungen treffen in beiden Sprachen." -ForegroundColor Green
+    Write-Host "  Ergebnis: alle $($faelle.Count) Deutungen treffen in beiden Sprachen, $($zustaende.Count) Scanner-Zustände gedeutet." -ForegroundColor Green
     Write-Host '            Ersetzt Punkt 13 der Abnahme nicht — die Werkzeuge selbst' -ForegroundColor DarkGray
     Write-Host '            laufen hier auf einem deutschen Windows.' -ForegroundColor DarkGray
     exit 0

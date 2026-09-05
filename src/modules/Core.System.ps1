@@ -526,32 +526,60 @@ function Get-WzSecurityInfo {
 
     $info.SecureBoot = try {
         if (Confirm-SecureBootUEFI -ErrorAction Stop) { Get-WzText 'core.secureBootOn' } else { Get-WzText 'core.secureBootOff' }
-    } catch { Get-WzText 'core.secureBootNa' }
+    } catch {
+        # Ohne Administratorrechte verweigert die Abfrage den Zugriff. Daraus
+        # wurde »kein UEFI« — auf einem UEFI-Notebook, nur weil die Rechte
+        # fehlten (Punkt 18 der Abnahme). Fehlende Rechte sind keine Hardware.
+        if ($_.Exception -is [UnauthorizedAccessException]) { Get-WzText 'core.secureBootNoRights' }
+        else { Get-WzText 'core.secureBootNa' }
+    }
 
     $info.Tpm = Get-WzTpmStatus
 
+    # Virenschutz: erst das Sicherheitscenter, dann Defender. Bis 0.5.2 zählte
+    # allein Get-MpComputerStatus — und das antwortet auch neben Norton, McAfee
+    # oder Malwarebytes, nur mit »Echtzeitschutz AUS«, weil Defender dort
+    # passiv ist. Genau die Fehlmeldung, die Punkt 20 der Abnahme verbietet.
+    # Das Sicherheitscenter kennt den fremden Scanner mit Namen und Zustand;
+    # der Abnahmelaptop hatte Malwarebytes neben Defender, und die Karte
+    # verschwieg es.
+    $fremde = @(Get-WzThirdPartyAntivirus)
     $info.Defender = 'n/v'
     $info.DefenderOk = $true
+    $parts = @()
+    foreach ($scanner in $fremde) {
+        $parts += Get-WzText 'core.avThirdParty' @{ name = $scanner.Name }
+        if ($scanner.OutOfDate) {
+            $parts += Get-WzText 'core.avSignaturesOld'
+            $info.DefenderOk = $false
+        }
+    }
     try {
         $mp = Get-MpComputerStatus -ErrorAction Stop
-        $parts = @()
-        # Weiches Trennzeichen (U+00AD): Am Fenster-Mindestmaß ist die Karte
-        # schmaler als das Wort, und WPF trennte mitten drin (»Echtzeitschut z«).
-        # So wird daraus bei Platznot »Echtzeit-schutz«, sonst bleibt es unsichtbar.
+        # Weiches Trennzeichen (U+00AD) im Text: Am Fenster-Mindestmaß ist die
+        # Karte schmaler als das Wort, und WPF trennte mitten drin
+        # (»Echtzeitschut z«). So wird daraus bei Platznot »Echtzeit-schutz«.
         if ($mp.RealTimeProtectionEnabled) {
             $parts += Get-WzText 'core.defenderRtOn'
+            # Das Signaturalter zählt nur, wenn Defender auch der Schutz ist.
+            # Neben einem fremden Scanner altern seine Signaturen folgenlos —
+            # und hätten sonst eine Warnung ausgelöst, die niemanden betrifft.
+            if ($null -ne $mp.AntivirusSignatureAge) {
+                $parts += Get-WzText 'core.defenderSignatures' @{ tage = $mp.AntivirusSignatureAge }
+                if ($mp.AntivirusSignatureAge -gt 7) { $info.DefenderOk = $false }
+            }
+        } elseif ($fremde.Count -gt 0) {
+            # Defender tritt zurück, sobald ein anderer Scanner übernimmt.
+            # Das ist Windows-Regel, kein Mangel.
+            $parts += Get-WzText 'core.avDefenderPassive'
         } else {
             $parts += Get-WzText 'core.defenderRtOff'
             $info.DefenderOk = $false
         }
-        if ($null -ne $mp.AntivirusSignatureAge) {
-            $parts += Get-WzText 'core.defenderSignatures' @{ tage = $mp.AntivirusSignatureAge }
-            if ($mp.AntivirusSignatureAge -gt 7) { $info.DefenderOk = $false }
-        }
-        $info.Defender = $parts -join ' · '
     } catch {
-        $info.Defender = Get-WzText 'core.defenderThirdParty'
+        if ($fremde.Count -eq 0) { $parts += Get-WzText 'core.defenderThirdParty' }
     }
+    $info.Defender = $parts -join ' · '
 
     $info.PhysicalDisks = @()
     try {
@@ -568,6 +596,56 @@ function Get-WzSecurityInfo {
     } catch { }
 
     return [pscustomobject]$info
+}
+
+function ConvertFrom-WzAvProductState {
+    <#
+    .SYNOPSIS
+        Deutet den productState eines Virenscanners aus dem Sicherheitscenter.
+    .NOTES
+        Das Feld ist ein Bitfeld ohne offizielle Beschreibung, aber seit
+        Windows 7 unverändert: Bit 12 sagt »eingeschaltet«, Bit 4 »Signaturen
+        veraltet«. Belegt an den Werten des Abnahmelaptops — 0x061100 für
+        Defender, 0x061000 für Malwarebytes, beide an und aktuell.
+    .OUTPUTS
+        PSCustomObject mit Enabled und OutOfDate
+    #>
+    param([Parameter(Mandatory = $true)][int]$State)
+
+    return [pscustomobject]@{
+        Enabled   = (($State -band 0x1000) -ne 0)
+        OutOfDate = (($State -band 0x10) -ne 0)
+    }
+}
+
+function Get-WzThirdPartyAntivirus {
+    <#
+    .SYNOPSIS
+        Eingeschaltete Virenscanner außer Defender, wie das Sicherheitscenter
+        sie kennt.
+    .NOTES
+        Auf Server-Windows gibt es den Namensraum nicht — dann bleibt die Liste
+        leer, und die Karte fällt auf Defender zurück wie bisher. Abgeschaltete
+        Produkte (eine abgelaufene Testfassung, die noch eingetragen ist) werden
+        übergangen: Sie schützen nicht, also gehören sie nicht in die Zeile.
+    .OUTPUTS
+        Objekte mit Name und OutOfDate
+    #>
+    $scanner = @()
+    try {
+        $produkte = @(Get-CimInstance -Namespace 'root\SecurityCenter2' -ClassName AntiVirusProduct -ErrorAction Stop)
+    } catch {
+        return @()
+    }
+
+    foreach ($produkt in $produkte) {
+        $name = "$($produkt.displayName)".Trim()
+        if (-not $name -or $name -match 'Defender') { continue }
+        $zustand = ConvertFrom-WzAvProductState -State ([int]$produkt.productState)
+        if (-not $zustand.Enabled) { continue }
+        $scanner += [pscustomobject]@{ Name = $name; OutOfDate = $zustand.OutOfDate }
+    }
+    return @($scanner)
 }
 
 function Get-WzWingetCandidates {
