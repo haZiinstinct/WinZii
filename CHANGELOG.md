@@ -32,6 +32,18 @@ ein Prüfwerkzeug in `einstellungen.json` hinterlässt.
   `einstellungen.json`, und der nächste echte Start auf einem deutschen Gerät
   kam auf Englisch hoch. Ein Prüfwerkzeug darf nichts hinterlassen, was der
   Anwender sieht.
+- **Die winget-Nachinstallation meldete einen Error und danach Erfolg.** Ist
+  eine Abhängigkeit schon da und gerade in Benutzung — auf dem Notebook hielten
+  `dllhost` und Fotos die VCLibs offen —, antwortet `Add-AppxPackage` mit
+  `0x80073D02`. Das stand als Error im Protokoll, drei Zeilen vor »winget ist
+  einsatzbereit«. Jetzt heißt es »ist gerade in Benutzung — die vorhandene
+  Fassung bleibt«, als Hinweis.
+- **»Bereitstellung für alle Benutzer nicht möglich: Zugriff verweigert«** —
+  trotz Administratorrechten, und ohne ein Wort dazu, warum. Der Grund stand nur
+  in `dism.log`: Der Bereitstellungsdienst kommt nicht an seinen Schlüssel unter
+  `HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Appx`; auf dem Notebook haben
+  Administratoren dort nur Leserecht. WinZii nennt jetzt Schlüssel und
+  Protokolldatei und sagt dazu, dass das angemeldete Konto winget trotzdem hat.
 
 ### Geprüft
 
@@ -45,7 +57,13 @@ ein Prüfwerkzeug in `einstellungen.json` hinterlässt.
   2017 und 2019 anbietet — genau der Fall, vor dem sie warnt: alle vier als
   Treiber erkannt, keiner vorausgewählt.
 - `tools\Test-Parsers.ps1` deutet jetzt auch die Zustände des Sicherheitscenters;
-  die beiden ersten Werte sind die echten vom Notebook.
+  die beiden ersten Werte sind die echten vom Notebook — und die beiden
+  Meldungen der winget-Nachinstallation von oben.
+- FAT32, auf einer virtuellen Platte: WinZii startet daraus, das Dashboard
+  zeigt den Hinweisbalken, der Office-Download wird vorher abgelehnt, in beiden
+  Sprachen.
+- Die winget-Nachinstallation ohne Zwischenspeicher, über WLAN: 300 MB in
+  40 s, winget antwortet danach im selben und in einem neuen Prozess.
 
 ## [0.5.2] — 2026-09-01
 

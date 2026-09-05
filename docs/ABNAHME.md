@@ -31,7 +31,7 @@ muss, was noch aussteht, stehen **alle 23** Punkte in einer Tabelle:
 | 1 — winget nach Neuanmeldung | **Erledigt** (Notebook, 0.5.1). |
 | 2 — fremdes Konto | **Offen.** Es gab kein zweites Technikerkonto zum Elevieren. |
 | 3 — WLAN statt Kabel | **Erledigt** (Notebook, 0.5.1): 93 MB in 32 s, Installation samt Nachprüfung. |
-| 4 — leerer Stick | **Halb.** Start aus dem entpackten 0.5.2-Archiv geprüft (01.09.): startet, `offline\` enthält nur `.gitkeep`, kein Rechnername im Archiv, winget wird gefunden. Offen bleibt die winget-Nachinstallation **ohne** Zwischenspeicher (~315 MB) und Office. |
+| 4 — leerer Stick | **Erledigt bis auf Office** — **mit zwei Befunden** (Notebook, 05.09.). Start aus dem entpackten 0.5.2-Archiv geprüft (01.09.): startet, `offline\` enthält nur `.gitkeep`, kein Rechnername im Archiv, winget wird gefunden. Die winget-Nachinstallation **ohne** Zwischenspeicher lief über WLAN in 39,6 s (207 MB App Installer, 93 MB Abhängigkeiten), winget antwortet danach im selben und in einem neuen Prozess. Befund 1: Eine Abhängigkeit, die schon da und gerade in Benutzung ist (`0x80073D02`), stand als **Error** im Protokoll — drei Zeilen vor »winget ist einsatzbereit«. Befund 2: »Bereitstellung für alle Benutzer nicht möglich: Zugriff verweigert«, trotz Elevierung, ohne Grund. `dism.log` nennt ihn: Der Dienst kommt nicht an `HKLM\…\CurrentVersion\Appx`, Administratoren haben dort auf diesem Gerät nur Leserecht. Beides behoben — der eine ist jetzt ein Hinweis, der andere nennt Schlüssel und Protokoll. Office bleibt offen. |
 | 5 — OEM-Office | **Offen.** Auf keinem der beiden Geräte liegt ein vorinstalliertes OEM-Office; der Punkt braucht ein Kundengerät. |
 | 6 — Startdauer | **Erledigt** (Notebook, 0.4.1): 57,5 s im Mittel als Referenzwert. |
 | 7 — Energieplan | **Erledigt** (Notebook, 0.5.1), samt Kühlungsrichtlinie und Turbo-Verhalten. |
@@ -43,7 +43,7 @@ muss, was noch aussteht, stehen **alle 23** Punkte in einer Tabelle:
 | 13 — englisches Windows | **Halb.** Die CI deckt den statischen Teil bei jedem Push. Dazu prüft `tools\Test-Parsers.ps1` alle neun Stellen, die Windows-Ausgaben deuten, gegen die **echten** deutschen und englischen Wortlaute — alle treffen. `DISM` und `chkdsk` werten gar keinen Text aus, sondern Rückgabewerte, und können dort nicht brechen. Offen bleibt der Lauf auf einem wirklich englischen System. |
 | 14 — Sprachwechsel im Betrieb | **Erledigt** (01.09.) — **mit Befund.** `Update-WzMeasuredTexts` bewirkte nichts: zwei Hintergrundaufgaben gleichzeitig angestoßen, die zweite abgewiesen. Behoben, und `tools\Test-LanguageSwitch.ps1` prüft es seither bei jedem Push. Am 05.09. ein zweiter Befund, am Werkzeug selbst: Es schaltete auf Englisch **ohne** `-NoSave` und hinterließ »en« in `einstellungen.json` — der nächste echte Start auf dem deutschen Notebook kam auf Englisch hoch. Behoben; belegt, dass die Datei nach dem Lauf wegbleibt. |
 | 15 — Windows 10 | **Offen.** Steht seit der ersten Fassung als Grenze im README, ein vollständiger Durchlauf fehlt. |
-| 16 — schreibgeschützter Stick, FAT32 | **Halb, mit Befund.** Schreibschutz geprüft (01.09.): WinZii startet, meldet es in Konsole und auf der Protokollseite, legt nichts an. Befund: Die Ausgabeknöpfe luden weiter zum Klicken ein — jetzt abgeschaltet, wenn nichts geschrieben werden kann. FAT32 nur im Code geprüft (alle vier Zweige da, Texte in beiden Sprachen); ein FAT32-Datenträger fehlt. Ein Lauf auf einer virtuellen FAT32-Platte (diskpart, 600 MB, WinZii daraus starten) war am 05.09. vorbereitet — er braucht Administratorrechte, die Abfrage wurde nicht bestätigt. |
+| 16 — schreibgeschützter Stick, FAT32 | **Erledigt, mit Befund.** Schreibschutz geprüft (01.09.): WinZii startet, meldet es in Konsole und auf der Protokollseite, legt nichts an. Befund: Die Ausgabeknöpfe luden weiter zum Klicken ein — jetzt abgeschaltet, wenn nichts geschrieben werden kann. FAT32 am 05.09. auf dem Notebook geprüft, auf einer virtuellen Platte (diskpart, 600 MB, FAT32): `Test-Smoke` läuft aus der Kopie, `Get-WzVolumeInfo` erkennt FAT32, `Test-WzOfficeTarget` lehnt den Datenträger **vor** dem Download ab — in beiden Sprachen —, das Dashboard zeigt den Hinweisbalken und »W: FAT32« in der Statuszeile, WinZii startet und rendert von dort. Ohne Befund. Was fehlt, ist nur noch ein echter Stick statt einer virtuellen Platte. |
 | 17 — Domänen-PC mit Richtlinien | **Offen.** Der Launcher warnt davor, geprüft ist es nie. Firmenkunden sind der Normalfall. |
 | 18 — Start ohne Rechte | **Erledigt** (01.09., Notebook 05.09.) — **mit zwei Befunden.** Alle fünfzehn Seiten laden sauber, aber WinZii merkte gar nicht, dass ihm die Rechte fehlen. Der Hinweis steht jetzt in den ersten Protokollzeilen, mit der Liste der betroffenen Seiten — auf dem Notebook bestätigt, als dritte und vierte Zeile, in beiden Sprachen. Zweiter Befund dort: Secure Boot meldete »n/v (kein UEFI oder gesperrt)« auf einem UEFI-Notebook, weil `Confirm-SecureBootUEFI` ohne Rechte den Zugriff verweigert. Jetzt »ohne Administratorrechte nicht abfragbar«. |
 | 19 — langsames Gerät | **Offen.** Alle Zeitlimits sind auf schneller Hardware gemessen. |
@@ -54,10 +54,9 @@ muss, was noch aussteht, stehen **alle 23** Punkte in einer Tabelle:
 
 Was davon nur ein Kundengerät klären kann: **5** (OEM-Office), **9** (Sicherheitsprogramme
 wirklich installieren), **11** (BitLocker, OneDrive), **2** (zweites Konto — auf dem
-Notebook ist »Administrator« abgeschaltet), **17** (Domäne) und **22** (ARM64). **4**, **10**
-und **16** ließen sich jederzeit nachholen — für 4 reicht ein leerer Stick, für 10 das
-Einschalten von Windows Sandbox auf dem Notebook (Neustart), für 16 eine virtuelle
-FAT32-Platte; alle drei brauchen Administratorrechte.
+Notebook ist »Administrator« abgeschaltet), **17** (Domäne) und **22** (ARM64). **10** ließe
+sich jederzeit nachholen — das Einschalten von Windows Sandbox auf dem Notebook, mit
+Neustart. Für **16** fehlt nur noch ein echter Stick statt der virtuellen Platte.
 
 > **Abnahmelauf vom 01.09.2026 auf dem Entwicklungsrechner.** Abgearbeitet wurde alles,
 > was ohne fremdes Gerät geht: **4** (saubere Kopie), **10** (Sandbox), **13** (Deutung
@@ -67,14 +66,14 @@ FAT32-Platte; alle drei brauchen Administratorrechte.
 > Nicht möglich waren: ein wirklich englisches Windows, ein FAT32-Datenträger (dafür
 > braucht es Administratorrechte für eine virtuelle Platte) und ein zweiter Monitor.
 
-> **Abnahmelauf vom 05.09.2026 auf dem Notebook, ohne Administratorrechte** (0.5.2 → 0.5.3).
-> Abgearbeitet: **8** (mit dem Auge, samt Ziehen unters Mindestmaß), **18** (Hinweis im
+> **Abnahmelauf vom 05.09.2026 auf dem Notebook** (0.5.2 → 0.5.3). Ohne Rechte
+> abgearbeitet: **8** (mit dem Auge, samt Ziehen unters Mindestmaß), **18** (Hinweis im
 > Protokoll), **20** (Malwarebytes neben Defender) und der neue Punkt **23** (vier alte
-> Intel-Treiber); dazu **14** am Werkzeug selbst. Drei Funde — 14, 18 und 20 —, alle
-> behoben.
+> Intel-Treiber); dazu **14** am Werkzeug selbst. Mit Rechten: **16** (FAT32 auf
+> virtueller Platte) und **4** (winget ohne Zwischenspeicher, über WLAN). Fünf Funde —
+> 14, 18, 20 und zwei in 4 —, alle behoben; der Lauf zu 4 danach wiederholt, das
+> Protokoll endet ohne Error-Zeile.
 >
-> Vorbereitet, aber nicht gelaufen, weil die Rechteabfrage abgelehnt wurde: **4** (winget
-> ohne Zwischenspeicher, ~315 MB über WLAN) und **16** (FAT32 auf virtueller Platte).
 > Nicht möglich: **2** (»Administrator« abgeschaltet), **10** (Sandbox abgeschaltet,
 > Einschalten braucht einen Neustart), **13** (nur de-DE installiert), **21** (ein
 > Bildschirm).
