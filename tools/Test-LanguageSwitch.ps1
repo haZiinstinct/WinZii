@@ -32,7 +32,10 @@ $aktion = @'
 $felder = { "$($syncHash.SecurityInfo.Activation)|$($syncHash.SecurityInfo.BitLocker)|$($syncHash.SecurityInfo.Defender)" }
 $vorher = & $felder
 
-[void](Set-WzLanguage -Code 'en')
+# -NoSave: Ohne den Schalter landete »en« in einstellungen.json — und der
+# nächste echte Start auf einem deutschen Gerät kam auf Englisch hoch. Auf dem
+# Abnahmelaptop genau so passiert, eine Minute nach dem Werkzeuglauf.
+[void](Set-WzLanguage -Code 'en' -NoSave)
 Update-WzLanguageUi
 
 # Neu gemessen wird im Hintergrund, in zwei Stufen nacheinander.
