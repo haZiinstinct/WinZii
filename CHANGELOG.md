@@ -20,6 +20,11 @@ Alle nennenswerten Änderungen an WinZii. Die Fassungen folgen
   greift auch beim Ziehen am Fensterrand.
   Damit ist auch die Angabe in beiden Readme-Dateien wieder wahr: Sie behauptete das seit
   0.5.0, geprüft war es nie.
+- **Der Office-Lizenzname zerbrach am Mindestmaß mitten im Wort.** Erster Fund von
+  `Test-Layout` auf dem Notebook: `Office21Standard2021VL_KMS_Client_AE` kommt ohne
+  Leerzeichen aus Windows, WPF darf darin nirgends umbrechen, und die Spalte auf der Seite
+  »Daten« hat bei 1000 × 560 nur 244 der nötigen 259 px. Ein weiches Trennzeichen nach
+  jedem Unterstrich gibt WPF die Stelle; ohne Platznot bleibt es unsichtbar.
 
 ### Neu
 

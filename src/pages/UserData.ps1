@@ -283,8 +283,15 @@ function Write-WzDataKeys {
             (Get-WzText 'data.licenceEnding' @{ kanal = $keys.Channel; teil = $keys.PartialKey }) -LabelWidth $width))
     }
     foreach ($office in @($keys.Office)) {
+        # Der Lizenzname kommt ohne Leerzeichen aus Windows —
+        # »Office21Standard2021VL_KMS_Client_AE« —, und WPF darf darin nirgends
+        # umbrechen. Am Fenster-Mindestmaß braucht er 259 px in einer Spalte
+        # mit 244 (Test-Layout auf dem Abnahmelaptop) und wurde mittendrin
+        # zerschnitten. Ein weiches Trennzeichen nach jedem Unterstrich gibt
+        # WPF die Stelle, an der es darf; ohne Platznot bleibt es unsichtbar.
+        $lizenzName = $office.Name -replace '_', ('_' + [char]0x00AD)
         # lang-ok: »Office« ist der Produktname und lautet in jeder Sprache gleich
-        [void]$container.Children.Add((New-WzInfoRow 'Office' "$($office.Name) · $($office.Channel)" -LabelWidth $width))  # lang-ok
+        [void]$container.Children.Add((New-WzInfoRow 'Office' "$lizenzName · $($office.Channel)" -LabelWidth $width))  # lang-ok
     }
 
     if ($wlan.Count -gt 0) {
