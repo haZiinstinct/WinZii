@@ -33,11 +33,12 @@ Alle nennenswerten Änderungen an WinZii. Die Fassungen folgen
 
 ## [0.5.3] — 2026-09-05
 
-Zweiter Abnahmelauf auf dem Notebook, diesmal ohne Administratorrechte — und auf
-dem ersten Gerät, auf dem ein fremder Virenscanner neben Defender läuft. Drei
-Funde, keiner davon auf dem Entwicklungsrechner zu sehen: Dort gibt es keinen
-zweiten Scanner, dort laufen die Rechte immer mit, und dort merkt niemand, was
-ein Prüfwerkzeug in `einstellungen.json` hinterlässt.
+Zweiter Abnahmelauf auf dem Notebook, erst ohne, dann mit Administratorrechten —
+und auf dem ersten Gerät, auf dem ein fremder Virenscanner neben Defender läuft.
+Fünf Funde, keiner davon auf dem Entwicklungsrechner zu sehen: Dort gibt es keinen
+zweiten Scanner, dort laufen die Rechte immer mit, dort hält kein Programm eine
+Abhängigkeit offen, und dort merkt niemand, was ein Prüfwerkzeug in
+`einstellungen.json` hinterlässt.
 
 ### Behoben
 

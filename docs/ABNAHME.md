@@ -10,10 +10,12 @@ bequemen Zweig. Genau daraus sind die drei Symptome entstanden, die den Audit au
 haben. Alles unten ist der Teil, der auf dem Entwicklungsrechner **grundsätzlich nicht**
 prüfbar ist.
 
-Stand: **0.5.3**, 05.09.2026. Alle elf Prüfwerkzeuge grün, Sandbox-Lauf mit dem
-0.5.1-Stand bestanden, Start aus sauberer Kopie mit leerem `offline\` geprüft.
+Stand: **0.5.3**, veröffentlicht am 05.09.2026, `main` seit dem 06.09. einen Commit weiter
+(Fensterlage, zweispaltige Karten, `Test-Layout`). Alle Prüfwerkzeuge grün, Sandbox-Lauf
+mit 0.5.3 über das WLAN des Notebooks bestanden, Start aus dem Release-Archiv mit leerem
+`offline\` geprüft.
 
-> **Was die CI seither abnimmt.** Seit `.github/workflows/pruefung.yml` laufen die neun
+> **Was die CI seither abnimmt.** Seit `.github/workflows/pruefung.yml` laufen die zwölf
 > Werkzeuge bei jedem Push auf einem **englischen** Windows-Server, und die Oberfläche
 > wird dort in beiden Sprachen gestartet und abgebildet. Damit ist der statische Teil
 > von »nicht-deutsches Windows« dauerhaft gedeckt — Zahlen- und Datumsformate,
@@ -439,8 +441,11 @@ powershell -NoProfile -ExecutionPolicy Bypass -File tools/Repair-Encoding.ps1
 ```
 
 Dann die Prüfwerkzeuge: `Test-Smoke`, `Test-Catalogs`, `Test-Pages`, `Test-Language`,
-`Test-Undo`, `Test-Process`, `Test-Contrast`, `Test-Dialogs`, `Invoke-Analyzer`.
+`Test-LanguageSwitch`, `Test-Parsers`, `Test-Undo`, `Test-Office`, `Test-Layout`,
+`Test-Process`, `Test-Contrast`, `Test-Dialogs`, `Invoke-Analyzer` — dieselben, die die CI
+bei jedem Push auf dem englischen Server laufen lässt.
 
-Fällt bei der Abnahme etwas auf, das Anwender betrifft, wird daraus **0.5.1**. Der
+Fällt bei der Abnahme etwas auf, das Anwender betrifft, wird daraus die **nächste
+Patch-Fassung**. Der
 Abschnitt »Bekannte Grenzen« in beiden Readme-Dateien wird dann ehrlich nachgezogen —
 was auf dem Laptop geprüft wurde, darf dort nicht mehr als ungetestet stehen.
