@@ -3,6 +3,34 @@
 Alle nennenswerten Änderungen an WinZii. Die Fassungen folgen
 [Semantic Versioning](https://semver.org/lang/de/).
 
+## [Unveröffentlicht]
+
+### Behoben
+
+- **Das Fenster startete zu tief und stand mit dem Fuß hinter der Taskleiste.**
+  `WindowStartupLocation="CenterScreen"` zentriert auf dem ganzen Bildschirm und rechnet
+  die Taskleiste nicht heraus. Auf dem Abnahmegerät (1536 × 864, 48 px Taskleiste) saß
+  das 796 px hohe Fenster oben bei 34 statt bei 10, und seine unteren 14 px lagen unter
+  der Leiste — man musste es nach jedem Start von Hand nach oben schieben. Jetzt wird die
+  Lage selbst gesetzt, mittig **in der Arbeitsfläche**.
+- **Karten brechen keine Wörter mehr auseinander.** Unter 1200 px Fensterbreite stehen die
+  Kartengitter zweispaltig statt dreispaltig. Bei drei Spalten blieben einer Karte auf
+  einem 1366er-Laptop 117 px für den Wert — Seriennummer, IP-Adresse und Kontoname passen
+  dort nicht am Stück hinein, und WPF schneidet sie mittendrin auseinander. Die Umschaltung
+  greift auch beim Ziehen am Fensterrand.
+  Damit ist auch die Angabe in beiden Readme-Dateien wieder wahr: Sie behauptete das seit
+  0.5.0, geprüft war es nie.
+
+### Neu
+
+- `tools\Test-Layout.ps1` fährt jede Seite bei erzwungener Fenstergröße an und prüft:
+  Konsole eingeklappt, Klick zieht sie auf, aktiver Eintrag der Seitenleiste im Bild,
+  nichts außerhalb des Fensters, Fenster mittig in der Arbeitsfläche — und ob ein Wort
+  mitten durchtrennt wird. Letzteres wird nicht geschätzt, sondern mit WPFs eigenem
+  Textlayout gemessen: Ein loser TextBlock je Stück, zerlegt an den Stellen, an denen WPF
+  umbrechen darf. `FormattedText` liegt zwei bis vier Pixel daneben — genau die
+  Größenordnung, um die es hier geht.
+
 ## [0.5.3] — 2026-09-05
 
 Zweiter Abnahmelauf auf dem Notebook, diesmal ohne Administratorrechte — und auf

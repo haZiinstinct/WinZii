@@ -145,6 +145,15 @@ try {
     if ($window.Width -gt $workArea.Width) {
         $window.Width = [math]::Max($window.MinWidth, $workArea.Width - 20)
     }
+
+    # Selbst setzen statt WindowStartupLocation="CenterScreen": Das zentriert
+    # auf dem GANZEN Bildschirm und rechnet die Taskleiste nicht heraus. Bei
+    # 1536×864 mit 48 px Taskleiste stand das 796 px hohe Fenster oben bei 34
+    # statt bei 10, und seine unteren 14 px lagen hinter der Taskleiste — man
+    # musste es nach jedem Start von Hand nach oben schieben.
+    $window.WindowStartupLocation = 'Manual'
+    $window.Left = $workArea.Left + [math]::Max(0, ($workArea.Width - $window.Width) / 2)
+    $window.Top = $workArea.Top + [math]::Max(0, ($workArea.Height - $window.Height) / 2)
 } catch {
     # Ohne Anpassung bleibt die Vorgabegröße
 }
@@ -193,6 +202,11 @@ $syncHash.BtnClose.Add_Click({
     }
     $syncHash.Window.Close()
 })
+
+# --- Kartengitter mitwachsen lassen ---------------------------------------
+# Beim Ziehen am Fensterrand ebenso wie beim Maximieren. Ohne Wechsel der
+# Spaltenzahl kostet der Aufruf nichts, er darf also bei jeder Meldung kommen.
+$window.Add_SizeChanged({ Update-WzCardLayout })
 
 # --- Log-Konsole ein- und ausklappen --------------------------------------
 $syncHash.LogHeader.Add_MouseLeftButtonUp({

@@ -6,7 +6,7 @@
     <TextBlock Style="{DynamicResource WzPageLead}"
                Text="{DynamicResource L.log.lead}" />
 
-    <Grid>
+    <Grid Name="ProtoCards">
         <Grid.ColumnDefinitions>
             <ColumnDefinition Width="*" />
             <ColumnDefinition Width="14" />

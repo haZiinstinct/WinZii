@@ -61,6 +61,103 @@ function Register-WzNames {
         if ($name -like '*Rows') {
             [Windows.Controls.Grid]::SetIsSharedSizeScope($element, $true)
         }
+
+        # Kartengitter werden bei schmalem Fenster umgebrochen. Sie melden sich
+        # über die Endung an, damit eine neue Seite nichts verdrahten muss.
+        if ($name -like '*Cards' -and $element -is [Windows.Controls.Grid]) {
+            if (-not $syncHash.CardGrids) {
+                $syncHash.CardGrids = [Collections.ArrayList]::Synchronized((New-Object Collections.ArrayList))
+            }
+            if (-not $syncHash.CardGrids.Contains($element)) { [void]$syncHash.CardGrids.Add($element) }
+            Set-WzCardColumns -Grid $element -Columns (Get-WzCardColumnCount)
+        }
+    }
+}
+
+# Unterhalb dieser Fensterbreite werden Kartengitter zweispaltig. Nachgemessen
+# mit tools\Test-Layout.ps1: Bei 1092 px — einem 1366er-Laptop bei 125 % —
+# bleiben einer Karte 117 px für den Wert, und Seriennummer, IP-Adresse und
+# Kontoname passen dort nicht am Stück hinein. WPF schneidet sie dann mitten
+# im Wort auseinander. Ab 1200 px geht alles auf.
+$script:WzCardBreakpoint = 1200
+$script:WzCardWidths = @{}
+$script:WzCardColumnsNow = @{}
+
+function Get-WzCardColumnCount {
+    <#
+    .SYNOPSIS
+        Wie viele Kartenspalten passen bei der aktuellen Fensterbreite?
+    #>
+    if (-not $syncHash.Window) { return 3 }
+    $breite = $syncHash.Window.ActualWidth
+    if ($breite -le 0) { $breite = $syncHash.Window.Width }
+    if ($breite -gt 0 -and $breite -lt $script:WzCardBreakpoint) { return 2 }
+    return 3
+}
+
+function Set-WzCardColumns {
+    <#
+    .SYNOPSIS
+        Verteilt die Karten eines Kartengitters auf n Spalten.
+    .DESCRIPTION
+        Ein Kartengitter ist abwechselnd aufgebaut: gerade Spalten tragen die
+        Karten, ungerade sind die Abstände dazwischen. Die Kinder stehen in
+        Lesereihenfolge. Beides wird hier vorausgesetzt und von
+        tools\Test-Layout.ps1 mitgeprüft.
+
+        Nicht gebrauchte Spalten bekommen Breite 0, statt Karten hineinzulegen —
+        so bleibt die XAML-Fassung die einzige Wahrheit über den Aufbau.
+    #>
+    param(
+        [Parameter(Mandatory = $true)]$Grid,
+        [Parameter(Mandatory = $true)][ValidateRange(1, 3)][int]$Columns
+    )
+
+    if (-not $Grid -or $Grid.Children.Count -eq 0) { return }
+    # Ursprüngliche Spaltenbreiten einmal merken — sie sind die Vorlage für
+    # jedes spätere Zurückschalten auf mehr Spalten.
+    if (-not $script:WzCardWidths.ContainsKey($Grid)) {
+        $script:WzCardWidths[$Grid] = @($Grid.ColumnDefinitions | ForEach-Object { $_.Width })
+    }
+    if ($script:WzCardColumnsNow[$Grid] -eq $Columns) { return }
+
+    $vorlage = $script:WzCardWidths[$Grid]
+    $letzteGenutzte = $Columns * 2 - 2
+    for ($c = 0; $c -lt $Grid.ColumnDefinitions.Count; $c++) {
+        $Grid.ColumnDefinitions[$c].Width = if ($c -le $letzteGenutzte) {
+            $vorlage[$c]
+        } else {
+            New-Object Windows.GridLength 0
+        }
+    }
+
+    $i = 0
+    foreach ($karte in $Grid.Children) {
+        [Windows.Controls.Grid]::SetColumn($karte, ($i % $Columns) * 2)
+        [Windows.Controls.Grid]::SetRow($karte, [math]::Floor($i / $Columns))
+        $i++
+    }
+
+    $zeilen = [math]::Ceiling($Grid.Children.Count / $Columns)
+    while ($Grid.RowDefinitions.Count -lt $zeilen) {
+        $r = New-Object Windows.Controls.RowDefinition
+        $r.Height = 'Auto'
+        $Grid.RowDefinitions.Add($r)
+    }
+    $script:WzCardColumnsNow[$Grid] = $Columns
+}
+
+function Update-WzCardLayout {
+    <#
+    .SYNOPSIS
+        Bricht alle bekannten Kartengitter auf die zur Fensterbreite passende
+        Spaltenzahl um. Wird beim Seitenaufbau und bei jeder Größenänderung
+        gerufen; ohne Wechsel der Spaltenzahl kostet es nichts.
+    #>
+    if (-not $syncHash.CardGrids) { return }
+    $spalten = Get-WzCardColumnCount
+    foreach ($grid in @($syncHash.CardGrids)) {
+        if ($grid) { Set-WzCardColumns -Grid $grid -Columns $spalten }
     }
 }
 
