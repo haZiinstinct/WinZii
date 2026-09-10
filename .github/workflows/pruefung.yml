@@ -29,7 +29,7 @@ jobs:
 
     steps:
       - name: Auschecken
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Umgebung nennen
         shell: powershell
@@ -124,7 +124,7 @@ jobs:
 
     steps:
       - name: Auschecken
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       # Der Selbsttest baut das Fenster wirklich auf, wechselt auf eine Seite
       # und legt ein Abbild ab. Auf einem fremden System ist das der Nachweis,
@@ -147,7 +147,7 @@ jobs:
 
       - name: Abbilder aufbewahren
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: dashboard-abbilder
           path: abbilder/
