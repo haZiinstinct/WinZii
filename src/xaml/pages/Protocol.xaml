@@ -15,7 +15,7 @@
             <ColumnDefinition Width="*" />
         </Grid.ColumnDefinitions>
 
-        <Border Grid.Column="0" Style="{DynamicResource WzCard}">
+        <Border Grid.Column="0" Style="{DynamicResource WzCardStatic}">
             <StackPanel>
                 <TextBlock Text="{DynamicResource L.log.countEyebrow}" Style="{DynamicResource WzEyebrow}" />
                 <TextBlock Name="ProtoCount" Text="0" Style="{DynamicResource WzValueBig}" />
@@ -23,7 +23,7 @@
             </StackPanel>
         </Border>
 
-        <Border Grid.Column="2" Style="{DynamicResource WzCard}">
+        <Border Grid.Column="2" Style="{DynamicResource WzCardStatic}">
             <StackPanel>
                 <TextBlock Text="{DynamicResource L.log.durationEyebrow}" Style="{DynamicResource WzEyebrow}" />
                 <TextBlock Name="ProtoDuration" Text="{DynamicResource L.log.durationValue}" Style="{DynamicResource WzValueBig}" />
@@ -31,7 +31,7 @@
             </StackPanel>
         </Border>
 
-        <Border Grid.Column="4" Style="{DynamicResource WzCard}">
+        <Border Grid.Column="4" Style="{DynamicResource WzCardStatic}">
             <StackPanel>
                 <TextBlock Text="{DynamicResource L.log.issuesEyebrow}" Style="{DynamicResource WzEyebrow}" />
                 <TextBlock Name="ProtoIssues" Text="0" Style="{DynamicResource WzValueBig}" />

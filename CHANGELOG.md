@@ -3,7 +3,7 @@
 Alle nennenswerten Änderungen an WinZii. Die Fassungen folgen
 [Semantic Versioning](https://semver.org/lang/de/).
 
-## [Unveröffentlicht]
+## [0.6.0] — 2026-09-10
 
 ### Behoben
 
@@ -22,6 +22,21 @@ Alle nennenswerten Änderungen an WinZii. Die Fassungen folgen
   Eingabe- und Auswahlfeld hingen an derselben unsichtbaren Linie und bekommen sie
   ebenfalls. `Test-Contrast` prüft die Ränder der Bedienelemente jetzt mit: Sie waren nie
   Teil der Prüfliste, deshalb ist es jahrelang niemandem aufgefallen.
+- **Anklickbar war nur das Kästchen, nicht die Zeile.** Bei den Optimierungen, den
+  Programmen, den Updates, dem Deinstallieren und der Bereinigung stand der Name neben
+  der Checkbox statt in ihr — in einer eigenen Gitterspalte. Zu treffen waren also 17 × 17
+  Pixel; WCAG 2.2 verlangt 24, und wer 41 Optimierungen durchgeht, zielt 41-mal. Jetzt
+  ist der Text der Inhalt der Checkbox: Die ganze Zeile schaltet, samt der leeren Fläche
+  rechts daneben. Das löst nebenbei den Fall mit, dass ein Bildschirmleser Kästchen und
+  Beschriftung nicht zusammenbrachte. Bei der Bereinigung bleibt die Größe rechts
+  ausdrücklich außen vor — ein Klick auf eine Zahl, die sich beim Messen ändert, wäre
+  eine Falle.
+- **Karten leuchteten beim Überfahren, obwohl man sie nicht anklicken kann.** Der Stil
+  `WzCard` hellte den Rand auf und legte einen cyanen Schein darunter — benutzt auf dem
+  Dashboard und im Protokoll, also an genau den neun beziehungsweise drei Stellen, an
+  denen nichts passiert. Das Leuchten versprach etwas, das der Klick nicht einlöste, und
+  entwertete zugleich das Leuchten der Knöpfe, die wirklich reagieren. Es gibt jetzt nur
+  noch einen Kartenstil, und der bleibt ruhig.
 - **Mit der Tastatur war nicht zu sehen, wo man gerade steht.** Die Vorlagen setzten
   keinen eigenen Fokusrahmen, und Windows zeichnet dafür ein gepunktetes Rechteck, das
   auf `#0A0A0F` praktisch unsichtbar ist. Knöpfe, Seitenleiste, Auswahlkästchen,

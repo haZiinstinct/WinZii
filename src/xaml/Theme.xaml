@@ -182,21 +182,16 @@
 
     <!-- ================================================================
          Karten
-         ================================================================ -->
-    <Style x:Key="WzCard" TargetType="Border">
-        <Setter Property="Background" Value="{DynamicResource WzBgCard}" />
-        <Setter Property="BorderBrush" Value="{DynamicResource WzBorder}" />
-        <Setter Property="BorderThickness" Value="1" />
-        <Setter Property="CornerRadius" Value="16" />
-        <Setter Property="Padding" Value="20" />
-        <Style.Triggers>
-            <Trigger Property="IsMouseOver" Value="True">
-                <Setter Property="BorderBrush" Value="{DynamicResource WzBorderHover}" />
-                <Setter Property="Effect" Value="{DynamicResource WzGlow}" />
-            </Trigger>
-        </Style.Triggers>
-    </Style>
 
+         Es gibt nur diesen einen Kartenstil, und er reagiert bewusst nicht auf
+         die Maus. Bis 0.5.3 gab es daneben ein »WzCard«, das beim Überfahren
+         den Rand aufhellte und cyan glomm — benutzt auf dem Dashboard und im
+         Protokoll, also an genau den Stellen, an denen keine Karte anklickbar
+         ist. Das Leuchten versprach etwas, das beim Klick nicht passierte, und
+         entwertete zugleich das Leuchten der Knöpfe, die wirklich reagieren.
+         Reagiert eines Tages eine Karte auf den Klick, gehört der Stil zurück
+         — dann aber nur für sie.
+         ================================================================ -->
     <Style x:Key="WzCardStatic" TargetType="Border">
         <Setter Property="Background" Value="{DynamicResource WzBgCard}" />
         <Setter Property="BorderBrush" Value="{DynamicResource WzBorder}" />
@@ -525,18 +520,35 @@
         <Setter Property="Template">
             <Setter.Value>
                 <ControlTemplate TargetType="CheckBox">
-                    <StackPanel Orientation="Horizontal" Background="Transparent">
+                    <!-- Gitter statt waagerechtem Stapel, und das aus zwei Gründen.
+                         Erstens bekommt der Inhalt so die restliche Breite und darf
+                         umbrechen — in einem StackPanel wüchse er ins Unendliche,
+                         und eine mehrzeilige Beschreibung stünde in einer Zeile weit
+                         aus der Karte hinaus. Zweitens ist damit die ganze Zeile
+                         Klickfläche: Vorher lag der Text der Optimierungen neben der
+                         Checkbox statt in ihr, und zu treffen war nur das 17 px große
+                         Kästchen. WCAG 2.2 will 24 px, und wer 41 Optimierungen
+                         durchgeht, zielt 41-mal.
+                         Die Ausrichtung kommt von VerticalContentAlignment: mittig
+                         wie bisher für einzeilige Kästchen, oben für die Zeilen mit
+                         Beschreibung — sonst säße das Kästchen mitten im Absatz. -->
+                    <Grid Background="Transparent">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="*" />
+                        </Grid.ColumnDefinitions>
                         <Border x:Name="Box" Width="17" Height="17" CornerRadius="5"
                                 Background="{DynamicResource WzBgDarker}"
                                 BorderBrush="{DynamicResource WzBorderControl}" BorderThickness="1.4"
-                                VerticalAlignment="Center">
+                                VerticalAlignment="{TemplateBinding VerticalContentAlignment}">
                             <Path x:Name="Tick" Data="M 0 4 L 3.5 7.5 L 9 0" Stroke="#0A0A0F"
                                   StrokeThickness="2" Visibility="Collapsed"
                                   HorizontalAlignment="Center" VerticalAlignment="Center"
                                   StrokeEndLineCap="Round" StrokeStartLineCap="Round" />
                         </Border>
-                        <ContentPresenter Margin="9,0,0,0" VerticalAlignment="Center" />
-                    </StackPanel>
+                        <ContentPresenter Grid.Column="1" Margin="9,0,0,0"
+                                          VerticalAlignment="{TemplateBinding VerticalContentAlignment}" />
+                    </Grid>
                     <ControlTemplate.Triggers>
                         <Trigger Property="IsChecked" Value="True">
                             <Setter TargetName="Box" Property="Background" Value="{DynamicResource WzCyan}" />

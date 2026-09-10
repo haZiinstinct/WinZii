@@ -11,7 +11,7 @@ Vom USB-Stick starten, aufräumen, optimieren, einrichten — ohne Installation,
 
 <sub>A Windows maintenance toolkit for IT technicians. Fully bilingual German/English — interface, dialogs, log, reports and handover sheet.</sub>
 
-![Version](https://img.shields.io/badge/Version-0.5.3-00d4ff?labelColor=0a0a0f&style=flat-square)
+![Version](https://img.shields.io/badge/Version-0.6.0-00d4ff?labelColor=0a0a0f&style=flat-square)
 [![Prüfung](https://github.com/haZiinstinct/WinZii/actions/workflows/pruefung.yml/badge.svg)](https://github.com/haZiinstinct/WinZii/actions/workflows/pruefung.yml)
 ![Windows](https://img.shields.io/badge/Windows-10%20%7C%2011-00d4ff?labelColor=0a0a0f&style=flat-square)
 ![PowerShell](https://img.shields.io/badge/PowerShell-5.1-00d4ff?labelColor=0a0a0f&style=flat-square)
@@ -56,7 +56,7 @@ Das war alles. WinZii braucht keine Installation, keine Laufzeitumgebung und kei
 > **Windows meldet sich mit einem blauen Hinweis?**
 > Auf »Weitere Informationen« und dann »Trotzdem ausführen« klicken. Der Hinweis erscheint bei jeder Datei aus dem Internet, die nicht kostenpflichtig signiert wurde. Zu jedem Release gehört eine SHA256-Prüfsumme — damit lässt sich das Archiv vor dem Entpacken abgleichen:
 > ```powershell
-> Get-FileHash .\WinZii-0.5.3.zip -Algorithm SHA256
+> Get-FileHash .\WinZii-0.6.0.zip -Algorithm SHA256
 > ```
 
 **Voraussetzungen:** Windows 10 oder 11 mit Administratorrechten. PowerShell 5.1 und .NET Framework sind in Windows enthalten.

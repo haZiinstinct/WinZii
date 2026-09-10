@@ -775,16 +775,11 @@ function New-WzCard {
     #>
     param(
         [string]$Title,
-        [string]$Eyebrow,
-        [switch]$Static
+        [string]$Eyebrow
     )
 
     $card = New-Object Windows.Controls.Border
-    $card.Style = if ($Static) {
-        $syncHash.Window.FindResource('WzCardStatic')
-    } else {
-        $syncHash.Window.FindResource('WzCard')
-    }
+    $card.Style = $syncHash.Window.FindResource('WzCardStatic')
     $card.Margin = New-Object Windows.Thickness(0, 0, 0, 14)
 
     $stack = New-Object Windows.Controls.StackPanel
@@ -815,6 +810,17 @@ function New-WzCheckRow {
         Checkbox-Zeile mit Titel, Beschreibung und Abzeichen für Risiko und Zustand.
     .PARAMETER Item
         Objekt mit name, description und optional risk/level.
+    .NOTES
+        Name und Beschreibung stehen IM Kästchen, nicht daneben: Damit ist die
+        ganze Zeile die Schaltfläche. Vorher lag der Text in einer eigenen
+        Gitterspalte, und zu treffen war nur das Kästchen selbst — 17 px hoch,
+        bei 41 Optimierungen 41-mal. Nebenbei löst das den Fall mit, dass ein
+        Bildschirmleser Kästchen und Beschriftung nicht zusammenbrachte.
+    .OUTPUTS
+        Row (die Zeile zum Einhängen), CheckBox und HeaderRow — Letzteres für
+        Seiten, die später ein Abzeichen hinter den Namen setzen. Über den
+        Baum zu greifen (Children[1].Children[0]) hat beim ersten Umbau hier
+        still danebengelangt.
     #>
     param(
         [Parameter(Mandatory = $true)]$Item,
@@ -823,26 +829,16 @@ function New-WzCheckRow {
         [string]$StatusKind = 'info'
     )
 
-    $grid = New-Object Windows.Controls.Grid
-    $grid.Margin = New-Object Windows.Thickness(0, 5, 0, 5)
-    $col1 = New-Object Windows.Controls.ColumnDefinition
-    $col1.Width = 'Auto'
-    $col2 = New-Object Windows.Controls.ColumnDefinition
-    $col2.Width = '*'
-    [void]$grid.ColumnDefinitions.Add($col1)
-    [void]$grid.ColumnDefinitions.Add($col2)
-
     $checkBox = New-Object Windows.Controls.CheckBox
     $checkBox.IsChecked = $IsChecked
     $checkBox.Style = $syncHash.Window.FindResource('WzCheckBox')
-    $checkBox.VerticalAlignment = 'Top'
-    $checkBox.Margin = New-Object Windows.Thickness(0, 2, 10, 0)
+    # Oben statt mittig: Bei mehrzeiliger Beschreibung säße das Kästchen sonst
+    # in der Mitte des Absatzes statt neben dem Namen.
+    $checkBox.VerticalContentAlignment = 'Top'
+    $checkBox.Margin = New-Object Windows.Thickness(0, 5, 0, 5)
     $checkBox.Tag = $Item
-    [Windows.Controls.Grid]::SetColumn($checkBox, 0)
-    [void]$grid.Children.Add($checkBox)
 
     $textStack = New-Object Windows.Controls.StackPanel
-    [Windows.Controls.Grid]::SetColumn($textStack, 1)
 
     $headerRow = New-Object Windows.Controls.StackPanel
     $headerRow.Orientation = 'Horizontal'
@@ -880,8 +876,8 @@ function New-WzCheckRow {
         [void]$textStack.Children.Add($descriptionBlock)
     }
 
-    [void]$grid.Children.Add($textStack)
-    return [pscustomobject]@{ Row = $grid; CheckBox = $checkBox }
+    $checkBox.Content = $textStack
+    return [pscustomobject]@{ Row = $checkBox; CheckBox = $checkBox; HeaderRow = $headerRow }
 }
 
 function New-WzInfoRow {

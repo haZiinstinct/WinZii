@@ -23,7 +23,7 @@
             <RowDefinition Height="Auto" />
         </Grid.RowDefinitions>
 
-        <Border Grid.Row="0" Grid.Column="0" Style="{DynamicResource WzCard}" Margin="0,0,0,14">
+        <Border Grid.Row="0" Grid.Column="0" Style="{DynamicResource WzCardStatic}" Margin="0,0,0,14">
             <StackPanel>
                 <TextBlock Text="{DynamicResource L.dash.windowsEyebrow}" Style="{DynamicResource WzEyebrow}" />
                 <TextBlock Name="DashOsTitle" Text="{DynamicResource L.dash.loading}" Style="{DynamicResource WzCardTitle}" TextWrapping="Wrap" />
@@ -31,7 +31,7 @@
             </StackPanel>
         </Border>
 
-        <Border Grid.Row="0" Grid.Column="2" Style="{DynamicResource WzCard}" Margin="0,0,0,14">
+        <Border Grid.Row="0" Grid.Column="2" Style="{DynamicResource WzCardStatic}" Margin="0,0,0,14">
             <StackPanel>
                 <TextBlock Text="{DynamicResource L.dash.hardwareEyebrow}" Style="{DynamicResource WzEyebrow}" />
                 <TextBlock Name="DashHwTitle" Text="{DynamicResource L.dash.loading}" Style="{DynamicResource WzCardTitle}" TextWrapping="Wrap" />
@@ -39,7 +39,7 @@
             </StackPanel>
         </Border>
 
-        <Border Grid.Row="0" Grid.Column="4" Style="{DynamicResource WzCard}" Margin="0,0,0,14">
+        <Border Grid.Row="0" Grid.Column="4" Style="{DynamicResource WzCardStatic}" Margin="0,0,0,14">
             <StackPanel>
                 <TextBlock Text="{DynamicResource L.dash.securityEyebrow}" Style="{DynamicResource WzEyebrow}" />
                 <TextBlock Name="DashSecTitle" Text="{DynamicResource L.dash.loading}" Style="{DynamicResource WzCardTitle}" TextWrapping="Wrap" />
@@ -47,7 +47,7 @@
             </StackPanel>
         </Border>
 
-        <Border Grid.Row="1" Grid.Column="0" Style="{DynamicResource WzCard}" Margin="0,0,0,14">
+        <Border Grid.Row="1" Grid.Column="0" Style="{DynamicResource WzCardStatic}" Margin="0,0,0,14">
             <StackPanel>
                 <TextBlock Text="{DynamicResource L.dash.diskEyebrow}" Style="{DynamicResource WzEyebrow}" />
                 <TextBlock Text="{DynamicResource L.dash.diskTitle}" Style="{DynamicResource WzCardTitle}" />
@@ -55,7 +55,7 @@
             </StackPanel>
         </Border>
 
-        <Border Grid.Row="1" Grid.Column="2" Style="{DynamicResource WzCard}" Margin="0,0,0,14">
+        <Border Grid.Row="1" Grid.Column="2" Style="{DynamicResource WzCardStatic}" Margin="0,0,0,14">
             <StackPanel>
                 <TextBlock Text="{DynamicResource L.dash.networkEyebrow}" Style="{DynamicResource WzEyebrow}" />
                 <TextBlock Text="{DynamicResource L.dash.networkTitle}" Style="{DynamicResource WzCardTitle}" />
@@ -63,7 +63,7 @@
             </StackPanel>
         </Border>
 
-        <Border Grid.Row="1" Grid.Column="4" Style="{DynamicResource WzCard}" Margin="0,0,0,14">
+        <Border Grid.Row="1" Grid.Column="4" Style="{DynamicResource WzCardStatic}" Margin="0,0,0,14">
             <StackPanel>
                 <TextBlock Text="{DynamicResource L.dash.sessionEyebrow}" Style="{DynamicResource WzEyebrow}" />
                 <TextBlock Text="{DynamicResource L.dash.sessionTitle}" Style="{DynamicResource WzCardTitle}" />
@@ -71,7 +71,7 @@
             </StackPanel>
         </Border>
 
-        <Border Grid.Row="2" Grid.Column="0" Style="{DynamicResource WzCard}" Margin="0,0,0,14">
+        <Border Grid.Row="2" Grid.Column="0" Style="{DynamicResource WzCardStatic}" Margin="0,0,0,14">
             <StackPanel>
                 <TextBlock Text="{DynamicResource L.dash.gpuEyebrow}" Style="{DynamicResource WzEyebrow}" />
                 <TextBlock Name="DashGpuTitle" Text="{DynamicResource L.dash.loading}" Style="{DynamicResource WzCardTitle}" TextWrapping="Wrap" />
@@ -79,7 +79,7 @@
             </StackPanel>
         </Border>
 
-        <Border Grid.Row="2" Grid.Column="2" Style="{DynamicResource WzCard}" Margin="0,0,0,14">
+        <Border Grid.Row="2" Grid.Column="2" Style="{DynamicResource WzCardStatic}" Margin="0,0,0,14">
             <StackPanel>
                 <TextBlock Text="{DynamicResource L.dash.displayEyebrow}" Style="{DynamicResource WzEyebrow}" />
                 <TextBlock Name="DashMonitorTitle" Text="{DynamicResource L.dash.loading}" Style="{DynamicResource WzCardTitle}" TextWrapping="Wrap" />
@@ -87,7 +87,7 @@
             </StackPanel>
         </Border>
 
-        <Border Grid.Row="2" Grid.Column="4" Style="{DynamicResource WzCard}" Margin="0,0,0,14">
+        <Border Grid.Row="2" Grid.Column="4" Style="{DynamicResource WzCardStatic}" Margin="0,0,0,14">
             <StackPanel>
                 <TextBlock Text="{DynamicResource L.dash.firmwareEyebrow}" Style="{DynamicResource WzEyebrow}" />
                 <TextBlock Name="DashFirmwareTitle" Text="{DynamicResource L.dash.loading}" Style="{DynamicResource WzCardTitle}" TextWrapping="Wrap" />

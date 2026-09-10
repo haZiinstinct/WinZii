@@ -10,10 +10,14 @@ bequemen Zweig. Genau daraus sind die drei Symptome entstanden, die den Audit au
 haben. Alles unten ist der Teil, der auf dem Entwicklungsrechner **grundsätzlich nicht**
 prüfbar ist.
 
-Stand: **0.5.3**, veröffentlicht am 05.09.2026, `main` seit dem 06.09. einen Commit weiter
-(Fensterlage, zweispaltige Karten, `Test-Layout`). Alle Prüfwerkzeuge grün, Sandbox-Lauf
-mit 0.5.3 über das WLAN des Notebooks bestanden, Start aus dem Release-Archiv mit leerem
-`offline\` geprüft.
+Stand: **0.6.0**, veröffentlicht am 10.09.2026 (Fensterlage, zweispaltige Karten,
+`Test-Layout`, dazu die sichtbaren Bedienelemente: Knöpfe mit Rand und Fläche,
+Fokusrahmen, ganze Zeile statt Kästchen). Alle Prüfwerkzeuge grün.
+
+**Auf 0.6.0 noch nicht wiederholt:** der Sandbox-Lauf und der Start aus dem
+Release-Archiv mit leerem `offline\` — beides zuletzt mit 0.5.3 über das WLAN des
+Notebooks bestanden. Am Verhalten hat sich seither nichts geändert, nur am Aussehen und
+an der Trefferfläche der Zeilen; nachzuholen ist es trotzdem.
 
 > **Was die CI seither abnimmt.** Seit `.github/workflows/pruefung.yml` laufen die zwölf
 > Werkzeuge bei jedem Push auf einem **englischen** Windows-Server, und die Oberfläche

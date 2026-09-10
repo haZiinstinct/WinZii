@@ -73,7 +73,7 @@ function New-WzAppList {
         $apps = @(Get-WzApps -Category $category.id)
         if ($apps.Count -eq 0) { continue }
 
-        $card = New-WzCard -Eyebrow "// $($category.name.ToUpper())" -Static
+        $card = New-WzCard -Eyebrow "// $($category.name.ToUpper())"
         $stack = $card.Content
 
         $lead = New-Object Windows.Controls.TextBlock

@@ -32,7 +32,7 @@ function New-WzCleanupList {
         $groupCategories = @($categories | Where-Object { $_.group -eq $group.id })
         if ($groupCategories.Count -eq 0) { continue }
 
-        $card = New-WzCard -Eyebrow "// $($group.name.ToUpper())" -Static
+        $card = New-WzCard -Eyebrow "// $($group.name.ToUpper())"
         $stack = $card.Content
 
         $lead = New-Object Windows.Controls.TextBlock
@@ -61,9 +61,12 @@ function New-WzCleanupRow {
     #>
     param([Parameter(Mandatory = $true)]$Category)
 
+    # Zwei Spalten statt drei: Kästchen und Text bilden zusammen die Schaltfläche
+    # (siehe New-WzCheckRow), die Größe steht daneben und gehört nicht dazu —
+    # ein Klick auf eine Zahl, die sich beim Messen ändert, wäre eine Falle.
     $grid = New-Object Windows.Controls.Grid
     $grid.Margin = New-Object Windows.Thickness(0, 5, 0, 5)
-    foreach ($width in @('Auto', '*', 'Auto')) {
+    foreach ($width in @('*', 'Auto')) {
         $column = New-Object Windows.Controls.ColumnDefinition
         $column.Width = $width
         [void]$grid.ColumnDefinitions.Add($column)
@@ -72,14 +75,12 @@ function New-WzCleanupRow {
     $checkBox = New-Object Windows.Controls.CheckBox
     $checkBox.IsChecked = [bool]$Category.defaultChecked
     $checkBox.Style = $syncHash.Window.FindResource('WzCheckBox')
-    $checkBox.VerticalAlignment = 'Top'
-    $checkBox.Margin = New-Object Windows.Thickness(0, 2, 10, 0)
+    $checkBox.VerticalContentAlignment = 'Top'
     $checkBox.Add_Click({ Update-WzCleanupSelection })
     [Windows.Controls.Grid]::SetColumn($checkBox, 0)
     [void]$grid.Children.Add($checkBox)
 
     $textStack = New-Object Windows.Controls.StackPanel
-    [Windows.Controls.Grid]::SetColumn($textStack, 1)
 
     $headerRow = New-Object Windows.Controls.StackPanel
     $headerRow.Orientation = 'Horizontal'
@@ -128,7 +129,7 @@ function New-WzCleanupRow {
     $noteBlock.Margin = New-Object Windows.Thickness(0, 3, 12, 0)
     [void]$textStack.Children.Add($noteBlock)
 
-    [void]$grid.Children.Add($textStack)
+    $checkBox.Content = $textStack
 
     $sizeBlock = New-Object Windows.Controls.TextBlock
     $sizeBlock.Text = '—'
@@ -138,7 +139,7 @@ function New-WzCleanupRow {
     $sizeBlock.VerticalAlignment = 'Top'
     $sizeBlock.MinWidth = 80
     $sizeBlock.TextAlignment = 'Right'
-    [Windows.Controls.Grid]::SetColumn($sizeBlock, 2)
+    [Windows.Controls.Grid]::SetColumn($sizeBlock, 1)
     [void]$grid.Children.Add($sizeBlock)
 
     return [pscustomobject]@{

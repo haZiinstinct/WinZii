@@ -31,7 +31,7 @@ function New-WzTweakList {
         $title = if ($meta) { $meta.name } else { $categoryId }
         $lead = if ($meta) { $meta.description } else { '' }
 
-        $card = New-WzCard -Eyebrow "// $($title.ToUpper())" -Static
+        $card = New-WzCard -Eyebrow "// $($title.ToUpper())"
         $stack = $card.Content
 
         $header = New-Object Windows.Controls.Grid
@@ -56,10 +56,11 @@ function New-WzTweakList {
             [void]$stack.Children.Add($row.Row)
 
             $entry = [pscustomobject]@{
-                Tweak    = $tweak
-                CheckBox = $row.CheckBox
-                Row      = $row.Row
-                Badge    = $null
+                Tweak     = $tweak
+                CheckBox  = $row.CheckBox
+                Row       = $row.Row
+                HeaderRow = $row.HeaderRow
+                Badge     = $null
             }
             [void]$rows.Add($entry)
             [void]$categoryRows.Add($entry)
@@ -133,10 +134,8 @@ function Update-WzTweakStates {
             }
 
             if ($badgeText) {
-                $textStack = $entry.Row.Children[1]
-                $headerRow = $textStack.Children[0]
                 $badge = New-WzBadge -Text $badgeText -Kind $badgeKind
-                [void]$headerRow.Children.Add($badge)
+                [void]$entry.HeaderRow.Children.Add($badge)
                 $entry.Badge = $badge
             }
 
