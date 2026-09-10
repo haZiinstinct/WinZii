@@ -7,6 +7,29 @@ Alle nennenswerten Änderungen an WinZii. Die Fassungen folgen
 
 ### Behoben
 
+- **Knöpfe waren im Ruhezustand nicht als Knöpfe zu erkennen.** Der Sekundärknopf — der
+  mit 45 Vorkommen häufigste — stand auf durchsichtigem Grund und trug nur den
+  dekorativen Rand `WzBorder`: gegen die Karte gerechnet 1,2:1. Die kleinen Knöpfe
+  (»empfohlen«, »alle«, »keine«, »umschalten«, »leeren«, die Sprachwahl) hatten gar
+  keinen Rand und standen in Mono-Schrift derselben Größe und Farbe neben echten
+  Beschriftungen. Wer WinZii kennt, findet sie trotzdem; wer zum ersten Mal davorsitzt,
+  hält sie für Text und erfährt nur durch Zufall vom Gegenteil — nämlich dann, wenn die
+  Maus einmal darüberstreift. Jetzt tragen beide eine eigene Fläche und `WzBorderControl`
+  als Rand, dieselbe Linie, die schon das leere Auswahlkästchen umrandet: ein Grau heißt
+  in der ganzen Oberfläche »hier kann man etwas bedienen«. Dazu gibt es endlich eine
+  Rückmeldung beim Drücken. Rahmenlos bleiben nur die Fensterknöpfe und das Kreuz im
+  Dialog (`WzBtnChrome`) — die erklärt ihre Stelle in der Titelzeile.
+  Eingabe- und Auswahlfeld hingen an derselben unsichtbaren Linie und bekommen sie
+  ebenfalls. `Test-Contrast` prüft die Ränder der Bedienelemente jetzt mit: Sie waren nie
+  Teil der Prüfliste, deshalb ist es jahrelang niemandem aufgefallen.
+- **Mit der Tastatur war nicht zu sehen, wo man gerade steht.** Die Vorlagen setzten
+  keinen eigenen Fokusrahmen, und Windows zeichnet dafür ein gepunktetes Rechteck, das
+  auf `#0A0A0F` praktisch unsichtbar ist. Knöpfe, Seitenleiste, Auswahlkästchen,
+  Schalter, Eingabe- und Auswahlfeld markieren den Fokus jetzt in Cyan — im Primärknopf
+  dunkel, weil das auf der cyanen Fläche das Deutlichste ist.
+- **Primär- und Sekundärknopf standen in einer Reihe zwei Pixel versetzt.** Der
+  Primärknopf hatte keinen Rand, die Knöpfe daneben schon. Er hat jetzt einen
+  durchsichtigen in derselben Stärke.
 - **Das Fenster startete zu tief und stand mit dem Fuß hinter der Taskleiste.**
   `WindowStartupLocation="CenterScreen"` zentriert auf dem ganzen Bildschirm und rechnet
   die Taskleiste nicht heraus. Auf dem Abnahmegerät (1536 × 864, 48 px Taskleiste) saß

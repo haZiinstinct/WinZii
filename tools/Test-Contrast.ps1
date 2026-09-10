@@ -134,8 +134,11 @@ $checks = @(
     # Knöpfe
     @{ Was = 'Primärknopf';                    Fg = '#0A0A0F';     Bg = 'WzCyan';     Kind = 'text' }
     @{ Was = 'Primärknopf gedrückt';           Fg = '#0A0A0F';     Bg = 'WzCyanDim';  Kind = 'text' }
-    @{ Was = 'Sekundärknopf';                  Fg = 'WzTextDim';   Bg = 'WzBgCard';   Kind = 'text' }
-    @{ Was = 'Sekundärknopf beim Überfahren';  Fg = 'WzCyan';      Bg = 'WzBgCardHover'; Kind = 'text' }
+    @{ Was = 'Sekundärknopf';                  Fg = 'WzText';      Bg = 'WzBtnFace';  Kind = 'text' }
+    @{ Was = 'Sekundärknopf beim Überfahren';  Fg = 'WzCyan';      Bg = 'WzBtnFaceHover'; Kind = 'text' }
+    @{ Was = 'Sekundärknopf gedrückt';         Fg = 'WzText';      Bg = 'WzBtnFacePress'; Kind = 'text' }
+    @{ Was = 'Chip-Knopf';                     Fg = 'WzTextDim';   Bg = 'WzBtnFace';  Kind = 'text' }
+    @{ Was = 'Chip-Knopf beim Überfahren';     Fg = 'WzCyan';      Bg = 'WzBtnFaceHover'; Kind = 'text' }
     @{ Was = 'Navigation aktiv';               Fg = 'WzCyan';      Bg = '#1A00D4FF';  Behind = 'WzBgDarker'; Kind = 'text' }
 
     # Deaktiviert — vorher der schlimmste Fehler (1,5:1)
@@ -162,6 +165,16 @@ $checks = @(
     @{ Was = 'Auswahlkästchen (leer)';         Fg = 'WzBorderControl'; Bg = 'WzBgCard';    Kind = 'ui' }
     @{ Was = 'Schalter-Spur';                  Fg = 'WzBorderControl'; Bg = 'WzBgCard';    Kind = 'ui' }
     @{ Was = 'Balken-Spur';                    Fg = 'WzBorderControl'; Bg = 'WzBgCard';    Kind = 'ui' }
+
+    # Ränder der Knöpfe — der Punkt, an dem man einen Knopf überhaupt als Knopf
+    # erkennt, bevor die Maus ihn berührt. Vorher stand hier WzBorder mit 1,2:1;
+    # geprüft wurde es nie, deshalb ist es jahrelang niemandem aufgefallen.
+    @{ Was = 'Knopfrand auf Karte';            Fg = 'WzBorderControl'; Bg = 'WzBgCard';    Kind = 'ui' }
+    @{ Was = 'Knopfrand auf Seite';            Fg = 'WzBorderControl'; Bg = 'WzBgPage';    Kind = 'ui' }
+    @{ Was = 'Knopfrand in der Seitenleiste';  Fg = 'WzBorderControl'; Bg = 'WzBgDarker';  Kind = 'ui' }
+    @{ Was = 'Eingabefeld-Rand';               Fg = 'WzBorderControl'; Bg = 'WzBgCard';    Kind = 'ui' }
+    @{ Was = 'Fokusrahmen auf Karte';          Fg = 'WzCyan';          Bg = 'WzBgCard';    Kind = 'ui' }
+    @{ Was = 'Fokusrahmen im Primärknopf';     Fg = 'WzBgPage';        Bg = 'WzCyan';      Kind = 'ui' }
     @{ Was = 'Scrollbalken';                   Fg = '#66FFFFFF';       Bg = 'WzBgPage';    Behind = 'WzBgPage'; Kind = 'ui' }
     @{ Was = 'Auswahlkästchen angehakt';       Fg = 'WzCyan';          Bg = 'WzBgCard';    Kind = 'ui' }
     @{ Was = 'Schalter-Knopf (aus)';           Fg = 'WzTextDim';       Bg = 'WzBgCardHover'; Kind = 'ui' }

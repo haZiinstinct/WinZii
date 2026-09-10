@@ -27,6 +27,19 @@
     <SolidColorBrush x:Key="WzBorderHover"   Color="#4D00D4FF" />
     <SolidColorBrush x:Key="WzBorderControl" Color="#59636F" />
 
+    <!-- Knopfflächen
+         Ein Knopf muss im Ruhezustand als Knopf zu erkennen sein. Sekundär-
+         und Chip-Knöpfe standen vorher auf durchsichtigem Grund und trugen nur
+         den dekorativen WzBorder — beides zusammen ergibt gegen die Karte rund
+         1,2:1. Wer das Werkzeug kennt, findet sie trotzdem; wer davorsitzt und
+         nicht zufällig mit der Maus darüberfährt, hält sie für Beschriftungen.
+         Deshalb eine eigene Fläche, dazu WzBorderControl als Rand — dieselbe
+         Linie, die schon das leere Auswahlkästchen umrandet. Ein Grau heißt in
+         der ganzen Oberfläche: hier kann man etwas bedienen. -->
+    <SolidColorBrush x:Key="WzBtnFace"       Color="#1B1B26" />
+    <SolidColorBrush x:Key="WzBtnFaceHover"  Color="#262634" />
+    <SolidColorBrush x:Key="WzBtnFacePress"  Color="#101018" />
+
     <!-- Text — alle Werte erreichen auf Karte, Seite und Seitenleiste
          mindestens 4,5:1. WzTextFaint war mit #64748B darunter. -->
     <SolidColorBrush x:Key="WzText"         Color="#E2E8F0" />
@@ -194,6 +207,16 @@
 
     <!-- ================================================================
          Buttons
+
+         Vier Stufen, von laut nach leise:
+           WzBtnPrimary    gefüllt cyan  — die eine Hauptaktion einer Seite
+           WzBtnSecondary  Fläche + Rand — Nebenaktionen gleichen Rangs
+           WzBtnChip       klein, mono   — Kleinkram neben einer Überschrift
+           WzBtnChrome     rahmenlos     — nur Fensterknöpfe und Dialogkreuz
+         Alle vier bekommen denselben Fokusrahmen in Cyan. Die Windows-Vorlage
+         zeichnet stattdessen ein gepunktetes Rechteck, das auf dunklem Grund
+         praktisch unsichtbar ist — wer mit der Tastatur bedient, sieht sonst
+         nicht, wo er gerade steht.
          ================================================================ -->
     <Style x:Key="WzBtnPrimary" TargetType="Button">
         <Setter Property="FontFamily" Value="{DynamicResource WzFontSans}" />
@@ -203,16 +226,30 @@
         <Setter Property="Background" Value="{DynamicResource WzCyan}" />
         <Setter Property="Padding" Value="18,9,18,9" />
         <Setter Property="Cursor" Value="Hand" />
+        <Setter Property="FocusVisualStyle" Value="{x:Null}" />
         <Setter Property="Template">
             <Setter.Value>
                 <ControlTemplate TargetType="Button">
+                    <!-- Der Rand ist im Ruhezustand durchsichtig. Er steht hier,
+                         damit der Primärknopf genauso hoch baut wie die
+                         umrandeten Knöpfe daneben — vorher standen sie in einer
+                         Reihe zwei Pixel versetzt — und damit der Fokus ihn
+                         einfärben kann, ohne dass das Layout springt. -->
                     <Border x:Name="Shell" Background="{TemplateBinding Background}"
+                            BorderBrush="Transparent" BorderThickness="1"
                             CornerRadius="10" Padding="{TemplateBinding Padding}"
                             SnapsToDevicePixels="True">
                         <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" />
                     </Border>
                     <ControlTemplate.Triggers>
                         <Trigger Property="IsMouseOver" Value="True">
+                            <Setter TargetName="Shell" Property="Effect" Value="{DynamicResource WzGlowStrong}" />
+                        </Trigger>
+                        <!-- Dunkler Ring statt hellem: auf der cyanen Fläche ist
+                             er das Deutlichste, was es gibt, und trägt dieselbe
+                             Farbe wie die Schrift darauf. -->
+                        <Trigger Property="IsKeyboardFocused" Value="True">
+                            <Setter TargetName="Shell" Property="BorderBrush" Value="{DynamicResource WzBgPage}" />
                             <Setter TargetName="Shell" Property="Effect" Value="{DynamicResource WzGlowStrong}" />
                         </Trigger>
                         <Trigger Property="IsPressed" Value="True">
@@ -233,27 +270,38 @@
     <Style x:Key="WzBtnSecondary" TargetType="Button">
         <Setter Property="FontFamily" Value="{DynamicResource WzFontSans}" />
         <Setter Property="FontSize" Value="13" />
-        <Setter Property="Foreground" Value="{DynamicResource WzTextDim}" />
-        <Setter Property="Background" Value="Transparent" />
+        <Setter Property="Foreground" Value="{DynamicResource WzText}" />
+        <Setter Property="Background" Value="{DynamicResource WzBtnFace}" />
         <Setter Property="Padding" Value="18,9,18,9" />
         <Setter Property="Cursor" Value="Hand" />
+        <Setter Property="FocusVisualStyle" Value="{x:Null}" />
         <Setter Property="Template">
             <Setter.Value>
                 <ControlTemplate TargetType="Button">
                     <Border x:Name="Shell" Background="{TemplateBinding Background}"
-                            BorderBrush="{DynamicResource WzBorder}" BorderThickness="1"
+                            BorderBrush="{DynamicResource WzBorderControl}" BorderThickness="1"
                             CornerRadius="10" Padding="{TemplateBinding Padding}"
                             SnapsToDevicePixels="True">
                         <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" />
                     </Border>
                     <ControlTemplate.Triggers>
                         <Trigger Property="IsMouseOver" Value="True">
-                            <Setter TargetName="Shell" Property="BorderBrush" Value="{DynamicResource WzCyanBorder}" />
-                            <Setter TargetName="Shell" Property="Background" Value="{DynamicResource WzBgCardHover}" />
+                            <Setter TargetName="Shell" Property="BorderBrush" Value="{DynamicResource WzBorderHover}" />
+                            <Setter TargetName="Shell" Property="Background" Value="{DynamicResource WzBtnFaceHover}" />
                             <Setter Property="Foreground" Value="{DynamicResource WzCyan}" />
+                        </Trigger>
+                        <Trigger Property="IsKeyboardFocused" Value="True">
+                            <Setter TargetName="Shell" Property="BorderBrush" Value="{DynamicResource WzCyan}" />
+                        </Trigger>
+                        <!-- Die Fläche wird beim Drücken dunkler statt heller:
+                             der Knopf geht sichtbar hinein. Vorher gab es beim
+                             Drücken überhaupt keine Rückmeldung. -->
+                        <Trigger Property="IsPressed" Value="True">
+                            <Setter TargetName="Shell" Property="Background" Value="{DynamicResource WzBtnFacePress}" />
                         </Trigger>
                         <Trigger Property="IsEnabled" Value="False">
                             <Setter TargetName="Shell" Property="Background" Value="{DynamicResource WzDisabledFill}" />
+                            <Setter TargetName="Shell" Property="BorderBrush" Value="{DynamicResource WzBorder}" />
                             <Setter Property="Foreground" Value="{DynamicResource WzDisabledText}" />
                             <Setter Property="Cursor" Value="Arrow" />
                         </Trigger>
@@ -269,6 +317,7 @@
         <Setter Property="Foreground" Value="{DynamicResource WzRedText}" />
         <Setter Property="Padding" Value="18,9,18,9" />
         <Setter Property="Cursor" Value="Hand" />
+        <Setter Property="FocusVisualStyle" Value="{x:Null}" />
         <Setter Property="Template">
             <Setter.Value>
                 <ControlTemplate TargetType="Button">
@@ -283,6 +332,12 @@
                             <Setter TargetName="Shell" Property="Background" Value="#33EF4444" />
                             <Setter TargetName="Shell" Property="BorderBrush" Value="{DynamicResource WzRed}" />
                         </Trigger>
+                        <Trigger Property="IsKeyboardFocused" Value="True">
+                            <Setter TargetName="Shell" Property="BorderBrush" Value="{DynamicResource WzRed}" />
+                        </Trigger>
+                        <Trigger Property="IsPressed" Value="True">
+                            <Setter TargetName="Shell" Property="Background" Value="#14EF4444" />
+                        </Trigger>
                         <Trigger Property="IsEnabled" Value="False">
                             <Setter TargetName="Shell" Property="Background" Value="{DynamicResource WzDisabledFill}" />
                             <Setter TargetName="Shell" Property="BorderBrush" Value="{DynamicResource WzBorder}" />
@@ -295,17 +350,74 @@
         </Setter>
     </Style>
 
-    <Style x:Key="WzBtnGhost" TargetType="Button">
+    <!-- Chip — die kleinen Nebenaktionen: "empfohlen", "alle", "keine",
+         "umschalten", "leeren", die Sprachwahl in der Fußzeile.
+         Sie standen bis 0.5.3 rahmenlos in Mono-Schrift neben echten
+         Beschriftungen derselben Größe und Farbe. Für jemanden, der WinZii
+         zum ersten Mal öffnet, waren sie schlicht Text; erkannt hat man sie
+         nur, wenn man zufällig mit der Maus darüberfuhr. Jetzt tragen sie
+         Fläche und Rand wie der Sekundärknopf, nur kleiner.
+         Eckig gerundet, nicht als Pille: Pillen sind in dieser Oberfläche die
+         Abzeichen (MITTEL, AKTIV, Rechnername) — und die kann man nicht
+         anklicken. Eine Form, eine Bedeutung. -->
+    <Style x:Key="WzBtnChip" TargetType="Button">
+        <Setter Property="FontFamily" Value="{DynamicResource WzFontMono}" />
+        <Setter Property="FontSize" Value="11.5" />
+        <Setter Property="Foreground" Value="{DynamicResource WzTextDim}" />
+        <Setter Property="Background" Value="{DynamicResource WzBtnFace}" />
+        <Setter Property="Padding" Value="10,5,10,5" />
+        <Setter Property="Cursor" Value="Hand" />
+        <Setter Property="FocusVisualStyle" Value="{x:Null}" />
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="Button">
+                    <Border x:Name="Shell" Background="{TemplateBinding Background}"
+                            BorderBrush="{DynamicResource WzBorderControl}" BorderThickness="1"
+                            CornerRadius="8" Padding="{TemplateBinding Padding}"
+                            SnapsToDevicePixels="True">
+                        <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" />
+                    </Border>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsMouseOver" Value="True">
+                            <Setter TargetName="Shell" Property="BorderBrush" Value="{DynamicResource WzBorderHover}" />
+                            <Setter TargetName="Shell" Property="Background" Value="{DynamicResource WzBtnFaceHover}" />
+                            <Setter Property="Foreground" Value="{DynamicResource WzCyan}" />
+                        </Trigger>
+                        <Trigger Property="IsKeyboardFocused" Value="True">
+                            <Setter TargetName="Shell" Property="BorderBrush" Value="{DynamicResource WzCyan}" />
+                        </Trigger>
+                        <Trigger Property="IsPressed" Value="True">
+                            <Setter TargetName="Shell" Property="Background" Value="{DynamicResource WzBtnFacePress}" />
+                        </Trigger>
+                        <Trigger Property="IsEnabled" Value="False">
+                            <Setter TargetName="Shell" Property="Background" Value="{DynamicResource WzDisabledFill}" />
+                            <Setter TargetName="Shell" Property="BorderBrush" Value="{DynamicResource WzBorder}" />
+                            <Setter Property="Foreground" Value="{DynamicResource WzDisabledText}" />
+                            <Setter Property="Cursor" Value="Arrow" />
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <!-- Rahmenlos — und zwar nur dort, wo die Stelle den Knopf schon erklärt:
+         Minimieren, Maximieren, Schließen in der Titelzeile und das Kreuz im
+         Dialog. Die kennt jeder aus jedem Fenster; ein Kasten darum würde die
+         Kopfleiste nur zerschneiden. Überall sonst gilt: sichtbar umrandet. -->
+    <Style x:Key="WzBtnChrome" TargetType="Button">
         <Setter Property="FontFamily" Value="{DynamicResource WzFontMono}" />
         <Setter Property="FontSize" Value="11.5" />
         <Setter Property="Foreground" Value="{DynamicResource WzTextDim}" />
         <Setter Property="Background" Value="Transparent" />
         <Setter Property="Padding" Value="10,5,10,5" />
         <Setter Property="Cursor" Value="Hand" />
+        <Setter Property="FocusVisualStyle" Value="{x:Null}" />
         <Setter Property="Template">
             <Setter.Value>
                 <ControlTemplate TargetType="Button">
                     <Border x:Name="Shell" Background="{TemplateBinding Background}"
+                            BorderBrush="Transparent" BorderThickness="1"
                             CornerRadius="8" Padding="{TemplateBinding Padding}">
                         <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" />
                     </Border>
@@ -313,6 +425,13 @@
                         <Trigger Property="IsMouseOver" Value="True">
                             <Setter TargetName="Shell" Property="Background" Value="{DynamicResource WzBgCardHover}" />
                             <Setter Property="Foreground" Value="{DynamicResource WzCyan}" />
+                        </Trigger>
+                        <Trigger Property="IsKeyboardFocused" Value="True">
+                            <Setter TargetName="Shell" Property="BorderBrush" Value="{DynamicResource WzCyan}" />
+                            <Setter Property="Foreground" Value="{DynamicResource WzCyan}" />
+                        </Trigger>
+                        <Trigger Property="IsPressed" Value="True">
+                            <Setter TargetName="Shell" Property="Background" Value="{DynamicResource WzBtnFacePress}" />
                         </Trigger>
                     </ControlTemplate.Triggers>
                 </ControlTemplate>
@@ -332,6 +451,7 @@
         <Setter Property="Padding" Value="14,10,14,10" />
         <Setter Property="Margin" Value="0,1,0,1" />
         <Setter Property="Cursor" Value="Hand" />
+        <Setter Property="FocusVisualStyle" Value="{x:Null}" />
         <Setter Property="Template">
             <Setter.Value>
                 <ControlTemplate TargetType="Button">
@@ -344,6 +464,20 @@
                         <Trigger Property="IsMouseOver" Value="True">
                             <Setter TargetName="Shell" Property="Background" Value="{DynamicResource WzBgCardHover}" />
                             <Setter Property="Foreground" Value="{DynamicResource WzText}" />
+                        </Trigger>
+                        <!-- Die Seitenleiste bleibt im Ruhezustand bewusst ohne
+                             Kästen: Eine Liste aus Symbol und Wort links am Rand
+                             liest sich von selbst als Navigation, fünfzehn
+                             Rahmen untereinander wären nur Unruhe. Wer mit der
+                             Tabulatortaste hierherkommt, braucht die Markierung
+                             aber trotzdem. -->
+                        <Trigger Property="IsKeyboardFocused" Value="True">
+                            <Setter TargetName="Shell" Property="Background" Value="{DynamicResource WzBgCardHover}" />
+                            <Setter TargetName="Shell" Property="BorderBrush" Value="{DynamicResource WzCyan}" />
+                            <Setter Property="Foreground" Value="{DynamicResource WzText}" />
+                        </Trigger>
+                        <Trigger Property="IsPressed" Value="True">
+                            <Setter TargetName="Shell" Property="Background" Value="{DynamicResource WzBtnFacePress}" />
                         </Trigger>
                     </ControlTemplate.Triggers>
                 </ControlTemplate>
@@ -360,6 +494,7 @@
         <Setter Property="Padding" Value="14,10,14,10" />
         <Setter Property="Margin" Value="0,1,0,1" />
         <Setter Property="Cursor" Value="Hand" />
+        <Setter Property="FocusVisualStyle" Value="{x:Null}" />
         <Setter Property="Template">
             <Setter.Value>
                 <ControlTemplate TargetType="Button">
@@ -368,6 +503,11 @@
                             CornerRadius="11" Padding="{TemplateBinding Padding}">
                         <ContentPresenter HorizontalAlignment="Left" VerticalAlignment="Center" />
                     </Border>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsKeyboardFocused" Value="True">
+                            <Setter TargetName="Shell" Property="BorderBrush" Value="{DynamicResource WzCyan}" />
+                        </Trigger>
+                    </ControlTemplate.Triggers>
                 </ControlTemplate>
             </Setter.Value>
         </Setter>
@@ -381,6 +521,7 @@
         <Setter Property="FontSize" Value="13" />
         <Setter Property="Foreground" Value="{DynamicResource WzText}" />
         <Setter Property="Cursor" Value="Hand" />
+        <Setter Property="FocusVisualStyle" Value="{x:Null}" />
         <Setter Property="Template">
             <Setter.Value>
                 <ControlTemplate TargetType="CheckBox">
@@ -405,6 +546,9 @@
                         <Trigger Property="IsMouseOver" Value="True">
                             <Setter TargetName="Box" Property="BorderBrush" Value="{DynamicResource WzBorderHover}" />
                         </Trigger>
+                        <Trigger Property="IsKeyboardFocused" Value="True">
+                            <Setter TargetName="Box" Property="BorderBrush" Value="{DynamicResource WzCyan}" />
+                        </Trigger>
                         <Trigger Property="IsEnabled" Value="False">
                             <Setter Property="Foreground" Value="{DynamicResource WzDisabledText}" />
                             <Setter TargetName="Box" Property="Background" Value="{DynamicResource WzDisabledFill}" />
@@ -422,6 +566,7 @@
         <Setter Property="FontSize" Value="11" />
         <Setter Property="Foreground" Value="{DynamicResource WzTextDim}" />
         <Setter Property="Cursor" Value="Hand" />
+        <Setter Property="FocusVisualStyle" Value="{x:Null}" />
         <Setter Property="Template">
             <Setter.Value>
                 <ControlTemplate TargetType="CheckBox">
@@ -443,6 +588,12 @@
                             <Setter TargetName="Knob" Property="HorizontalAlignment" Value="Right" />
                             <Setter TargetName="Knob" Property="Margin" Value="0,0,3,0" />
                             <Setter Property="Foreground" Value="{DynamicResource WzCyan}" />
+                        </Trigger>
+                        <Trigger Property="IsMouseOver" Value="True">
+                            <Setter TargetName="Track" Property="BorderBrush" Value="{DynamicResource WzBorderHover}" />
+                        </Trigger>
+                        <Trigger Property="IsKeyboardFocused" Value="True">
+                            <Setter TargetName="Track" Property="BorderBrush" Value="{DynamicResource WzCyan}" />
                         </Trigger>
                         <Trigger Property="IsEnabled" Value="False">
                             <Setter Property="Foreground" Value="{DynamicResource WzDisabledText}" />
@@ -492,10 +643,11 @@
         <Setter Property="FontSize" Value="13" />
         <Setter Property="Foreground" Value="{DynamicResource WzText}" />
         <Setter Property="Background" Value="{DynamicResource WzBgDarker}" />
-        <Setter Property="BorderBrush" Value="{DynamicResource WzBorder}" />
+        <Setter Property="BorderBrush" Value="{DynamicResource WzBorderControl}" />
         <Setter Property="Padding" Value="12,0,12,0" />
         <Setter Property="Height" Value="36" />
         <Setter Property="Cursor" Value="Hand" />
+        <Setter Property="FocusVisualStyle" Value="{x:Null}" />
         <Setter Property="ItemContainerStyle" Value="{DynamicResource WzComboItem}" />
         <Setter Property="Template">
             <Setter.Value>
@@ -506,7 +658,7 @@
                             <ToggleButton.Template>
                                 <ControlTemplate TargetType="ToggleButton">
                                     <Border x:Name="Shell" Background="{DynamicResource WzBgDarker}"
-                                            BorderBrush="{DynamicResource WzBorder}" BorderThickness="1"
+                                            BorderBrush="{DynamicResource WzBorderControl}" BorderThickness="1"
                                             CornerRadius="10">
                                         <Path x:Name="Arrow" Data="M 0 0 L 4 4 L 8 0" Stroke="{DynamicResource WzTextDim}"
                                               StrokeThickness="1.6" HorizontalAlignment="Right" VerticalAlignment="Center"
@@ -527,6 +679,13 @@
                                           HorizontalAlignment="Left" VerticalAlignment="Center"
                                           IsHitTestVisible="False" TextElement.Foreground="{DynamicResource WzTextBright}" />
 
+                        <!-- Eigener Ring statt eines Randwechsels: Der Rand
+                             steckt in der Vorlage des Umschaltknopfs und ist
+                             von hier aus nicht erreichbar. -->
+                        <Border x:Name="FocusRing" CornerRadius="10" BorderThickness="1"
+                                BorderBrush="{DynamicResource WzCyan}"
+                                IsHitTestVisible="False" Visibility="Collapsed" />
+
                         <Popup x:Name="PART_Popup" AllowsTransparency="True" Placement="Bottom"
                                IsOpen="{TemplateBinding IsDropDownOpen}" PopupAnimation="Fade">
                             <Border Background="{DynamicResource WzBgCard}"
@@ -540,6 +699,9 @@
                         </Popup>
                     </Grid>
                     <ControlTemplate.Triggers>
+                        <Trigger Property="IsKeyboardFocusWithin" Value="True">
+                            <Setter TargetName="FocusRing" Property="Visibility" Value="Visible" />
+                        </Trigger>
                         <Trigger Property="IsEnabled" Value="False">
                             <Setter Property="Foreground" Value="{DynamicResource WzDisabledText}" />
                             <Setter Property="Cursor" Value="Arrow" />
@@ -555,11 +717,22 @@
         <Setter Property="FontSize" Value="12.5" />
         <Setter Property="Foreground" Value="{DynamicResource WzText}" />
         <Setter Property="Background" Value="{DynamicResource WzBgDarker}" />
-        <Setter Property="BorderBrush" Value="{DynamicResource WzBorder}" />
+        <Setter Property="BorderBrush" Value="{DynamicResource WzBorderControl}" />
         <Setter Property="BorderThickness" Value="1" />
         <Setter Property="Padding" Value="9,6,9,6" />
         <Setter Property="CaretBrush" Value="{DynamicResource WzCyan}" />
         <Setter Property="SelectionBrush" Value="{DynamicResource WzCyan}" />
+        <Style.Triggers>
+            <!-- Reihenfolge: Der Fokus steht hinten und gewinnt damit gegen das
+                 Überfahren — sonst verliert das Feld seine Markierung, sobald
+                 die Maus zufällig darüber liegt. -->
+            <Trigger Property="IsMouseOver" Value="True">
+                <Setter Property="BorderBrush" Value="{DynamicResource WzBorderHover}" />
+            </Trigger>
+            <Trigger Property="IsKeyboardFocusWithin" Value="True">
+                <Setter Property="BorderBrush" Value="{DynamicResource WzCyan}" />
+            </Trigger>
+        </Style.Triggers>
     </Style>
 
     <!-- ================================================================

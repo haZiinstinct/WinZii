@@ -54,7 +54,7 @@
                     <Button Name="ToolBtnDnsCloudflare" Style="{DynamicResource WzBtnSecondary}" Margin="0,0,8,8" Content="Cloudflare" />
                     <Button Name="ToolBtnDnsQuad9" Style="{DynamicResource WzBtnSecondary}" Margin="0,0,8,8" Content="Quad9" />
                     <Button Name="ToolBtnDnsGoogle" Style="{DynamicResource WzBtnSecondary}" Margin="0,0,8,8" Content="Google" />
-                    <Button Name="ToolBtnDnsAuto" Style="{DynamicResource WzBtnGhost}" Margin="0,0,8,8" Content="{DynamicResource L.tool.btnDnsRouter}" />
+                    <Button Name="ToolBtnDnsAuto" Style="{DynamicResource WzBtnChip}" Margin="0,0,8,8" Content="{DynamicResource L.tool.btnDnsRouter}" />
                 </WrapPanel>
             </StackPanel>
         </Border>

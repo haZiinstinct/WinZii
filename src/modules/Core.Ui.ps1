@@ -502,7 +502,7 @@ function Show-WzConfirm {
     $closeButton.Width = 34
     $closeButton.Height = 30
     $closeButton.Padding = New-Object Windows.Thickness(0)
-    $closeButton.Style = $syncHash.Window.FindResource('WzBtnGhost')
+    $closeButton.Style = $syncHash.Window.FindResource('WzBtnChrome')
     $closeButton.VerticalAlignment = 'Top'
     $closeButton.ToolTip = Get-WzText 'core.closeTip'
     [Windows.Controls.Grid]::SetColumn($closeButton, 1)

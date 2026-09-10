@@ -153,7 +153,7 @@
                          steht sonst kein einziges umrandetes Bedienelement, und ein
                          Kasten neben dem Credit stört dessen Ruhe. Das Menü baut
                          main.ps1 aus den vorhandenen Sprachdateien. -->
-                    <Button Name="LanguagePicker" Style="{DynamicResource WzBtnGhost}"
+                    <Button Name="LanguagePicker" Style="{DynamicResource WzBtnChip}"
                             HorizontalAlignment="Left" Margin="0,0,0,12"
                             Padding="8,3,10,3" FontSize="11.5"
                             ToolTip="{DynamicResource L.app.languageTip}" />
@@ -213,11 +213,11 @@
                 <!-- Fenstersteuerung -->
                 <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Stretch"
                             WindowChrome.IsHitTestVisibleInChrome="True">
-                    <Button Name="BtnMinimize" Style="{DynamicResource WzBtnGhost}" Width="44" Padding="0"
+                    <Button Name="BtnMinimize" Style="{DynamicResource WzBtnChrome}" Width="44" Padding="0"
                             Content="&#xE921;" FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets" FontSize="10" />
-                    <Button Name="BtnMaximize" Style="{DynamicResource WzBtnGhost}" Width="44" Padding="0"
+                    <Button Name="BtnMaximize" Style="{DynamicResource WzBtnChrome}" Width="44" Padding="0"
                             Content="&#xE922;" FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets" FontSize="10" />
-                    <Button Name="BtnClose" Style="{DynamicResource WzBtnGhost}" Width="46" Padding="0"
+                    <Button Name="BtnClose" Style="{DynamicResource WzBtnChrome}" Width="46" Padding="0"
                             Content="&#xE8BB;" FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets" FontSize="10" />
                 </StackPanel>
             </Grid>
@@ -239,7 +239,7 @@
                                    Foreground="{DynamicResource WzTextFaint}" VerticalAlignment="Center" />
                     </StackPanel>
                     <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,0,20,0" VerticalAlignment="Center">
-                        <Button Name="BtnClearLog" Style="{DynamicResource WzBtnGhost}" Content="{DynamicResource L.shell.consoleClear}" />
+                        <Button Name="BtnClearLog" Style="{DynamicResource WzBtnChip}" Content="{DynamicResource L.shell.consoleClear}" />
                         <TextBlock Name="LogChevron" Text="&#xE70D;" FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets"
                                    FontSize="10.5" Foreground="{DynamicResource WzTextFaint}" VerticalAlignment="Center" Margin="10,0,0,0" />
                     </StackPanel>
@@ -258,7 +258,7 @@
                     <TextBlock Name="StatusText" Text="{DynamicResource L.shell.statusReady}"
                                FontFamily="{DynamicResource WzFontMono}" FontSize="10.5"
                                Foreground="#94A3B8" VerticalAlignment="Center" />
-                    <Button Name="BtnCancelTask" Style="{DynamicResource WzBtnGhost}" Content="{DynamicResource L.shell.cancel}"
+                    <Button Name="BtnCancelTask" Style="{DynamicResource WzBtnChip}" Content="{DynamicResource L.shell.cancel}"
                             FontSize="10.5" Padding="8,1,8,1" Margin="12,0,0,0"
                             VerticalAlignment="Center" Visibility="Collapsed"
                             ToolTip="{DynamicResource L.shell.cancelTip}" />

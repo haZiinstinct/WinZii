@@ -44,7 +44,7 @@ function New-WzTweakList {
 
         $toggleAll = New-Object Windows.Controls.Button
         $toggleAll.Content = Get-WzText 'opt.btnToggleAll'
-        $toggleAll.Style = $syncHash.Window.FindResource('WzBtnGhost')
+        $toggleAll.Style = $syncHash.Window.FindResource('WzBtnChip')
         $toggleAll.HorizontalAlignment = 'Right'
         $toggleAll.VerticalAlignment = 'Top'
         [void]$header.Children.Add($toggleAll)

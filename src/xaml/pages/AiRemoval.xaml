@@ -30,8 +30,8 @@
                                VerticalAlignment="Center" Margin="14,0,0,0" />
                 </StackPanel>
                 <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
-                    <Button Name="AiBtnRecommended" Style="{DynamicResource WzBtnGhost}" Content="{DynamicResource L.ai.btnRecommended}" Margin="0,0,4,0" />
-                    <Button Name="AiBtnNone" Style="{DynamicResource WzBtnGhost}" Content="{DynamicResource L.ai.btnNone}" />
+                    <Button Name="AiBtnRecommended" Style="{DynamicResource WzBtnChip}" Content="{DynamicResource L.ai.btnRecommended}" Margin="0,0,4,0" />
+                    <Button Name="AiBtnNone" Style="{DynamicResource WzBtnChip}" Content="{DynamicResource L.ai.btnNone}" />
                 </StackPanel>
             </Grid>
             <WrapPanel Margin="0,16,0,0">

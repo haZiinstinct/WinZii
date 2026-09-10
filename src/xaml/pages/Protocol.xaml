@@ -138,7 +138,7 @@
                 <StackPanel Grid.Column="1" Orientation="Horizontal" Margin="10,0,0,0">
                     <Button Name="ProtoBtnLogo" Style="{DynamicResource WzBtnSecondary}" Margin="0,0,8,0"
                             Content="{DynamicResource L.log.btnLogo}" />
-                    <Button Name="ProtoBtnLogoClear" Style="{DynamicResource WzBtnGhost}"
+                    <Button Name="ProtoBtnLogoClear" Style="{DynamicResource WzBtnChip}"
                             Content="{DynamicResource L.log.btnLogoClear}" />
                 </StackPanel>
             </Grid>

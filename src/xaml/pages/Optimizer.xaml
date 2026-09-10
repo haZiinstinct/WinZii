@@ -19,9 +19,9 @@
                                VerticalAlignment="Center" Margin="14,0,0,0" />
                 </StackPanel>
                 <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
-                    <Button Name="OptBtnRecommended" Style="{DynamicResource WzBtnGhost}" Content="{DynamicResource L.opt.btnRecommended}" Margin="0,0,4,0" />
-                    <Button Name="OptBtnAll" Style="{DynamicResource WzBtnGhost}" Content="{DynamicResource L.opt.btnAll}" Margin="0,0,4,0" />
-                    <Button Name="OptBtnNone" Style="{DynamicResource WzBtnGhost}" Content="{DynamicResource L.opt.btnNone}" />
+                    <Button Name="OptBtnRecommended" Style="{DynamicResource WzBtnChip}" Content="{DynamicResource L.opt.btnRecommended}" Margin="0,0,4,0" />
+                    <Button Name="OptBtnAll" Style="{DynamicResource WzBtnChip}" Content="{DynamicResource L.opt.btnAll}" Margin="0,0,4,0" />
+                    <Button Name="OptBtnNone" Style="{DynamicResource WzBtnChip}" Content="{DynamicResource L.opt.btnNone}" />
                 </StackPanel>
             </Grid>
             <WrapPanel Margin="0,16,0,0">

@@ -28,7 +28,7 @@
                         Content="{DynamicResource L.clean.btnAnalyse}" MinWidth="180" />
                 <Button Name="CleanBtnClean" Style="{DynamicResource WzBtnDanger}" Margin="0,0,0,8"
                         Content="{DynamicResource L.clean.btnDelete}" MinWidth="180" IsEnabled="False" />
-                <Button Name="CleanBtnRecommended" Style="{DynamicResource WzBtnGhost}"
+                <Button Name="CleanBtnRecommended" Style="{DynamicResource WzBtnChip}"
                         Content="{DynamicResource L.clean.btnRecommended}" />
             </StackPanel>
         </Grid>

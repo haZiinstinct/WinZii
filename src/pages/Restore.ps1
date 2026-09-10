@@ -86,7 +86,7 @@ function Write-WzRestoreSources {
 
         $button = New-Object Windows.Controls.Button
         $button.Content = Get-WzText 'rest.btnOtherSource'
-        $button.Style = $syncHash.Window.FindResource('WzBtnGhost')
+        $button.Style = $syncHash.Window.FindResource('WzBtnChip')
         $button.HorizontalAlignment = 'Left'
         $button.Margin = New-Object Windows.Thickness(0, 8, 0, 0)
         $button.Add_Click({ Select-WzRestoreSource })
