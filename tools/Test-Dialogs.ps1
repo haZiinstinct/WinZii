@@ -31,7 +31,7 @@ $syncHash.DryRun = $true
 . (Join-Path $root 'src\version.ps1')
 $syncHash.Version = $script:WzVersion
 
-foreach ($module in 'Core.Paths', 'Core.Logging', 'Core.Json', 'Core.I18n', 'Core.Runspace', 'Core.Ui') {
+foreach ($module in 'Core.Paths', 'Core.Logging', 'Core.Json', 'Core.I18n', 'Core.Runspace', 'Core.Ui', 'Core.Palette') {
     . (Join-Path $root "src\modules\$module.ps1")
 }
 
@@ -193,6 +193,55 @@ $window.Add_ContentRendered({
         })
         if (-not $ok) { $script:failed++ }
     }
+
+    # --- Kommandopalette ---------------------------------------------------
+    # Sie ist ein eigenes Fenster mit eigenem Aufbau und faellt deshalb nicht
+    # unter die Faelle oben. Geprueft wird dasselbe: Sie geht auf, und Escape
+    # macht sie wieder zu. Ein Suchfenster, das haengen bleibt, sperrt die
+    # ganze Oberflaeche.
+    $palettenSchliesser = New-Object Windows.Threading.DispatcherTimer
+    $palettenSchliesser.Interval = [TimeSpan]::FromMilliseconds(700)
+    $palettenSchliesser.Add_Tick({
+        $palettenSchliesser.Stop()
+        $dialog = $syncHash.ActiveDialog
+        if (-not $dialog) { return }
+        $keyArgs = New-Object Windows.Input.KeyEventArgs(
+            [Windows.Input.Keyboard]::PrimaryDevice,
+            [Windows.PresentationSource]::FromVisual($dialog),
+            0, [Windows.Input.Key]::Escape)
+        $keyArgs.RoutedEvent = [Windows.Input.Keyboard]::PreviewKeyDownEvent
+        $dialog.RaiseEvent($keyArgs)
+    }.GetNewClosure())
+    $palettenSchliesser.Start()
+
+    Show-WzPalette
+    $palettenZu = ($null -eq $syncHash.ActiveDialog)
+
+    # Die Filterung braucht kein Fenster und wird hier gleich mitgeprueft:
+    # Ein Treffer am Wortanfang gehoert nach oben.
+    $probe = @(
+        [pscustomobject]@{ Title = 'Treiber'; Detail = 'Geraete-Manager, Fehlercode'; Kind = 'page'; Action = {} }
+        [pscustomobject]@{ Title = 'Reparatur'; Detail = 'Drucker, Warteschlange'; Kind = 'page'; Action = {} }
+        [pscustomobject]@{ Title = 'Dashboard'; Detail = 'Uebersicht'; Kind = 'page'; Action = {} }
+    )
+    $alle = @(Select-WzPaletteMatches -Entries $probe -Query '')
+    $drucker = @(Select-WzPaletteMatches -Entries $probe -Query 'drucker')
+    $tr = @(Select-WzPaletteMatches -Entries $probe -Query 'Tre')
+    $nichts = @(Select-WzPaletteMatches -Entries $probe -Query 'zzzz')
+    $filterOk = ($alle.Count -eq 3 -and
+                 $drucker.Count -eq 1 -and $drucker[0].Title -eq 'Reparatur' -and
+                 $tr.Count -eq 1 -and $tr[0].Title -eq 'Treiber' -and
+                 $nichts.Count -eq 0)
+
+    [void]$script:results.Add([pscustomobject]@{
+        Name = 'palette'
+        Weg  = 'Escape'
+        Bild = $filterOk
+        Zu   = $palettenZu
+        Abbr = $true
+        Ok   = ($palettenZu -and $filterOk)
+    })
+    if (-not ($palettenZu -and $filterOk)) { $script:failed++ }
 
     # --- Auffangnetz -------------------------------------------------------
     # Die Klick-Handler laufen im UI-Faden. Fliegt dort etwas, verschwand es

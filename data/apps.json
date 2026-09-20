@@ -1,4 +1,4 @@
-{
+﻿{
   "schemaVersion": 1,
   "wingetBootstrap": {
     "note": "Wird nur gebraucht, wenn winget fehlt (LTSC, ältere Windows-10-Stände, frisch aufgesetzte Systeme). Das Abhängigkeitspaket stammt aus demselben Release wie der App Installer und enthält alles, was dieser jeweils verlangt (inzwischen auch die WindowsAppRuntime).",
@@ -168,6 +168,14 @@
       "category": "technik",
       "wingetId": "AntibodySoftware.WizTree",
       "description": "Speicheranalyse direkt über die NTFS-Tabelle — Sekunden statt Minuten, wo TreeSize noch sucht.",
+      "defaultChecked": false
+    },
+    {
+      "id": "intel-dsa",
+      "name": "Intel Treiber- und Support-Assistent",
+      "category": "technik",
+      "wingetId": "Intel.IntelDriverAndSupportAssistant",
+      "description": "Sucht Treiber für Chipsatz, WLAN und Intel-Grafik. Ohne Kommandozeile — die Treiberseite verweist darauf, installieren lässt er sich hier.",
       "defaultChecked": false
     },
     {

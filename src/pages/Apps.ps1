@@ -70,15 +70,18 @@ function Write-WzAppsStatus {
         $syncHash.AppsOfflineHint.Text = Get-WzText 'apps.offlineNone'
     }
 
-    # Gleich mitmessen, was veraltet ist. Auf einem gewachsenen Kundengerät ist
-    # das die wichtigere Hälfte dieser Seite, und wer erst einen Knopf suchen
-    # muss, sieht sie nie.
+    # Die Suche nach veralteten Programmen läuft NICHT von selbst, obwohl sie
+    # gerade dann am nützlichsten wäre. Zwei Gründe, beide schwerer als die
+    # Bequemlichkeit: Sie fragt winget, und das geht ins Netz — ungefragt, beim
+    # bloßen Öffnen einer Seite, tut WinZii das nirgends. Und sie dauert auf
+    # einem gewachsenen Gerät bis zu einer Minute, in der kein anderer Schritt
+    # anlaufen kann. Wer nur ein Programm installieren will, stünde davor.
     $syncHash.AppsBtnUpgradeScan.IsEnabled = $Info.Winget.Available
     $syncHash.AppsBtnUpgradeAll.IsEnabled = $false
-    if ($Info.Winget.Available) {
-        Start-WzUpgradeScan
+    $syncHash.AppsUpgradeTitle.Text = if ($Info.Winget.Available) {
+        Get-WzText 'apps.upgradeNotChecked'
     } else {
-        $syncHash.AppsUpgradeTitle.Text = Get-WzText 'apps.upgradeNoWinget'
+        Get-WzText 'apps.upgradeNoWinget'
     }
 }
 

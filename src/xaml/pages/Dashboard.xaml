@@ -96,8 +96,29 @@
         </Border>
     </Grid>
 
-    <!-- Schnellaktionen -->
+    <!-- Seit dem letzten Besuch -->
     <Border Style="{DynamicResource WzCardStatic}" Margin="0,4,0,0">
+        <StackPanel>
+            <Grid>
+                <StackPanel Grid.Column="0">
+                    <TextBlock Text="{DynamicResource L.snap.eyebrow}" Style="{DynamicResource WzEyebrow}" />
+                    <TextBlock Name="DashSnapshotTitle" Text="{DynamicResource L.snap.none}" Style="{DynamicResource WzCardTitle}" />
+                </StackPanel>
+                <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Top">
+                    <Button Name="DashBtnSnapshotCompare" Style="{DynamicResource WzBtnSecondary}" Margin="0,0,8,0"
+                            IsEnabled="False" Content="{DynamicResource L.snap.btnCompare}" />
+                    <Button Name="DashBtnSnapshotSave" Style="{DynamicResource WzBtnSecondary}"
+                            Content="{DynamicResource L.snap.btnSave}" />
+                </StackPanel>
+            </Grid>
+            <TextBlock Style="{DynamicResource WzHint}" Margin="0,0,0,10"
+                       Text="{DynamicResource L.snap.hint}" />
+            <StackPanel Name="DashSnapshot" />
+        </StackPanel>
+    </Border>
+
+    <!-- Schnellaktionen -->
+    <Border Style="{DynamicResource WzCardStatic}" Margin="0,14,0,0">
         <StackPanel>
             <TextBlock Text="{DynamicResource L.dash.quickEyebrow}" Style="{DynamicResource WzEyebrow}" />
             <TextBlock Text="{DynamicResource L.dash.quickTitle}" Style="{DynamicResource WzCardTitle}" />

@@ -11,7 +11,7 @@ Run it from a USB stick: clean up, optimize, set up — no installation, no acco
 
 <sub>**Fully bilingual, German and English** — interface, dialogs, log, reports and handover sheet. The language button sits at the bottom of the sidebar and takes effect immediately, including for values that were already measured.</sub>
 
-![Version](https://img.shields.io/badge/Version-0.6.0-00d4ff?labelColor=0a0a0f&style=flat-square)
+![Version](https://img.shields.io/badge/Version-0.7.0-00d4ff?labelColor=0a0a0f&style=flat-square)
 [![Prüfung](https://github.com/haZiinstinct/WinZii/actions/workflows/pruefung.yml/badge.svg)](https://github.com/haZiinstinct/WinZii/actions/workflows/pruefung.yml)
 ![Windows](https://img.shields.io/badge/Windows-10%20%7C%2011-00d4ff?labelColor=0a0a0f&style=flat-square)
 ![PowerShell](https://img.shields.io/badge/PowerShell-5.1-00d4ff?labelColor=0a0a0f&style=flat-square)
@@ -28,20 +28,21 @@ Run it from a USB stick: clean up, optimize, set up — no installation, no acco
 | Area | What it does |
 | --- | --- |
 | **Dashboard** | Windows version, hardware, GPU, monitors, BIOS, RAM slots and battery wear, plus activation, BitLocker, antivirus, disks and network — everything at a glance when taking on a PC. |
-| **Diagnostics** | Reads the event logs and translates them into plain language: what happened, what it means, what to do. Plus bluescreen stop codes, disk health, and the sfc, DISM and chkdsk tools. |
+| **Set up** | What comes first after a fresh install: computer name, local account, time zone and clock sync, number format and keyboard layout, Windows activation including the key from the firmware, network printers. Until now the only part of the job that meant leaving the tool. |
+| **Diagnostics** | Reads the event logs and translates them into plain language: what happened, what it means, what to do. Plus bluescreen stop codes, disk health, and the sfc, DISM and chkdsk tools. The **stress test** loads processor, memory and drive and finds what stays invisible at idle: cooling at its end, where the clock collapses. |
 | **Updates** | Shows what Windows still has to catch up on, and installs it. Drivers are listed separately and never preselected — Windows Update likes to offer older manufacturer builds there that overwrite a newer driver. Updates are installed one at a time so the log shows where it sticks; the PC is never restarted on its own. |
-| **Optimization** | 41 tweaks for speed, telemetry, privacy and security. Each one explained, each one individually reversible. |
+| **Optimization** | 48 tweaks for speed, telemetry, privacy and security. Each one explained, each one individually reversible. |
 | **AI removal** | Finds Copilot, Recall and Click to Do — blocks them by policy or removes them entirely. The blocks also act preventively against feature updates. |
 | **Cleanup** | First shows where the space went (caches, update leftovers, browser caches, Windows.old), then deletes selectively. Personal files are excluded. |
-| **Programs** | 59 programs via winget, including a **security** section (second opinion, cleanup after an infection, protection afterwards), including bootstrapping winget itself on LTSC systems. Installers can be cached on the stick for offline use. |
+| **Programs** | 60 programs via winget, including a **security** section (second opinion, cleanup after an infection, protection afterwards), including bootstrapping winget itself on LTSC systems. Installers can be cached on the stick for offline use. Plus the other half: whatever is **already installed but outdated** is measured when the page opens and updated on request. |
 | **Uninstall** | Finds and uninstalls installed programs — silently where possible — and then hunts down what the uninstaller left behind: the install folder, Start menu entries, the program's own registry keys. Findings are listed with their size, nothing is removed without confirmation, and keys are exported to `.reg` first. |
 | **Office** | Microsoft 365, Office LTSC 2024 and 2021 via the official Deployment Tool — fully offline from the stick if you want. Plus LibreOffice. |
 | **Data** | Answers the question before every reinstall: what needs backing up? Profile sizes per account, when an account was last used, Outlook data files, browser profiles, printers, network drives, product keys. Does more than warn about OneDrive placeholders that look like files in Explorer but are empty — it can download them and wait for completion. Exports bookmarks, Wi-Fi credentials, the device list and BitLocker keys, and copies the personal folders to an external drive with robocopy, never deleting anything at the source. |
 | **Restore** | The other half of the data migration: re-create Wi-Fi networks, bookmarks, printers and network drives from a backup — including one taken on a different machine. Shows up front what fits and what does not: missing printer drivers, browser profiles that do not exist here, and Wi-Fi networks that were saved without their key. |
-| **Drivers** | Devices with error codes in plain language instead of numbers. Driver inventory sorted by age — the fastest route to a suspect after bluescreens. Back up drivers to the stick and restore them in one go after reinstalling. |
+| **Drivers** | Devices with error codes in plain language instead of numbers. Driver inventory sorted by age — the fastest route to a suspect after bluescreens. Back up drivers to the stick and restore them in one go after reinstalling. And **obtain** them — in stages: Windows Update, then the silent command line of Dell, Lenovo or HP, and for devices still left without a driver, the Microsoft Update Catalog by hardware ID. |
 | **Autostart** | Shows everything that starts at sign-in, with publisher. Disable instead of delete — reversible at any time. |
 | **Repair** | Measures first where the problem sits (adapter, IP, router, DNS, internet), then names the matching fix. Plus Windows Update cache reset, print queue flush, quick virus scan, preinstalled app removal. |
-| **Protocol** | Every step is recorded. Two outputs: the technical log and the **handover sheet** — what was done, how much space was gained, how the PC is equipped and what remains, in customer language with fields for technician, customer and order number. |
+| **Protocol** | Every step is recorded. Two outputs: the technical log and the **handover sheet** — what was done, how much space was gained, how the PC is equipped and what remains, in customer language with fields for technician, customer and order number — **as a PDF too**. Plus the inventory as CSV and JSON for your own customer records, and an archive holding every report for the machine. |
 
 ---
 
@@ -56,7 +57,7 @@ That is all. WinZii needs no installation, no runtime, no particular drive lette
 > **Windows shows a blue SmartScreen warning?**
 > Click "More info" and then "Run anyway". The warning appears for any unsigned file downloaded from the internet. Every release ships a SHA256 checksum so you can verify the archive before extracting:
 > ```powershell
-> Get-FileHash .\WinZii-0.6.0.zip -Algorithm SHA256
+> Get-FileHash .\WinZii-0.7.0.zip -Algorithm SHA256
 > ```
 
 **Requirements:** Windows 10 or 11 with administrator rights. PowerShell 5.1 and .NET Framework ship with Windows.
@@ -101,6 +102,12 @@ To be blunt, so nobody gets surprised: WinZii was developed on **one** machine �
 | **Downloading Office** | Cancelling ends the deployment tool, **not** the download: the fetching is done by the Windows Click-to-Run service, which carries on in the background. During the acceptance run the folder grew from 39 MB to 2.5 GB after the cancel. WinZii says so in the log and names the folder to delete; since 0.4.1 a partial cache is reliably reported as incomplete. |
 | **FAT32 media** | Since 0.5.3 verified on a virtual FAT32 disk: WinZii starts from it, the dashboard shows the notice bar, and the Office download is refused **before** the 4 GB limit bites. A real FAT32 stick is still missing. |
 | **Leftover cleanup after uninstalling** | The rules and the whole chain — find, back up, remove — are covered by 46 checks in `tools\Test-Undo.ps1`. Since 0.5.1 it has also faced real uninstallers, on a machine with 53 programs grown over the years; that run found two bugs, both fixed (see the [CHANGELOG](CHANGELOG.md)). Two things hold permanently: **deleted folders are gone for good** — only registry keys are backed up — and the search is deliberately narrow. It would rather miss a leftover than touch another program's folder — since 0.5.1 not even when the vendor itself records the whole family's shared folder as the install location. |
+| **Vendor tools** | Untested. The development machine is a self-build, and the acceptance laptop comes from none of the three vendors with a silent command line. What could be tested without the hardware was: the winget IDs in the catalog are checked against the source, and the "cannot be found" path is the one WinZii takes when a path is wrong. Whether Dell Command, the Thin Installer or the Image Assistant really run through with these arguments is only known on a machine that has them. |
+| **Update Catalog** | The most brittle spot in the whole tool, and deliberately so: Microsoft offers no interface for the catalog, so the search page is read. If its layout changes, WinZii finds nothing — it goes empty cleanly, but it does not notice. The search itself has run; downloading and installing a catalog driver never has, because neither machine is missing a driver. |
+| **Stress test** | Run on the development machine, a desktop with fixed cooling: the clock held 3801 of 3801 MHz, the drive measured 574 MB/s writing and 1809 reading, and the unbuffered read loop returns every byte. The very case it was built for — a throttled laptop — is therefore missing. And this machine reports no temperatures at all; the "not measurable" path is tested, the other one is not. |
+| **Activating Windows** | The key from the firmware is read — this machine has none stored, so the empty case is what has been tested. Installing a key and activating is untested: that needs a machine whose activation you may put at risk. |
+| **Accounts and computer name** | Untested on a real customer machine. Renaming and creating an account are changes you do not run through casually on your own workstation. |
+| **PDF output** | Tested through the Edge that sits on this machine: 37 KB with intact umlauts. On an LTSC system without Edge the "no PDF, here is the HTML" path applies — derived, not seen. |
 | **Driver backup, Office install** | Verified read-only, never executed end to end. |
 | **Restoring printers** | Fully exercised in the Sandbox: pulling the driver from the driver store, creating the network port, adding the printer, and not duplicating it on a second run. What remains untested is a printer on real hardware — USB ports only appear once the device is attached and are deliberately skipped. |
 | **Restoring Wi-Fi** | Profile files are read correctly and a failure is reported cleanly. Actually creating a profile could never be verified — neither the development machine nor the Sandbox has a Wi-Fi adapter. |
@@ -118,13 +125,13 @@ Dark theme in the haZii style, German or English, with a live console: every act
 
 <img src="docs/screenshot-dashboard.png" alt="WinZii dashboard" width="100%">
 
-Twelve pages in five groups:
+Sixteen pages in five groups, also reachable through the search with **Ctrl+K**:
 
 ```
-// SYSTEM        Dashboard · Diagnostics
+// SYSTEM        Dashboard · Set up · Diagnostics · Updates
 // OPTIMIZE      Optimization · AI removal · Cleanup · Autostart
-// INSTALL       Programs · Office
-// TAKE OVER     Data · Drivers
+// SOFTWARE      Programs · Uninstall · Office
+// TAKE OVER     Data · Restore · Drivers
 // TOOLS         Repair · Protocol
 ```
 

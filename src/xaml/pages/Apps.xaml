@@ -42,7 +42,7 @@
                     <TextBlock Name="AppsUpgradeTitle" Text="{DynamicResource L.apps.upgradeTitle}" Style="{DynamicResource WzCardTitle}" />
                 </StackPanel>
                 <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Top">
-                    <Button Name="AppsBtnUpgradeScan" Style="{DynamicResource WzBtnSecondary}" Margin="0,0,8,0"
+                    <Button Name="AppsBtnUpgradeScan" Style="{DynamicResource WzBtnPrimary}" Margin="0,0,8,0"
                             Content="{DynamicResource L.apps.btnUpgradeScan}" />
                     <Button Name="AppsBtnUpgradeAll" Style="{DynamicResource WzBtnChip}"
                             Content="{DynamicResource L.apps.btnUpgradeAll}" />
