@@ -8,6 +8,13 @@ function Initialize-WzDashboardPage {
     $syncHash.DashBtnOptimize.Add_Click({ Show-WzPage -Id 'Optimizer' })
     $syncHash.DashBtnAi.Add_Click({ Show-WzPage -Id 'AiRemoval' })
     $syncHash.DashBtnRefresh.Add_Click({ Update-WzDashboardPage -Force })
+    $syncHash.DashBtnSnapshotSave.Add_Click({ Start-WzSnapshotSave })
+    $syncHash.DashBtnSnapshotCompare.Add_Click({ Start-WzSnapshotCompare })
+
+    # Nur nachsehen, ob es eine Momentaufnahme gibt — das ist ein Dateizugriff.
+    # Der Vergleich selbst liest alle Programme und prüft achtundvierzig
+    # Optimierungen nach; er läuft erst auf Knopfdruck.
+    Update-WzSnapshotCard
 }
 
 function Update-WzDashboardPage {
@@ -304,5 +311,141 @@ function Write-WzDashboardNotices {
             $kind = if ($recommendation.Kind -eq 'err') { 'error' } else { $recommendation.Kind }
             [void]$notices.Items.Add((New-WzNotice -Kind $kind -Text $recommendation.Text))
         }
+    }
+}
+
+# --- Seit dem letzten Besuch -----------------------------------------------
+
+function Update-WzSnapshotCard {
+    <#
+    .SYNOPSIS
+        Zeigt, ob es eine Momentaufnahme dieses Rechners gibt und wie alt sie ist.
+    .NOTES
+        Der Vergleich selbst läuft NICHT beim Seitenaufbau: Er liest alle
+        installierten Programme und prüft achtundvierzig Optimierungen nach,
+        das dauert. Das Dashboard soll sofort dastehen.
+    #>
+    $snapshot = Get-WzSavedSnapshot
+    $syncHash.DashSnapshotTitle.Text = if (-not $snapshot) {
+        Get-WzText 'snap.none'
+    } else {
+        $when = $null
+        try { $when = [datetime]::Parse($snapshot.created) } catch { }
+        if ($when) {
+            Get-WzText 'snap.have' @{ zeit = (Format-WzAgo $when) }
+        } else {
+            Get-WzText 'snap.haveUndated'
+        }
+    }
+    $syncHash.DashBtnSnapshotCompare.IsEnabled = [bool]$snapshot
+    $syncHash.DashSnapshot.Children.Clear()
+}
+
+function Start-WzSnapshotSave {
+    $existing = Get-WzSavedSnapshot
+    if ($existing) {
+        $answer = Show-WzConfirm -Title (Get-WzText 'snap.saveTitle') `
+            -Message (Get-WzText 'snap.overwriteMessage') `
+            -ConfirmText (Get-WzText 'snap.btnSave')
+        if (-not $answer.Confirmed) { return }
+    }
+
+    Invoke-WzTask -Name (Get-WzText 'snap.taskSave') -Cancelable -ScriptBlock {
+        Save-WzSnapshot
+    } -OnComplete {
+        param($result)
+        if (-not $result) { return }
+        Show-WzInfo -Title (Get-WzText 'snap.saveTitle') `
+            -Message $(if ($result.Success) {
+                Get-WzText 'snap.saved' @{ anzahl = $result.Programs }
+            } else {
+                Get-WzText 'snap.saveFailed'
+            }) -Items @($result.Path | Where-Object { $_ })
+        Update-WzSnapshotCard
+    }
+}
+
+function Start-WzSnapshotCompare {
+    $syncHash.DashSnapshotTitle.Text = Get-WzText 'snap.comparing'
+    $syncHash.DashSnapshot.Children.Clear()
+
+    Invoke-WzTask -Name (Get-WzText 'snap.taskCompare') -Cancelable -ScriptBlock {
+        Compare-WzSnapshot
+    } -OnComplete {
+        param($diff)
+        if (-not $diff) { return }
+        Write-WzSnapshotDiff -Diff $diff
+    }
+}
+
+function Write-WzSnapshotDiff {
+    <#
+    .SYNOPSIS
+        Trägt den Vergleich in die Karte ein.
+    #>
+    param([Parameter(Mandatory = $true)]$Diff)
+
+    $container = $syncHash.DashSnapshot
+    $container.Children.Clear()
+
+    if (-not $Diff.HasSnapshot) {
+        $syncHash.DashSnapshotTitle.Text = Get-WzText 'snap.none'
+        return
+    }
+
+    $syncHash.DashSnapshotTitle.Text = if ($Diff.Since) {
+        Get-WzText 'snap.compared' @{ zeit = (Format-WzAgo $Diff.Since) }
+    } else {
+        Get-WzText 'snap.haveUndated'
+    }
+
+    # Die zurückgedrehten Optimierungen zuerst: Sie sind der Grund, warum es
+    # diese Karte gibt. Ein Funktionsupdate stellt Telemetrie und Datenschutz
+    # still wieder her, und ohne Vergleich merkt das niemand.
+    $lost = @($Diff.LostTweaks)
+    if ($lost.Count -gt 0) {
+        [void]$container.Children.Add((New-WzInfoRow (Get-WzText 'snap.rowLostTweaks') `
+            (Get-WzText 'snap.lostTweaksValue' @{ anzahl = $lost.Count; liste = ($lost -join ', ') }) `
+            -Kind 'warn' -LabelWidth 190))
+    } else {
+        [void]$container.Children.Add((New-WzInfoRow (Get-WzText 'snap.rowLostTweaks') `
+            (Get-WzText 'snap.lostTweaksNone') -Kind 'ok' -LabelWidth 190))
+    }
+
+    # Die Beschriftungen werden hier ausgeschrieben statt über eine Kennung
+    # zusammengesetzt: Test-Language gleicht benutzte gegen definierte
+    # Schlüssel ab und sucht dafür nach dem Aufruf im Quelltext. Steht der
+    # Schlüssel in einer Variablen, hält der Abgleich ihn für tot.
+    foreach ($pair in @(
+        @((Get-WzText 'snap.rowAddedPrograms'), @($Diff.AddedPrograms), 'warn'),
+        @((Get-WzText 'snap.rowRemovedPrograms'), @($Diff.RemovedPrograms), 'normal'),
+        @((Get-WzText 'snap.rowUpdatedPrograms'), @($Diff.UpdatedPrograms), 'ok'),
+        @((Get-WzText 'snap.rowAddedAutostart'), @($Diff.AddedAutostart), 'warn')
+    )) {
+        $items = @($pair[1])
+        if ($items.Count -eq 0) { continue }
+        # Höchstens acht Einträge in einer Zeile — der Rest wird gezählt.
+        $shown = @($items | Select-Object -First 8)
+        $text = $shown -join ', '
+        if ($items.Count -gt $shown.Count) {
+            $text += Get-WzText 'snap.andMore' @{ anzahl = ($items.Count - $shown.Count) }
+        }
+        [void]$container.Children.Add((New-WzInfoRow $pair[0] $text -Kind $pair[2] -LabelWidth 190))
+    }
+
+    foreach ($volume in @($Diff.SpaceChange)) {
+        if ([math]::Abs($volume.Bytes) -lt 100MB) { continue }
+        $text = if ($volume.Bytes -gt 0) {
+            Get-WzText 'snap.spaceMore' @{ groesse = (Format-WzBytes $volume.Bytes) }
+        } else {
+            Get-WzText 'snap.spaceLess' @{ groesse = (Format-WzBytes ([math]::Abs($volume.Bytes))) }
+        }
+        [void]$container.Children.Add((New-WzInfoRow (Get-WzText 'snap.rowSpace' @{ laufwerk = $volume.Letter }) `
+            $text -Kind $(if ($volume.Bytes -lt 0) { 'warn' } else { 'ok' }) -LabelWidth 190))
+    }
+
+    if ($container.Children.Count -le 1 -and $lost.Count -eq 0) {
+        [void]$container.Children.Add((New-WzInfoRow (Get-WzText 'snap.rowResult') `
+            (Get-WzText 'snap.nothingChanged') -Kind 'ok' -LabelWidth 190))
     }
 }

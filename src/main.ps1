@@ -39,12 +39,12 @@ $syncHash.BuildDate = $script:WzBuildDate
 # --- Module laden ---------------------------------------------------------
 $moduleOrder = @(
     'Core.Paths', 'Core.I18n', 'Core.Logging', 'Core.Json', 'Core.Runspace', 'Core.Ui',
-    'Core.Version',
+    'Core.Version', 'Core.Palette',
     'Core.System', 'Core.Backup',
     'Optimizer', 'AiRemoval', 'Cleanup', 'Apps', 'Office',
     'Diagnostics', 'NetworkDiag', 'Report', 'Autostart', 'Toolbox',
     'UserData', 'Migration', 'Drivers', 'Uninstall', 'WindowsUpdate',
-    'Setup', 'HealthCheck'
+    'Setup', 'HealthCheck', 'Snapshot'
 )
 foreach ($moduleName in $moduleOrder) {
     $modulePath = Join-Path $PSScriptRoot "modules\$moduleName.ps1"
@@ -122,6 +122,14 @@ function Set-WzFonts {
     }
 }
 Set-WzFonts
+
+# --- Fortschritt auf dem Taskleistensymbol --------------------------------
+# Angelegt wird es hier einmal; ein- und ausgeschaltet wird es in Set-WzBusy.
+try {
+    $window.TaskbarItemInfo = New-Object Windows.Shell.TaskbarItemInfo
+} catch {
+    # Ohne Taskleisten-Fortschritt läuft WinZii genauso
+}
 
 # --- Fenstersymbol --------------------------------------------------------
 try {
@@ -257,6 +265,9 @@ $syncHash.LanguagePicker.Add_Click({ Show-WzLanguageChooser })
 $syncHash.HaziiBadge.Add_MouseLeftButtonUp({
     Start-Process 'https://hazii.org'
 })
+
+# --- Kommandopalette (Strg+K) ---------------------------------------------
+Register-WzPaletteShortcut -Window $window
 
 # --- Laufende Bestandsaufnahme abbrechen ----------------------------------
 $syncHash.BtnCancelTask.Add_Click({ Stop-WzTask })

@@ -3,6 +3,141 @@
 Alle nennenswerten Änderungen an WinZii. Die Fassungen folgen
 [Semantic Versioning](https://semver.org/lang/de/).
 
+## [0.7.0] — 2026-09-20
+
+Die Fassung, die den Techniker im Werkzeug behält. Bisher gab es sechs
+Schritte, für die er WinZii zwangsläufig verlassen musste — vom Rechnernamen
+bis zur Treiberbeschaffung. Diese Lücke ist geschlossen.
+
+Was ausdrücklich **nicht** dazugehört: ein unbeaufsichtigter Durchlauf. Jeder
+Eingriff wird weiterhin einzeln angekündigt und einzeln bestätigt, und keiner
+startet den Rechner von selbst neu.
+
+### Neu
+
+- **Seite »Einrichten«.** Was nach einer Neuinstallation als Erstes ansteht,
+  lief bisher außerhalb des Werkzeugs: Rechnername, lokales Konto, Zeitzone,
+  Zeitabgleich, Zahlenformat, Tastaturlayout, Windows-Aktivierung samt dem
+  Schlüssel aus der Firmware, Netzwerkdrucker. Jeder Schritt steht jetzt im
+  Protokoll und im Übergabeblatt.
+
+  Drei Entscheidungen darin: Gruppen werden über ihre SID angesprochen, nicht
+  über den Namen — »Administratoren« heißt auf einem englischen Windows
+  anders. Das Kennwort eines neuen Kontos bleibt ein SecureString und wird
+  nirgends abgelegt. Und die Standardprogramme setzt WinZii **nicht**, sondern
+  öffnet die Einstellungsseite: Windows sichert die Zuordnung seit Windows 10
+  mit einer Prüfsumme ab und dreht sie von außen gesetzt still zurück.
+
+  In einer Domäne bleibt das Umbenennen gesperrt — das Computerkonto im
+  Verzeichnis bliebe auf dem alten Namen zurück.
+
+- **Installierte Programme aktualisieren.** Die Programme-Seite misst beim
+  Öffnen mit, was veraltet ist, und bringt es auf Wunsch auf den neuesten
+  Stand. Auf einem gewachsenen Kundengerät ist das die wertvollere Hälfte der
+  Seite: Dort fehlt selten etwas, dort ist der PDF-Betrachter drei Jahre alt.
+
+  Die Liste kommt aus der Tabellenausgabe von winget, für die es keine
+  maschinenlesbare Form gibt. Der Parser vergleicht deshalb nicht gegen
+  »Verfügbar« oder »Available«, sondern misst die Spaltengrenzen aus der
+  Kopfzeile. Pakete, deren installierte Fassung winget nicht lesen kann,
+  bleiben außen vor — dort wäre die Aktualisierung ein Blindflug.
+
+- **Treiber beschaffen.** Bisher konnte WinZii Treiber sichern und
+  zurückspielen, aber nie welche besorgen. Neu ist ein Stufenmodell, das die
+  vier möglichen Wege mit ihrer jeweiligen Verlässlichkeit benennt, statt einen
+  davon als »automatische Treibersuche« zu verkaufen — die gibt es nicht, kein
+  Hersteller bietet dafür eine Schnittstelle an.
+
+  Der Gewinn liegt in Stufe drei: Dell, Lenovo und HP haben eine stille
+  Kommandozeile, die für genau dieses Modell sucht. Der neue Katalog
+  `data\oemtools.json` führt sie mit Erkennungsmuster, winget-Kennung und
+  Pfadkandidaten; alle Kennungen sind gegen die Quelle »winget« geprüft. Die
+  Pfade sind eine Liste, kein fester Wert — die Hersteller verschieben ihre
+  Werkzeuge zwischen den Fassungen.
+
+  Stufe vier ist der Microsoft Update-Katalog, und nur für Geräte mit
+  Fehlercode 28: die gelben Ausrufezeichen ganz ohne Treiber. Der Katalog hat
+  keine Schnittstelle und wird gelesen wie eine Webseite — das ist die
+  brüchigste Stelle in WinZii und steht so im Hinweistext. Welcher Treffer
+  passt, entscheidet der Techniker; nichts wird von selbst genommen.
+
+- **Belastungstest.** Ein PC, der im Leerlauf sauber aussieht, sagt nichts
+  darüber, wie er unter Last läuft — und genau das ist die Frage, die nach der
+  Übergabe zurückkommt. Gemessen werden Rechenwerk, Arbeitsspeicher und
+  Datenträger.
+
+  Der Prozessortest sucht nicht Leistung, sondern Drosselung: Fällt der Takt
+  unter siebzig Prozent des Grundtakts, ist die Kühlung am Ende. Der
+  Speichertest vergleicht gegen ein kleines Referenzmuster statt gegen eine
+  Kopie — die läge im selben Speicher und trüge denselben Fehler. Die
+  Plattenmessung geht in beiden Richtungen am Zwischenspeicher vorbei, sonst
+  misst man den Arbeitsspeicher.
+
+  Was die Prüfung **nicht** kann, steht als eigene Zeile in der Karte: Sie
+  prüft nur, was Windows im Betrieb hergibt. Ein Fehler ist ein sicherer
+  Befund, kein Fehler ist keine Entwarnung. Daneben liegt der Knopf zur
+  Windows-Speicherdiagnose, die den ganzen Speicher prüft.
+
+- **Sieben Sicherheitseingriffe**, jetzt fünfzehn statt acht unter
+  »Sicherheit«. Vorausgewählt sind drei, weil sie nichts kaputtmachen können:
+  SmartScreen, Netzwerkschutz und das Blockieren von Office-Makros aus dem
+  Internet — Letzteres der wirksamste einzelne Eintrag im Katalog.
+
+  Vier sind es ausdrücklich nicht: Der Cloud-Schutz schickt Proben an
+  Microsoft. Der überwachte Ordnerzugriff sperrt Sicherungsprogramme mit aus.
+  Der abgeschaltete Script Host legt Anmeldeskripte lahm. Der Schutz der
+  Anmeldedaten im Speicher kann Fingerabdruckleser ausfallen lassen. Alle vier
+  nennen den Preis vor dem Nutzen.
+
+- **Seit dem letzten Besuch.** Ein Kundengerät steht selten nur einmal auf dem
+  Tisch. Das Dashboard kann sich den Zustand merken — Programme, Autostart,
+  greifende Optimierungen, freier Platz — und beim nächsten Mal vergleichen.
+  Die wertvollste Zeile ist dabei nicht »neu installiert«, sondern
+  **»zurückgedreht«**: Funktionsupdates stellen Telemetrie- und
+  Datenschutzeinstellungen still wieder her, und im Protokoll des letzten
+  Besuchs steht das Gegenteil. Die Momentaufnahme liegt beim Stick, nicht
+  beim Kunden.
+
+- **Gemerkte Auswahl der Optimierungen.** Wer achtundvierzig Einträge einmal
+  durchgegangen ist, will das beim nächsten Kunden nicht wiederholen. Die
+  Auswahl liegt in `einstellungen.json` und reist mit dem Stick.
+- **Übergabeblatt als PDF**, gedruckt über den Edge, der auf jedem Windows 10
+  und 11 liegt. Ein HTML gibt man einem Kunden nicht in die Hand.
+
+- **Abschnitt »Zustand geprüft«** im Übergabeblatt: die Startzeit aus dem
+  Leistungsprotokoll und das Ergebnis des Belastungstests. Ist keiner gelaufen,
+  sagt das Blatt das ausdrücklich.
+
+- **Inventar als CSV und JSON.** Die HTML-Berichte sind für Menschen, das hier
+  ist für die eigene Kundendatei: eine Zeile je Gerät, Semikolon getrennt und
+  mit BOM, damit Excel sie ohne Rückfrage öffnet.
+
+- **Alles packen.** Alle Berichte dieses PCs in einem Archiv — ausdrücklich
+  ohne die Sicherungen: Dort stehen WLAN- und BitLocker-Schlüssel im Klartext,
+  und ein Archiv wird nebenbei weitergereicht.
+
+- **Suche über alles mit Strg+K.** Sechzehn Seiten sind zu viele, um jede
+  Funktion aus dem Gedächtnis zu finden. Wer »drucker« tippt, landet auf der
+  Reparaturseite, ohne zu wissen, dass die Warteschlange dort liegt — jede
+  Seite trägt dafür ihre Stichwörter.
+
+- **Fortschritt auf dem Taskleistensymbol.** Wer während einer Treibersicherung
+  etwas anderes macht, sieht sonst erst beim Zurückwechseln, ob WinZii noch
+  läuft.
+
+### Geändert
+
+- **Die Suche nach veralteten Programmen läuft nicht von selbst.** Sie war
+  zuerst so gebaut, dass sie beim Öffnen der Seite mitmisst — bequem, aber
+  zweimal falsch: Sie fragt winget, und das geht ins Netz. Ungefragt, beim
+  bloßen Öffnen einer Seite, tut WinZii das nirgends. Und sie dauert auf einem
+  gewachsenen Gerät bis zu einer Minute, in der kein anderer Schritt anlaufen
+  kann; wer nur ein Programm installieren wollte, stünde davor. Der Seitentest
+  hat genau das gezeigt: Er blieb an der Programme-Seite hängen.
+
+- Die Sprachdateien standen nach dem Bearbeiten mit CRLF im Arbeitsbaum,
+  obwohl `.gitattributes` für JSON LF vorschreibt. Wieder angeglichen.
+
 ## [0.6.0] — 2026-09-10
 
 ### Behoben

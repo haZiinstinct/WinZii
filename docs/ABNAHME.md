@@ -10,7 +10,7 @@ bequemen Zweig. Genau daraus sind die drei Symptome entstanden, die den Audit au
 haben. Alles unten ist der Teil, der auf dem Entwicklungsrechner **grundsätzlich nicht**
 prüfbar ist.
 
-Stand: **0.6.0**, veröffentlicht am 10.09.2026 (Fensterlage, zweispaltige Karten,
+Stand: **0.7.0**, veröffentlicht am 20.09.2026 (Fensterlage, zweispaltige Karten,
 `Test-Layout`, dazu die sichtbaren Bedienelemente: Knöpfe mit Rand und Fläche,
 Fokusrahmen, ganze Zeile statt Kästchen). Alle Prüfwerkzeuge grün.
 
@@ -30,7 +30,7 @@ an der Trefferfläche der Zeilen; nachzuholen ist es trotzdem.
 
 Drei Läufe haben die Tabelle gefüllt: zwei auf dem zweiten Notebook (0.5.1 mit Rechten,
 0.5.3 ohne) und einer auf dem Entwicklungsrechner (0.5.2). Damit hier niemand nachzählen
-muss, was noch aussteht, stehen **alle 23** Punkte in einer Tabelle:
+muss, was noch aussteht, stehen **alle 29** Punkte in einer Tabelle:
 
 | Punkt | Stand |
 | --- | --- |
@@ -57,6 +57,12 @@ muss, was noch aussteht, stehen **alle 23** Punkte in einer Tabelle:
 | 21 — hohe Skalierung, zweiter Monitor | **Halb, ohne Befund.** 1920×1080 (200 % auf 4K), das Mindestmaß 1000×560 und ein sehr breites 2560×720 sitzen alle (01.09.). Ein zweiter Monitor mit abweichender Skalierung fehlt. |
 | 22 — ARM64 | **Offen.** An zwei Stellen im Code berücksichtigt, nie auf einem Gerät gesehen. |
 | 23 — Windows-Updates mit alten Herstellertreibern | **Halb, ohne Befund.** Das Notebook bekommt von Windows Update vier Intel-Treiber von 2017 und 2019 angeboten — genau der Fall, vor dem die Seite seit 0.5.2 warnt. Suche 4,3 s, alle vier als Treiber erkannt und unten einsortiert, keiner vorausgewählt, Größe 0 erscheint nicht als »bis zu 0 MB«. Eingespielt wurde nichts, mit Absicht: Ein Treiber von 2017 über den aktuellen ist genau das, was die Seite verhindern soll. Offen bleibt das Einspielen eines echten Updates mit Neustart. |
+| 24 — Werkzeug des Herstellers | **Offen.** Braucht ein Gerät von Dell, Lenovo oder HP. Zu prüfen: Wird es erkannt, findet WinZii die Programmdatei nach der Installation über winget, läuft »Nur suchen« durch, und was steht danach in der Konsole? Erst danach »Treiber einspielen« — und nur auf einem Gerät, dessen Treiber man verlieren darf. Vorher die Treibersicherung anlegen. |
+| 25 — Update-Katalog | **Offen.** Braucht ein Gerät mit einem Bauteil ohne Treiber (Fehlercode 28). Zu prüfen: Findet die Suche etwas, stimmen Titel, Datum und Größe in der Auswahl, lässt sich der Treffer laden, entpacken und einspielen? Und: Was passiert ohne Internet — die Suche muss sauber leer ausgehen, nicht hängen. |
+| 26 — Belastungstest auf einem Notebook | **Offen.** Der Entwicklungsrechner ist ein Desktop mit fester Kühlung und meldet keine Temperaturen. Auf dem Notebook zu prüfen: Kommen Temperaturwerte, steigen sie unter Last, und fällt der Takt? Genau dafür ist die Messung da. Fünf Minuten wählen, das Gerät dabei nicht auf eine Decke legen. |
+| 27 — Konto und Rechnername | **Offen.** Auf einem Gerät zu prüfen, das umbenannt werden darf: Wird der Name nach dem Neustart übernommen, meldet sich das neue Konto an, und stimmt seine Gruppe — bei einem Standardkonto muss die Rechteabfrage kommen. Auf einem englischen Windows gegenprüfen: Die Gruppe wird über ihre SID angesprochen, genau dafür. |
+| 28 — Windows aktivieren | **Offen.** Der Schlüssel aus der Firmware wird hier nicht gelesen, weil keiner hinterlegt ist. Auf einem Markengerät zu prüfen: Steht er da, lässt er sich übernehmen? Das Eintragen selbst nur auf einem Gerät, dessen Aktivierung nicht gebraucht wird. |
+| 29 — PDF ohne Edge | **Offen.** Auf einem LTSC-System ohne Edge zu prüfen: Das Übergabeblatt muss als HTML entstehen und der Hinweis »kein PDF« im Protokoll stehen — der Vorgang darf nicht scheitern. |
 
 Was davon nur ein Kundengerät klären kann: **5** (OEM-Office), **9** (Sicherheitsprogramme
 wirklich installieren), **11** (BitLocker, OneDrive), **2** (zweites Konto — auf dem

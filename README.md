@@ -11,7 +11,7 @@ Vom USB-Stick starten, aufräumen, optimieren, einrichten — ohne Installation,
 
 <sub>A Windows maintenance toolkit for IT technicians. Fully bilingual German/English — interface, dialogs, log, reports and handover sheet.</sub>
 
-![Version](https://img.shields.io/badge/Version-0.6.0-00d4ff?labelColor=0a0a0f&style=flat-square)
+![Version](https://img.shields.io/badge/Version-0.7.0-00d4ff?labelColor=0a0a0f&style=flat-square)
 [![Prüfung](https://github.com/haZiinstinct/WinZii/actions/workflows/pruefung.yml/badge.svg)](https://github.com/haZiinstinct/WinZii/actions/workflows/pruefung.yml)
 ![Windows](https://img.shields.io/badge/Windows-10%20%7C%2011-00d4ff?labelColor=0a0a0f&style=flat-square)
 ![PowerShell](https://img.shields.io/badge/PowerShell-5.1-00d4ff?labelColor=0a0a0f&style=flat-square)
@@ -28,20 +28,21 @@ Vom USB-Stick starten, aufräumen, optimieren, einrichten — ohne Installation,
 | Bereich | Was es tut |
 | --- | --- |
 | **Dashboard** | Windows-Version, Hardware, Grafik, Bildschirme, BIOS, RAM-Steckplätze und Akkuverschleiß, dazu Aktivierung, BitLocker, Virenschutz, Datenträger und Netzwerk — alles auf einen Blick beim Aufsetzen des PCs. |
-| **Diagnose** | Wertet die Ereignisprotokolle aus und übersetzt sie in Klartext: was passiert ist, was es bedeutet, was zu tun ist. Dazu Bluescreen-Stoppcodes, Datenträgerzustand und die Werkzeuge sfc, DISM und chkdsk. |
+| **Einrichten** | Was nach der Neuinstallation als Erstes ansteht: Rechnername, lokales Konto, Zeitzone und Zeitabgleich, Zahlenformat und Tastaturlayout, Windows-Aktivierung samt dem Schlüssel aus der Firmware, Netzwerkdrucker. Bisher der einzige Teil der Arbeit, für den man das Werkzeug verlassen musste. |
+| **Diagnose** | Wertet die Ereignisprotokolle aus und übersetzt sie in Klartext: was passiert ist, was es bedeutet, was zu tun ist. Dazu Bluescreen-Stoppcodes, Datenträgerzustand und die Werkzeuge sfc, DISM und chkdsk. Der **Belastungstest** lastet Rechenwerk, Speicher und Datenträger aus und findet, was im Leerlauf unsichtbar bleibt: eine Kühlung am Ende, an der der Takt einbricht. |
 | **Updates** | Zeigt, was Windows noch nachzuholen hat, und spielt es ein. Treiber stehen getrennt und sind nie vorausgewählt — Windows Update bietet dort gern ältere Herstellerstände an, die einen neueren Treiber überschreiben. Eingespielt wird eines nach dem anderen, damit im Protokoll steht, wo es hängt; neu gestartet wird nie von selbst. |
-| **Optimierung** | 41 Eingriffe für Geschwindigkeit, Telemetrie, Datenschutz und Sicherheit. Jeder mit Begründung, jeder einzeln zurücknehmbar. |
+| **Optimierung** | 48 Eingriffe für Geschwindigkeit, Telemetrie, Datenschutz und Sicherheit. Jeder mit Begründung, jeder einzeln zurücknehmbar. |
 | **KI-Entfernung** | Findet Copilot, Recall und Click to Do — sperrt sie per Richtlinie oder entfernt sie ganz. Die Sperren wirken auch vorbeugend gegen Funktionsupdates. |
 | **Bereinigung** | Zeigt erst, wo wie viel Platz liegt (Zwischenspeicher, Update-Reste, Browser-Caches, Windows.old), dann wird gezielt gelöscht. Persönliche Dateien sind ausgeschlossen. |
-| **Programme** | 59 Programme über winget, darunter eine Rubrik **Sicherheit** (Zweitmeinung, Aufräumen nach einem Befall, Schutz danach), mit Nachinstallation von winget selbst für LTSC-Systeme. Installationsdateien lassen sich auf den Stick laden. |
+| **Programme** | 60 Programme über winget, darunter eine Rubrik **Sicherheit** (Zweitmeinung, Aufräumen nach einem Befall, Schutz danach), mit Nachinstallation von winget selbst für LTSC-Systeme. Installationsdateien lassen sich auf den Stick laden. Dazu die andere Hälfte: Was **schon installiert, aber veraltet** ist, wird beim Öffnen mitgemessen und auf Wunsch aktualisiert. |
 | **Deinstallieren** | Installierte Programme suchen und entfernen, still wo möglich — und danach die Reste, die der Deinstallierer liegen lässt: Installationsordner, Startmenü-Einträge, eigene Registry-Schlüssel. Die Funde stehen mit Größe im Dialog, entfernt wird erst nach Bestätigung, Schlüssel vorher als `.reg` gesichert. |
 | **Office** | Microsoft 365, Office LTSC 2024 und 2021 über das offizielle Bereitstellungswerkzeug — auf Wunsch komplett offline vom Stick. Dazu LibreOffice. |
 | **Daten** | Beantwortet vor der Neuinstallation: Was muss gesichert werden? Profilgrößen je Konto, wann ein Konto zuletzt benutzt wurde, Outlook-Dateien, Browser-Profile, Drucker, Netzlaufwerke, Produktschlüssel. Warnt nicht nur vor OneDrive-Platzhaltern, die im Explorer wie Dateien aussehen und leer sind, sondern lädt sie auf Wunsch herunter und wartet auf den Abschluss. Exportiert Lesezeichen, WLAN-Zugänge, Geräteliste und BitLocker-Schlüssel — und kopiert die persönlichen Ordner mit robocopy auf eine externe Platte, ohne an der Quelle etwas zu löschen. |
 | **Zurückspielen** | Die andere Hälfte des Datenumzugs: WLAN-Netze, Lesezeichen, Drucker und Netzlaufwerke aus einer Sicherung wieder anlegen — auch aus der eines anderen Rechners. Zeigt vorher, was passt und was nicht: fehlende Druckertreiber, Browser-Profile, die es hier nicht gibt, und WLAN-Netze, die ohne Schlüssel gesichert wurden. |
-| **Treiber** | Geräte mit Fehlercode im Klartext statt als Nummer. Treiberbestand nach Alter sortiert — bei Bluescreens der schnellste Weg zum Verdächtigen. Treiber auf den Stick sichern und nach dem Neuaufsetzen in einem Rutsch zurückspielen. |
+| **Treiber** | Geräte mit Fehlercode im Klartext statt als Nummer. Treiberbestand nach Alter sortiert — bei Bluescreens der schnellste Weg zum Verdächtigen. Treiber auf den Stick sichern und nach dem Neuaufsetzen in einem Rutsch zurückspielen. Und sie **beschaffen** — in Stufen: Windows Update, dann das stille Kommandozeilenwerkzeug von Dell, Lenovo oder HP, und für Geräte, die dann immer noch ohne Treiber dastehen, der Microsoft Update-Katalog über die Hardware-Kennung. |
 | **Autostart** | Zeigt alles, was beim Anmelden mitstartet, samt Herausgeber. Abschalten statt löschen, jederzeit umkehrbar. |
 | **Reparatur** | Misst erst, wo es klemmt (Netzwerkkarte, IP, Router, Namensauflösung, Internet), und benennt dann die passende Maßnahme. Dazu Windows-Update-Zwischenspeicher leeren, Druckwarteschlange befreien, Virenschnellprüfung, vorinstallierte Apps entfernen. |
-| **Protokoll** | Jeder Schritt wird mitgeschrieben. Zwei Ausgaben: das technische Protokoll und das **Übergabeblatt** — was gemacht wurde, wie viel Platz gewonnen wurde, wie der PC ausgestattet ist und was noch ansteht, in Kundensprache und mit Feldern für Techniker, Kunde und Auftragsnummer. |
+| **Protokoll** | Jeder Schritt wird mitgeschrieben. Zwei Ausgaben: das technische Protokoll und das **Übergabeblatt** — was gemacht wurde, wie viel Platz gewonnen wurde, wie der PC ausgestattet ist und was noch ansteht, in Kundensprache und mit Feldern für Techniker, Kunde und Auftragsnummer — **auch als PDF**. Dazu das Inventar als CSV und JSON für die eigene Kundendatei und ein Archiv mit allen Berichten des Geräts. |
 
 ---
 
@@ -56,7 +57,7 @@ Das war alles. WinZii braucht keine Installation, keine Laufzeitumgebung und kei
 > **Windows meldet sich mit einem blauen Hinweis?**
 > Auf »Weitere Informationen« und dann »Trotzdem ausführen« klicken. Der Hinweis erscheint bei jeder Datei aus dem Internet, die nicht kostenpflichtig signiert wurde. Zu jedem Release gehört eine SHA256-Prüfsumme — damit lässt sich das Archiv vor dem Entpacken abgleichen:
 > ```powershell
-> Get-FileHash .\WinZii-0.6.0.zip -Algorithm SHA256
+> Get-FileHash .\WinZii-0.7.0.zip -Algorithm SHA256
 > ```
 
 **Voraussetzungen:** Windows 10 oder 11 mit Administratorrechten. PowerShell 5.1 und .NET Framework sind in Windows enthalten.
@@ -101,6 +102,12 @@ Ehrlich gesagt, damit niemand böse überrascht wird: WinZii wurde auf **einem**
 | **Office auf den Datenträger laden** | Der Abbruch beendet das Bereitstellungswerkzeug, **nicht** den Download: Geladen wird vom Click-to-Run-Dienst von Windows, und der macht im Hintergrund weiter. Im Abnahmelauf wuchs der Ordner nach dem Abbruch von 39 MB auf 2,5 GB. WinZii sagt das im Protokoll und nennt den Ordner zum Löschen; ein angefangener Vorrat gilt seit 0.4.1 zuverlässig als unvollständig. |
 | **FAT32-Datenträger** | Seit 0.5.3 auf einer virtuellen FAT32-Platte geprüft: WinZii startet davon, das Dashboard zeigt den Hinweisbalken, und der Office-Download wird abgelehnt, **bevor** die 4-GB-Grenze zuschlägt. Ein echter FAT32-Stick fehlt weiterhin. |
 | **Restesuche nach dem Deinstallieren** | Die Regeln und die ganze Kette — finden, sichern, entfernen — sind in `tools\Test-Undo.ps1` mit 46 Prüfungen abgedeckt. Seit 0.5.1 ist sie auch gegen echte Deinstallierer gelaufen, auf einem Gerät mit 53 gewachsen installierten Programmen; der Lauf hat zwei Fehler gefunden, beide behoben (siehe [CHANGELOG](CHANGELOG.md)). Zwei Dinge gelten dauerhaft: **Gelöschte Ordner sind endgültig weg** — gesichert werden nur Registry-Schlüssel —, und die Suche ist absichtlich eng. Sie übersieht lieber einen Rest, als den Ordner eines anderen Programms anzufassen; seit 0.5.1 auch dann nicht, wenn der Hersteller selbst den Sammelordner der ganzen Familie als Installationsordner einträgt. |
+| **Werkzeuge der Gerätehersteller** | Ungeprüft. Der Entwicklungsrechner ist ein Eigenbau, das Abnahme-Notebook stammt von keinem der drei Hersteller mit stiller Kommandozeile. Geprüft ist nur, was sich ohne Gerät prüfen lässt: Die winget-Kennungen im Katalog sind gegen die Quelle abgeglichen, und der Weg über »nicht auffindbar« ist der, den WinZii hier nimmt, wenn ein Pfad nicht stimmt. Ob Dell Command, der Thin Installer oder der Image Assistant mit diesen Argumenten wirklich durchlaufen, weiß nur ein Gerät, auf dem sie laufen. |
+| **Update-Katalog** | Die brüchigste Stelle im ganzen Werkzeug, und das mit Absicht: Microsoft bietet für den Katalog keine Schnittstelle an, gelesen wird die Suchseite. Ändert sich ihr Aufbau, findet WinZii nichts mehr — leer ausgehen tut es dann sauber, aber es merkt es nicht. Die Suche selbst ist gelaufen, das Herunterladen und Einspielen eines Katalogtreibers nie: Auf keinem der beiden Geräte fehlt ein Treiber. |
+| **Belastungstest** | Auf dem Entwicklungsrechner gelaufen, einem Desktop mit fester Kühlung: Der Takt hielt 3801 von 3801 MHz, die Plattenmessung ergab 574 MB/s schreibend und 1809 lesend, und die ungepufferte Leseschleife liefert alle Bytes. Genau der Fall, für den er gebaut ist — ein gedrosseltes Notebook — fehlt damit. Und Temperaturen meldet dieses Gerät gar nicht; der Pfad »nicht messbar« ist geprüft, der andere nicht. |
+| **Windows aktivieren** | Der Schlüssel aus der Firmware wird gelesen — auf diesem Gerät ist keiner hinterlegt, geprüft ist also der leere Fall. Einen Schlüssel einzutragen und zu aktivieren ist ungeprüft: Dafür bräuchte es ein Gerät, dessen Aktivierung man aufs Spiel setzen darf. |
+| **Konten und Rechnername** | Ungeprüft an einem echten Kundengerät. Das Umbenennen und das Anlegen eines Kontos sind Eingriffe, die man auf dem Arbeitsrechner nicht nebenbei durchspielt. |
+| **PDF-Ausgabe** | Über den Edge geprüft, der auf diesem Gerät liegt: 37 KB mit heilen Umlauten. Auf einem LTSC-System ohne Edge greift der Weg »kein PDF, dafür das HTML« — abgeleitet, nicht gesehen. |
 | **Treibersicherung und Office** | Nur lesend geprüft, nie vollständig durchgeführt. |
 | **Drucker zurückspielen** | In der Sandbox vollständig durchlaufen: Treiber aus dem Treiberspeicher nachziehen, Netzwerkanschluss anlegen, Drucker einrichten, beim zweiten Lauf nichts doppeln. Ungeprüft bleibt ein Drucker an echter Hardware — USB-Anschlüsse entstehen erst mit dem Gerät und werden bewusst übersprungen. |
 | **WLAN zurückspielen** | Die Profildateien werden richtig gelesen und ein Fehlschlag sauber gemeldet. Ein Profil wirklich einzurichten konnte nie geprüft werden — weder der Entwicklungsrechner noch die Sandbox hat einen WLAN-Adapter. |
@@ -118,13 +125,13 @@ Dunkles Design im haZii-Stil, deutsch oder englisch, mit mitlaufender Konsole: J
 
 <img src="docs/screenshot-dashboard.png" alt="Dashboard von WinZii" width="100%">
 
-Zwölf Seiten in fünf Gruppen:
+Sechzehn Seiten in fünf Gruppen, erreichbar auch über die Suche mit **Strg+K**:
 
 ```
-// SYSTEM        Dashboard · Diagnose
+// SYSTEM        Dashboard · Einrichten · Diagnose · Updates
 // OPTIMIEREN    Optimierung · KI-Entfernung · Bereinigung · Autostart
-// INSTALLIEREN  Programme · Office
-// ÜBERNEHMEN    Daten · Treiber
+// SOFTWARE      Programme · Deinstallieren · Office
+// ÜBERNEHMEN    Daten · Zurückspielen · Treiber
 // WERKZEUGE     Reparatur · Protokoll
 ```
 

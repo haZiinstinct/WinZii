@@ -728,6 +728,10 @@
       "wiztree": {
         "description": "Disk space analysis straight from the NTFS table — seconds where TreeSize is still searching."
       },
+      "intel-dsa": {
+        "name": "Intel Driver & Support Assistant",
+        "description": "Looks for chipset, Wi-Fi and Intel graphics drivers. No command line — the drivers page points to it, installing it happens here."
+      },
       "snappydriver": {
         "description": "Adding drivers when there is no network after a reinstall. Driver packages can be downloaded in advance."
       },

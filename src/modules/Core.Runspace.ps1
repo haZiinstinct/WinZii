@@ -196,6 +196,17 @@ function Set-WzBusy {
         }
         if ($syncHash.Window) {
             $syncHash.Window.Cursor = if ($isBusy) { [Windows.Input.Cursors]::AppStarting } else { $null }
+
+            # Auch auf dem Symbol in der Taskleiste. Wer während einer
+            # Treibersicherung etwas anderes macht, sieht sonst erst beim
+            # Zurückwechseln, dass WinZii längst fertig ist — oder noch läuft.
+            # »Indeterminate«, weil keiner der Vorgänge seinen Fortschritt kennt:
+            # Ein Balken, der bei 30 Prozent stehen bleibt, verspricht mehr als
+            # ein laufender.
+            if ($syncHash.Window.TaskbarItemInfo) {
+                $syncHash.Window.TaskbarItemInfo.ProgressState =
+                    if ($isBusy) { 'Indeterminate' } else { 'None' }
+            }
         }
     }.GetNewClosure()
 
