@@ -672,6 +672,10 @@ function New-WzHandoverReport {
         -Body ((New-WzHtmlCard -Title (Get-WzText 'rep.cardEquipment') -Rows $deviceRows) +
                (New-WzHtmlCard -Title (Get-WzText 'rep.cardSecurity') -Rows $securityRows))
 
+    # --- Was gemessen wurde ------------------------------------------------
+    # Startzeit gibt es immer, der Belastungstest nur, wenn er gelaufen ist.
+    $content += New-WzHealthSection
+
     # --- Empfehlungen ------------------------------------------------------
     $recommendations = Get-WzHandoverRecommendations -Info $after -Security $security -Actions $actions
     $recommendationBody = if ($recommendations.Count -eq 0) {
@@ -993,4 +997,259 @@ function Export-WzProtocol {
     Write-WzLog (Get-WzText 'rep.logProtoSaved' @{ datei = $file }) -Level Ok
     if ($Open) { Start-Process $file }
     return $file
+}
+
+function New-WzHealthSection {
+    <#
+    .SYNOPSIS
+        Der Abschnitt »Zustand geprüft« für das Übergabeblatt.
+    .DESCRIPTION
+        Ohne gelaufenen Belastungstest bleibt er weg. Ein Abschnitt, der
+        »nicht geprüft« meldet, sagt dem Kunden nichts und macht das Blatt nur
+        länger — die Startzeit steht trotzdem drin, denn die gibt es immer.
+    #>
+    [CmdletBinding()]
+    param()
+
+    $rows = @()
+
+    $boot = $null
+    try { $boot = Get-WzBootPerformance -Count 5 } catch { }
+    if ($boot -and @($boot.Runs).Count -gt 0) {
+        $last = @($boot.Runs)[0]
+        $rows += "$(Get-WzText 'rep.rowBootLast')|$(Get-WzText 'rep.valSeconds' @{ sekunden = $last.TotalSeconds })"
+        $rows += "$(Get-WzText 'rep.rowBootAverage')|$(Get-WzText 'rep.valBootAverage' @{ sekunden = $boot.AverageSeconds; anzahl = @($boot.Runs).Count })"
+        if ($boot.Hint) { $rows += "$(Get-WzText 'rep.rowBootVerdict')|$($boot.Hint)" }
+    }
+
+    $check = $syncHash.HealthCheck
+    if ($check) {
+        if ($check.Cpu) {
+            $rows += "$(Get-WzText 'health.rowCpu')|$($check.Cpu.Verdict)|$(if ($check.Cpu.Ok) { 'ok' } else { 'warn' })"
+            if ($null -ne $check.Cpu.PeakCelsius) {
+                $rows += "$(Get-WzText 'health.rowTemperature')|$(Get-WzText 'health.temperatureValue' @{ hoechste = $check.Cpu.PeakCelsius; start = $check.Cpu.StartCelsius })"
+            }
+        }
+        if ($check.Memory) {
+            $rows += "$(Get-WzText 'health.rowMemory')|$($check.Memory.Verdict)|$(if ($check.Memory.Ok) { 'ok' } else { 'warn' })"
+        }
+        if ($check.Disk) {
+            $rows += "$(Get-WzText 'health.rowDisk')|$($check.Disk.Verdict)|$(if ($check.Disk.Ok) { 'ok' } else { 'warn' })"
+        }
+    }
+
+    if ($rows.Count -eq 0) { return '' }
+
+    $body = New-WzHtmlCard -Title (Get-WzText 'rep.cardCondition') -Rows $rows
+    if (-not $check) {
+        $body += New-WzHtmlNote -Kind 'info' -Text (Get-WzText 'rep.noHealthCheck')
+    }
+
+    return (New-WzHtmlSection -Title (Get-WzText 'rep.secCondition') `
+        -Lead (Get-WzText 'rep.leadCondition') -Body $body)
+}
+
+function Export-WzInventory {
+    <#
+    .SYNOPSIS
+        Schreibt die Ausstattung dieses Geräts als CSV und als JSON.
+    .DESCRIPTION
+        Die HTML-Berichte sind für Menschen. Das hier ist für die eigene
+        Kundendatei: eine Zeile je Gerät, die sich in eine Tabelle einfügen
+        lässt, und daneben dieselben Angaben vollständig als JSON.
+    .OUTPUTS
+        PSCustomObject mit CsvPath und JsonPath.
+    #>
+    [CmdletBinding()]
+    param(
+        [string]$Customer,
+        [string]$OrderNumber,
+        [string]$Technician
+    )
+
+    $result = [pscustomobject]@{ CsvPath = ''; JsonPath = ''; Success = $false }
+
+    $info = $syncHash.SystemInfo
+    if (-not $info) { $info = Get-WzSystemInfo }
+    $security = $syncHash.SecurityInfo
+
+    $disks = @($security.PhysicalDisks | ForEach-Object {
+        "$($_.Model) ($($_.MediaType), $(Format-WzBytes $_.SizeBytes))" })
+    $macs = @($info.Network | Where-Object { $_.Mac } | ForEach-Object { $_.Mac })
+
+    # Flach und in fester Reihenfolge: So lässt sich die Zeile ohne Nacharbeit
+    # an eine bestehende Tabelle anhängen.
+    $record = [ordered]@{
+        Datum          = (Get-Date).ToString('yyyy-MM-dd')
+        Computername   = $info.ComputerName
+        Kunde          = $Customer
+        Auftragsnummer = $OrderNumber
+        Techniker      = $Technician
+        Hersteller     = $info.Manufacturer
+        Modell         = $info.Model
+        Bauform        = if ($info.IsLaptop) { Get-WzText 'dash.chassisNotebook' } else { Get-WzText 'dash.chassisDesktop' }
+        Seriennummer   = $info.SerialNumber
+        Windows        = $info.OsCaption
+        WindowsVersion = $info.OsVersion
+        WindowsBuild   = $info.OsBuild
+        Prozessor      = $info.CpuName
+        ArbeitsspeicherGB = [math]::Round($info.RamTotalBytes / 1GB, 1)
+        SteckplaetzeBelegt = $info.RamSlotsUsed
+        SteckplaetzeGesamt = $info.RamSlots
+        Datentraeger   = ($disks -join '; ')
+        Grafik         = (@($info.Gpus | ForEach-Object { $_.Name }) -join '; ')
+        Bios           = $info.BiosVersion
+        MacAdressen    = ($macs -join '; ')
+        Aktivierung    = if ($security) { $security.Activation } else { '' }
+        Virenschutz    = if ($security) { $security.Defender } else { '' }
+        BitLocker      = if ($security) { $security.BitLocker } else { '' }
+        Akku           = if ($info.Battery.Present) { $info.Battery.Verdict } else { '' }
+        WinZiiVersion  = $syncHash.Version
+    }
+
+    if ($syncHash.DryRun) {
+        Write-WzLog (Get-WzText 'rep.logInventoryTest') -Level Test
+        return $result
+    }
+
+    try {
+        $stamp = Get-Date -Format 'yyyy-MM-dd_HHmm'
+        $folder = Get-WzReportDir
+        $result.CsvPath = Join-Path $folder "$(Get-WzText 'rep.inventoryFile')-$stamp.csv"
+        $result.JsonPath = Join-Path $folder "$(Get-WzText 'rep.inventoryFile')-$stamp.json"
+
+        # Semikolon und UTF-8 mit BOM: So öffnet Excel die Datei im
+        # deutschsprachigen Raum ohne Rückfrage und mit heilen Umlauten.
+        $object = [pscustomobject]$record
+        $csv = @($object | ConvertTo-Csv -NoTypeInformation -Delimiter ';')
+        [IO.File]::WriteAllLines($result.CsvPath, $csv, (New-Object Text.UTF8Encoding($true)))
+
+        $json = $object | ConvertTo-Json -Depth 4
+        [IO.File]::WriteAllText($result.JsonPath, $json, (New-Object Text.UTF8Encoding($false)))
+
+        $result.Success = $true
+        Write-WzLog (Get-WzText 'rep.logInventorySaved' @{ datei = $result.CsvPath }) -Level Ok
+    } catch {
+        Write-WzLog (Get-WzText 'rep.logInventoryFailed' @{ grund = $_.Exception.Message.Split([char]10)[0] }) -Level Warn
+    }
+
+    return $result
+}
+
+function Get-WzEdgePath {
+    <#
+    .SYNOPSIS
+        Microsoft Edge, sofern auffindbar.
+    .NOTES
+        Edge ist auf jedem Windows 10 und 11 vorhanden und kann eine Seite
+        ohne Fenster in ein PDF drucken. Damit braucht WinZii für die
+        PDF-Ausgabe keine zusätzliche Bibliothek — und auf einem LTSC-System
+        ohne Edge sagt es ehrlich, dass es nicht geht.
+    #>
+    foreach ($candidate in @(
+        "$env:ProgramFiles\Microsoft\Edge\Application\msedge.exe",
+        "${env:ProgramFiles(x86)}\Microsoft\Edge\Application\msedge.exe"
+    )) {
+        if ($candidate -and (Test-Path -LiteralPath $candidate)) { return $candidate }
+    }
+    return ''
+}
+
+function Convert-WzReportToPdf {
+    <#
+    .SYNOPSIS
+        Druckt einen HTML-Bericht über Edge in ein PDF.
+    .OUTPUTS
+        Pfad des PDF oder leer.
+    #>
+    [CmdletBinding()]
+    param([Parameter(Mandatory = $true)][string]$HtmlPath)
+
+    if (-not (Test-Path -LiteralPath $HtmlPath)) { return '' }
+
+    $edge = Get-WzEdgePath
+    if (-not $edge) {
+        Write-WzLog (Get-WzText 'rep.logNoEdge') -Level Warn
+        return ''
+    }
+
+    $pdfPath = [IO.Path]::ChangeExtension($HtmlPath, '.pdf')
+    $uri = 'file:///' + ($HtmlPath -replace '\\', '/')
+
+    # --headless=new ist die Fassung, die seit Edge 112 gedruckt wird; die alte
+    # liefert auf manchen Geräten eine leere Seite. Kopf- und Fußzeile bleiben
+    # weg: Der Bericht hat eine eigene.
+    $arguments = "--headless=new --disable-gpu --no-first-run --no-pdf-header-footer " +
+                 "--print-to-pdf=`"$pdfPath`" `"$uri`""
+    $process = Invoke-WzProcess -FilePath $edge -Arguments $arguments -TimeoutSeconds 120
+
+    if ((Test-Path -LiteralPath $pdfPath) -and (Get-Item -LiteralPath $pdfPath).Length -gt 1024) {
+        Write-WzLog (Get-WzText 'rep.logPdfSaved' @{ datei = $pdfPath }) -Level Ok
+        return $pdfPath
+    }
+
+    Write-WzLog (Get-WzText 'rep.logPdfFailed' @{ code = $process.ExitCode }) -Level Warn
+    return ''
+}
+
+function New-WzHandoverPackage {
+    <#
+    .SYNOPSIS
+        Packt alles, was für diesen PC entstanden ist, in ein Archiv.
+    .DESCRIPTION
+        Am Ende eines Auftrags liegen Berichte, Protokolle und Ausfuhren in
+        mehreren Ordnern. Was der Kunde oder die eigene Ablage bekommt, ist
+        eine Datei — sonst bleibt die Hälfte liegen.
+
+        Bewusst ohne die Sicherungen: Dort stehen WLAN-Schlüssel und
+        BitLocker-Wiederherstellungsschlüssel im Klartext. Die gehören nicht
+        in ein Archiv, das man nebenbei weitergibt.
+    .OUTPUTS
+        PSCustomObject mit Path, Files und Success.
+    #>
+    [CmdletBinding()]
+    param([switch]$IncludeLogs)
+
+    $result = [pscustomobject]@{ Path = ''; Files = 0; Success = $false; Bytes = [int64]0 }
+
+    $sources = @()
+    $reportDir = Get-WzReportDir
+    if (Test-Path -LiteralPath $reportDir) {
+        $sources += @(Get-ChildItem -LiteralPath $reportDir -File -ErrorAction SilentlyContinue |
+            Where-Object { $_.Extension -in @('.html', '.pdf', '.csv', '.json') })
+    }
+    if ($IncludeLogs) {
+        $logDir = Get-WzLogDir
+        if (Test-Path -LiteralPath $logDir) {
+            $sources += @(Get-ChildItem -LiteralPath $logDir -File -ErrorAction SilentlyContinue |
+                Where-Object { $_.Extension -eq '.txt' })
+        }
+    }
+
+    if ($sources.Count -eq 0) {
+        Write-WzLog (Get-WzText 'rep.logPackageEmpty') -Level Warn
+        return $result
+    }
+
+    if ($syncHash.DryRun) {
+        Write-WzLog (Get-WzText 'rep.logPackageTest' @{ anzahl = $sources.Count }) -Level Test
+        return $result
+    }
+
+    $target = Join-Path $reportDir "$(Get-WzText 'rep.packageFile')-$env:COMPUTERNAME-$(Get-Date -Format 'yyyy-MM-dd_HHmm').zip"
+    try {
+        # -Force, weil ein zweiter Lauf in derselben Minute sonst scheitert
+        Compress-Archive -LiteralPath @($sources | ForEach-Object { $_.FullName }) `
+            -DestinationPath $target -CompressionLevel Optimal -Force -ErrorAction Stop
+
+        $result.Path = $target
+        $result.Files = $sources.Count
+        $result.Bytes = (Get-Item -LiteralPath $target).Length
+        $result.Success = $true
+        Write-WzLog (Get-WzText 'rep.logPackageSaved' @{ anzahl = $sources.Count; datei = $target }) -Level Ok
+    } catch {
+        Write-WzLog (Get-WzText 'rep.logPackageFailed' @{ grund = $_.Exception.Message.Split([char]10)[0] }) -Level Warn
+    }
+
+    return $result
 }
