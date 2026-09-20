@@ -614,3 +614,208 @@ function Get-WzOfflineInstallerInfo {
         Ids   = $ids
     }
 }
+
+function ConvertFrom-WzWingetUpgradeList {
+    <#
+    .SYNOPSIS
+        Liest die Tabelle von »winget upgrade« in Objekte um.
+    .DESCRIPTION
+        winget kennt keine maschinenlesbare Ausgabe für diese Liste — es gibt
+        nur die Tabelle für Menschen, und deren Überschriften sind übersetzt:
+        »Verfügbar« heißt auf einem englischen Windows »Available«. Gegen sie
+        zu vergleichen scheitert also. Stattdessen werden die Spaltengrenzen
+        gemessen: Die Trennlinie aus Bindestrichen steht in jeder Sprache an
+        derselben Stelle, und die Wortanfänge in der Zeile darüber sind die
+        Spaltenanfänge.
+
+        Nur der erste Tabellenblock wird gelesen. Darunter hängt winget einen
+        zweiten an — die Pakete, die sich nicht über ihre Kennung ansprechen
+        lassen. Die gehören nicht in eine Auswahlliste, denn WinZii könnte sie
+        gar nicht aktualisieren.
+    .OUTPUTS
+        Liste aus Name, Id, Current, Available, Source
+    #>
+    param([Parameter(Mandatory = $true)][AllowEmptyString()][AllowNull()][string]$Output)
+
+    if (-not $Output) { return @() }
+
+    $lines = @($Output -split "`r?`n")
+    $separator = -1
+    for ($index = 0; $index -lt $lines.Count; $index++) {
+        if ($lines[$index] -match '^-{10,}\s*$' -and $index -gt 0) { $separator = $index; break }
+    }
+    if ($separator -lt 1) { return @() }
+
+    # Spaltenanfang ist jede Stelle der Kopfzeile, an der nach mindestens zwei
+    # Leerzeichen wieder Text beginnt.
+    $header = $lines[$separator - 1]
+    $starts = @(0)
+    foreach ($match in [regex]::Matches($header, '(?<=\s{2})\S')) { $starts += $match.Index }
+    $starts = @($starts | Sort-Object -Unique)
+    if ($starts.Count -lt 4) { return @() }
+
+    $entries = @()
+    for ($index = $separator + 1; $index -lt $lines.Count; $index++) {
+        $line = $lines[$index]
+        # Die Tabelle endet bei der ersten leeren Zeile. Was danach kommt, ist
+        # die Zusammenfassung oder der zweite Block.
+        if ([string]::IsNullOrWhiteSpace($line)) { break }
+        if ($line -match '^-{10,}\s*$') { break }
+
+        $fields = @()
+        for ($column = 0; $column -lt $starts.Count; $column++) {
+            $from = $starts[$column]
+            if ($from -ge $line.Length) { $fields += ''; continue }
+            $to = if ($column + 1 -lt $starts.Count) { $starts[$column + 1] } else { $line.Length }
+            if ($to -gt $line.Length) { $to = $line.Length }
+            $fields += $line.Substring($from, $to - $from).Trim()
+        }
+
+        # Ohne Kennung und ohne verfügbare Fassung ist der Eintrag unbrauchbar —
+        # genau so sehen die Zeilen aus, die winget für »unbekannt« ausgibt.
+        if (-not $fields[1] -or -not $fields[3]) { continue }
+
+        $entries += [pscustomobject]@{
+            Name      = $fields[0]
+            Id        = $fields[1]
+            Current   = $fields[2]
+            Available = $fields[3]
+            Source    = if ($fields.Count -gt 4) { $fields[4] } else { '' }
+        }
+    }
+
+    return @($entries)
+}
+
+function Get-WzUpgradableApps {
+    <#
+    .SYNOPSIS
+        Welche installierten Programme haben eine neuere Fassung?
+    .DESCRIPTION
+        Der wertvollste Blick auf ein gewachsenes Kundengerät: Dort sind nicht
+        die fehlenden Programme das Problem, sondern die drei Jahre alten.
+        Bewusst OHNE die Pakete, deren installierte Fassung winget nicht
+        erkennt — dort wäre jede »Aktualisierung« ein Blindflug, der auch eine
+        ältere Fassung darüberlegen kann.
+    #>
+    [CmdletBinding()]
+    param()
+
+    $result = [pscustomobject]@{ Apps = @(); WingetAvailable = $false; Failed = $false }
+
+    $wingetPath = Resolve-WzWingetPath
+    if (-not $wingetPath) {
+        Write-WzLog (Get-WzText 'apps.logWingetUnavailable') -Level Warn
+        return $result
+    }
+    $result.WingetAvailable = $true
+
+    Write-WzLog (Get-WzText 'apps.logUpgradeScan') -Level Action
+    $process = Invoke-WzProcess -FilePath $wingetPath `
+        -Arguments 'upgrade --accept-source-agreements --disable-interactivity' `
+        -TimeoutSeconds 300
+
+    # Ein Rückgabewert ungleich null ohne jede Ausgabe heißt: Der Aufruf kam
+    # nicht durch. Findet winget dagegen nichts zu aktualisieren, schreibt es
+    # das hin — und das ist die beste Nachricht dieser Karte, kein Fehler.
+    if ($process.ExitCode -ne 0 -and -not $process.StdOut) {
+        $result.Failed = $true
+        Write-WzLog (Get-WzText 'apps.logUpgradeScanFailed' @{ code = $process.ExitCode }) -Level Warn
+        return $result
+    }
+
+    $result.Apps = @(ConvertFrom-WzWingetUpgradeList -Output $process.StdOut)
+    Write-WzLog (Get-WzText 'apps.logUpgradeFound' @{ anzahl = @($result.Apps).Count }) -Level Info
+
+    return $result
+}
+
+function Update-WzApps {
+    <#
+    .SYNOPSIS
+        Aktualisiert die übergebenen Programme nacheinander.
+        Ein Fehlschlag beendet die Reihe nicht.
+    .OUTPUTS
+        PSCustomObject mit Updated, Skipped, Failed, Details, UpdatedNames
+    #>
+    param([Parameter(Mandatory = $true)][AllowEmptyCollection()][array]$Apps)
+
+    $summary = [pscustomobject]@{
+        Updated        = 0
+        Skipped        = 0
+        Failed         = 0
+        Details        = @()
+        UpdatedNames   = @()
+        RebootRequired = $false
+    }
+
+    $wingetPath = Resolve-WzWingetPath
+    if (-not $wingetPath -and -not $syncHash.DryRun) {
+        Write-WzLog (Get-WzText 'apps.logWingetUnavailable') -Level Error
+        $summary.Details += Get-WzText 'apps.detailWingetMissing'
+        return $summary
+    }
+
+    if (-not $syncHash.DryRun) {
+        $net = Test-WzInternetAccess
+        if ($net.Kind -ne 'ok') {
+            $reason = switch ($net.Kind) {
+                'portal'      { Get-WzText 'apps.netPortal' }
+                'certificate' { Get-WzText 'apps.netCertificate' }
+                default       { Get-WzText 'apps.netNone' }
+            }
+            Write-WzLog "$reason ($($net.Detail))" -Level Error
+            $summary.Details += $reason
+            return $summary
+        }
+    }
+
+    $index = 0
+    foreach ($app in $Apps) {
+        $index++
+        Write-WzLog (Get-WzText 'apps.logUpgradeStep' @{ nummer = $index; gesamt = @($Apps).Count
+            name = $app.Name; alt = $app.Current; neu = $app.Available }) -Level Action
+
+        if ($syncHash.DryRun) {
+            Write-WzLog (Get-WzText 'apps.logTestUpgrade' @{ id = $app.Id }) -Level Test
+            $summary.Skipped++
+            continue
+        }
+
+        # Kein Bereich mitgeben: Das Programm liegt schon irgendwo, und winget
+        # soll es dort aktualisieren, wo es steht. Ein erzwungener Bereich
+        # legte sonst eine zweite Kopie daneben.
+        $arguments = "upgrade --id $($app.Id) --exact --silent --accept-source-agreements " +
+                     '--accept-package-agreements --disable-interactivity'
+        $process = Invoke-WzProcess -FilePath $wingetPath -Arguments $arguments -TimeoutSeconds 1800
+        $outcome = Get-WzWingetOutcome -ExitCode $process.ExitCode
+
+        # »retry« heißt bei der Installation »anderer Bereich«. Beim
+        # Aktualisieren gibt es diesen zweiten Versuch nicht, denn der Bereich
+        # steht mit dem installierten Programm schon fest.
+        switch ($outcome.Outcome) {
+            'ok' {
+                $summary.Updated++
+                $summary.UpdatedNames += Get-WzText 'apps.upgradeItem' @{ name = $app.Name; neu = $app.Available }
+                Write-WzLog (Get-WzText 'apps.logUpgradedShort') -Level Ok
+            }
+            'reboot' {
+                $summary.Updated++
+                $summary.UpdatedNames += Get-WzText 'apps.upgradeItem' @{ name = $app.Name; neu = $app.Available }
+                $summary.RebootRequired = $true
+                Write-WzLog "  $($outcome.Text)" -Level Ok
+            }
+            'skip' {
+                $summary.Skipped++
+                Write-WzLog "  $($outcome.Text)" -Level Info
+            }
+            default {
+                $summary.Failed++
+                $summary.Details += "$($app.Name): $($outcome.Text)"
+                Write-WzLog "  $($outcome.Text)" -Level Warn
+            }
+        }
+    }
+
+    return $summary
+}

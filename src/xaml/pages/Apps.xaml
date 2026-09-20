@@ -33,5 +33,28 @@
         </StackPanel>
     </Border>
 
+    <!-- Was schon installiert ist, aber veraltet -->
+    <Border Style="{DynamicResource WzCardStatic}" Margin="0,0,0,16">
+        <StackPanel>
+            <Grid>
+                <StackPanel Grid.Column="0">
+                    <TextBlock Text="{DynamicResource L.apps.upgradeEyebrow}" Style="{DynamicResource WzEyebrow}" />
+                    <TextBlock Name="AppsUpgradeTitle" Text="{DynamicResource L.apps.upgradeTitle}" Style="{DynamicResource WzCardTitle}" />
+                </StackPanel>
+                <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Top">
+                    <Button Name="AppsBtnUpgradeScan" Style="{DynamicResource WzBtnSecondary}" Margin="0,0,8,0"
+                            Content="{DynamicResource L.apps.btnUpgradeScan}" />
+                    <Button Name="AppsBtnUpgradeAll" Style="{DynamicResource WzBtnChip}"
+                            Content="{DynamicResource L.apps.btnUpgradeAll}" />
+                </StackPanel>
+            </Grid>
+            <TextBlock Style="{DynamicResource WzHint}" Margin="0,0,0,12"
+                       Text="{DynamicResource L.apps.upgradeHint}" />
+            <StackPanel Name="AppsUpgradeList" />
+            <Button Name="AppsBtnUpgrade" Style="{DynamicResource WzBtnPrimary}" Margin="0,12,0,0"
+                    HorizontalAlignment="Left" IsEnabled="False" Content="{DynamicResource L.apps.btnUpgrade}" />
+        </StackPanel>
+    </Border>
+
     <StackPanel Name="AppsCategories" />
 </StackPanel>
