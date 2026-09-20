@@ -15,6 +15,8 @@ function Initialize-WzDiagnosticsPage {
     $syncHash.DiagBtnDism.Add_Click({ Start-WzRepairTool -Kind 'dism' })
     $syncHash.DiagBtnChkdsk.Add_Click({ Start-WzRepairTool -Kind 'chkdsk' })
     $syncHash.DiagBtnBattery.Add_Click({ Start-WzBatteryReport })
+    $syncHash.DiagBtnHealth.Add_Click({ Start-WzHealthCheck })
+    $syncHash.DiagBtnMemDiag.Add_Click({ Start-WzMemoryDiagnostic })
 
     [void]$syncHash.DiagNotices.Items.Add((New-WzNotice -Kind 'info' `
         -Text (Get-WzText 'diag.noticeReadOnly')))
@@ -342,5 +344,124 @@ function Start-WzBatteryReport {
         } else {
             Show-WzInfo -Title (Get-WzText 'diag.noBatteryTitle') -Message (Get-WzText 'diag.noBatteryMessage')
         }
+    }
+}
+
+# --- Belastungstest --------------------------------------------------------
+
+function Start-WzHealthCheck {
+    <#
+    .SYNOPSIS
+        Fragt Umfang und Dauer ab und lässt die drei Messungen laufen.
+    #>
+    $answer = Show-WzConfirm -Title (Get-WzText 'health.dialogTitle') `
+        -Message (Get-WzText 'health.dialogMessage') `
+        -Items @(
+            (Get-WzText 'health.dialogItemCpu'),
+            (Get-WzText 'health.dialogItemMemory'),
+            (Get-WzText 'health.dialogItemDisk'),
+            (Get-WzText 'health.dialogItemNoise')
+        ) `
+        -Choices @(
+            (Get-WzText 'health.durationShort'),
+            (Get-WzText 'health.durationNormal'),
+            (Get-WzText 'health.durationLong')
+        ) `
+        -ChoiceLabel (Get-WzText 'health.durationLabel') -ChoiceDefault 1 `
+        -ConfirmText (Get-WzText 'health.btnRun')
+    if (-not $answer.Confirmed) { return }
+
+    $seconds = switch ($answer.SelectedIndex) {
+        0 { 30 }
+        2 { 300 }
+        default { 60 }
+    }
+
+    $syncHash.DiagHealthTitle.Text = Get-WzText 'health.running'
+    $syncHash.DiagHealth.Children.Clear()
+
+    Invoke-WzTask -Name (Get-WzText 'health.task') -ArgumentList @($seconds) -ScriptBlock {
+        param($cpuSeconds)
+        Invoke-WzHealthCheck -CpuSeconds $cpuSeconds
+    } -OnComplete {
+        param($check)
+        if (-not $check) { return }
+        Write-WzHealthResult -Check $check
+
+        Add-WzAction -Area 'Prüfung' -Summary $(if ($check.Ok) {
+            Get-WzText 'health.actionOk'
+        } else {
+            Get-WzText 'health.actionWarn' @{ anzahl = @($check.Warnings).Count }
+        }) -Detail @($check.Warnings)
+    }
+}
+
+function Write-WzHealthResult {
+    <#
+    .SYNOPSIS
+        Trägt das Ergebnis der drei Messungen in die Karte ein.
+    #>
+    param([Parameter(Mandatory = $true)]$Check)
+
+    $syncHash.DiagHealthTitle.Text = if ($Check.Ok) {
+        Get-WzText 'health.verdictOk'
+    } else {
+        Get-WzText 'health.verdictWarn' @{ anzahl = @($Check.Warnings).Count }
+    }
+
+    $container = $syncHash.DiagHealth
+    $container.Children.Clear()
+
+    $cpu = $Check.Cpu
+    if ($cpu) {
+        [void]$container.Children.Add((New-WzInfoRow (Get-WzText 'health.rowCpu') $cpu.Verdict `
+            -Kind $(if ($cpu.Ok) { 'ok' } else { 'warn' }) -LabelWidth 190))
+        if ($cpu.MaxMhz -gt 0) {
+            [void]$container.Children.Add((New-WzInfoRow (Get-WzText 'health.rowClock') `
+                (Get-WzText 'health.clockValue' @{ takt = $cpu.AvgMhzOnLoad; tiefster = $cpu.MinMhzOnLoad; max = $cpu.MaxMhz }) -LabelWidth 190))
+        }
+        [void]$container.Children.Add((New-WzInfoRow (Get-WzText 'health.rowTemperature') `
+            $(if ($null -ne $cpu.PeakCelsius) {
+                Get-WzText 'health.temperatureValue' @{ hoechste = $cpu.PeakCelsius; start = $cpu.StartCelsius }
+            } else {
+                Get-WzText 'health.temperatureNone'
+            }) `
+            -Kind $(if ($null -ne $cpu.PeakCelsius -and $cpu.PeakCelsius -ge 90) { 'warn' } else { 'normal' }) -LabelWidth 190))
+    }
+
+    if ($Check.Memory) {
+        [void]$container.Children.Add((New-WzInfoRow (Get-WzText 'health.rowMemory') $Check.Memory.Verdict `
+            -Kind $(if ($Check.Memory.Ok) { 'ok' } else { 'error' }) -LabelWidth 190))
+    }
+
+    if ($Check.Disk) {
+        [void]$container.Children.Add((New-WzInfoRow (Get-WzText 'health.rowDisk') $Check.Disk.Verdict `
+            -Kind $(if ($Check.Disk.Ok) { 'ok' } else { 'warn' }) -LabelWidth 190))
+    }
+
+    [void]$container.Children.Add((New-WzInfoRow (Get-WzText 'health.rowLimits') (Get-WzText 'health.limits') -LabelWidth 190))
+}
+
+function Start-WzMemoryDiagnostic {
+    <#
+    .SYNOPSIS
+        Öffnet die Windows-Speicherdiagnose.
+    .NOTES
+        Sie prüft den ganzen Speicher, aber erst nach einem Neustart und vor
+        dem Systemstart — das kann WinZii nicht leisten und soll es auch nicht
+        vortäuschen. Der Dialog gehört deshalb dem Anwender: Er entscheidet
+        über den Neustart, nicht das Werkzeug.
+    #>
+    $answer = Show-WzConfirm -Title (Get-WzText 'health.memDiagTitle') `
+        -Message (Get-WzText 'health.memDiagMessage') `
+        -Items @((Get-WzText 'health.memDiagItem1'), (Get-WzText 'health.memDiagItem2')) `
+        -ConfirmText (Get-WzText 'health.btnMemDiagOpen')
+    if (-not $answer.Confirmed) { return }
+
+    try {
+        Start-Process 'mdsched.exe' -ErrorAction Stop
+        Write-WzLog (Get-WzText 'health.logMemDiagOpened') -Level Info
+    } catch {
+        Write-WzLog (Get-WzText 'health.logMemDiagFailed' @{ grund = $_.Exception.Message.Split([char]10)[0] }) -Level Warn
     }
 }
