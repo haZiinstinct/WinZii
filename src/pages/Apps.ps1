@@ -19,6 +19,13 @@ function Initialize-WzAppsPage {
         Update-WzAppsSelection
     })
 
+    $syncHash.AppsBtnUpgradeScan.Add_Click({ Start-WzUpgradeScan })
+    $syncHash.AppsBtnUpgrade.Add_Click({ Start-WzAppUpgrade })
+    $syncHash.AppsBtnUpgradeAll.Add_Click({
+        foreach ($box in @($syncHash.AppsUpgradeBoxes)) { $box.IsChecked = $true }
+        Update-WzUpgradeSelection
+    })
+
     Update-WzAppsSelection
 }
 
@@ -61,6 +68,17 @@ function Write-WzAppsStatus {
             Get-WzText 'apps.offlineHave' @{ anzahl = $Info.Offline.Count; groesse = (Format-WzBytes $Info.Offline.Bytes) }
     } else {
         $syncHash.AppsOfflineHint.Text = Get-WzText 'apps.offlineNone'
+    }
+
+    # Gleich mitmessen, was veraltet ist. Auf einem gewachsenen Kundengerät ist
+    # das die wichtigere Hälfte dieser Seite, und wer erst einen Knopf suchen
+    # muss, sieht sie nie.
+    $syncHash.AppsBtnUpgradeScan.IsEnabled = $Info.Winget.Available
+    $syncHash.AppsBtnUpgradeAll.IsEnabled = $false
+    if ($Info.Winget.Available) {
+        Start-WzUpgradeScan
+    } else {
+        $syncHash.AppsUpgradeTitle.Text = Get-WzText 'apps.upgradeNoWinget'
     }
 }
 
@@ -223,5 +241,104 @@ function Start-WzWingetBootstrap {
             Show-WzInfo -Title (Get-WzText 'apps.bootstrapFailTitle') `
                 -Message (Get-WzText 'apps.bootstrapFailMessage')
         }
+    }
+}
+
+# --- Vorhandene Programme aktualisieren ------------------------------------
+
+function Start-WzUpgradeScan {
+    $syncHash.AppsUpgradeTitle.Text = Get-WzText 'apps.upgradeChecking'
+    $syncHash.AppsUpgradeList.Children.Clear()
+    $syncHash.AppsUpgradeBoxes = @()
+    $syncHash.AppsBtnUpgrade.IsEnabled = $false
+
+    Invoke-WzTask -Name (Get-WzText 'apps.taskUpgradeScan') -Silent -Cancelable -ScriptBlock {
+        Get-WzUpgradableApps
+    } -OnComplete {
+        param($result)
+        if (-not $result) { return }
+        Write-WzUpgradeList -Result $result
+    }
+}
+
+function Write-WzUpgradeList {
+    <#
+    .SYNOPSIS
+        Füllt die Karte mit dem, was sich aktualisieren lässt.
+    #>
+    param([Parameter(Mandatory = $true)]$Result)
+
+    $apps = @($Result.Apps)
+    $syncHash.AppsUpgradeApps = $apps
+
+    $syncHash.AppsUpgradeTitle.Text = if (-not $Result.WingetAvailable) {
+        Get-WzText 'apps.upgradeNoWinget'
+    } elseif ($Result.Failed) {
+        Get-WzText 'apps.upgradeFailed'
+    } elseif ($apps.Count -eq 0) {
+        Get-WzText 'apps.upgradeNone'
+    } elseif ($apps.Count -eq 1) {
+        Get-WzText 'apps.upgradeCountOne'
+    } else {
+        Get-WzText 'apps.upgradeCount' @{ anzahl = $apps.Count }
+    }
+
+    $container = $syncHash.AppsUpgradeList
+    $container.Children.Clear()
+    $syncHash.AppsUpgradeBoxes = @()
+
+    foreach ($app in $apps) {
+        $item = [pscustomobject]@{
+            name        = $app.Name
+            description = Get-WzText 'apps.upgradeFromTo' @{ alt = $app.Current; neu = $app.Available }
+        }
+        $row = New-WzCheckRow -Item $item -IsChecked $false
+        $row.CheckBox.Tag = $app
+        $row.CheckBox.Add_Click({ Update-WzUpgradeSelection })
+        [void]$container.Children.Add($row.Row)
+        $syncHash.AppsUpgradeBoxes += $row.CheckBox
+    }
+
+    $syncHash.AppsBtnUpgradeAll.IsEnabled = ($apps.Count -gt 0)
+    Update-WzUpgradeSelection
+}
+
+function Update-WzUpgradeSelection {
+    $count = @(@($syncHash.AppsUpgradeBoxes) | Where-Object { $_.IsChecked }).Count
+    $syncHash.AppsBtnUpgrade.IsEnabled = ($count -gt 0)
+}
+
+function Start-WzAppUpgrade {
+    $selected = @(@($syncHash.AppsUpgradeBoxes) | Where-Object { $_.IsChecked } | ForEach-Object { $_.Tag })
+    if ($selected.Count -eq 0) { return }
+
+    $answer = Show-WzConfirm -Title (Get-WzText 'apps.upgradeDialogTitle') `
+        -Message (Get-WzText 'apps.upgradeDialogMessage' @{ anzahl = $selected.Count }) `
+        -Items @($selected | ForEach-Object {
+            Get-WzText 'apps.upgradeDialogItem' @{ name = $_.Name; alt = $_.Current; neu = $_.Available } }) `
+        -ConfirmText (Get-WzText 'apps.btnUpgrade')
+    if (-not $answer.Confirmed) { return }
+
+    Invoke-WzTask -Name (Get-WzText 'apps.taskUpgrade') -ArgumentList (, $selected) -ScriptBlock {
+        param($apps)
+        Update-WzApps -Apps $apps
+    } -OnComplete {
+        param($summary)
+        if (-not $summary) { return }
+
+        if ($summary.Updated -gt 0) {
+            Add-WzAction -Area 'Programme' -RebootRequired:$summary.RebootRequired `
+                -Summary (Get-WzText 'apps.actionUpgrade' @{ anzahl = $summary.Updated }) `
+                -Detail @($summary.UpdatedNames)
+        }
+
+        Show-WzInfo -Title (Get-WzText 'apps.upgradeDoneTitle') `
+            -Message (Get-WzText 'apps.upgradeDoneMessage' @{
+                aktualisiert = $summary.Updated; uebersprungen = $summary.Skipped; fehlgeschlagen = $summary.Failed }) `
+            -Items @(@($summary.UpdatedNames) + @($summary.Details))
+
+        # Neu messen statt die Liste zu Fuß zu pflegen: Ein Programm, das eine
+        # zweite Aktualisierung nachzieht, stünde sonst als erledigt da.
+        Start-WzUpgradeScan
     }
 }

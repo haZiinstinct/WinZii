@@ -127,6 +127,56 @@ foreach ($fall in $faelle) {
     }
 }
 
+
+# --- Die Tabelle von »winget upgrade« ------------------------------------
+# Kein Muster, sondern eine Tabelle — und winget hat für diese Liste keine
+# maschinenlesbare Ausgabe. Die Überschriften sind übersetzt (»Verfügbar« /
+# »Available«), die Spaltengrenzen nicht: Sie werden aus der Kopfzeile
+# gemessen. Genau das wird hier geprüft, in beiden Sprachen und mit dem
+# zweiten Block, den winget unter die Tabelle hängt.
+Write-Host ''
+. (Join-Path $root 'src\modules\Apps.ps1')
+
+$deutsch = @'
+   -
+Name                             ID                            Version      Verfügbar    Quelle
+-------------------------------------------------------------------------------------------------
+Notepad++ (64-bit x64)           Notepad++.Notepad++           8.6.2        8.6.4        winget
+7-Zip 23.01 (x64)                7zip.7zip                     23.01        24.09        winget
+
+2 Upgrades verfügbar.
+'@
+
+$englisch = @'
+Name                             Id                            Version      Available    Source
+-------------------------------------------------------------------------------------------------
+VLC media player                 VideoLAN.VLC                  3.0.20       3.0.21       winget
+
+1 upgrades available.
+1 package(s) have version numbers that cannot be determined.
+Name                             Id                            Version      Available    Source
+-------------------------------------------------------------------------------------------------
+Eigenbau-Programm                Hersteller.Eigenbau           Unknown      2.0          winget
+'@
+
+$deutung = @(ConvertFrom-WzWingetUpgradeList -Output $deutsch)
+Pruefe 'winget upgrade — deutsche Tabelle: Anzahl' ($deutung.Count -eq 2) "$($deutung.Count) Zeile(n)"
+Pruefe 'winget upgrade — deutsche Tabelle: Kennung' ($deutung[0].Id -eq 'Notepad++.Notepad++') $deutung[0].Id
+Pruefe 'winget upgrade — deutsche Tabelle: Fassungen' `
+    ($deutung[0].Current -eq '8.6.2' -and $deutung[0].Available -eq '8.6.4') `
+    "$($deutung[0].Current) -> $($deutung[0].Available)"
+Pruefe 'winget upgrade — Name mit Leerzeichen bleibt heil' ($deutung[1].Name -eq '7-Zip 23.01 (x64)') $deutung[1].Name
+
+$deutungEn = @(ConvertFrom-WzWingetUpgradeList -Output $englisch)
+Pruefe 'winget upgrade — englische Tabelle: nur der erste Block' ($deutungEn.Count -eq 1) "$($deutungEn.Count) Zeile(n)"
+Pruefe 'winget upgrade — englische Tabelle: Kennung' ($deutungEn[0].Id -eq 'VideoLAN.VLC') $deutungEn[0].Id
+Pruefe 'winget upgrade — Quelle gelesen' ($deutungEn[0].Source -eq 'winget') $deutungEn[0].Source
+
+Pruefe 'winget upgrade — leere Ausgabe ergibt nichts' `
+    (@(ConvertFrom-WzWingetUpgradeList -Output '').Count -eq 0)
+Pruefe 'winget upgrade — Ausgabe ohne Tabelle ergibt nichts' `
+    (@(ConvertFrom-WzWingetUpgradeList -Output "Es sind keine anwendbaren Upgrades vorhanden.").Count -eq 0)
+
 # --- Zahlen statt Wörter: der productState des Sicherheitscenters ---------
 # Punkt 20 der Abnahme, gefunden mit Malwarebytes neben Defender: Der Zustand
 # eines fremden Scanners kommt als Bitfeld, nicht als Text — trotzdem eine
