@@ -269,6 +269,7 @@ $felder = @(
     @{ Katalog = 'cleanup';     Liste = 'groups';     Key = 'id';         Felder = @('name', 'description') }
     @{ Katalog = 'cleanup';     Liste = 'categories'; Key = 'id';         Felder = @('name', 'description') }
     @{ Katalog = 'eventmap';    Liste = 'entries';    Key = 'provider+id'; Felder = @('title', 'explanation', 'recommendation') }
+    @{ Katalog = 'oemtools';    Liste = 'tools';      Key = 'id';         Felder = @('description') }
     @{ Katalog = 'office';      Liste = 'variants';   Key = 'id';         Felder = @('name', 'description', 'note') }
     @{ Katalog = 'office';      Liste = 'languages';  Key = 'id';         Felder = @('name') }
     @{ Katalog = 'office';      Liste = 'apps';       Key = 'id';         Felder = @('name') }

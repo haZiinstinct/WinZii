@@ -15,6 +15,7 @@ function Get-WzCatalogIdentity {
         bugcheckmap = @{ entries = 'code' }
         cleanup     = @{ groups = 'id'; categories = 'id' }
         eventmap    = @{ entries = 'provider+id' }
+        oemtools    = @{ tools = 'id' }
         office      = @{ variants = 'id'; languages = 'id'; apps = 'id' }
         tweaks      = @{ categories = 'id'; tweaks = 'id' }
         updatecodes = @{ codes = 'code' }

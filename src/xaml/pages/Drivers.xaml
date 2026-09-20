@@ -33,6 +33,36 @@
         </StackPanel>
     </Border>
 
+    <!-- Treiber beschaffen -->
+    <Border Style="{DynamicResource WzCardStatic}" Margin="0,0,0,14">
+        <StackPanel>
+            <TextBlock Text="{DynamicResource L.drv.obtainEyebrow}" Style="{DynamicResource WzEyebrow}" />
+            <TextBlock Text="{DynamicResource L.drv.obtainTitle}" Style="{DynamicResource WzCardTitle}" />
+            <TextBlock Style="{DynamicResource WzHint}" Margin="0,0,0,12"
+                       Text="{DynamicResource L.drv.obtainHint}" />
+
+            <ItemsControl Name="DrvObtainNotices" Margin="0,0,0,12" />
+
+            <!-- Werkzeug des Herstellers -->
+            <TextBlock Text="{DynamicResource L.drv.oemLabel}" Style="{DynamicResource WzLabel}" Margin="0,0,0,6" />
+            <StackPanel Name="DrvOemRows" Margin="0,0,0,10" />
+            <WrapPanel Margin="0,0,0,18">
+                <Button Name="DrvBtnOemInstall" Style="{DynamicResource WzBtnSecondary}" Margin="0,0,8,8"
+                        IsEnabled="False" Content="{DynamicResource L.drv.btnOemInstall}" />
+                <Button Name="DrvBtnOemScan" Style="{DynamicResource WzBtnSecondary}" Margin="0,0,8,8"
+                        IsEnabled="False" Content="{DynamicResource L.drv.btnOemScan}" />
+                <Button Name="DrvBtnOemApply" Style="{DynamicResource WzBtnPrimary}" Margin="0,0,8,8"
+                        IsEnabled="False" Content="{DynamicResource L.drv.btnOemApply}" />
+            </WrapPanel>
+
+            <!-- Geräte ganz ohne Treiber -->
+            <TextBlock Text="{DynamicResource L.drv.catalogLabel}" Style="{DynamicResource WzLabel}" Margin="0,0,0,6" />
+            <TextBlock Style="{DynamicResource WzHint}" Margin="0,0,0,10"
+                       Text="{DynamicResource L.drv.catalogHint}" />
+            <StackPanel Name="DrvCatalogRows" />
+        </StackPanel>
+    </Border>
+
     <!-- Treiberliste -->
     <Border Style="{DynamicResource WzCardStatic}" Margin="0,0,0,14">
         <StackPanel>
