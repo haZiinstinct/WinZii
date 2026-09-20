@@ -1,0 +1,187 @@
+﻿<StackPanel xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+            xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+
+    <TextBlock Text="{DynamicResource L.setup.eyebrow}" Style="{DynamicResource WzEyebrow}" />
+    <TextBlock Text="{DynamicResource L.setup.title}" Style="{DynamicResource WzPageTitle}" />
+    <TextBlock Style="{DynamicResource WzPageLead}"
+               Text="{DynamicResource L.setup.lead}" />
+
+    <ItemsControl Name="SetupNotices" Margin="0,0,0,14" />
+
+    <!-- Rechnername -->
+    <Border Style="{DynamicResource WzCardStatic}" Margin="0,0,0,14">
+        <StackPanel>
+            <TextBlock Text="{DynamicResource L.setup.nameEyebrow}" Style="{DynamicResource WzEyebrow}" />
+            <TextBlock Text="{DynamicResource L.setup.nameTitle}" Style="{DynamicResource WzCardTitle}" />
+            <TextBlock Style="{DynamicResource WzHint}" Margin="0,0,0,12"
+                       Text="{DynamicResource L.setup.nameHint}" />
+
+            <StackPanel Name="SetupNameRows" Margin="0,0,0,12" />
+
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+                <TextBox Grid.Column="0" Name="SetupNameBox" Style="{DynamicResource WzTextBox}"
+                         MaxLength="15" />
+                <Button Grid.Column="1" Name="SetupBtnName" Style="{DynamicResource WzBtnPrimary}"
+                        Margin="10,0,0,0" Content="{DynamicResource L.setup.btnName}" />
+            </Grid>
+        </StackPanel>
+    </Border>
+
+    <!-- Zeit und Region -->
+    <Border Style="{DynamicResource WzCardStatic}" Margin="0,0,0,14">
+        <StackPanel>
+            <TextBlock Text="{DynamicResource L.setup.timeEyebrow}" Style="{DynamicResource WzEyebrow}" />
+            <TextBlock Text="{DynamicResource L.setup.timeTitle}" Style="{DynamicResource WzCardTitle}" />
+            <TextBlock Style="{DynamicResource WzHint}" Margin="0,0,0,12"
+                       Text="{DynamicResource L.setup.timeHint}" />
+
+            <StackPanel Name="SetupTimeRows" Margin="0,0,0,12" />
+
+            <TextBlock Text="{DynamicResource L.setup.zoneLabel}" Style="{DynamicResource WzLabel}" Margin="0,0,0,5" />
+            <Grid Margin="0,0,0,12">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+                <ComboBox Grid.Column="0" Name="SetupZoneBox" Style="{DynamicResource WzComboBox}" />
+                <Button Grid.Column="1" Name="SetupBtnZone" Style="{DynamicResource WzBtnSecondary}"
+                        Margin="10,0,0,0" Content="{DynamicResource L.setup.btnZone}" />
+            </Grid>
+
+            <TextBlock Text="{DynamicResource L.setup.regionLabel}" Style="{DynamicResource WzLabel}" Margin="0,0,0,5" />
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+                <ComboBox Grid.Column="0" Name="SetupRegionBox" Style="{DynamicResource WzComboBox}" />
+                <Button Grid.Column="1" Name="SetupBtnRegion" Style="{DynamicResource WzBtnSecondary}"
+                        Margin="10,0,0,0" Content="{DynamicResource L.setup.btnRegion}" />
+                <Button Grid.Column="2" Name="SetupBtnTimeSync" Style="{DynamicResource WzBtnSecondary}"
+                        Margin="8,0,0,0" Content="{DynamicResource L.setup.btnTimeSync}" />
+            </Grid>
+        </StackPanel>
+    </Border>
+
+    <!-- Konten -->
+    <Border Style="{DynamicResource WzCardStatic}" Margin="0,0,0,14">
+        <StackPanel>
+            <TextBlock Text="{DynamicResource L.setup.accountEyebrow}" Style="{DynamicResource WzEyebrow}" />
+            <TextBlock Name="SetupAccountTitle" Text="{DynamicResource L.setup.accountTitle}" Style="{DynamicResource WzCardTitle}" />
+            <TextBlock Style="{DynamicResource WzHint}" Margin="0,0,0,12"
+                       Text="{DynamicResource L.setup.accountHint}" />
+
+            <StackPanel Name="SetupAccountRows" Margin="0,0,0,14" />
+
+            <Grid Margin="0,0,0,10">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="12" />
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="12" />
+                    <ColumnDefinition Width="*" />
+                </Grid.ColumnDefinitions>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
+                </Grid.RowDefinitions>
+
+                <TextBlock Grid.Row="0" Grid.Column="0" Text="{DynamicResource L.setup.accountNameLabel}" Style="{DynamicResource WzLabel}" Margin="0,0,0,5" />
+                <TextBox Grid.Row="1" Grid.Column="0" Name="SetupAccountName" Style="{DynamicResource WzTextBox}" />
+
+                <TextBlock Grid.Row="0" Grid.Column="2" Text="{DynamicResource L.setup.accountPasswordLabel}" Style="{DynamicResource WzLabel}" Margin="0,0,0,5" />
+                <PasswordBox Grid.Row="1" Grid.Column="2" Name="SetupAccountPassword" Style="{DynamicResource WzPasswordBox}" />
+
+                <TextBlock Grid.Row="0" Grid.Column="4" Text="{DynamicResource L.setup.accountRepeatLabel}" Style="{DynamicResource WzLabel}" Margin="0,0,0,5" />
+                <PasswordBox Grid.Row="1" Grid.Column="4" Name="SetupAccountRepeat" Style="{DynamicResource WzPasswordBox}" />
+            </Grid>
+
+            <WrapPanel>
+                <CheckBox Name="SetupAccountAdmin" Style="{DynamicResource WzCheckBox}" Margin="0,0,18,10"
+                          Content="{DynamicResource L.setup.accountAdminBox}" />
+                <CheckBox Name="SetupAccountNeverExpires" Style="{DynamicResource WzCheckBox}" Margin="0,0,18,10"
+                          IsChecked="True" Content="{DynamicResource L.setup.accountNeverExpires}" />
+                <Button Name="SetupBtnAccount" Style="{DynamicResource WzBtnPrimary}" Margin="0,0,0,10"
+                        Content="{DynamicResource L.setup.btnAccount}" />
+            </WrapPanel>
+        </StackPanel>
+    </Border>
+
+    <!-- Aktivierung -->
+    <Border Style="{DynamicResource WzCardStatic}" Margin="0,0,0,14">
+        <StackPanel>
+            <TextBlock Text="{DynamicResource L.setup.activationEyebrow}" Style="{DynamicResource WzEyebrow}" />
+            <TextBlock Text="{DynamicResource L.setup.activationTitle}" Style="{DynamicResource WzCardTitle}" />
+            <TextBlock Style="{DynamicResource WzHint}" Margin="0,0,0,12"
+                       Text="{DynamicResource L.setup.activationHint}" />
+
+            <StackPanel Name="SetupActivationRows" Margin="0,0,0,12" />
+
+            <TextBlock Text="{DynamicResource L.setup.keyLabel}" Style="{DynamicResource WzLabel}" Margin="0,0,0,5" />
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+                <TextBox Grid.Column="0" Name="SetupKeyBox" Style="{DynamicResource WzTextBox}" MaxLength="29" />
+                <Button Grid.Column="1" Name="SetupBtnKeyFromFirmware" Style="{DynamicResource WzBtnChip}"
+                        Margin="10,0,0,0" Content="{DynamicResource L.setup.btnKeyFirmware}" />
+                <Button Grid.Column="2" Name="SetupBtnKey" Style="{DynamicResource WzBtnPrimary}"
+                        Margin="8,0,0,0" Content="{DynamicResource L.setup.btnKey}" />
+            </Grid>
+        </StackPanel>
+    </Border>
+
+    <Grid>
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="*" />
+            <ColumnDefinition Width="14" />
+            <ColumnDefinition Width="*" />
+        </Grid.ColumnDefinitions>
+
+        <!-- Drucker -->
+        <Border Grid.Column="0" Style="{DynamicResource WzCardStatic}" Margin="0,0,0,14">
+            <StackPanel>
+                <TextBlock Text="{DynamicResource L.setup.printerEyebrow}" Style="{DynamicResource WzEyebrow}" />
+                <TextBlock Text="{DynamicResource L.setup.printerTitle}" Style="{DynamicResource WzCardTitle}" />
+                <TextBlock Style="{DynamicResource WzHint}" Margin="0,0,0,12"
+                           Text="{DynamicResource L.setup.printerHint}" />
+
+                <TextBlock Text="{DynamicResource L.setup.printerNameLabel}" Style="{DynamicResource WzLabel}" Margin="0,0,0,5" />
+                <TextBox Name="SetupPrinterName" Style="{DynamicResource WzTextBox}" Margin="0,0,0,10" />
+
+                <TextBlock Text="{DynamicResource L.setup.printerAddressLabel}" Style="{DynamicResource WzLabel}" Margin="0,0,0,5" />
+                <TextBox Name="SetupPrinterAddress" Style="{DynamicResource WzTextBox}" Margin="0,0,0,10" />
+
+                <TextBlock Text="{DynamicResource L.setup.printerDriverLabel}" Style="{DynamicResource WzLabel}" Margin="0,0,0,5" />
+                <ComboBox Name="SetupPrinterDriver" Style="{DynamicResource WzComboBox}" Margin="0,0,0,12" />
+
+                <Button Name="SetupBtnPrinter" Style="{DynamicResource WzBtnPrimary}" HorizontalAlignment="Left"
+                        Content="{DynamicResource L.setup.btnPrinter}" />
+            </StackPanel>
+        </Border>
+
+        <!-- Standardprogramme -->
+        <Border Grid.Column="2" Style="{DynamicResource WzCardStatic}" Margin="0,0,0,14">
+            <StackPanel>
+                <TextBlock Text="{DynamicResource L.setup.defaultsEyebrow}" Style="{DynamicResource WzEyebrow}" />
+                <TextBlock Text="{DynamicResource L.setup.defaultsTitle}" Style="{DynamicResource WzCardTitle}" />
+                <TextBlock Style="{DynamicResource WzHint}" Margin="0,0,0,12"
+                           Text="{DynamicResource L.setup.defaultsHint}" />
+
+                <Button Name="SetupBtnDefaultApps" Style="{DynamicResource WzBtnSecondary}" Margin="0,0,0,8"
+                        HorizontalAlignment="Left" Content="{DynamicResource L.setup.btnDefaultApps}" />
+                <Button Name="SetupBtnStartupApps" Style="{DynamicResource WzBtnSecondary}" Margin="0,0,0,8"
+                        HorizontalAlignment="Left" Content="{DynamicResource L.setup.btnPower}" />
+                <Button Name="SetupBtnWindowsUpdate" Style="{DynamicResource WzBtnSecondary}"
+                        HorizontalAlignment="Left" Content="{DynamicResource L.setup.btnUpdateSettings}" />
+            </StackPanel>
+        </Border>
+    </Grid>
+</StackPanel>

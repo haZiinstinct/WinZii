@@ -747,6 +747,29 @@
         </Style.Triggers>
     </Style>
 
+    <!-- Kennwortfeld: dieselben Farben und dieselben Auslöser wie das
+         Textfeld. Ohne eigenen Stil zeichnet WPF ein weißes Feld mitten in
+         das dunkle Design — ein Kennwort tippt man aber genau dort. -->
+    <Style x:Key="WzPasswordBox" TargetType="PasswordBox">
+        <Setter Property="FontFamily" Value="{DynamicResource WzFontMono}" />
+        <Setter Property="FontSize" Value="12.5" />
+        <Setter Property="Foreground" Value="{DynamicResource WzText}" />
+        <Setter Property="Background" Value="{DynamicResource WzBgDarker}" />
+        <Setter Property="BorderBrush" Value="{DynamicResource WzBorderControl}" />
+        <Setter Property="BorderThickness" Value="1" />
+        <Setter Property="Padding" Value="9,6,9,6" />
+        <Setter Property="CaretBrush" Value="{DynamicResource WzCyan}" />
+        <Setter Property="SelectionBrush" Value="{DynamicResource WzCyan}" />
+        <Style.Triggers>
+            <Trigger Property="IsMouseOver" Value="True">
+                <Setter Property="BorderBrush" Value="{DynamicResource WzBorderHover}" />
+            </Trigger>
+            <Trigger Property="IsKeyboardFocusWithin" Value="True">
+                <Setter Property="BorderBrush" Value="{DynamicResource WzCyan}" />
+            </Trigger>
+        </Style.Triggers>
+    </Style>
+
     <!-- ================================================================
          Tabellen
          ================================================================ -->
