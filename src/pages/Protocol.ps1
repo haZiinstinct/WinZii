@@ -18,6 +18,8 @@ function Initialize-WzProtocolPage {
     })
 
     $syncHash.ProtoBtnHandover.Add_Click({ Start-WzHandoverReport })
+    $syncHash.ProtoBtnInventory.Add_Click({ Start-WzInventoryExport })
+    $syncHash.ProtoBtnPackage.Add_Click({ Start-WzHandoverPackage })
 
     # Der Briefkopf wird gemerkt, sobald ein Feld verlassen wird. Ein eigener
     # »Speichern«-Knopf waere eine Falle: Wer ihn uebersieht, tippt beim
@@ -91,14 +93,75 @@ function Start-WzHandoverReport {
 
     Invoke-WzTask -Name (Get-WzText 'log.taskHandover') -ArgumentList $arguments -ScriptBlock {
         param($technician, $customer, $orderNumber)
-        New-WzHandoverReport -Technician $technician -Customer $customer -OrderNumber $orderNumber
+        $html = New-WzHandoverReport -Technician $technician -Customer $customer -OrderNumber $orderNumber
+        # Das PDF entsteht gleich mit: Ein HTML gibt man einem Kunden nicht in
+        # die Hand, und wer es hinterher von Hand druckt, tut es nicht.
+        [pscustomobject]@{ Html = $html; Pdf = (Convert-WzReportToPdf -HtmlPath $html) }
     } -OnComplete {
-        param($file)
-        if (-not $file) { return }
+        param($files)
+        if (-not $files -or -not $files.Html) { return }
+        $items = @($files.Html)
+        if ($files.Pdf) { $items += $files.Pdf }
         Show-WzInfo -Title (Get-WzText 'log.handoverDoneTitle') `
-            -Message (Get-WzText 'log.handoverDoneMessage') `
-            -Items @($file)
-        Start-Process $file
+            -Message $(if ($files.Pdf) { Get-WzText 'log.handoverDoneWithPdf' } else { Get-WzText 'log.handoverDoneMessage' }) `
+            -Items $items
+        Start-Process $(if ($files.Pdf) { $files.Pdf } else { $files.Html })
+    }
+}
+
+function Start-WzInventoryExport {
+    <#
+    .SYNOPSIS
+        Schreibt die Ausstattung als CSV und JSON für die eigene Kundendatei.
+    #>
+    $arguments = @(
+        $syncHash.ProtoCustomer.Text.Trim()
+        $syncHash.ProtoOrderNumber.Text.Trim()
+        $syncHash.ProtoTechnician.Text.Trim()
+    )
+
+    Invoke-WzTask -Name (Get-WzText 'log.taskInventory') -ArgumentList $arguments -ScriptBlock {
+        param($customer, $orderNumber, $technician)
+        Export-WzInventory -Customer $customer -OrderNumber $orderNumber -Technician $technician
+    } -OnComplete {
+        param($result)
+        if (-not $result) { return }
+        if ($result.Success) {
+            Add-WzAction -Area 'Bericht' -Summary (Get-WzText 'log.actionInventory')
+        }
+        Show-WzInfo -Title (Get-WzText 'log.inventoryTitle') `
+            -Message $(if ($result.Success) { Get-WzText 'log.inventoryDone' } else { Get-WzText 'log.inventoryFailed' }) `
+            -Items @(@($result.CsvPath, $result.JsonPath) | Where-Object { $_ })
+    }
+}
+
+function Start-WzHandoverPackage {
+    <#
+    .SYNOPSIS
+        Packt alle Berichte dieses PCs in ein Archiv.
+    #>
+    $answer = Show-WzConfirm -Title (Get-WzText 'log.packageTitle') `
+        -Message (Get-WzText 'log.packageMessage') `
+        -Items @((Get-WzText 'log.packageItemWhat'), (Get-WzText 'log.packageItemSecrets')) `
+        -OptionText (Get-WzText 'log.packageOptionLogs') -OptionDefault $false `
+        -ConfirmText (Get-WzText 'log.btnPackageGo')
+    if (-not $answer.Confirmed) { return }
+
+    Invoke-WzTask -Name (Get-WzText 'log.taskPackage') -ArgumentList @([bool]$answer.OptionChecked) -ScriptBlock {
+        param($withLogs)
+        New-WzHandoverPackage -IncludeLogs:$withLogs
+    } -OnComplete {
+        param($result)
+        if (-not $result) { return }
+        if ($result.Success) {
+            Add-WzAction -Area 'Bericht' -Summary (Get-WzText 'log.actionPackage' @{ anzahl = $result.Files })
+        }
+        Show-WzInfo -Title (Get-WzText 'log.packageTitle') `
+            -Message $(if ($result.Success) {
+                Get-WzText 'log.packageDone' @{ anzahl = $result.Files; groesse = (Format-WzBytes $result.Bytes) }
+            } else {
+                Get-WzText 'log.packageFailed'
+            }) -Items @($result.Path | Where-Object { $_ })
     }
 }
 
