@@ -51,6 +51,12 @@
                                 <TextBlock Text="{DynamicResource L.nav.dashboard}" VerticalAlignment="Center" />
                             </StackPanel>
                         </Button>
+                        <Button Name="NavSetup" Tag="Setup" Style="{DynamicResource WzNavButton}">
+                            <StackPanel Orientation="Horizontal">
+                                <TextBlock Text="&#xE713;" FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets" FontSize="14" Width="24" VerticalAlignment="Center" />
+                                <TextBlock Text="{DynamicResource L.nav.setup}" VerticalAlignment="Center" />
+                            </StackPanel>
+                        </Button>
                         <Button Name="NavDiagnostics" Tag="Diagnostics" Style="{DynamicResource WzNavButton}">
                             <StackPanel Orientation="Horizontal">
                                 <TextBlock Text="&#xE9D9;" FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets" FontSize="14" Width="24" VerticalAlignment="Center" />
