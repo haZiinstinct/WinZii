@@ -1,4 +1,4 @@
-{
+﻿{
   "schemaVersion": 1,
   "categories": [
     {
@@ -938,6 +938,195 @@
           "name": "UseLogonCredential",
           "valueType": "DWord",
           "value": 0
+        }
+      ]
+    },
+    {
+      "id": "sec-smartscreen",
+      "category": "security",
+      "level": "soft",
+      "risk": "low",
+      "name": "SmartScreen für heruntergeladene Programme einschalten",
+      "description": "Windows prüft heruntergeladene Programme gegen seine Rufdatenbank und warnt vor unbekannten. Das ist die Hürde, die zwischen dem falschen Download und dem Doppelklick steht.",
+      "defaultChecked": true,
+      "appliesTo": "all",
+      "requiresReboot": false,
+      "actions": [
+        {
+          "type": "registry",
+          "path": "HKLM:\\SOFTWARE\\Policies\\Microsoft\\Windows\\System",
+          "name": "EnableSmartScreen",
+          "valueType": "DWord",
+          "value": 1
+        },
+        {
+          "type": "registry",
+          "path": "HKLM:\\SOFTWARE\\Policies\\Microsoft\\Windows\\System",
+          "name": "ShellSmartScreenLevel",
+          "valueType": "String",
+          "value": "Warn"
+        }
+      ]
+    },
+    {
+      "id": "sec-defender-network",
+      "category": "security",
+      "level": "soft",
+      "risk": "low",
+      "name": "Netzwerkschutz des Defenders einschalten",
+      "description": "Blockiert Verbindungen zu Adressen, die Microsoft als bösartig führt — auch aus Programmen heraus, die keinen Browser benutzen. Wirkt gegen den Nachladeschritt, der bei fast jedem Befall kommt.",
+      "defaultChecked": true,
+      "appliesTo": "all",
+      "requiresReboot": false,
+      "actions": [
+        {
+          "type": "registry",
+          "path": "HKLM:\\SOFTWARE\\Policies\\Microsoft\\Windows Defender\\Windows Defender Exploit Guard\\Network Protection",
+          "name": "EnableNetworkProtection",
+          "valueType": "DWord",
+          "value": 1
+        }
+      ]
+    },
+    {
+      "id": "sec-office-macros",
+      "category": "security",
+      "level": "soft",
+      "risk": "low",
+      "name": "Office-Makros aus dem Internet blockieren",
+      "description": "Word- und Excel-Dateien aus dem Netz dürfen keine Makros mehr ausführen. Der mit Abstand häufigste Weg, auf dem Verschlüsselungstrojaner in Firmen kommen — die Rechnung im Anhang. Makros aus eigenen Dateien laufen weiter.",
+      "defaultChecked": true,
+      "appliesTo": "all",
+      "requiresReboot": false,
+      "actions": [
+        {
+          "type": "registry",
+          "path": "HKCU:\\Software\\Policies\\Microsoft\\office\\16.0\\word\\security",
+          "name": "blockcontentexecutionfrominternet",
+          "valueType": "DWord",
+          "value": 1
+        },
+        {
+          "type": "registry",
+          "path": "HKCU:\\Software\\Policies\\Microsoft\\office\\16.0\\excel\\security",
+          "name": "blockcontentexecutionfrominternet",
+          "valueType": "DWord",
+          "value": 1
+        },
+        {
+          "type": "registry",
+          "path": "HKCU:\\Software\\Policies\\Microsoft\\office\\16.0\\powerpoint\\security",
+          "name": "blockcontentexecutionfrominternet",
+          "valueType": "DWord",
+          "value": 1
+        },
+        {
+          "type": "registry",
+          "path": "HKCU:\\Software\\Policies\\Microsoft\\office\\16.0\\access\\security",
+          "name": "blockcontentexecutionfrominternet",
+          "valueType": "DWord",
+          "value": 1
+        },
+        {
+          "type": "registry",
+          "path": "HKCU:\\Software\\Policies\\Microsoft\\office\\16.0\\publisher\\security",
+          "name": "blockcontentexecutionfrominternet",
+          "valueType": "DWord",
+          "value": 1
+        },
+        {
+          "type": "registry",
+          "path": "HKCU:\\Software\\Policies\\Microsoft\\office\\16.0\\visio\\security",
+          "name": "blockcontentexecutionfrominternet",
+          "valueType": "DWord",
+          "value": 1
+        }
+      ]
+    },
+    {
+      "id": "sec-defender-cloud",
+      "category": "security",
+      "level": "soft",
+      "risk": "low",
+      "name": "Cloud-Schutz des Defenders einschalten",
+      "description": "Der Defender fragt bei unbekannten Dateien bei Microsoft nach und schickt verdächtige Proben dorthin. Das erkennt neue Schädlinge Stunden früher als die Signaturen — kostet aber genau das, was WinZii sonst abschaltet: Daten verlassen den Rechner. Deshalb nicht vorausgewählt; bei einem Gerät nach einem Befall ist die Abwägung eine andere als bei einem frisch aufgesetzten.",
+      "defaultChecked": false,
+      "appliesTo": "all",
+      "requiresReboot": false,
+      "actions": [
+        {
+          "type": "registry",
+          "path": "HKLM:\\SOFTWARE\\Policies\\Microsoft\\Windows Defender\\Spynet",
+          "name": "SpynetReporting",
+          "valueType": "DWord",
+          "value": 2
+        },
+        {
+          "type": "registry",
+          "path": "HKLM:\\SOFTWARE\\Policies\\Microsoft\\Windows Defender\\Spynet",
+          "name": "SubmitSamplesConsent",
+          "valueType": "DWord",
+          "value": 1
+        }
+      ]
+    },
+    {
+      "id": "sec-defender-folders",
+      "category": "security",
+      "level": "hard",
+      "risk": "medium",
+      "name": "Überwachter Ordnerzugriff einschalten",
+      "description": "Nur noch bekannte Programme dürfen in Dokumente, Bilder und Desktop schreiben — der eingebaute Schutz gegen Verschlüsselungstrojaner. Der Preis sind Fehlalarme: Sicherungsprogramme, Spielstände und ältere Fachsoftware werden mit ausgesperrt und müssen von Hand freigegeben werden. Nichts, was man einem Kunden ohne Ansage hinterlässt.",
+      "defaultChecked": false,
+      "appliesTo": "all",
+      "requiresReboot": false,
+      "actions": [
+        {
+          "type": "registry",
+          "path": "HKLM:\\SOFTWARE\\Policies\\Microsoft\\Windows Defender\\Windows Defender Exploit Guard\\Controlled Folder Access",
+          "name": "EnableControlledFolderAccess",
+          "valueType": "DWord",
+          "value": 1
+        }
+      ]
+    },
+    {
+      "id": "sec-wsh-off",
+      "category": "security",
+      "level": "hard",
+      "risk": "medium",
+      "name": "Windows Script Host abschalten",
+      "description": "Verhindert, dass .vbs- und .js-Dateien per Doppelklick laufen — der klassische Weg für Schädlinge aus E-Mail-Anhängen. Vorsicht bei gewachsenen Arbeitsplätzen: Anmeldeskripte, Installationsroutinen und ältere Branchensoftware benutzen denselben Weg und bleiben danach stehen.",
+      "defaultChecked": false,
+      "appliesTo": "all",
+      "requiresReboot": false,
+      "actions": [
+        {
+          "type": "registry",
+          "path": "HKLM:\\SOFTWARE\\Microsoft\\Windows Script Host\\Settings",
+          "name": "Enabled",
+          "valueType": "DWord",
+          "value": 0
+        }
+      ]
+    },
+    {
+      "id": "sec-lsa-protection",
+      "category": "security",
+      "level": "hard",
+      "risk": "medium",
+      "name": "Anmeldedaten im Speicher schützen",
+      "description": "Der Anmeldedienst läuft danach geschützt, und Werkzeuge wie Mimikatz kommen nicht mehr an die Kennwörter im Arbeitsspeicher. Greift erst nach dem Neustart. Ältere Treiber und Fingerabdruckleser, die sich in die Anmeldung einklinken, können danach ausfallen — dann hilft nur das Zurücknehmen.",
+      "defaultChecked": false,
+      "appliesTo": "all",
+      "requiresReboot": true,
+      "actions": [
+        {
+          "type": "registry",
+          "path": "HKLM:\\SYSTEM\\CurrentControlSet\\Control\\Lsa",
+          "name": "RunAsPPL",
+          "valueType": "DWord",
+          "value": 1
         }
       ]
     },

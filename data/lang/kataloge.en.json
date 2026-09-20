@@ -1004,6 +1004,34 @@
         "name": "Prevent plain-text credentials in memory",
         "description": "Switches WDigest off. Otherwise attackers can read passwords in plain text out of memory with tools like Mimikatz."
       },
+      "sec-smartscreen": {
+        "name": "Turn on SmartScreen for downloaded programs",
+        "description": "Windows checks downloaded programs against its reputation database and warns about unknown ones. That is the hurdle standing between the wrong download and the double-click."
+      },
+      "sec-defender-network": {
+        "name": "Turn on Defender network protection",
+        "description": "Blocks connections to addresses Microsoft lists as malicious — including from programs that do not use a browser. It works against the download step that follows nearly every infection."
+      },
+      "sec-office-macros": {
+        "name": "Block Office macros from the internet",
+        "description": "Word and Excel files from the net may no longer run macros. By far the most common way encryption trojans reach companies — the invoice in the attachment. Macros in your own files keep working."
+      },
+      "sec-defender-cloud": {
+        "name": "Turn on Defender cloud protection",
+        "description": "Defender asks Microsoft about unknown files and sends suspicious samples there. That catches new malware hours earlier than signatures do — but it costs exactly what WinZii otherwise switches off: data leaves the machine. Not preselected for that reason; on a device after an infection the trade-off is a different one than on a freshly installed system."
+      },
+      "sec-defender-folders": {
+        "name": "Turn on controlled folder access",
+        "description": "Only known programs may write to Documents, Pictures and the desktop — the built-in defence against encryption trojans. The price is false alarms: backup software, game saves and older line-of-business applications get locked out too and have to be allowed by hand. Not something to leave on a customer's machine unannounced."
+      },
+      "sec-wsh-off": {
+        "name": "Turn off Windows Script Host",
+        "description": "Stops .vbs and .js files from running on a double-click — the classic route for malware in email attachments. Careful on machines that have grown over the years: logon scripts, installers and older line-of-business software use the same route and stop working afterwards."
+      },
+      "sec-lsa-protection": {
+        "name": "Protect credentials in memory",
+        "description": "The logon service then runs protected, and tools like Mimikatz can no longer reach the passwords in memory. Takes effect after the restart. Older drivers and fingerprint readers that hook into the logon can fail afterwards — then only undoing helps."
+      },
       "ai-copilot-policy": {
         "name": "Block Copilot",
         "description": "Switches Windows Copilot off by policy and removes the taskbar button. Also works preventively: Copilot stays off if a feature update reinstalls it."
