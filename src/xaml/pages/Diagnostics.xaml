@@ -76,11 +76,32 @@
     </Border>
 
     <!-- Datenträger -->
-    <Border Style="{DynamicResource WzCardStatic}">
+    <Border Style="{DynamicResource WzCardStatic}" Margin="0,0,0,14">
         <StackPanel>
             <TextBlock Text="{DynamicResource L.diag.diskEyebrow}" Style="{DynamicResource WzEyebrow}" />
             <TextBlock Name="DiagDisksTitle" Text="{DynamicResource L.diag.notAnalysed}" Style="{DynamicResource WzCardTitle}" />
             <StackPanel Name="DiagDisks" />
+        </StackPanel>
+    </Border>
+
+    <!-- Belastungstest -->
+    <Border Style="{DynamicResource WzCardStatic}">
+        <StackPanel>
+            <Grid>
+                <StackPanel Grid.Column="0">
+                    <TextBlock Text="{DynamicResource L.health.eyebrow}" Style="{DynamicResource WzEyebrow}" />
+                    <TextBlock Name="DiagHealthTitle" Text="{DynamicResource L.health.notRun}" Style="{DynamicResource WzCardTitle}" />
+                </StackPanel>
+                <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Top">
+                    <Button Name="DiagBtnMemDiag" Style="{DynamicResource WzBtnChip}" Margin="0,0,8,0"
+                            Content="{DynamicResource L.health.btnMemDiag}" />
+                    <Button Name="DiagBtnHealth" Style="{DynamicResource WzBtnPrimary}"
+                            Content="{DynamicResource L.health.btnRun}" />
+                </StackPanel>
+            </Grid>
+            <TextBlock Style="{DynamicResource WzHint}" Margin="0,0,0,12"
+                       Text="{DynamicResource L.health.hint}" />
+            <StackPanel Name="DiagHealth" />
         </StackPanel>
     </Border>
 </StackPanel>
