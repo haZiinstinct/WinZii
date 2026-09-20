@@ -1,0 +1,63 @@
+{
+  "_hinweis": "Werkzeuge der Gerätehersteller für Treiber. 'match' wird gegen Hersteller und Modell aus der Firmware geprüft. 'paths' sind Kandidaten — nach der Installation wird der erste genommen, den es wirklich gibt. Alle winget-Kennungen am 20.09.2026 gegen die Quelle 'winget' geprüft.",
+  "tools": [
+    {
+      "id": "dell",
+      "name": "Dell Command | Update",
+      "vendor": "Dell",
+      "match": "^Dell",
+      "wingetId": "Dell.CommandUpdate",
+      "silent": true,
+      "paths": [
+        "%ProgramFiles%\\Dell\\CommandUpdate\\dcu-cli.exe",
+        "%ProgramFiles(x86)%\\Dell\\CommandUpdate\\dcu-cli.exe"
+      ],
+      "scanArgs": "/scan -silent",
+      "applyArgs": "/applyUpdates -reboot=disable -silent",
+      "description": "Sucht bei Dell nach Treibern, BIOS und Firmware für genau dieses Gerät und spielt sie ein. Neu gestartet wird nicht."
+    },
+    {
+      "id": "lenovo",
+      "name": "Lenovo Thin Installer",
+      "vendor": "Lenovo",
+      "match": "^(Lenovo|LENOVO)",
+      "wingetId": "Lenovo.ThinInstaller",
+      "silent": true,
+      "paths": [
+        "%ProgramFiles(x86)%\\Lenovo\\ThinInstaller\\ThinInstaller.exe",
+        "%ProgramFiles%\\Lenovo\\ThinInstaller\\ThinInstaller.exe"
+      ],
+      "scanArgs": "/CM -search A -action LIST -noicon",
+      "applyArgs": "/CM -search A -action INSTALL -includerebootpackages 1,3 -noreboot -noicon",
+      "description": "Das Werkzeug für Lenovo-Geschäftsgeräte. Sucht Treiber und Firmware für genau dieses Modell. Pakete, die einen Neustart erzwingen würden, bleiben außen vor."
+    },
+    {
+      "id": "hp",
+      "name": "HP Image Assistant",
+      "vendor": "HP",
+      "match": "^(HP|Hewlett)",
+      "wingetId": "HP.ImageAssistant",
+      "silent": true,
+      "paths": [
+        "%ProgramFiles%\\HP\\HPIA\\HPImageAssistant.exe",
+        "%ProgramFiles(x86)%\\HP\\HPIA\\HPImageAssistant.exe",
+        "%ProgramData%\\HP\\HPIA\\HPImageAssistant.exe"
+      ],
+      "scanArgs": "/Operation:Analyze /Category:Drivers /Selection:All /Action:List /Silent",
+      "applyArgs": "/Operation:Analyze /Category:Drivers /Selection:All /Action:Install /Silent /noninteractive",
+      "description": "HPs eigenes Werkzeug für Treiber und Firmware. Es vergleicht den Bestand mit dem, was HP für dieses Modell führt."
+    },
+    {
+      "id": "intel",
+      "name": "Intel Treiber- und Support-Assistent",
+      "vendor": "Intel",
+      "match": "",
+      "wingetId": "Intel.IntelDriverAndSupportAssistant",
+      "silent": false,
+      "paths": [],
+      "scanArgs": "",
+      "applyArgs": "",
+      "description": "Für Chipsatz, WLAN und Intel-Grafik. Das Werkzeug hat keine Kommandozeile — es läuft im Browser und muss von Hand bedient werden."
+    }
+  ]
+}

@@ -1,4 +1,20 @@
 ﻿{
+  "oemtools": {
+    "tools": {
+      "dell": {
+        "description": "Asks Dell for drivers, BIOS and firmware for this exact machine and installs them. Nothing restarts."
+      },
+      "lenovo": {
+        "description": "The tool for Lenovo business machines. Looks for drivers and firmware for this exact model. Packages that would force a restart are left out."
+      },
+      "hp": {
+        "description": "HP's own tool for drivers and firmware. It compares what is installed against what HP lists for this model."
+      },
+      "intel": {
+        "description": "For chipset, Wi-Fi and Intel graphics. The tool has no command line — it runs in the browser and has to be operated by hand."
+      }
+    }
+  },
   "office": {
     "variants": {
       "m365home": {
