@@ -910,7 +910,11 @@
       },
       "perf-power-profile": {
         "name": "Performance on mains, endurance on battery",
-        "description": "Creates its own power plan that tells mains and battery apart. On the mains the fan may spin up instead of lowering the clock, and turbo kicks in without holding back. On battery, turbo is only used where it pays off, and cooling would rather lower the clock than get loud. The peak clock on mains does not rise as a result — that is not capped anyway; what changes is responsiveness and behaviour under sustained load. The gain is mainly on the battery side. The existing power plan is left untouched and is active again the moment this is undone."
+        "description": "Creates its own power plan that tells mains and battery apart. On the mains the fan may spin up instead of lowering the clock, and turbo kicks in without holding back. On battery, turbo is only used where it pays off, and cooling would rather lower the clock than get loud. The peak clock on mains does not rise as a result — that is not capped anyway; what changes is responsiveness and behaviour under sustained load. The gain is mainly on the battery side. On the mains the device also keeps working: no sleep, no hibernation, not even with the lid closed — only the screen turns off after 30 minutes. On battery: screen after 10, sleep after 15 minutes. The power button only ever turns the screen off; the device shuts down fully via Start → Shut down or a long press. The existing power plan is left untouched and is active again the moment this is undone."
+      },
+      "perf-update-manual": {
+        "name": "Install and restart Windows Update by hand only",
+        "description": "Windows still downloads updates but only installs them once you start it yourself in Settings. Windows no longer forces a restart while someone is signed in — running work stays open overnight. In return, security updates wait until someone takes care of them: if you set this, check Settings → Windows Update regularly. In managed environments (Intune, WSUS) company policy may take precedence."
       },
       "perf-sysmain-off": {
         "name": "Switch SysMain (Superfetch) off",

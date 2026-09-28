@@ -180,7 +180,7 @@
       "level": "soft",
       "risk": "low",
       "name": "Leistung am Netz, Ausdauer auf Akku",
-      "description": "Legt einen eigenen Energieplan an, der zwischen Netzbetrieb und Akku unterscheidet. Am Netzteil darf der Lüfter hochdrehen, statt den Takt zu senken, und der Turbo greift ohne Zurückhaltung. Auf Akku wird der Turbo nur genutzt, wo er sich lohnt, und die Kühlung senkt lieber den Takt, als laut zu werden. Der Spitzentakt am Netz steigt dadurch nicht — der ist ohnehin nicht gedeckelt; was sich ändert, sind Ansprechverhalten und Verhalten unter Dauerlast. Der Gewinn liegt vor allem auf der Akkuseite. Der bisherige Energieplan wird nicht angefasst und ist beim Zurücknehmen sofort wieder aktiv.",
+      "description": "Legt einen eigenen Energieplan an, der zwischen Netzbetrieb und Akku unterscheidet. Am Netzteil darf der Lüfter hochdrehen, statt den Takt zu senken, und der Turbo greift ohne Zurückhaltung. Auf Akku wird der Turbo nur genutzt, wo er sich lohnt, und die Kühlung senkt lieber den Takt, als laut zu werden. Der Spitzentakt am Netz steigt dadurch nicht — der ist ohnehin nicht gedeckelt; was sich ändert, sind Ansprechverhalten und Verhalten unter Dauerlast. Der Gewinn liegt vor allem auf der Akkuseite. Am Netzteil arbeitet das Gerät außerdem durch: kein Energiesparmodus, kein Ruhezustand, auch nicht bei zugeklapptem Deckel — nur der Bildschirm geht nach 30 Minuten aus. Auf Akku gilt: Bildschirm nach 10, Energiesparmodus nach 15 Minuten. Der Einschaltknopf schaltet immer nur den Bildschirm aus; ganz aus geht das Gerät über Start → Herunterfahren oder durch langes Drücken. Der bisherige Energieplan wird nicht angefasst und ist beim Zurücknehmen sofort wieder aktiv.",
       "defaultChecked": false,
       "appliesTo": "all",
       "requiresReboot": false,
@@ -216,8 +216,73 @@
               "ac": 2,
               "dc": 3,
               "optional": true
+            },
+            {
+              "subgroup": "SUB_SLEEP",
+              "setting": "STANDBYIDLE",
+              "ac": 0,
+              "dc": 900
+            },
+            {
+              "subgroup": "SUB_SLEEP",
+              "setting": "HIBERNATEIDLE",
+              "ac": 0,
+              "dc": 10800
+            },
+            {
+              "subgroup": "SUB_SLEEP",
+              "setting": "HYBRIDSLEEP",
+              "ac": 0,
+              "dc": 0,
+              "optional": true
+            },
+            {
+              "subgroup": "SUB_VIDEO",
+              "setting": "VIDEOIDLE",
+              "ac": 1800,
+              "dc": 600
+            },
+            {
+              "subgroup": "SUB_BUTTONS",
+              "setting": "LIDACTION",
+              "ac": 0,
+              "dc": 1,
+              "optional": true
+            },
+            {
+              "subgroup": "SUB_BUTTONS",
+              "setting": "PBUTTONACTION",
+              "ac": 4,
+              "dc": 4
             }
           ]
+        }
+      ]
+    },
+    {
+      "id": "perf-update-manual",
+      "category": "performance",
+      "level": "soft",
+      "risk": "medium",
+      "name": "Windows Update nur von Hand installieren und neu starten",
+      "description": "Windows lädt Updates weiterhin herunter, installiert sie aber erst, wenn man es in den Einstellungen selbst anstößt. Einen Neustart erzwingt Windows nicht mehr, solange jemand angemeldet ist — laufende Arbeit bleibt über Nacht offen. Dafür bleiben Sicherheitsupdates liegen, bis sich jemand darum kümmert: Wer den Eintrag setzt, sollte regelmäßig unter Einstellungen → Windows Update nachsehen. In verwalteten Umgebungen (Intune, WSUS) kann die Firmenrichtlinie Vorrang haben.",
+      "defaultChecked": false,
+      "appliesTo": "all",
+      "requiresReboot": true,
+      "actions": [
+        {
+          "type": "registry",
+          "path": "HKLM:\\SOFTWARE\\Policies\\Microsoft\\Windows\\WindowsUpdate\\AU",
+          "name": "NoAutoRebootWithLoggedOnUsers",
+          "valueType": "DWord",
+          "value": 1
+        },
+        {
+          "type": "registry",
+          "path": "HKLM:\\SOFTWARE\\Policies\\Microsoft\\Windows\\WindowsUpdate\\AU",
+          "name": "AUOptions",
+          "valueType": "DWord",
+          "value": 3
         }
       ]
     },

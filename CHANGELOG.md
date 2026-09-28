@@ -3,6 +3,25 @@
 Alle nennenswerten Änderungen an WinZii. Die Fassungen folgen
 [Semantic Versioning](https://semver.org/lang/de/).
 
+## [Unveröffentlicht]
+
+### Geändert
+
+- **Energieplan »Leistung am Netz, Ausdauer auf Akku«** arbeitet am Netzteil
+  jetzt durch: kein Energiesparmodus, kein Ruhezustand (bisher griff der von
+  »Ausbalanciert« geerbte Ruhezustand nach 180 Minuten auch am Netz), Deckel
+  zu ändert nichts. Nur der Bildschirm geht nach 30 Minuten aus. Der
+  Einschaltknopf schaltet in beiden Betriebsarten nur noch den Bildschirm aus.
+  Auf Akku bleibt es bei 10 Minuten Bildschirm und 15 Minuten bis zum
+  Energiesparmodus.
+
+### Neu
+
+- **»Windows Update nur von Hand installieren und neu starten«**
+  (`perf-update-manual`, nicht vorausgewählt): Updates werden geladen, aber
+  erst auf Anstoß installiert; kein erzwungener Neustart, solange jemand
+  angemeldet ist.
+
 ## [0.7.0] — 2026-09-20
 
 Die Fassung, die den Techniker im Werkzeug behält. Bisher gab es sechs

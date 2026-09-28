@@ -193,6 +193,9 @@ Prüfen von Hand anhaken:
 - Anwenden. Danach in den Windows-Energieoptionen nachsehen: gibt es den neuen Plan, ist
   er aktiv, und steht der vorherige unangetastet daneben?
 - Getrennte Werte je Betriebsart prüfen — Netzteil ab, Verhalten auf Akku beobachten.
+- Am Netzteil: Energiesparmodus und Ruhezustand »Nie«, Deckel zu »Nichts unternehmen«,
+  Bildschirm nach 30 Minuten aus. Einschaltknopf kurz drücken → nur der Bildschirm geht
+  aus, in beiden Betriebsarten.
 - **Zurücknehmen.** Der vorherige Plan muss wieder aktiv sein und die Kopie verschwunden.
 - Zweiter Durchlauf: es darf **keine** zweite Kopie entstehen.
 
