@@ -5,6 +5,13 @@ Alle nennenswerten Änderungen an WinZii. Die Fassungen folgen
 
 ## [Unveröffentlicht]
 
+### Geprüft
+
+- **Full-Stack-Audit** über den gesamten Baum: `docs/AUDIT-2026-10.md`
+  (Befunde mit Datei, Zeile und Szenario) und `docs/AUDIT-2026-10-AUFGABEN.md`
+  (Abhakliste in fünf Stufen). Zwei kritische Befunde: Die Rücknahme ignoriert
+  den Testmodus, und rekursives Löschen folgt Junctions ins lebende Profil.
+
 ### Geändert
 
 - **Energieplan »Leistung am Netz, Ausdauer auf Akku«** arbeitet am Netzteil
