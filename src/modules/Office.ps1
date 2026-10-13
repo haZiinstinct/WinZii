@@ -632,7 +632,7 @@ function Remove-WzOffice {
         }
         foreach ($folder in $remnants.Folders) {
             try {
-                Remove-Item -LiteralPath $folder -Recurse -Force -ErrorAction Stop
+                Remove-WzTree -LiteralPath $folder
                 $summary.Steps += Get-WzText 'off.logFolderRemoved' @{ ordner = $folder }
                 Write-WzLog (Get-WzText 'off.logFolderRemoved' @{ ordner = $folder }) -Level Ok
             } catch {

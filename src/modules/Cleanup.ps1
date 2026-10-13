@@ -302,7 +302,7 @@ function Remove-WzPathSet {
             $entries = Get-ChildItem -Path $path -Force -ErrorAction SilentlyContinue
             foreach ($entry in $entries) {
                 try {
-                    Remove-Item -LiteralPath $entry.FullName -Recurse -Force -ErrorAction Stop
+                    Remove-WzTree -LiteralPath $entry.FullName
                     $removed++
                 } catch {
                     $failed++
@@ -411,7 +411,7 @@ function Remove-WzWindowsOld {
     Invoke-WzTakeOwnership -Path $target
 
     try {
-        Remove-Item -LiteralPath $target -Recurse -Force -ErrorAction Stop
+        Remove-WzTree -LiteralPath $target
         Write-WzLog (Get-WzText 'clean.logRemovedShort') -Level Ok
         return [pscustomobject]@{ Removed = 1; Failed = 0 }
     } catch {
