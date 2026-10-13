@@ -67,7 +67,7 @@ function Test-WzTweakState {
                 if ($pruefbar) {
                     $checkable++
                     $current = Get-WzRegistryValue -Path $action.path -Name $action.name
-                    if ($current.Exists -and "$($current.Value)" -eq "$($action.value)") { $matching++ }
+                    if ($current.Exists -and "$($current.Value)" -eq "$($action.value)" -and $current.Type -eq $action.valueType) { $matching++ }
                 }
             }
             'service' {
@@ -244,7 +244,9 @@ function Invoke-WzRegistryAction {
 
     $path = Resolve-WzRegistryPath $Action.path
     $current = Get-WzRegistryValue -Path $path -Name $Action.name
-    if ($current.Exists -and "$($current.Value)" -eq "$($Action.value)") {
+    # Auch der Typ zählt: REG_SZ "0" statt DWORD 0 galt bisher als »schon
+    # gesetzt«, obwohl Windows den Wert so nicht liest.
+    if ($current.Exists -and "$($current.Value)" -eq "$($Action.value)" -and $current.Type -eq $Action.valueType) {
         Write-WzLog (Get-WzText 'opt.logAlreadySet' @{ name = $Action.name }) -Level Info
         return
     }
@@ -263,6 +265,9 @@ function Invoke-WzRegistryAction {
         existed   = $current.Exists
         value     = $current.Value
         valueType = if ($current.Exists) { $current.Type } else { $Action.valueType }
+        # Legt erst das Anwenden den Schlüssel an, räumt die Rücknahme ihn
+        # wieder weg, sofern er dann leer ist.
+        keyExisted = [bool](Test-Path -LiteralPath $path)
     }
 
     if (-not (Test-Path -LiteralPath $path)) {
