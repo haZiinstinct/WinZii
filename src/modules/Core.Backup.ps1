@@ -331,10 +331,25 @@ function Restore-WzUndoSession {
                         }
                         Set-ItemProperty -Path $action.path -Name $action.name `
                             -Value $previous.value -Type $previous.valueType -ErrorAction Stop
-                    } else {
-                        Remove-ItemProperty -Path $action.path -Name $action.name -ErrorAction SilentlyContinue
+                        $result.Restored++
+                    } elseif ($null -ne (Get-ItemProperty -LiteralPath $action.path -Name $action.name -ErrorAction SilentlyContinue)) {
+                        # Nur zählen, was wirklich zurückging. Bisher zählte
+                        # auch ein Wert, den es schon nicht mehr gab; ein
+                        # Fehlschlag beim Löschen ging still unter.
+                        Remove-ItemProperty -LiteralPath $action.path -Name $action.name -ErrorAction Stop
+                        $result.Restored++
                     }
-                    $result.Restored++
+
+                    # Hat erst das Anwenden den Schlüssel angelegt, geht er
+                    # wieder weg — aber nur, wenn er leer ist. Ältere
+                    # Sicherungen kennen keyExisted und lassen ihn stehen.
+                    if ($previous.PSObject.Properties['keyExisted'] -and $previous.keyExisted -eq $false -and
+                        (Test-Path -LiteralPath $action.path)) {
+                        $key = Get-Item -LiteralPath $action.path -ErrorAction SilentlyContinue
+                        if ($key -and $key.SubKeyCount -eq 0 -and $key.ValueCount -eq 0) {
+                            Remove-Item -LiteralPath $action.path -ErrorAction SilentlyContinue
+                        }
+                    }
                 }
                 'service' {
                     if ($previous.startupType) {
@@ -346,7 +361,9 @@ function Restore-WzUndoSession {
                     $result.Restored++
                 }
                 'scheduledTask' {
-                    if ($previous.state -eq 'Ready' -or $previous.state -eq 'Running') {
+                    # Alles außer »Disabled« war aktiv — auch »Queued«, das
+                    # bisher als deaktiviert zurückgesetzt wurde (Audit M6).
+                    if ($previous.state -ne 'Disabled') {
                         Enable-ScheduledTask -TaskPath $action.taskPath -TaskName $action.taskName -ErrorAction Stop | Out-Null
                     } else {
                         Disable-ScheduledTask -TaskPath $action.taskPath -TaskName $action.taskName -ErrorAction SilentlyContinue | Out-Null

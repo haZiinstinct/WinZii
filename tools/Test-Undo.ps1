@@ -608,6 +608,65 @@ if ($junctionAngelegt) {
         ((-not (Test-Path -LiteralPath $einzelLink)) -and (Test-Path -LiteralPath (Join-Path $junctionZiel 'profil.txt'))) $loeschFehler
 }
 
+# --- 10. Rücknahme im Detail ------------------------------------------------
+# Angelegte Schlüssel, Werttyp und Aufgabenzustand (Audit 2026-10, M6 und
+# Stufe-2-Kleinpunkte). Alles unter dem eigenen Testschlüssel; die
+# Aufgaben-Cmdlets werden durch Attrappen ersetzt, kein echter Eingriff.
+Write-Host ''
+Write-Host '10. Rücknahme im Detail' -ForegroundColor White
+
+$angelegt = "$testKey\Angelegt"
+$schluesselTweak = [pscustomobject]@{
+    id             = 'selbsttest-schluessel'
+    name           = 'Selbsttest — neuer Schlüssel'
+    requiresReboot = $false
+    actions        = @(
+        [pscustomobject]@{ type = 'registry'; path = $angelegt; name = 'A'; valueType = 'DWord'; value = 1 }
+        [pscustomobject]@{ type = 'registry'; path = $angelegt; name = 'B'; valueType = 'DWord'; value = 2 }
+    )
+}
+$schluesselLauf = Invoke-WzTweaks -Tweaks @($schluesselTweak) -Scope 'selbsttest-schluessel'
+Write-Check 'Schlüssel beim Anwenden angelegt' (Test-Path -LiteralPath $angelegt)
+if ($schluesselLauf.UndoFile) {
+    $schluesselRueck = Restore-WzUndoSession -UndoFile $schluesselLauf.UndoFile
+    Write-Check 'angelegter Schlüssel nach Rücknahme weg' (-not (Test-Path -LiteralPath $angelegt)) "Restored=$($schluesselRueck.Restored)"
+    Write-Check 'beide Werte als zurückgesetzt gezählt' ($schluesselRueck.Restored -eq 2 -and $schluesselRueck.Failed -eq 0)
+
+    # Zweite Rücknahme derselben Sicherung: die Werte gibt es nicht mehr,
+    # gezählt werden darf nichts.
+    $nochmal = Restore-WzUndoSession -UndoFile $schluesselLauf.UndoFile
+    Write-Check 'fehlender Wert zählt nicht als zurückgesetzt' ($nochmal.Restored -eq 0 -and $nochmal.Failed -eq 0) "Restored=$($nochmal.Restored) Failed=$($nochmal.Failed)"
+}
+
+# Gleicher Wert, falscher Typ: muss neu gesetzt werden.
+Set-ItemProperty -Path $testKey -Name 'Typ' -Value '1' -Type String
+$typTweak = [pscustomobject]@{
+    id = 'selbsttest-typ'; name = 'Selbsttest — Werttyp'; requiresReboot = $false
+    actions = @([pscustomobject]@{ type = 'registry'; path = $testKey; name = 'Typ'; valueType = 'DWord'; value = 1 })
+}
+$typLauf = Invoke-WzTweaks -Tweaks @($typTweak) -Scope 'selbsttest-typ'
+$typNachher = (Get-Item -LiteralPath $testKey).GetValueKind('Typ')
+Write-Check 'REG_SZ "1" gilt nicht als DWORD 1' ($typNachher -eq 'DWord') "Typ=$typNachher"
+
+# Aufgabenzustand »Queued« war aktiv und muss aktiv zurückkommen.
+$script:aufgabenAufrufe = @()
+function global:Enable-ScheduledTask { param($TaskPath, $TaskName) $script:aufgabenAufrufe += "Enable:$TaskName" }
+function global:Disable-ScheduledTask { param($TaskPath, $TaskName) $script:aufgabenAufrufe += "Disable:$TaskName" }
+try {
+    $aufgabenSitzung = New-WzUndoSession -Scope 'selbsttest-aufgaben'
+    foreach ($zustand in 'Queued', 'Ready', 'Disabled') {
+        Save-WzUndoState -Session $aufgabenSitzung -ItemId 'selbsttest' -ItemName 'Selbsttest' `
+            -Action ([pscustomobject]@{ type = 'scheduledTask'; taskPath = '\WinZii-Selbsttest\'; taskName = $zustand }) `
+            -Previous @{ state = $zustand }
+    }
+    $aufgabenUndo = Complete-WzUndoSession -Session $aufgabenSitzung
+    [void](Restore-WzUndoSession -UndoFile $aufgabenUndo)
+    Write-Check 'Aufgabe »Queued« wird wieder aktiviert' ($script:aufgabenAufrufe -contains 'Enable:Queued') ($script:aufgabenAufrufe -join ', ')
+    Write-Check 'Aufgabe »Disabled« bleibt deaktiviert' ($script:aufgabenAufrufe -contains 'Disable:Disabled')
+} finally {
+    Remove-Item -LiteralPath Function:\Enable-ScheduledTask, Function:\Disable-ScheduledTask -ErrorAction SilentlyContinue
+}
+
 # --- Aufräumen --------------------------------------------------------------
 if (Test-Path -LiteralPath $junctionBasis) {
     try { Remove-WzTree -LiteralPath $junctionBasis } catch { }
