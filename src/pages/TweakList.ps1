@@ -262,10 +262,13 @@ function Show-WzUndoDialog {
             bereich = $session.Scope; anzahl = $session.ActionCount; zusatz = $suffix }
     }
 
+    $message = Get-WzText 'opt.undoMessage'
+    if ($syncHash.DryRun) { $message = Get-WzText 'opt.confirmDryRun' @{ rest = $message } }
+
     $answer = Show-WzConfirm -Title (Get-WzText 'opt.undoTitle') `
-        -Message (Get-WzText 'opt.undoMessage') `
+        -Message $message `
         -Choices @($choices) -ChoiceLabel (Get-WzText 'opt.lblBackup') -ChoiceDefault $preselect `
-        -ConfirmText (Get-WzText 'opt.btnUndoGo') -Danger
+        -ConfirmText $(if ($syncHash.DryRun) { Get-WzText 'opt.btnDryRun' } else { Get-WzText 'opt.btnUndoGo' }) -Danger
 
     if (-not $answer.Confirmed) { return }
 
@@ -278,6 +281,12 @@ function Show-WzUndoDialog {
     } -OnComplete {
         param($result)
         if (-not $result) { return }
+
+        if ($result.DryRun) {
+            Show-WzInfo -Title (Get-WzText 'opt.undoTitle') -Message (Get-WzText 'opt.lineUndoDryRun' @{ anzahl = $result.Skipped })
+            if ($OnDone) { & $OnDone }
+            return
+        }
 
         $lines = @(Get-WzText 'opt.lineRestored' @{ anzahl = $result.Restored })
         if ($result.Failed -gt 0) { $lines += Get-WzText 'opt.lineUndoFailed' @{ anzahl = $result.Failed } }

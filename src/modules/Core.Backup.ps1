@@ -306,6 +306,18 @@ function Restore-WzUndoSession {
     $entries = @($data.entries)
     [array]::Reverse($entries)
 
+    # Testmodus: nur auflisten, was zurückginge. Ohne diese Weiche wurden
+    # Registry, Dienste und Energieplan real zurückgesetzt, das Übergabeblatt
+    # vermerkte den Eingriff aber als Test (Audit 2026-10, K1).
+    if ($syncHash.DryRun) {
+        $result | Add-Member -NotePropertyName 'DryRun' -NotePropertyValue $true
+        foreach ($entry in $entries) {
+            Write-WzLog (Get-WzText 'core.logUndoTest' @{ name = $entry.itemName; art = $entry.action.type }) -Level Test
+            $result.Skipped++
+        }
+        return $result
+    }
+
     foreach ($entry in $entries) {
         $action = $entry.action
         $previous = $entry.previous

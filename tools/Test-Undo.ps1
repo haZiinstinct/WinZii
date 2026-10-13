@@ -137,7 +137,17 @@ if ($undoFile) {
     $zweiter = @($undo.entries)[1]
     Write-Check 'neuer Wert als »gab es nicht« vermerkt' ($zweiter.previous.existed -eq $false)
 
-    $restore = Restore-WzUndoSession -UndoFile $undoFile
+    # Rücknahme im Testmodus: Früher setzte sie trotzdem alles zurück, und das
+    # Übergabeblatt nannte den echten Eingriff einen Test (Audit 2026-10, K1).
+    $syncHash.DryRun = $true
+    $trockenRestore = Restore-WzUndoSession -UndoFile $undoFile
+    $syncHash.DryRun = $false
+    $unberuehrt = Get-ItemProperty -LiteralPath $testKey
+    Write-Check 'Rücknahme im Testmodus: Werte unverändert' ($unberuehrt.Vorhanden -eq 7 -and $unberuehrt.Neu -eq 1) "Vorhanden=$($unberuehrt.Vorhanden) Neu=$($unberuehrt.Neu)"
+    Write-Check 'Rücknahme im Testmodus: als Testlauf gemeldet' ($trockenRestore.DryRun -and $trockenRestore.Restored -eq 0 -and $trockenRestore.Skipped -eq 2) "Restored=$($trockenRestore.Restored) Skipped=$($trockenRestore.Skipped)"
+    Write-Check 'Rücknahme im Testmodus: Sicherung nicht als erledigt vermerkt' ($null -eq (Read-WzJson -Path $undoFile).restoredAt)
+
+    $restore =Restore-WzUndoSession -UndoFile $undoFile
     Write-Check 'beide Änderungen zurückgenommen' ($restore.Restored -eq 2 -and $restore.Failed -eq 0) "Restored=$($restore.Restored) Failed=$($restore.Failed)"
 
     $zurueck = Get-ItemProperty -LiteralPath $testKey
