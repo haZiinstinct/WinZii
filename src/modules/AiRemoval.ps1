@@ -141,6 +141,7 @@ function Invoke-WzAppxAction {
 
     if ($found.Count -eq 0 -and $provisioned.Count -eq 0) {
         Write-WzLog (Get-WzText 'ai.logNoMatchingPackages' @{ muster = ($Action.patterns -join ', ') }) -Level Info
+        if ($Session) { $Session.ActionMissing = $true }
         return
     }
 
@@ -150,15 +151,20 @@ function Invoke-WzAppxAction {
         return
     }
 
-    Save-WzUndoState -Session $Session -ItemId $Tweak.id -ItemName $Tweak.name -Action $Action -Previous @{
-        packages = @($found | ForEach-Object { $_.PackageFullName })
-        note     = (Get-WzText 'ai.noteStoreOnly')
+    # Die Hashtable bleibt dieselbe, die in der Sitzung steht: EndOfLife-
+    # Schlüssel, die erst in der Schleife entstehen, landen so noch in undo.json.
+    $previous = @{
+        packages      = @($found | ForEach-Object { $_.PackageFullName })
+        note          = (Get-WzText 'ai.noteStoreOnly')
+        endOfLifeKeys = New-Object Collections.ArrayList
     }
+    Save-WzUndoState -Session $Session -ItemId $Tweak.id -ItemName $Tweak.name -Action $Action -Previous $previous
 
     foreach ($package in $found) {
         try {
             if ($package.NonRemovable -and $Action.forceNonRemovable) {
-                Set-WzAppxEndOfLife -PackageFullName $package.PackageFullName
+                $eolKey = Set-WzAppxEndOfLife -PackageFullName $package.PackageFullName
+                if ($eolKey) { [void]$previous.endOfLifeKeys.Add($eolKey) }
             }
             Remove-AppxPackage -Package $package.PackageFullName -AllUsers -ErrorAction Stop
             Write-WzLog (Get-WzText 'ai.logRemovedPackage' @{ name = $package.Name }) -Level Ok
@@ -176,6 +182,9 @@ function Invoke-WzAppxAction {
             Remove-AppxProvisionedPackage -Online -PackageName $package.PackageName -ErrorAction Stop | Out-Null
             Write-WzLog (Get-WzText 'ai.logProvRemoved' @{ name = $package.DisplayName }) -Level Ok
         } catch {
+            # Bleibt die Bereitstellung, kommt die App mit jedem neuen Konto
+            # zurück — das ist kein Erfolg.
+            if ($Session) { $Session.ActionFailed = $true }
             Write-WzLog (Get-WzText 'ai.logProvKept' @{ name = $package.DisplayName }) -Level Warn
         }
     }
@@ -198,8 +207,12 @@ function Set-WzAppxEndOfLife {
         if (-not (Test-Path -LiteralPath $path)) { [void](New-Item -Path $path -Force -ErrorAction Stop) }
         Set-ItemProperty -Path $path -Name 'EndOfLife' -Value 1 -Type DWord -ErrorAction Stop
         Write-WzLog (Get-WzText 'ai.logEolMarked' @{ name = $PackageFullName }) -Level Info
+        # Der Pfad geht in die Sicherung: Die Markierung bleibt nach der
+        # Rücknahme bestehen und muss dort genannt werden.
+        return $path
     } catch {
         Write-WzLog (Get-WzText 'ai.logEolFailed' @{ grund = $_.Exception.Message }) -Level Warn
+        return $null
     }
 }
 
@@ -223,6 +236,7 @@ function Invoke-WzCapabilityAction {
 
     if ($capabilities.Count -eq 0) {
         Write-WzLog (Get-WzText 'ai.logNoMatchingCap') -Level Info
+        if ($Session) { $Session.ActionMissing = $true }
         return
     }
 

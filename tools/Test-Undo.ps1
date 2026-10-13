@@ -648,6 +648,20 @@ $typLauf = Invoke-WzTweaks -Tweaks @($typTweak) -Scope 'selbsttest-typ'
 $typNachher = (Get-Item -LiteralPath $testKey).GetValueKind('Typ')
 Write-Check 'REG_SZ "1" gilt nicht als DWORD 1' ($typNachher -eq 'DWord') "Typ=$typNachher"
 
+# Ein Eintrag, dessen Ziel es auf dem Gerät nicht gibt, ist »nicht
+# zutreffend«, nicht »angewendet« (Audit 2026-10, M2). Die Namen je Ergebnis
+# speisen das Übergabeblatt (M1).
+$fehltTweak = [pscustomobject]@{
+    id = 'selbsttest-fehlt'; name = 'Selbsttest — Dienst fehlt'; requiresReboot = $true
+    actions = @([pscustomobject]@{ type = 'service'; serviceName = 'WinZiiSelbsttestGibtEsNicht'; startupType = 'Disabled' })
+}
+$fehltLauf = Invoke-WzTweaks -Tweaks @($fehltTweak, $typTweak, $kaputt) -Scope 'selbsttest-fehlt'
+Write-Check 'fehlender Dienst: nicht zutreffend' ($fehltLauf.NotApplicable -eq 1 -and $fehltLauf.NotApplicableNames -contains $fehltTweak.name) "Applied=$($fehltLauf.Applied) NotApplicable=$($fehltLauf.NotApplicable)"
+Write-Check 'kein Neustart für Nicht-Zutreffendes' (-not $fehltLauf.RebootRequired)
+Write-Check 'Namen je Ergebnis getrennt' (
+    $fehltLauf.AppliedNames -contains $typTweak.name -and $fehltLauf.FailedNames -contains $kaputt.name -and
+    $fehltLauf.AppliedNames -notcontains $kaputt.name) "angewendet=$($fehltLauf.AppliedNames -join ', ') fehlgeschlagen=$($fehltLauf.FailedNames -join ', ')"
+
 # Aufgabenzustand »Queued« war aktiv und muss aktiv zurückkommen.
 $script:aufgabenAufrufe = @()
 function global:Enable-ScheduledTask { param($TaskPath, $TaskName) $script:aufgabenAufrufe += "Enable:$TaskName" }
