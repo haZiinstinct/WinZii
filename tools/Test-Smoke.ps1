@@ -3,6 +3,7 @@
 #   2. XAML-Dateien parsebar
 #   3. JSON-Kataloge gültig
 #   4. Encoding (UTF-8 mit BOM)
+#   5. Log-Level jedes Write-WzLog-Aufrufs gegen das ValidateSet
 # Aufruf:  powershell -NoProfile -ExecutionPolicy Bypass -STA -File tools\Test-Smoke.ps1
 [CmdletBinding()]
 param()
@@ -96,6 +97,47 @@ if ($noBom.Count -eq 0) {
     $errors += 'Encoding'
     Write-Result "$($noBom.Count) Datei(en) ohne BOM" $false ($noBom -join ', ')
     Write-Host '         Abhilfe: tools\Repair-Encoding.ps1' -ForegroundColor DarkGray
+}
+
+# --- 5. Log-Level ----------------------------------------------------------
+# Ein Level außerhalb des ValidateSet wirft erst zur Laufzeit, bei der
+# Parameterbindung. »-Level Err« stand genau im Fehlerzweig des Dateiumzugs
+# und brach ihn ab, statt den Fehler zu melden (Audit 2026-10, H8).
+Write-Host ''
+Write-Host '  Log-Level' -ForegroundColor White
+$loggingAst = [Management.Automation.Language.Parser]::ParseFile("$root\src\modules\Core.Logging.ps1", [ref]$null, [ref]$null)
+$writeLog = $loggingAst.Find({ param($node)
+        $node -is [Management.Automation.Language.FunctionDefinitionAst] -and $node.Name -eq 'Write-WzLog' }, $true)
+$levelParam = @($writeLog.Body.ParamBlock.Parameters | Where-Object { $_.Name.VariablePath.UserPath -eq 'Level' })[0]
+$validateSet = @($levelParam.Attributes | Where-Object { $_.TypeName.Name -eq 'ValidateSet' })[0]
+$allowedLevels = @($validateSet.PositionalArguments | ForEach-Object { $_.Value })
+
+$badLevels = @()
+foreach ($file in Get-ChildItem "$root\src", "$root\tools" -Recurse -Include '*.ps1' -File) {
+    $ast = [Management.Automation.Language.Parser]::ParseFile($file.FullName, [ref]$null, [ref]$null)
+    $calls = $ast.FindAll({ param($node)
+            $node -is [Management.Automation.Language.CommandAst] -and $node.GetCommandName() -eq 'Write-WzLog' }, $true)
+    foreach ($call in $calls) {
+        $elements = $call.CommandElements
+        for ($i = 0; $i -lt $elements.Count - 1; $i++) {
+            if ($elements[$i] -is [Management.Automation.Language.CommandParameterAst] -and $elements[$i].ParameterName -eq 'Level') {
+                $value = $elements[$i + 1]
+                if ($value -is [Management.Automation.Language.StringConstantExpressionAst] -and $allowedLevels -notcontains $value.Value) {
+                    $badLevels += '{0}:{1} -Level {2}' -f $file.FullName.Substring($root.Length + 1), $value.Extent.StartLineNumber, $value.Value
+                }
+            }
+        }
+    }
+}
+$checked++
+if ($allowedLevels.Count -eq 0) {
+    $errors += 'Log-Level'
+    Write-Result 'ValidateSet von Write-WzLog nicht gefunden' $false
+} elseif ($badLevels.Count -eq 0) {
+    Write-Result "alle -Level-Argumente gültig ($($allowedLevels -join ', '))" $true
+} else {
+    $errors += 'Log-Level'
+    Write-Result "$($badLevels.Count) ungültige(s) -Level-Argument(e)" $false ($badLevels -join ', ')
 }
 
 # --- Ergebnis -------------------------------------------------------------

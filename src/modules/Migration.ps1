@@ -135,7 +135,7 @@ function Invoke-WzFileMigration {
         $measure = Measure-WzPathSet -Paths @($job.Destination)
         if ($result.ExitCode -ge 8 -or $null -eq $result.ExitCode) {
             $failed += Get-WzText 'data.copyFailedEntry' @{ name = $job.Name; code = $result.ExitCode }
-            Write-WzLog (Get-WzText 'data.logCopyFailed' @{ name = $job.Name; code = $result.ExitCode }) -Level Err
+            Write-WzLog (Get-WzText 'data.logCopyFailed' @{ name = $job.Name; code = $result.ExitCode }) -Level Error
         } else {
             $done += Get-WzText 'data.copyDoneEntry' @{ name = $job.Name; groesse = (Format-WzBytes $measure.Bytes); anzahl = $measure.Items }
             $copiedBytes += $measure.Bytes
