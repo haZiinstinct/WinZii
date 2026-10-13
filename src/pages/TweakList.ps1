@@ -230,12 +230,18 @@ function Invoke-WzTweakSelection {
 
         $lines = @(Get-WzText 'opt.lineApplied' @{ anzahl = $summary.Applied })
         if ($summary.Failed -gt 0) { $lines += Get-WzText 'opt.lineFailed' @{ anzahl = $summary.Failed } }
+        if ($summary.NotApplicable -gt 0) { $lines += Get-WzText 'opt.lineNotApplicable' @{ anzahl = $summary.NotApplicable } }
         if ($summary.RebootRequired) { $lines += Get-WzText 'opt.lineReboot' }
         if ($summary.UndoFile) { $lines += Get-WzText 'opt.lineBackup' @{ pfad = (Split-Path -Parent $summary.UndoFile) } }
 
+        # Ins Übergabeblatt nur, was wirklich angewendet wurde; Fehlschläge
+        # gekennzeichnet. Bisher standen alle ausgewählten Einträge dort,
+        # auch die fehlgeschlagenen (Audit 2026-10, M1).
+        $detail = @($summary.AppliedNames) +
+            @($summary.FailedNames | ForEach-Object { Get-WzText 'opt.detailFailed' @{ name = $_ } })
         Add-WzAction -Area $Title -RebootRequired:([bool]$summary.RebootRequired) `
             -Summary ((Get-WzText 'opt.actionApplied' @{ anzahl = $summary.Applied }) + $(if ($summary.Failed -gt 0) { Get-WzText 'opt.actionFailedSuffix' @{ anzahl = $summary.Failed } })) `
-            -Detail @($selected | ForEach-Object { $_.name })
+            -Detail $detail
 
         Show-WzInfo -Title (Get-WzText 'opt.doneTitle') -Message ($lines -join ' ') -Items @($summary.Messages)
         if ($OnDone) { & $OnDone }

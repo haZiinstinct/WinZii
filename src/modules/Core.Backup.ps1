@@ -30,6 +30,10 @@ function New-WzUndoSession {
         # Funktionen), melden hier zurück. Ohne das galt ein Eintrag als
         # erledigt, bei dem kein einziges Paket entfernt werden konnte.
         ActionFailed = $false
+        # Gibt es das Ziel einer Aktion auf diesem Gerät nicht (Dienst,
+        # Aufgabe, Funktion, Paket), meldet der Handler das hier. Hat keine
+        # Aktion eines Eintrags etwas vorgefunden, ist er »nicht zutreffend«.
+        ActionMissing = $false
         # Ein Dienst, der sich nicht anhalten ließ, wirkt erst nach einem Neustart
         NeedsReboot  = $false
     }
@@ -429,6 +433,12 @@ function Restore-WzUndoSession {
                     $hint = if ($action.undo -and $action.undo.hint) { $action.undo.hint } else { Get-WzText 'core.notRestorable' }
                     $note = "$($entry.itemName): $hint"
                     if ($result.Notes -notcontains $note) { $result.Notes += $note }
+                    # Nicht entfernbare Pakete wurden per EndOfLife-Schlüssel
+                    # freigegeben. Der bleibt stehen; die Rücknahme nennt ihn, damit er
+                    # sich bei Bedarf von Hand entfernen lässt.
+                    if ($previous -and $previous.PSObject.Properties['endOfLifeKeys'] -and @($previous.endOfLifeKeys).Count -gt 0) {
+                        $result.Notes += Get-WzText 'core.noteEndOfLife' @{ name = $entry.itemName; pfade = (@($previous.endOfLifeKeys) -join ', ') }
+                    }
                 }
             }
         } catch {

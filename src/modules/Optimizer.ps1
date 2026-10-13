@@ -155,7 +155,9 @@ function Invoke-WzTweaks {
     .PARAMETER CreateRestorePoint
         Vorab einen Systemwiederherstellungspunkt anlegen.
     .OUTPUTS
-        PSCustomObject mit Applied, Failed, RebootRequired, UndoFile
+        PSCustomObject mit Applied, Failed, NotApplicable, RebootRequired,
+        UndoFile, Messages und den Namen je Ergebnis (AppliedNames,
+        FailedNames, NotApplicableNames) für das Übergabeblatt.
     #>
     param(
         [Parameter(Mandatory = $true)]$Tweaks,
@@ -164,11 +166,15 @@ function Invoke-WzTweaks {
     )
 
     $summary = [pscustomobject]@{
-        Applied        = 0
-        Failed         = 0
-        RebootRequired = $false
-        UndoFile       = $null
-        Messages       = @()
+        Applied            = 0
+        Failed             = 0
+        NotApplicable      = 0
+        RebootRequired     = $false
+        UndoFile           = $null
+        Messages           = @()
+        AppliedNames       = @()
+        FailedNames        = @()
+        NotApplicableNames = @()
     }
 
     $items = @($Tweaks)
@@ -193,6 +199,8 @@ function Invoke-WzTweaks {
     foreach ($tweak in $items) {
         Write-WzLog "$($tweak.name)" -Level Action
         $tweakFailed = $false
+        $actionsRun = 0
+        $actionsMissing = 0
 
         foreach ($action in $tweak.actions) {
             try {
@@ -214,8 +222,11 @@ function Invoke-WzTweaks {
                 # Handler, die ihre Fehler selbst abfangen, melden über die
                 # Sitzung zurück. Der Merker wird je Aktion zurückgesetzt.
                 $session.ActionFailed = $false
+                $session.ActionMissing = $false
+                $actionsRun++
                 & $handler -Action $action -Session $session -Tweak $tweak
                 if ($session.ActionFailed) { $tweakFailed = $true }
+                if ($session.ActionMissing) { $actionsMissing++ }
             } catch {
                 $tweakFailed = $true
             Write-WzLog (Get-WzText 'opt.logError' @{ grund = $_.Exception.Message }) -Level Error
@@ -224,8 +235,16 @@ function Invoke-WzTweaks {
 
         if ($tweakFailed) {
             $summary.Failed++
+            $summary.FailedNames += $tweak.name
+        } elseif ($actionsRun -gt 0 -and $actionsMissing -eq $actionsRun) {
+            # Nichts davon gibt es auf diesem Gerät — bisher zählte das als
+            # »angewendet« und stand so im Übergabeblatt (Audit 2026-10, M2).
+            $summary.NotApplicable++
+            $summary.NotApplicableNames += $tweak.name
+            Write-WzLog (Get-WzText 'opt.logNotApplicable' @{ name = $tweak.name }) -Level Info
         } else {
             $summary.Applied++
+            $summary.AppliedNames += $tweak.name
             # Ein Neustart ist nur nötig, wenn der Eintrag auch wirklich
             # angewendet wurde — bisher erschien die Meldung selbst dann, wenn
             # alles fehlgeschlagen war, und verlor dadurch ihre Aussage.
@@ -299,6 +318,7 @@ function Invoke-WzServiceAction {
     $service = Get-Service -Name $Action.serviceName -ErrorAction SilentlyContinue
     if (-not $service) {
         Write-WzLog (Get-WzText 'opt.logNoService' @{ name = $Action.serviceName }) -Level Info
+        if ($Session) { $Session.ActionMissing = $true }
         return
     }
 
@@ -352,6 +372,7 @@ function Invoke-WzScheduledTaskAction {
     $task = Get-ScheduledTask -TaskPath $Action.taskPath -TaskName $Action.taskName -ErrorAction SilentlyContinue
     if (-not $task) {
         Write-WzLog (Get-WzText 'opt.logNoTask' @{ name = $Action.taskName }) -Level Info
+        if ($Session) { $Session.ActionMissing = $true }
         return
     }
     if ($Action.state -eq 'Disabled' -and $task.State -eq 'Disabled') {
@@ -382,6 +403,7 @@ function Invoke-WzFeatureAction {
     $feature = Get-WindowsOptionalFeature -Online -FeatureName $Action.featureName -ErrorAction SilentlyContinue
     if (-not $feature) {
         Write-WzLog (Get-WzText 'opt.logNoFeature' @{ name = $Action.featureName }) -Level Info
+        if ($Session) { $Session.ActionMissing = $true }
         return
     }
     $targetEnabled = ($Action.state -eq 'Enabled')
