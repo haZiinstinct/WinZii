@@ -167,7 +167,7 @@
       },
       "recycle-bin": {
         "name": "Recycle bin",
-        "description": "Permanently deletes every file in the recycle bin — including those of other user accounts."
+        "description": "Permanently deletes every file in the signed-in account's recycle bin."
       },
       "wu-cache": {
         "name": "Windows Update cache",

@@ -297,11 +297,15 @@ function Start-WzCleanupRun {
             $lines += Get-WzText 'clean.lineLocked' @{ anzahl = $summary.Failed }
         }
 
+        # Ins Übergabeblatt nur, was wirklich bereinigt wurde (Audit M1).
+        $detail = @($summary.DoneNames) +
+            @($summary.FailedNames | ForEach-Object { Get-WzText 'clean.detailFailed' @{ name = $_ } }) +
+            @($summary.SkippedNames | ForEach-Object { Get-WzText 'clean.detailSkipped' @{ name = $_ } })
         Add-WzAction -Area 'Speicherplatz' `
             -Summary (Get-WzText 'clean.actionFreed' @{ groesse = (Format-WzBytes $summary.FreedBytes); anzahl = $summary.Removed }) `
-            -Detail @($categories | ForEach-Object { $_.name })
+            -Detail $detail
 
-        Show-WzInfo -Title (Get-WzText 'clean.doneTitle') -Message ($lines -join ' ')
+        Show-WzInfo -Title (Get-WzText 'clean.doneTitle') -Message ($lines -join ' ') -Items @($summary.Messages)
         Start-WzCleanupScan
     }.GetNewClosure()
 }
