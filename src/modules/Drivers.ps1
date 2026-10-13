@@ -326,6 +326,9 @@ function Get-WzDriverBackups {
     if (-not (Test-Path -LiteralPath $root)) { return @() }
 
     $backups = foreach ($folder in (Get-ChildItem -LiteralPath $root -Directory -ErrorAction SilentlyContinue)) {
+        # Bis 0.7.0 lagen Katalog-Downloads unter treiber\katalog. Auf Sticks,
+        # die das noch haben, ist der Ordner keine Sicherung (Audit 2026-10, H5).
+        if ($folder.Name -eq 'katalog') { continue }
         $packages = @(Get-ChildItem -LiteralPath $folder.FullName -Directory -ErrorAction SilentlyContinue).Count
         if ($packages -eq 0) { continue }
         $bytes = (Get-ChildItem -LiteralPath $folder.FullName -Recurse -File -ErrorAction SilentlyContinue |
@@ -657,8 +660,11 @@ function Install-WzCatalogDriver {
         return $result
     }
 
-    # »katalog« ist ein Ordnername auf dem Datenträger, keine Anzeige.
-    $target = New-WzDirectory (Get-WzPath 'offline' 'treiber' 'katalog' $Entry.UpdateId)
+    # »katalogtreiber« ist ein Ordnername auf dem Datenträger, keine Anzeige.
+    # Bewusst neben »treiber«, nicht darunter: Get-WzDriverBackups hält jeden
+    # Unterordner von »treiber« für die Sicherung eines PCs, und das
+    # Rückspielen hätte alle je geladenen Katalogtreiber eingespielt.
+    $target = New-WzDirectory (Get-WzPath 'offline' 'katalogtreiber' $Entry.UpdateId)
     $fileName = [IO.Path]::GetFileName(($url -split '\?')[0])
     if (-not $fileName) { $fileName = "$($Entry.UpdateId).cab" }
     $file = Join-Path $target $fileName
