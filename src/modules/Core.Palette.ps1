@@ -67,6 +67,12 @@ function Get-WzPaletteEntries {
         Detail = Get-WzText 'palette.detailToggle'
         Kind   = 'command'
         Action = {
+            # Während eines Vorgangs ist der Schalter gesperrt (Set-WzBusy).
+            # Die Palette darf daran nicht vorbei.
+            if ($syncHash.Busy) {
+                Write-WzLog (Get-WzText 'core.busyLog' @{ name = $syncHash.BusyName }) -Level Warn
+                return
+            }
             $syncHash.DryRunToggle.IsChecked = (-not $syncHash.DryRunToggle.IsChecked)
             # Den Klick nachbilden, damit Abzeichen und Protokollzeile mitgehen
             $syncHash.DryRunToggle.RaiseEvent(

@@ -296,6 +296,29 @@ $window.Add_ContentRendered({
     })
     if (-not ($lebt -and $zu -and $protokolliert)) { $script:failed++ }
 
+    # Testmodus-Schalter während eines Vorgangs: gesperrt, und auch Strg+K
+    # kommt nicht daran vorbei (Audit 2026-10, H1).
+    $toggle = $syncHash.DryRunToggle
+    $dryVorher = $syncHash.DryRun
+    $haekchenVorher = $toggle.IsChecked
+    Set-WzBusy -On -Status 'Selbsttest'
+    $gesperrt = -not $toggle.IsEnabled
+    $paletteEintrag = @(Get-WzPaletteEntries | Where-Object { $_.Title -eq (Get-WzText 'palette.cmdDryRun') })[0]
+    if ($paletteEintrag) { & $paletteEintrag.Action }
+    $unveraendert = ($syncHash.DryRun -eq $dryVorher -and $toggle.IsChecked -eq $haekchenVorher)
+    Set-WzBusy -Off
+    $wiederFrei = $toggle.IsEnabled
+    $sperreOk = ($gesperrt -and [bool]$paletteEintrag -and $unveraendert -and $wiederFrei)
+    [void]$script:results.Add([pscustomobject]@{
+        Name = 'testmodus'
+        Weg  = 'Busy'
+        Bild = $gesperrt
+        Zu   = $unveraendert
+        Abbr = $wiederFrei
+        Ok   = $sperreOk
+    })
+    if (-not $sperreOk) { $script:failed++ }
+
     $window.Close()
 })
 
@@ -307,6 +330,11 @@ foreach ($entry in $script:results) {
     $color = if ($entry.Ok) { 'Green' } else { 'Red' }
     if ($entry.Weg -eq 'Dispatcher') {
         Write-Host ("  {0} {1,-11} Fehler im UI-Faden   Fenster lebt={2,-5} Dialog zu={3,-5} protokolliert={4}" -f `
+            $symbol, $entry.Name, $entry.Bild, $entry.Zu, $entry.Abbr) -ForegroundColor $color
+        continue
+    }
+    if ($entry.Weg -eq 'Busy') {
+        Write-Host ("  {0} {1,-11} Schalter im Vorgang  gesperrt={2,-5} Strg+K wirkungslos={3,-5} danach frei={4}" -f `
             $symbol, $entry.Name, $entry.Bild, $entry.Zu, $entry.Abbr) -ForegroundColor $color
         continue
     }

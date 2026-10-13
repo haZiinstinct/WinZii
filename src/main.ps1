@@ -240,6 +240,11 @@ $syncHash.DryRunBadge.Visibility = if ($syncHash.DryRun) {
     [Windows.Visibility]::Collapsed
 }
 $syncHash.DryRunToggle.Add_Click({
+    # Set-WzBusy sperrt den Schalter; das hier fängt nachgebildete Klicks ab.
+    if ($syncHash.Busy) {
+        $syncHash.DryRunToggle.IsChecked = $syncHash.DryRun
+        return
+    }
     $syncHash.DryRun = [bool]$syncHash.DryRunToggle.IsChecked
     $syncHash.DryRunBadge.Visibility = if ($syncHash.DryRun) {
         [Windows.Visibility]::Visible
