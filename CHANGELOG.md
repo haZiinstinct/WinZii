@@ -12,6 +12,20 @@ Alle nennenswerten Änderungen an WinZii. Die Fassungen folgen
   (Abhakliste in fünf Stufen). Zwei kritische Befunde: Die Rücknahme ignoriert
   den Testmodus, und rekursives Löschen folgt Junctions ins lebende Profil.
 
+### Behoben
+
+- **Rücknahme im Testmodus** setzte Registry, Dienste und Energieplan real
+  zurück. Jetzt wird nur protokolliert, was zurückginge (Audit K1).
+- **Löschen folgt keiner Junction mehr.** Bereinigung, Programmreste und
+  Office-Restordner entfernen Junctions und Links nur als Verweis, egal auf
+  welchem Build von Windows PowerShell 5.1 (Audit K2).
+- **Dateiumzug brach bei einem robocopy-Fehler ab,** statt ihn zu melden;
+  Test-Smoke prüft jetzt alle Log-Level (Audit H8).
+- **Katalogtreiber erschienen als Treibersicherung »katalog«.** Sie liegen
+  jetzt unter `offline\katalogtreiber` (Audit H5).
+- **Testmodus-Schalter ist während eines Vorgangs gesperrt,** auch über
+  Strg+K (Audit H1).
+
 ### Geändert
 
 - **Energieplan »Leistung am Netz, Ausdauer auf Akku«** arbeitet am Netzteil

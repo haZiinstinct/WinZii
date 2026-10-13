@@ -187,6 +187,12 @@ function Set-WzBusy {
             }
             $syncHash.BtnCancelTask.IsEnabled = $canCancel
         }
+        # Der Testmodus wird pro Aktion neu gelesen. Umschalten mitten im Lauf
+        # schrieb den Rest real (ohne Wiederherstellungspunkt) oder löschte am
+        # Ende die Sicherung schon angewendeter Einträge (Audit 2026-10, H1).
+        if ($syncHash.DryRunToggle) {
+            $syncHash.DryRunToggle.IsEnabled = -not $isBusy
+        }
         if ($syncHash.BusyBar) {
             $syncHash.BusyBar.Visibility = if ($isBusy) {
                 [Windows.Visibility]::Visible
