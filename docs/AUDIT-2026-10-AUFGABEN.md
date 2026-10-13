@@ -27,10 +27,10 @@ Jeder Punkt: `- [ ] **Kennung** Datei:Zeile. Aufgabe. → Erledigt wenn …`
 - [ ] **M4** `data/tweaks.json:1037-1055` (`sec-defender-network`). `defaultChecked: false`, `risk: medium`, Beschreibung um Cloud-Voraussetzung ergänzen. Alle Defender-Policy-Einträge (Z. 923, 1010, 1037, 1112, 1139): Hinweis »sperrt die Einstellung in der Windows-Sicherheit«. → Erledigt wenn `Test-Catalogs` durchläuft und die Texte in `kataloge.en.json` nachgezogen sind.
 - [ ] **M5** `src/modules/Autostart.ps1:298-299, 312, 391-406`. Startordner über `Get-WzUserFolder -Kind RoamingAppData` bilden, `Resolve-WzRegistryPath` auch auf die StartupApproved-Pfade anwenden. → Erledigt wenn bei Elevierung mit Technikerkonto der Startordner des Kunden gezeigt wird.
 - [x] **M6** `src/modules/Core.Backup.ps1:337-341`. `if ($previous.state -ne 'Disabled') { Enable } else { Disable }`. → Erledigt wenn Testfall mit Zustand `Queued` in `Test-Undo.ps1`.
-- [ ] **M7** `src/modules/Cleanup.ps1:126-133, 225-276, 319-331`. Bei `Blocked` die Kategorie überspringen und melden; im Papierkorb-Catch `Failed=1` statt `0`; `data/cleanup.json:34` korrigieren (nur eigener Papierkorb). → Erledigt wenn ein laufender Edge die Cache-Kategorie als übersprungen meldet.
+- [x] **M7** `src/modules/Cleanup.ps1:126-133, 225-276, 319-331`. Bei `Blocked` die Kategorie überspringen und melden; im Papierkorb-Catch `Failed=1` statt `0`; `data/cleanup.json:34` korrigieren (nur eigener Papierkorb). → Erledigt wenn ein laufender Edge die Cache-Kategorie als übersprungen meldet.
 - [x] **N** `src/modules/Core.Backup.ps1:322-323`, `src/modules/Optimizer.ps1:268-269`. `keyExisted` im Undo-Eintrag speichern; bei `false` den Schlüssel nach der Rücknahme löschen, wenn er leer ist.
 - [x] **N** `src/modules/Core.Backup.ps1:323`. `Remove-ItemProperty -ErrorAction Stop`, catch nur für »Wert fehlt«; `Restored++` nur bei Wirkung.
-- [ ] **N** `src/modules/Cleanup.ps1:165, 302`. Festen Pfadteil mit `[WildcardPattern]::Escape()` schützen, nur den Katalog-Platzhalter roh anhängen.
+- [x] **N** `src/modules/Cleanup.ps1:165, 302`. Festen Pfadteil mit `[WildcardPattern]::Escape()` schützen, nur den Katalog-Platzhalter roh anhängen.
 - [ ] **N** `src/modules/Uninstall.ps1:53-55, 166-195`. GUID per Regex aus `MsiExec /I{GUID}` ziehen und wie ProductCode behandeln (`/x … /qn`).
 - [x] **N** `src/modules/AiRemoval.ps1:174-181, 186-204`. `ActionFailed` bei Fehlschlag der Bereitstellungs-Entfernung setzen; EndOfLife-Schlüssel in `previous` festhalten und im Undo-Hinweis nennen.
 - [x] **N** `src/modules/Optimizer.ps1:70, 247`. »Schon gesetzt« zusätzlich gegen `$current.Type -eq $Action.valueType` prüfen.
@@ -142,7 +142,7 @@ Jeder Punkt: `- [ ] **Kennung** Datei:Zeile. Aufgabe. → Erledigt wenn …`
 - [ ] **N** `docs/ABNAHME.md:13-17, 33, 54, ~394`. Kopf auf 0.7.0-Inhalt, Kapitel 23-29 anlegen oder Tabelle als vollständige Quelle kennzeichnen, »sechzehn Seiten«.
 - [ ] **N** `SECURITY.md:13`. Mail-Adresse eintragen oder Satz streichen und auf GitHub Private Vulnerability Reporting verweisen; Satz »unterstützt wird die jeweils neueste Fassung«.
 - [ ] **N** `CHANGELOG.md`. Vergleichs-Links am Ende (Keep a Changelog).
-- [ ] **N** `data/cleanup.json:34`. »auch der von anderen Benutzerkonten« streichen (siehe M7).
+- [x] **N** `data/cleanup.json:34`. »auch der von anderen Benutzerkonten« streichen (siehe M7).
 
 ## Stufe 5: Gegen Herstellerdoku prüfen
 

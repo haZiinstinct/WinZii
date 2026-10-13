@@ -31,7 +31,7 @@
       "id": "recycle-bin",
       "group": "user",
       "name": "Papierkorb",
-      "description": "Endgültiges Löschen aller Dateien im Papierkorb — auch der von anderen Benutzerkonten.",
+      "description": "Endgültiges Löschen aller Dateien im Papierkorb des angemeldeten Kontos.",
       "method": "recycleBin",
       "risk": "medium",
       "defaultChecked": false

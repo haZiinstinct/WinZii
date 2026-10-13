@@ -135,6 +135,21 @@ function Measure-WzCleanupCategory {
     return $result
 }
 
+function ConvertTo-WzCleanupPattern {
+    <#
+    .SYNOPSIS
+        Katalogpfad mit Umgebungsvariablen in ein sicheres Platzhaltermuster.
+    .NOTES
+        Gilt nur »*« und »?« aus dem Katalog als Platzhalter. Ein Profil wie
+        »C:\Users\Max [Büro]« machte aus »[Büro]« sonst eine Zeichenklasse,
+        und der Pfad traf nichts oder Falsches. »*« und »?« sind in Windows-
+        Dateinamen verboten, also genügt es, »[«, »]« und den Backtick zu
+        maskieren.
+    #>
+    param([Parameter(Mandatory = $true)][string]$Path)
+    return ((Expand-WzUserPath $Path) -replace '([\[\]`])', '`$1')
+}
+
 function Measure-WzPathSet {
     <#
     .SYNOPSIS
@@ -162,7 +177,7 @@ function Measure-WzPathSet {
         $targets = @()
         try {
             if ($path -match '[\*\?]') {
-                $targets = @(Resolve-Path -Path $path -ErrorAction SilentlyContinue |
+                $targets = @(Resolve-Path -Path (ConvertTo-WzCleanupPattern $rawPath) -ErrorAction SilentlyContinue |
                     Select-Object -ExpandProperty ProviderPath)
             } elseif (Test-Path -LiteralPath $path) {
                 $targets = @($path)
@@ -211,15 +226,19 @@ function Invoke-WzCleanup {
     .SYNOPSIS
         Löscht die gewählten Kategorien.
     .OUTPUTS
-        PSCustomObject mit FreedBytes, Removed, Failed, Messages
+        PSCustomObject mit FreedBytes, Removed, Failed, Messages und den
+        Kategorienamen je Ergebnis (DoneNames, FailedNames, SkippedNames)
     #>
     param([Parameter(Mandatory = $true)]$Categories)
 
     $summary = [pscustomobject]@{
-        FreedBytes = [int64]0
-        Removed    = 0
-        Failed     = 0
-        Messages   = @()
+        FreedBytes   = [int64]0
+        Removed      = 0
+        Failed       = 0
+        Messages     = @()
+        DoneNames    = @()
+        FailedNames  = @()
+        SkippedNames = @()
     }
 
     foreach ($category in $Categories) {
@@ -228,6 +247,23 @@ function Invoke-WzCleanup {
         if ($category.method -eq 'reportOnly') {
             Write-WzLog (Get-WzText 'clean.logAnalysisOnly') -Level Info
             continue
+        }
+
+        # Läuft der Browser, wird sein Zwischenspeicher nicht angefasst.
+        # Bisher wurde das nur in der Übersicht angezeigt und beim Löschen
+        # nicht geprüft (Audit 2026-10, M7). Gemessen wird jetzt, nicht beim
+        # Scan — dazwischen kann der Browser gestartet worden sein.
+        if ($category.PSObject.Properties['blockingProcesses']) {
+            $running = @($category.blockingProcesses | Where-Object {
+                Get-Process -Name $_ -ErrorAction SilentlyContinue
+            })
+            if ($running.Count -gt 0) {
+                $text = Get-WzText 'clean.skippedBlocked' @{ name = $category.name; prozesse = ($running -join ', ') }
+                Write-WzLog $text -Level Warn
+                $summary.Messages += $text
+                $summary.SkippedNames += $category.name
+                continue
+            }
         }
 
         $before = Measure-WzCleanupCategory -Category $category
@@ -259,6 +295,11 @@ function Invoke-WzCleanup {
 
             $summary.Removed += $result.Removed
             $summary.Failed += $result.Failed
+            if ($result.Failed -gt 0 -and $result.Removed -eq 0) {
+                $summary.FailedNames += $category.name
+            } else {
+                $summary.DoneNames += $category.name
+            }
             if (-not $syncHash.DryRun -and $category.method -ne 'dism') {
                 $after = Measure-WzCleanupCategory -Category $category
                 $freed = [math]::Max(0, $before.Bytes - $after.Bytes)
@@ -267,6 +308,7 @@ function Invoke-WzCleanup {
             }
         } catch {
             $summary.Failed++
+            $summary.FailedNames += $category.name
             Write-WzLog (Get-WzText 'clean.logError' @{ grund = $_.Exception.Message }) -Level Error
         } finally {
             foreach ($serviceName in $stoppedServices) {
@@ -299,7 +341,7 @@ function Remove-WzPathSet {
         }
 
         try {
-            $entries = Get-ChildItem -Path $path -Force -ErrorAction SilentlyContinue
+            $entries = Get-ChildItem -Path (ConvertTo-WzCleanupPattern $rawPath) -Force -ErrorAction SilentlyContinue
             foreach ($entry in $entries) {
                 try {
                     Remove-WzTree -LiteralPath $entry.FullName
@@ -325,8 +367,16 @@ function Clear-WzRecycleBin {
         Clear-RecycleBin -Force -ErrorAction Stop
         return [pscustomobject]@{ Removed = 1; Failed = 0 }
     } catch {
-        # Ein leerer Papierkorb meldet ebenfalls einen Fehler
-        return [pscustomobject]@{ Removed = 0; Failed = 0 }
+        # Ein leerer Papierkorb meldet ebenfalls einen Fehler. Ob es einer
+        # war, zeigt erst die Nachzählung — bisher galt jeder Fehler als
+        # »nichts zu tun« (Audit 2026-10, M7).
+        $grund = $_.Exception.Message
+        $rest = Measure-WzCleanupCategory -Category ([pscustomobject]@{ id = 'recycle-bin'; method = 'recycleBin' })
+        if ($rest.Items -eq 0) {
+            return [pscustomobject]@{ Removed = 0; Failed = 0 }
+        }
+        Write-WzLog (Get-WzText 'clean.logBinFailed' @{ anzahl = $rest.Items; grund = $grund }) -Level Warn
+        return [pscustomobject]@{ Removed = 0; Failed = 1 }
     }
 }
 
