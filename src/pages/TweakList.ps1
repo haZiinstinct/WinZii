@@ -171,6 +171,13 @@ function Invoke-WzTweakSelection {
         return
     }
 
+    # Vor der Rückfrage, nicht erst im Hintergrund: Auf einem schreibgeschützten
+    # Stick würde sonst alles angewendet, nur die Sicherung fehlte (Audit H3).
+    if (-not $syncHash.DryRun -and -not (Test-WzWritableRoot)) {
+        Show-WzInfo -Title (Get-WzText 'opt.writeBlockedTitle') -Message (Get-WzText 'opt.writeBlockedMessage')
+        return
+    }
+
     $riskyCount = @($selected | Where-Object { $_.risk -in @('medium', 'high') }).Count
     $rebootCount = @($selected | Where-Object { $_.requiresReboot }).Count
 
@@ -216,6 +223,11 @@ function Invoke-WzTweakSelection {
         param($summary)
         if (-not $summary) { return }
 
+        if ($summary.PSObject.Properties['WriteBlocked']) {
+            Show-WzInfo -Title (Get-WzText 'opt.writeBlockedTitle') -Message (Get-WzText 'opt.writeBlockedMessage')
+            return
+        }
+
         $lines = @(Get-WzText 'opt.lineApplied' @{ anzahl = $summary.Applied })
         if ($summary.Failed -gt 0) { $lines += Get-WzText 'opt.lineFailed' @{ anzahl = $summary.Failed } }
         if ($summary.RebootRequired) { $lines += Get-WzText 'opt.lineReboot' }
@@ -225,7 +237,7 @@ function Invoke-WzTweakSelection {
             -Summary ((Get-WzText 'opt.actionApplied' @{ anzahl = $summary.Applied }) + $(if ($summary.Failed -gt 0) { Get-WzText 'opt.actionFailedSuffix' @{ anzahl = $summary.Failed } })) `
             -Detail @($selected | ForEach-Object { $_.name })
 
-        Show-WzInfo -Title (Get-WzText 'opt.doneTitle') -Message ($lines -join ' ') -Items @()
+        Show-WzInfo -Title (Get-WzText 'opt.doneTitle') -Message ($lines -join ' ') -Items @($summary.Messages)
         if ($OnDone) { & $OnDone }
     }.GetNewClosure()
 }

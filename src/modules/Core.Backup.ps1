@@ -14,8 +14,11 @@ function New-WzUndoSession {
     #>
     param([Parameter(Mandatory = $true)][string]$Scope)
 
+    # Der Ordner entsteht erst beim ersten Schreiben (Export-WzRegistryKey,
+    # Complete-WzUndoSession). Vorher legte schon der Testmodus ihn an und
+    # räumte ihn am Ende wieder weg.
     $stamp = Get-Date -Format 'yyyy-MM-dd_HHmmss'
-    $directory = Get-WzBackupDir -Stamp "$stamp-$Scope"
+    $directory = Get-WzPath 'backups' $env:COMPUTERNAME "$stamp-$Scope"
 
     return [pscustomobject]@{
         Scope        = $Scope
@@ -83,6 +86,7 @@ function Complete-WzUndoSession {
         exportedKeys = @($Session.ExportedKeys)
     }
 
+    [void](New-WzDirectory $Session.Directory)
     $undoFile = Join-Path $Session.Directory 'undo.json'
     [void](Save-WzJson -InputObject $manifest -Path $undoFile -Depth 12)
     Write-WzLog (Get-WzText 'core.logBackupStored' @{ pfad = $Session.Directory }) -Level Info
@@ -114,6 +118,7 @@ function Export-WzRegistryKey {
         return
     }
 
+    [void](New-WzDirectory $Session.Directory)
     $result = Invoke-WzProcess -FilePath 'reg.exe' -Arguments "export `"$regPath`" `"$target`" /y"
     if ($result.ExitCode -eq 0) {
         [void]$Session.ExportedKeys.Add($Path)

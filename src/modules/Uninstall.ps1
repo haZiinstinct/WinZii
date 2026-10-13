@@ -557,6 +557,15 @@ function Remove-WzUninstallLeftovers {
         return $summary
     }
 
+    # Ohne beschreibbaren Datenträger keine .reg-Sicherung — dann wird nichts
+    # endgültig gelöscht (Audit 2026-10, H3).
+    if (-not (Test-WzWritableRoot)) {
+        $summary.Failed = @($Leftovers | Where-Object { $_ }).Count
+        $summary.Details += Get-WzText 'unin.writeBlocked'
+        Write-WzLog (Get-WzText 'unin.writeBlocked') -Level Error
+        return $summary
+    }
+
     $session = New-WzUndoSession -Scope 'Programmreste'
     $removedPaths = New-Object Collections.ArrayList
 

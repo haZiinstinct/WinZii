@@ -667,6 +667,27 @@ try {
     Remove-Item -LiteralPath Function:\Enable-ScheduledTask, Function:\Disable-ScheduledTask -ErrorAction SilentlyContinue
 }
 
+# --- 11. Schreibgeschützter Datenträger ------------------------------------
+# Ohne Sicherung kein Eingriff (Audit 2026-10, H3). Die Schreibprobe wird
+# durch eine Attrappe ersetzt, die »nicht beschreibbar« meldet.
+Write-Host ''
+Write-Host '11. Schreibgeschützter Datenträger' -ForegroundColor White
+
+$echteSchreibprobe = ${function:Test-WzWritableRoot}
+function Test-WzWritableRoot { $false }
+try {
+    Set-ItemProperty -Path $testKey -Name 'Vorhanden' -Value 42 -Type DWord
+    $gesperrt = Invoke-WzTweaks -Tweaks @($tweak) -Scope 'selbsttest-gesperrt'
+    Write-Check 'nichts angewendet' ((Get-ItemProperty -LiteralPath $testKey).Vorhanden -eq 42 -and $gesperrt.Applied -eq 0)
+    Write-Check 'Grund gemeldet' ($gesperrt.WriteBlocked -and @($gesperrt.Messages).Count -eq 1)
+
+    $restGesperrt = Remove-WzUninstallLeftovers -Leftovers @([pscustomobject]@{
+            Kind = 'Folder'; Path = 'X:\gibt-es-nicht'; TargetPath = 'X:\gibt-es-nicht'; SizeBytes = 0 })
+    Write-Check 'Programmreste: nichts gelöscht, Grund gemeldet' ($restGesperrt.Removed -eq 0 -and $restGesperrt.Failed -eq 1) "Failed=$($restGesperrt.Failed)"
+} finally {
+    Set-Item -Path Function:\Test-WzWritableRoot -Value $echteSchreibprobe
+}
+
 # --- Aufräumen --------------------------------------------------------------
 if (Test-Path -LiteralPath $junctionBasis) {
     try { Remove-WzTree -LiteralPath $junctionBasis } catch { }

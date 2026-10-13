@@ -174,6 +174,15 @@ function Invoke-WzTweaks {
     $items = @($Tweaks)
     if ($items.Count -eq 0) { return $summary }
 
+    # Ohne beschreibbaren Datenträger gibt es keine Sicherung und damit keinen
+    # Rückweg. Dann wird gar nichts angewendet (Audit 2026-10, H3).
+    if (-not $syncHash.DryRun -and -not (Test-WzWritableRoot)) {
+        $summary | Add-Member -NotePropertyName 'WriteBlocked' -NotePropertyValue $true
+        $summary.Messages += Get-WzText 'opt.writeBlockedMessage'
+        Write-WzLog (Get-WzText 'opt.writeBlockedMessage') -Level Error
+        return $summary
+    }
+
     if ($CreateRestorePoint) {
         Write-WzLog (Get-WzText 'opt.logRestorePoint') -Level Action
         [void](New-WzRestorePoint -Description "WinZii — vor $Scope")
@@ -226,9 +235,16 @@ function Invoke-WzTweaks {
     }
 
     if (-not $syncHash.DryRun) {
-        $summary.UndoFile = Complete-WzUndoSession -Session $session
-    } else {
-        try { Remove-Item -LiteralPath $session.Directory -Recurse -Force -ErrorAction Stop } catch { }
+        # Wirft Save-WzJson (Stick zwischendurch abgezogen, voll), sind die
+        # Eingriffe trotzdem geschehen. Ohne Zusammenfassung gäbe es weder
+        # Dialog noch Eintrag im Übergabeblatt (Audit 2026-10, H3).
+        try {
+            $summary.UndoFile = Complete-WzUndoSession -Session $session
+        } catch {
+            $summary.UndoFile = $null
+            $summary.Messages += Get-WzText 'opt.undoSaveFailed' @{ grund = $_.Exception.Message }
+            Write-WzLog (Get-WzText 'opt.undoSaveFailed' @{ grund = $_.Exception.Message }) -Level Error
+        }
     }
 
     return $summary
