@@ -590,7 +590,7 @@ function Remove-WzUninstallLeftovers {
                 Export-WzRegistryKey -Session $session -Path $leftover.TargetPath
                 Remove-Item -LiteralPath $leftover.TargetPath -Recurse -Force -ErrorAction Stop
             } else {
-                Remove-Item -LiteralPath $leftover.TargetPath -Recurse -Force -ErrorAction Stop
+                Remove-WzTree -LiteralPath $leftover.TargetPath
                 $summary.Bytes += $leftover.SizeBytes
             }
             $summary.Removed++

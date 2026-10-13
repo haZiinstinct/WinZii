@@ -17,6 +17,9 @@
 # Ordner endgültig löscht. Erst die beiden Regelwerke, die davor stehen, dann
 # die ganze Kette an einem Wegwerf-Programm, das der Abschnitt selbst anlegt.
 #
+# Abschnitt 9 legt im TEMP-Ordner eine Junction an und prüft, dass Remove-WzTree
+# ihr nicht folgt. Das Ziel ist ebenfalls ein Wegwerf-Ordner.
+#
 # Aufruf:  powershell -NoProfile -ExecutionPolicy Bypass -File tools\Test-Undo.ps1
 [CmdletBinding()]
 param()
@@ -563,7 +566,52 @@ if ($restLauf.UndoFile) {
     try { Remove-Item -LiteralPath $restSession -Recurse -Force -ErrorAction Stop } catch { }
 }
 
+# --- 9. Rekursives Löschen folgt keiner Junction -----------------------------
+# Windows PowerShell 5.1 löscht bei »Remove-Item -Recurse« den Inhalt hinter
+# einer Junction mit. In Windows.old zeigen solche Junctions ins lebende Profil
+# (Audit 2026-10, K2). Nachgebaut im TEMP-Ordner: ein Wegwerf-Ordner mit einer
+# Junction auf einen Zielordner, der danach noch voll sein muss.
+Write-Host ''
+Write-Host '9. Rekursives Löschen folgt keiner Junction' -ForegroundColor White
+
+$junctionBasis = Join-Path $env:TEMP 'WinZii-Selbsttest-Junction'
+$junctionZiel = Join-Path $junctionBasis 'ziel'
+$wegwerf = Join-Path $junctionBasis 'wegwerf'
+$einzelLink = Join-Path $junctionBasis 'einzel-link'
+[void](New-Item -Path (Join-Path $wegwerf 'unter') -ItemType Directory -Force)
+[void](New-Item -Path $junctionZiel -ItemType Directory -Force)
+Set-Content -LiteralPath (Join-Path $junctionZiel 'profil.txt') -Value 'muss bleiben'
+Set-Content -LiteralPath (Join-Path $wegwerf 'unter\weg.txt') -Value 'darf weg'
+$schreibgeschuetzt = Join-Path $wegwerf 'schreibgeschuetzt.txt'
+Set-Content -LiteralPath $schreibgeschuetzt -Value 'darf weg'
+(Get-Item -LiteralPath $schreibgeschuetzt).IsReadOnly = $true
+
+$junctionAngelegt = $false
+try {
+    [void](New-Item -ItemType Junction -Path (Join-Path $wegwerf 'unter\Application Data') -Value $junctionZiel -ErrorAction Stop)
+    [void](New-Item -ItemType Junction -Path $einzelLink -Value $junctionZiel -ErrorAction Stop)
+    $junctionAngelegt = $true
+} catch {
+    Write-Host "  [--]   übersprungen: Junction nicht anlegbar ($($_.Exception.Message))" -ForegroundColor DarkGray
+}
+
+if ($junctionAngelegt) {
+    $loeschFehler = $null
+    try { Remove-WzTree -LiteralPath $wegwerf } catch { $loeschFehler = $_.Exception.Message }
+    Write-Check 'Ordner mit Junction gelöscht' (-not (Test-Path -LiteralPath $wegwerf)) $loeschFehler
+    Write-Check 'Junction-Ziel noch voll' (Test-Path -LiteralPath (Join-Path $junctionZiel 'profil.txt'))
+
+    # Ist der Startpunkt selbst eine Junction, verschwindet nur der Verweis.
+    $loeschFehler = $null
+    try { Remove-WzTree -LiteralPath $einzelLink } catch { $loeschFehler = $_.Exception.Message }
+    Write-Check 'Junction als Startpunkt: nur der Verweis weg' `
+        ((-not (Test-Path -LiteralPath $einzelLink)) -and (Test-Path -LiteralPath (Join-Path $junctionZiel 'profil.txt'))) $loeschFehler
+}
+
 # --- Aufräumen --------------------------------------------------------------
+if (Test-Path -LiteralPath $junctionBasis) {
+    try { Remove-WzTree -LiteralPath $junctionBasis } catch { }
+}
 # Sicherheitsnetz: Bricht Abschnitt 8 mittendrin ab, bleibt weder der
 # Wegwerf-Ordner noch der Schlüssel liegen.
 foreach ($rest in @($restOrdner, $verboten, $sammelOrdner)) {

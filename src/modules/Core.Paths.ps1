@@ -99,6 +99,47 @@ function New-WzDirectory {
     return $Path
 }
 
+function Remove-WzTree {
+    <#
+    .SYNOPSIS
+        Löscht eine Datei oder einen Ordner samt Inhalt, ohne Junctions und
+        symbolischen Links zu folgen. Wirft beim ersten Fehler.
+    .NOTES
+        Windows PowerShell 5.1 steigt bei »Remove-Item -Recurse« in Junctions
+        hinein und löscht den Inhalt des Ziels. Windows.old\Users\<Name> enthält
+        »Application Data« & Co. mit absoluten Zielen ins lebende Profil — der
+        Fallback der Windows.old-Bereinigung hätte so AppData des Kunden geleert
+        (Audit 2026-10, K2). Hier wird jeder Reparsepunkt nur als Link entfernt;
+        DirectoryInfo.Delete() ohne Rekursion ruft RemoveDirectory, und das
+        nimmt bei einer Junction nur den Verweis weg.
+        Iterativ statt rekursiv, damit tiefe Bäume nicht an der Aufruftiefe
+        scheitern. Ordner werden in umgekehrter Fundreihenfolge gelöscht, also
+        immer die Kinder vor dem Elternordner.
+    #>
+    param([Parameter(Mandatory = $true)][string]$LiteralPath)
+
+    $root = Get-Item -LiteralPath $LiteralPath -Force -ErrorAction Stop
+    $dirs = New-Object System.Collections.Generic.List[IO.DirectoryInfo]
+    $stack = New-Object System.Collections.Generic.Stack[IO.FileSystemInfo]
+    $stack.Push($root)
+
+    while ($stack.Count -gt 0) {
+        $item = $stack.Pop()
+        if ($item.Attributes -band [IO.FileAttributes]::ReadOnly) {
+            $item.Attributes = $item.Attributes -band (-bnot [IO.FileAttributes]::ReadOnly)
+        }
+        $isLink = [bool]($item.Attributes -band [IO.FileAttributes]::ReparsePoint)
+        if ($item -is [IO.DirectoryInfo] -and -not $isLink) {
+            $dirs.Add($item)
+            foreach ($child in $item.EnumerateFileSystemInfos()) { $stack.Push($child) }
+        } else {
+            $item.Delete()
+        }
+    }
+
+    for ($i = $dirs.Count - 1; $i -ge 0; $i--) { $dirs[$i].Delete() }
+}
+
 function Test-WzWritableRoot {
     <#
     .SYNOPSIS
