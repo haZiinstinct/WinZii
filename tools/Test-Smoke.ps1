@@ -26,7 +26,9 @@ Write-Host ''
 
 # --- 1. PowerShell-Syntax -------------------------------------------------
 Write-Host '  PowerShell-Syntax' -ForegroundColor White
-foreach ($file in Get-ChildItem "$root\src" -Recurse -Include '*.ps1' -File) {
+# Auch tools\: Ein Syntaxfehler in New-Release.ps1 fiel sonst erst beim
+# Release auf (Audit 2026-10, M40).
+foreach ($file in Get-ChildItem "$root\src", "$root\tools" -Recurse -Include '*.ps1' -File) {
     $checked++
     $parseErrors = $null
     $tokens = $null

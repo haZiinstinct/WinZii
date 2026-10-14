@@ -664,7 +664,7 @@ $typTweak = [pscustomobject]@{
     id = 'selbsttest-typ'; name = 'Selbsttest — Werttyp'; requiresReboot = $false
     actions = @([pscustomobject]@{ type = 'registry'; path = $testKey; name = 'Typ'; valueType = 'DWord'; value = 1 })
 }
-$typLauf = Invoke-WzTweaks -Tweaks @($typTweak) -Scope 'selbsttest-typ'
+[void](Invoke-WzTweaks -Tweaks @($typTweak) -Scope 'selbsttest-typ')
 $typNachher = (Get-Item -LiteralPath $testKey).GetValueKind('Typ')
 Write-Check 'REG_SZ "1" gilt nicht als DWORD 1' ($typNachher -eq 'DWord') "Typ=$typNachher"
 
