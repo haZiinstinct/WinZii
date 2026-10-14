@@ -43,6 +43,28 @@ Alle nennenswerten Änderungen an WinZii. Die Fassungen folgen
   angelegte Schlüssel, Registry-Reste aus der Restesuche (M6, N).
 - **Bereinigung überspringt den Zwischenspeicher eines laufenden Browsers**
   und meldet einen nicht geleerten Papierkorb als Fehler (M7).
+- **winget-Rückgabewerte aus der Quelle neu abgeleitet.** Eine fehlende
+  Abhängigkeit zählte als »installiert, Neustart nötig«, der normale
+  MSI-Neustartfall als Fehlschlag. Jeder Code trägt jetzt Hex-Wert und
+  Symbol aus winget-cli (H4).
+- **Installation aus dem Stick-Vorrat setzt die nötige winget-Einstellung**
+  und fällt bei einem Fehlschlag online zurück (H6, Abnahme ohne Netz
+  steht noch aus).
+- **Signaturprüfung:** Das Office-Bereitstellungswerkzeug braucht eine
+  gültige Microsoft-Signatur, EXE und MSI im Vorrat eine gültige Signatur
+  (M8).
+- **Treiber:** Download-Adressen aus dem Katalog nur über HTTPS von
+  Microsoft (M9), pnputil-Rückgabe 3010 zählt als Erfolg mit Neustart
+  (M10), OEM-Werkzeuge gelten nach der Installation nicht mehr als
+  fehlgeschlagen (M16).
+- **Office:** Der Vorrat kennt seine Bitness (M12), Installieren und
+  Entfernen sind nicht mehr scheinbar abbrechbar, Downloads wirklich (M13),
+  der Wiederherstellungspunkt friert das Fenster nicht mehr ein (M17).
+- **Updates suchen nach dem Einspielen wirklich neu** (M14).
+- **Leere Ergebnislisten bleiben leer** (Katalogsuche zeigte »1 Treffer«),
+  und »beschäftigt« bleibt nach einem Fehler nicht mehr hängen (M15, M28).
+- **Drucker anlegen:** im Testmodus kein »fehlgeschlagen« mehr, im
+  Übergabeblatt nur einmal (M18).
 
 ### Geändert
 
