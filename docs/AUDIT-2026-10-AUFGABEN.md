@@ -1,4 +1,4 @@
-﻿# Aufgabenliste zum Audit 2026-10
+# Aufgabenliste zum Audit 2026-10
 
 Abhakliste zu [AUDIT-2026-10.md](AUDIT-2026-10.md). Dort steht zu jedem Punkt das Szenario und die Begründung; hier steht nur, was zu tun ist und woran man erkennt, dass es erledigt ist. Die Kennungen (K1, H4, M20 …) sind in beiden Dateien gleich.
 
@@ -89,11 +89,11 @@ Jeder Punkt: `- [ ] **Kennung** Datei:Zeile. Aufgabe. → Erledigt wenn …`
 
 ### Oberfläche und Laufzeit
 
-- [ ] **H11** `src/modules/Core.I18n.ps1:420-422`. Merker `AppsChecked`, `OffChecked`, `AiStatesChecked`, `OptStatesChecked`, `CleanScanned` beim Sprachwechsel zurücksetzen (oder alle auf `*Loaded` umbenennen). → Erledigt wenn `Test-LanguageSwitch` einen Apps-Durchlauf enthält und der Installieren-Knopf nach dem Wechsel aktiv ist.
-- [ ] **H12** `src/main.ps1:205-213`. `$window.Add_Closing({ if ($syncHash.Busy) { Rückfrage; $e.Cancel = -not $answer.Confirmed } })`; `BtnClose` ruft nur noch `Close()`. → Erledigt wenn Alt+F4 während einer Aufgabe die Rückfrage zeigt.
+- [x] **H11** `src/modules/Core.I18n.ps1:420-422`. Merker `AppsChecked`, `OffChecked`, `AiStatesChecked`, `OptStatesChecked`, `CleanScanned` beim Sprachwechsel zurücksetzen (oder alle auf `*Loaded` umbenennen). → Erledigt wenn `Test-LanguageSwitch` einen Apps-Durchlauf enthält und der Installieren-Knopf nach dem Wechsel aktiv ist.
+- [x] **H12** `src/main.ps1:205-213`. `$window.Add_Closing({ if ($syncHash.Busy) { Rückfrage; $e.Cancel = -not $answer.Confirmed } })`; `BtnClose` ruft nur noch `Close()`. → Erledigt wenn Alt+F4 während einer Aufgabe die Rückfrage zeigt.
 - [x] **M28** `src/modules/Core.Runspace.ps1:107-137`. Abholung in `try/finally` mit `CurrentTask=$null; Set-WzBusy -Off` im `finally`.
-- [ ] **M29** `src/modules/Core.Ui.ps1:178-184`. Bei Fehler im Initializer `$syncHash.Pages.Remove($Id)`.
-- [ ] **M31** `src/modules/Core.I18n.ps1:68-77, 511-515`, `src/launcher.ps1:34-41`. Nicht-deutsche Primärsprache ohne eigene Datei auf `en` statt `de`. → Erledigt wenn `Test-Language` Abschnitt 8 die Funktion `Get-WzSystemLanguage` wirklich aufruft (siehe auch Stufe 3).
+- [x] **M29** `src/modules/Core.Ui.ps1:178-184`. Bei Fehler im Initializer `$syncHash.Pages.Remove($Id)`.
+- [x] **M31** `src/modules/Core.I18n.ps1:68-77, 511-515`, `src/launcher.ps1:34-41`. Nicht-deutsche Primärsprache ohne eigene Datei auf `en` statt `de`. → Erledigt wenn `Test-Language` Abschnitt 8 die Funktion `Get-WzSystemLanguage` wirklich aufruft (siehe auch Stufe 3).
 - [ ] **N** `src/modules/Core.Ui.ps1:372, 471, 473`. `'Auswahl'`, `'// ACHTUNG'`, `'// HINWEIS'` über `Get-WzText`.
 - [ ] **N** `src/launcher.ps1:130-134`, `tools/Test-Pages.ps1:68`, `tools/Test-LanguageSwitch.ps1:165`. Im `&`-Zweig `$mainScript` ohne eigene Anführungszeichen übergeben; einmal mit Pfad mit Leerzeichen prüfen.
 - [ ] **N** `src/pages/Protocol.ps1:58`. `-ArgumentList ('"{0}"' -f $syncHash.LogFile)`.
@@ -127,7 +127,7 @@ Jeder Punkt: `- [ ] **Kennung** Datei:Zeile. Aufgabe. → Erledigt wenn …`
 - [ ] **N** `.gitattributes:27-31`. `.github/ export-ignore`.
 - [ ] **N** `.gitignore`. `/selftest.png`, `/abbilder/`.
 - [ ] **N** `.editorconfig:9`. `[*.{yml,yaml,txt,gitattributes,gitignore,editorconfig}] end_of_line = lf`.
-- [ ] **N** `tools/Test-Language.ps1:201-216`. `Core.I18n.ps1` dot-sourcen und `Get-WzSystemLanguage` mit umgebogener `Get-UICulture` aufrufen; Z. 259: Einzelwort-Literale in `-ConfirmText`, `-Title`, `-Area` prüfen.
+- [x] **N** `tools/Test-Language.ps1:201-216`. `Core.I18n.ps1` dot-sourcen und `Get-WzSystemLanguage` mit umgebogener `Get-UICulture` aufrufen; Z. 259: Einzelwort-Literale in `-ConfirmText`, `-Title`, `-Area` prüfen.
 - [ ] **N** `tools/Test-Pages.ps1:51, 71`, `tools/Test-Layout.ps1:229`, `tools/Test-Sandbox.ps1:51, 63`. Zusätzlich `$LASTEXITCODE -ne 0` als Fehlschlag.
 - [ ] **N** `tools/Test-Process.ps1:88`. PID des gestarteten Kindprozesses prüfen statt aller `ping`-Prozesse.
 - [ ] **N** `tools/Test-Catalogs.ps1:272, 278-279`. Strukturprüfung für `oemtools.json`, `updatecodes.json`, `wingetcodes.json` (Pflichtfelder, Hex ↔ Dezimal).

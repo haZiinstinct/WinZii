@@ -36,7 +36,14 @@ $vorher = & $felder
 # nächste echte Start auf einem deutschen Gerät kam auf Englisch hoch. Auf dem
 # Abnahmelaptop genau so passiert, eine Minute nach dem Werkzeuglauf.
 [void](Set-WzLanguage -Code 'en' -NoSave)
+# Seiten-Merker wie nach einem Besuch. Nach dem Neuaufbau müssen alle wieder
+# auf $false stehen, sonst bleibt etwa der Installieren-Knopf der Programme-
+# Seite grau (Audit 2026-10, H11).
+$merker = 'AppsChecked', 'OffChecked', 'AiStatesChecked', 'OptStatesChecked', 'CleanScanned', 'DrvLoaded'
+foreach ($m in $merker) { $syncHash[$m] = $true }
 Update-WzLanguageUi
+$stehenGeblieben = @($merker | Where-Object { $syncHash[$_] })
+Write-Host "WZTEST-MERKER $(if ($stehenGeblieben.Count) { 'stehen:' + ($stehenGeblieben -join ',') } else { 'ok' })"
 
 # Neu gemessen wird im Hintergrund, in zwei Stufen nacheinander.
 $grenze = (Get-Date).AddSeconds(90)
@@ -98,6 +105,9 @@ function Pruefe {
 
 Pruefe 'Programm startet und schließt sauber' ($code -eq 0) "exit=$code"
 Pruefe 'Prüfteil hat gemessen' ($null -ne $ergebnis)
+$merkerZeile = @($zeilen | Where-Object { $_ -match 'WZTEST-MERKER' }) | Select-Object -First 1
+$merkerWert = if ($merkerZeile) { ($merkerZeile -replace '.*WZTEST-MERKER\s*', '').Trim() } else { 'fehlt' }
+Pruefe 'Seiten-Merker nach dem Wechsel zurückgesetzt' ($merkerWert -eq 'ok') $(if ($merkerWert -ne 'ok') { $merkerWert } else { '' })
 
 if ($vorher) { Write-Host ("         vorher : " + ($vorher -replace '.*WZTEST-VORHER\s*', '')) -ForegroundColor DarkGray }
 if ($nachher) { Write-Host ("         nachher: " + ($nachher -replace '.*WZTEST-NACHHER\s*', '')) -ForegroundColor DarkGray }

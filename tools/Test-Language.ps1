@@ -198,20 +198,29 @@ if ($dead.Count -gt 0) {
 # Get-WzSystemLanguage liefert hier immer 'de'.
 Write-Host ''
 Write-Host '8. LCID-Zuordnung'
+# Geprüft wird die echte Funktion aus Core.I18n.ps1, nicht eine Kopie ihrer
+# Tabelle: Get-UICulture wird für die Dauer der Prüfung durch eine Attrappe
+# ersetzt, die nacheinander die LCIDs liefert. Bisher prüfte der Abschnitt
+# nur seine eigene Tabelle (Audit 2026-10, N).
 $lcidMap = @{
     0x0407 = 'de'; 0x0C07 = 'de'; 0x0409 = 'en'; 0x0809 = 'en'; 0x0C0A = 'es'
     0x040C = 'fr'; 0x0416 = 'pt'; 0x0816 = 'pt'; 0x0419 = 'ru'; 0x0804 = 'zh'
-    0x0411 = 'ja'; 0x0401 = 'ar'; 0x041F = 'de'   # Türkisch ist nicht vorgesehen -> Rückfall
+    0x0411 = 'ja'; 0x0401 = 'ar'
+    # Ohne Eintrag: Englisch, nicht Deutsch (Audit 2026-10, M31)
+    0x041F = 'en'; 0x0415 = 'en'; 0x0413 = 'en'
 }
-$primaryMap = @{
-    0x07 = 'de'; 0x09 = 'en'; 0x0A = 'es'; 0x0C = 'fr'; 0x16 = 'pt'
-    0x19 = 'ru'; 0x04 = 'zh'; 0x11 = 'ja'; 0x01 = 'ar'
-}
+. (Join-Path $root 'src\modules\Core.I18n.ps1')
+$script:attrappenLcid = 0
+function Get-UICulture { [pscustomobject]@{ LCID = $script:attrappenLcid } }
 $wrong = @()
-foreach ($lcid in $lcidMap.Keys) {
-    $primary = $lcid -band 0x3FF
-    $got = if ($primaryMap.ContainsKey($primary)) { $primaryMap[$primary] } else { 'de' }
-    if ($got -ne $lcidMap[$lcid]) { $wrong += ('0x{0:X4} -> {1}, erwartet {2}' -f $lcid, $got, $lcidMap[$lcid]) }
+try {
+    foreach ($lcid in $lcidMap.Keys) {
+        $script:attrappenLcid = $lcid
+        $got = Get-WzSystemLanguage
+        if ($got -ne $lcidMap[$lcid]) { $wrong += ('0x{0:X4} -> {1}, erwartet {2}' -f $lcid, $got, $lcidMap[$lcid]) }
+    }
+} finally {
+    Remove-Item -LiteralPath Function:\Get-UICulture -ErrorAction SilentlyContinue
 }
 Pruefe 'alle geprüften LCIDs treffen' ($wrong.Count -eq 0) $(if ($wrong.Count) { $wrong[0] } else { "$($lcidMap.Count) geprüft" })
 
