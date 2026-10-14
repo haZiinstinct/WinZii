@@ -582,6 +582,11 @@ function Find-WzCatalogDrivers {
     try {
         [Net.ServicePointManager]::SecurityProtocol =
             [Net.ServicePointManager]::SecurityProtocol -bor [Net.SecurityProtocolType]::Tls12
+        # Anmeldepflichtiger Proxy im Firmennetz: wie in Get-WzDownload mit den
+        # Anmeldedaten des Kontos, sonst endete die Abfrage in einem 407.
+        if ([Net.WebRequest]::DefaultWebProxy) {
+            [Net.WebRequest]::DefaultWebProxy.Credentials = [Net.CredentialCache]::DefaultCredentials
+        }
 
         $query = [Uri]::EscapeDataString($HardwareId)
         $response = Invoke-WebRequest -Uri "https://www.catalog.update.microsoft.com/Search.aspx?q=$query" `
@@ -624,6 +629,29 @@ function ConvertFrom-WzHtmlCell {
     return ($text -replace '\s+', ' ').Trim()
 }
 
+function Test-WzCatalogDownloadUrl {
+    <#
+    .SYNOPSIS
+        Darf von dieser Adresse ein Treiber geladen werden?
+    .NOTES
+        Die Adresse kommt aus einer Skriptseite des Katalogs und wird danach
+        eleviert per pnputil eingespielt. Das erste Muster nahm bisher jede
+        Adresse (Audit 2026-10, M9). Erlaubt ist nur HTTPS zu Microsoft oder
+        Windows Update; der Host wird über [Uri] bestimmt, nicht per
+        Textsuche, damit »https://evil.example/?x=.microsoft.com/« nicht durchrutscht.
+    #>
+    param([string]$Url)
+
+    $uri = $null
+    if (-not [Uri]::TryCreate($Url, [UriKind]::Absolute, [ref]$uri)) { return $false }
+    if ($uri.Scheme -ne 'https') { return $false }
+    $hostName = $uri.Host.ToLowerInvariant()
+    foreach ($domain in @('windowsupdate.com', 'microsoft.com')) {
+        if ($hostName -eq $domain -or $hostName.EndsWith(".$domain")) { return $true }
+    }
+    return $false
+}
+
 function Get-WzCatalogDownloadUrl {
     <#
     .SYNOPSIS
@@ -639,17 +667,27 @@ function Get-WzCatalogDownloadUrl {
     try {
         [Net.ServicePointManager]::SecurityProtocol =
             [Net.ServicePointManager]::SecurityProtocol -bor [Net.SecurityProtocolType]::Tls12
+        # Anmeldepflichtiger Proxy im Firmennetz: wie in Get-WzDownload mit den
+        # Anmeldedaten des Kontos, sonst endete die Abfrage in einem 407.
+        if ([Net.WebRequest]::DefaultWebProxy) {
+            [Net.WebRequest]::DefaultWebProxy.Credentials = [Net.CredentialCache]::DefaultCredentials
+        }
 
         $body = @{ updateIDs = "[{`"size`":0,`"languages`":`"`",`"uidInfo`":`"$UpdateId`",`"updateID`":`"$UpdateId`"}]" }
         $response = Invoke-WebRequest -Uri 'https://www.catalog.update.microsoft.com/DownloadDialog.aspx' `
             -Method Post -Body $body -UseBasicParsing -TimeoutSec 60 -UserAgent 'WinZii'
 
         $match = [regex]::Match($response.Content, "downloadInformation\[\d+\]\.files\[\d+\]\.url\s*=\s*'([^']+)'")
-        if ($match.Success) { return $match.Groups[1].Value }
+        if ($match.Success) {
+            # Ältere Einträge nennen http://; der Server liefert dieselbe Datei
+            # auch über HTTPS, und eleviert eingespielt wird nur, was so kam.
+            $url = $match.Groups[1].Value -replace '^http://', 'https://'
+            if (Test-WzCatalogDownloadUrl $url) { return $url }
+        }
 
         # Zweite Schreibweise, die der Katalog je nach Eintrag benutzt
         $match = [regex]::Match($response.Content, "'(https://[^']*download\.windowsupdate\.com/[^']+)'")
-        if ($match.Success) { return $match.Groups[1].Value }
+        if ($match.Success -and (Test-WzCatalogDownloadUrl $match.Groups[1].Value)) { return $match.Groups[1].Value }
     } catch {
         Write-WzLog (Get-WzText 'drv.logCatalogUnreachable' @{ grund = $_.Exception.Message.Split([char]10)[0] }) -Level Warn
     }
