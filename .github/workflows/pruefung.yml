@@ -85,6 +85,11 @@ jobs:
         shell: powershell
         run: .\tools\Test-Office.ps1
 
+      - name: Test-Report
+        if: always()
+        shell: powershell
+        run: .\tools\Test-Report.ps1
+
       - name: Test-Process
         if: always()
         shell: powershell
