@@ -507,7 +507,21 @@ function Import-WzPrinters {
             # Netzwerkdrucker hängen an einem freigegebenen Pfad, lokale an einem
             # Anschluss — Add-Printer verlangt dafür verschiedene Parameter.
             if ($printer.netzwerk -and $printer.anschluss -like '\\*') {
-                Add-Printer -ConnectionName $printer.anschluss -ErrorAction Stop
+                # Druckerverbindungen gelten pro Benutzer wie Netzlaufwerke
+                # (Audit 2026-10, M24): im Kontext des Anwenders anlegen.
+                $verbindung = [string]$printer.anschluss
+                if ($verbindung -notmatch '^\\\\[^\\/:*?"<>|\x00-\x1F]+\\[^\x00-\x1F]+$') {
+                    throw (Get-WzText 'rest.printerConnectionInvalid' @{ pfad = $verbindung })
+                }
+                if (Test-WzNeedsUserContext) {
+                    $skript = "try { Add-Printer -ConnectionName '{0}' -ErrorAction Stop; exit 0 } catch { exit 1 }" -f $verbindung.Replace("'", "''")
+                    $lauf = Invoke-WzAsInteractiveUser -Script $skript -TimeoutSeconds 120
+                    if (-not ($lauf.Ran -and $lauf.ExitCode -eq 0)) {
+                        throw $(if ($lauf.Error) { $lauf.Error } else { Get-WzText 'rest.userContextFailed' @{ code = $lauf.ExitCode } })
+                    }
+                } else {
+                    Add-Printer -ConnectionName $verbindung -ErrorAction Stop
+                }
             } else {
                 if (-not (Get-PrinterPort -Name $printer.anschluss -ErrorAction SilentlyContinue)) {
                     # Nur Netzwerkanschlüsse lassen sich anlegen. USB001,
@@ -601,11 +615,36 @@ function Import-WzMappedDrives {
             continue
         }
 
+        # Die Werte kommen aus einer Datei auf dem Stick und landen in einem
+        # Skript. Nur ein Buchstabe und ein schlichter UNC-Pfad sind erlaubt.
+        $ziel = [string]$drive.ziel
+        if ($letter -notmatch '^[A-Za-z]$' -or $ziel -notmatch '^\\\\[^\\/:*?"<>|\x00-\x1F]+\\[^\x00-\x1F]+$') {
+            $failed += Get-WzText 'rest.driveEntry' @{ buchstabe = $letter; ziel = $ziel }
+            Write-WzLog (Get-WzText 'rest.logDriveInvalid' @{ buchstabe = $letter; ziel = $ziel }) -Level Warn
+            continue
+        }
+
+        # Netzlaufwerke gelten pro Benutzer und Token. Aus dem erhöhten WinZii
+        # angelegt, landeten sie im falschen Profil oder waren im Explorer
+        # unsichtbar (Audit 2026-10, M24) — deshalb im Kontext des Anwenders.
+        if (Test-WzNeedsUserContext) {
+            $skript = "try { New-SmbMapping -LocalPath '{0}:' -RemotePath '{1}' -Persistent `$true -ErrorAction Stop | Out-Null; exit 0 } catch { exit 1 }" -f $letter, $ziel.Replace("'", "''")
+            $lauf = Invoke-WzAsInteractiveUser -Script $skript
+            if ($lauf.Ran -and $lauf.ExitCode -eq 0) {
+                $applied += Get-WzText 'rest.driveEntry' @{ buchstabe = $letter; ziel = $ziel }
+            } else {
+                $failed += Get-WzText 'rest.driveEntry' @{ buchstabe = $letter; ziel = $ziel }
+                $grund = if ($lauf.Error) { $lauf.Error } else { Get-WzText 'rest.userContextFailed' @{ code = $lauf.ExitCode } }
+                Write-WzLog (Get-WzText 'rest.logDriveFailed' @{ buchstabe = $letter; grund = $grund }) -Level Warn
+            }
+            continue
+        }
+
         try {
-            New-SmbMapping -LocalPath "${letter}:" -RemotePath $drive.ziel -Persistent $true -ErrorAction Stop | Out-Null
-            $applied += Get-WzText 'rest.driveEntry' @{ buchstabe = $letter; ziel = $drive.ziel }
+            New-SmbMapping -LocalPath "${letter}:" -RemotePath $ziel -Persistent $true -ErrorAction Stop | Out-Null
+            $applied += Get-WzText 'rest.driveEntry' @{ buchstabe = $letter; ziel = $ziel }
         } catch {
-            $failed += Get-WzText 'rest.driveEntry' @{ buchstabe = $letter; ziel = $drive.ziel }
+            $failed += Get-WzText 'rest.driveEntry' @{ buchstabe = $letter; ziel = $ziel }
             Write-WzLog (Get-WzText 'rest.logDriveFailed' @{ buchstabe = $letter; grund = $_.Exception.Message.Split([char]10)[0] }) -Level Warn
         }
     }

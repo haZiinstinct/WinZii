@@ -894,6 +894,83 @@ function Format-WzUptime {
     return ($parts -join ' ')
 }
 
+function Test-WzNeedsUserContext {
+    <#
+    .SYNOPSIS
+        Muss etwas Benutzerbezogenes über Invoke-WzAsInteractiveUser laufen?
+    .NOTES
+        Ja, wenn WinZii erhöht läuft (eigenes Token, getrennt vom Explorer des
+        Anwenders) oder unter einem anderen Konto als dem am Bildschirm.
+    #>
+    $identity = [Security.Principal.WindowsIdentity]::GetCurrent()
+    $elevated = ([Security.Principal.WindowsPrincipal]$identity).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)
+    if ($elevated) { return $true }
+    return [bool](Get-WzInteractiveProfile)
+}
+
+function Invoke-WzAsInteractiveUser {
+    <#
+    .SYNOPSIS
+        Führt ein kurzes PowerShell-Skript im Kontext des am Bildschirm
+        angemeldeten Anwenders aus, ohne erhöhte Rechte.
+    .DESCRIPTION
+        Netzlaufwerke und Druckerverbindungen gelten pro Benutzer und pro
+        Token. Aus dem erhöhten WinZii angelegt, landeten sie bei einem
+        Technikerkonto im falschen Profil und waren bei Selbst-Elevierung im
+        Explorer unsichtbar (Audit 2026-10, M24).
+        Weg: eine einmalige geplante Aufgabe mit dem Anwender als Prinzipal,
+        interaktiver Anmeldung und eingeschränkten Rechten; starten, abwarten,
+        löschen. Das Skript geht als -EncodedCommand mit — der Aufrufer muss
+        alle eingesetzten Werte vorher prüfen und maskieren.
+    .OUTPUTS
+        PSCustomObject mit Ran, ExitCode, Error.
+    #>
+    param(
+        [Parameter(Mandatory = $true)][string]$Script,
+        [int]$TimeoutSeconds = 60
+    )
+
+    $result = [pscustomobject]@{ Ran = $false; ExitCode = $null; Error = '' }
+    try {
+        $user = (Get-CimInstance -ClassName Win32_ComputerSystem -ErrorAction Stop).UserName
+    } catch { $user = $null }
+    if (-not $user) {
+        $result.Error = Get-WzText 'core.noInteractiveUser'
+        return $result
+    }
+
+    $encoded = [Convert]::ToBase64String([Text.Encoding]::Unicode.GetBytes($Script))
+    $taskPath = '\WinZii\'
+    $taskName = 'Benutzerkontext-' + [guid]::NewGuid().ToString('N')
+    try {
+        $action = New-ScheduledTaskAction -Execute 'powershell.exe' `
+            -Argument "-NoProfile -NonInteractive -WindowStyle Hidden -ExecutionPolicy Bypass -EncodedCommand $encoded"
+        $principal = New-ScheduledTaskPrincipal -UserId $user -LogonType Interactive -RunLevel Limited
+        [void](Register-ScheduledTask -TaskName $taskName -TaskPath $taskPath -Action $action -Principal $principal -ErrorAction Stop)
+        Start-ScheduledTask -TaskName $taskName -TaskPath $taskPath -ErrorAction Stop
+
+        # 267011 heißt »noch nie gelaufen« — direkt nach dem Start normal.
+        $deadline = (Get-Date).AddSeconds($TimeoutSeconds)
+        do {
+            Start-Sleep -Milliseconds 300
+            $task = Get-ScheduledTask -TaskName $taskName -TaskPath $taskPath -ErrorAction Stop
+            $info = Get-ScheduledTaskInfo -TaskName $taskName -TaskPath $taskPath -ErrorAction Stop
+        } while ((Get-Date) -lt $deadline -and ($task.State -eq 'Running' -or $info.LastTaskResult -eq 267011))
+
+        if ($task.State -eq 'Running' -or $info.LastTaskResult -eq 267011) {
+            $result.Error = Get-WzText 'core.userTaskTimeout' @{ sekunden = $TimeoutSeconds }
+        } else {
+            $result.Ran = $true
+            $result.ExitCode = [int]$info.LastTaskResult
+        }
+    } catch {
+        $result.Error = $_.Exception.Message.Split([char]10)[0]
+    } finally {
+        Unregister-ScheduledTask -TaskName $taskName -TaskPath $taskPath -Confirm:$false -ErrorAction SilentlyContinue
+    }
+    return $result
+}
+
 function Get-WzInteractiveProfile {
     <#
     .SYNOPSIS
