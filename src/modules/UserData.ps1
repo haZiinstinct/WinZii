@@ -212,32 +212,40 @@ function Get-WzOneDriveState {
         # Zeitbudget: Bei sechsstelligen Dateizahlen dauert die Zählung Minuten
         # und sieht aus wie ein Absturz. Lieber ehrlich abbrechen und das sagen.
         $watch = [Diagnostics.Stopwatch]::StartNew()
-        try {
-            foreach ($file in [IO.Directory]::EnumerateFiles($path, '*', [IO.SearchOption]::AllDirectories)) {
-                try {
-                    $info = New-Object IO.FileInfo($file)
-                    $attributes = [int]$info.Attributes
-                    if (($attributes -band [int][IO.FileAttributes]::Offline) -ne 0 -or
-                        ($attributes -band $recallOnDataAccess) -ne 0) {
-                        $cloudOnly++
-                    } else {
-                        $localBytes += $info.Length
-                        $localFiles++
-                    }
-                } catch { }
+        # Ordner einzeln, damit ein gesperrter Zweig nicht die ganze Zählung
+        # beendet (Audit M25). Unlesbare Zweige machen das Ergebnis unvollständig.
+        $tree = Get-WzDirectoryTree -Path $path
+        if ($tree.Skipped -gt 0) { $incomplete = $true; $anyIncomplete = $true }
+        :zaehlen foreach ($dir in $tree.Directories) {
+            try {
+                foreach ($info in $dir.EnumerateFiles()) {
+                    try {
+                        $attributes = [int]$info.Attributes
+                        if (($attributes -band [int][IO.FileAttributes]::Offline) -ne 0 -or
+                            ($attributes -band $recallOnDataAccess) -ne 0) {
+                            $cloudOnly++
+                        } else {
+                            $localBytes += $info.Length
+                            $localFiles++
+                        }
+                    } catch { }
 
-                $count = $localFiles + $cloudOnly
-                if (($count % 20000) -eq 0 -and $count -gt 0) {
-                    Write-WzLog (Get-WzText 'data.logOneDriveCounted' @{ anzahl = $count }) -Level Info
+                    $count = $localFiles + $cloudOnly
+                    if (($count % 20000) -eq 0 -and $count -gt 0) {
+                        Write-WzLog (Get-WzText 'data.logOneDriveCounted' @{ anzahl = $count }) -Level Info
+                    }
+                    if ($watch.Elapsed.TotalSeconds -gt 45) {
+                        $incomplete = $true
+                        $anyIncomplete = $true
+                        Write-WzLog (Get-WzText 'data.logOneDriveAborted' @{ anzahl = $count }) -Level Warn
+                        break zaehlen
+                    }
                 }
-                if ($watch.Elapsed.TotalSeconds -gt 45) {
-                    $incomplete = $true
-                    $anyIncomplete = $true
-                    Write-WzLog (Get-WzText 'data.logOneDriveAborted' @{ anzahl = $count }) -Level Warn
-                    break
-                }
+            } catch {
+                $incomplete = $true
+                $anyIncomplete = $true
             }
-        } catch { }
+        }
 
         if ($cloudOnly -gt 0) { $anyPlaceholder = $true }
 

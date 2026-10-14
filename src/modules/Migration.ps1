@@ -284,17 +284,19 @@ function Get-WzPlaceholderCount {
 
     $recallOnDataAccess = 0x00400000
     $count = 0
-    try {
-        foreach ($file in [IO.Directory]::EnumerateFiles($Path, '*', [IO.SearchOption]::AllDirectories)) {
-            try {
-                $attributes = [int][IO.File]::GetAttributes($file)
+    # Ordner einzeln: Ein gesperrter Zweig beendete sonst die Zählung, und
+    # es hieß »0 Platzhalter« (Audit 2026-10, M25).
+    foreach ($dir in (Get-WzDirectoryTree -Path $Path).Directories) {
+        try {
+            foreach ($info in $dir.EnumerateFiles()) {
+                $attributes = [int]$info.Attributes
                 if (($attributes -band [int][IO.FileAttributes]::Offline) -ne 0 -or
                     ($attributes -band $recallOnDataAccess) -ne 0) {
                     $count++
                 }
-            } catch { }
-        }
-    } catch { }
+            }
+        } catch { }
+    }
     return $count
 }
 

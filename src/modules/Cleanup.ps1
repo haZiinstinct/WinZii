@@ -187,14 +187,17 @@ function Measure-WzPathSet {
         foreach ($target in $targets) {
             try {
                 if ([IO.Directory]::Exists($target)) {
-                    foreach ($file in [IO.Directory]::EnumerateFiles($target, '*', [IO.SearchOption]::AllDirectories)) {
+                    # Ordner einzeln: Ein gesperrter Unterordner beendete
+                    # sonst die ganze Messung (Audit 2026-10, M25).
+                    foreach ($dir in (Get-WzDirectoryTree -Path $target).Directories) {
                         try {
-                            $info = New-Object IO.FileInfo($file)
-                            $bytes += $info.Length
-                            $items++
-                            if ($info.LastWriteTime -lt $threshold) {
-                                $oldBytes += $info.Length
-                                $oldItems++
+                            foreach ($info in $dir.EnumerateFiles()) {
+                                $bytes += $info.Length
+                                $items++
+                                if ($info.LastWriteTime -lt $threshold) {
+                                    $oldBytes += $info.Length
+                                    $oldItems++
+                                }
                             }
                         } catch { }
                     }
