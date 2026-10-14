@@ -49,8 +49,21 @@ function Get-WzAutostartItems {
     # Anwender aufgelöst: Bei Elevierung mit einem Technikerkonto zeigte
     # GetFolderPath('Startup') sonst dessen Ordner, und das Umschalten schrieb
     # in dessen HKCU (Audit 2026-10, M5).
-    $roaming = Get-WzUserFolder -Kind 'RoamingAppData'
-    $userStartup = if ($roaming) { Join-Path $roaming 'Microsoft\Windows\Start Menu\Programs\Startup' } else { $null }
+    # Ein umgeleiteter Startordner (Gruppenrichtlinie, Profil auf Server)
+    # steht unter »User Shell Folders«; der feste Pfad ist nur der Rückfall.
+    $userStartup = $null
+    try {
+        $shellFolders = Resolve-WzRegistryPath 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer\User Shell Folders'
+        # Unaufgelöst lesen: Get-ItemProperty setzte für %USERPROFILE% das
+        # Profil des laufenden Kontos ein, nicht das des Anwenders.
+        $eingetragen = (Get-Item -LiteralPath $shellFolders -ErrorAction Stop).GetValue('Startup', $null,
+            [Microsoft.Win32.RegistryValueOptions]::DoNotExpandEnvironmentNames)
+        if ($eingetragen) { $userStartup = Expand-WzUserPath $eingetragen }
+    } catch { }
+    if (-not $userStartup) {
+        $roaming = Get-WzUserFolder -Kind 'RoamingAppData'
+        if ($roaming) { $userStartup = Join-Path $roaming 'Microsoft\Windows\Start Menu\Programs\Startup' }
+    }
     $folders = @(
         @{ Path = $userStartup; Scope = (Get-WzText 'auto.scopeThisUser'); Approved = (Resolve-WzRegistryPath 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer\StartupApproved\StartupFolder') }
         @{ Path = [Environment]::GetFolderPath('CommonStartup'); Scope = (Get-WzText 'auto.scopeAllUsers'); Approved = 'HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\StartupApproved\StartupFolder' }
@@ -58,7 +71,9 @@ function Get-WzAutostartItems {
 
     foreach ($folder in $folders) {
         if (-not $folder.Path -or -not (Test-Path -LiteralPath $folder.Path)) { continue }
-        foreach ($file in (Get-ChildItem -LiteralPath $folder.Path -File -ErrorAction SilentlyContinue)) {
+        # -Force: Versteckte Dateien starten genauso mit — und sind der
+        # naheliegende Weg, sich vor genau dieser Liste zu verbergen.
+        foreach ($file in (Get-ChildItem -LiteralPath $folder.Path -File -Force -ErrorAction SilentlyContinue)) {
             if ($file.Name -eq 'desktop.ini') { continue }
             [void]$items.Add([pscustomobject]@{
                 Name       = $file.BaseName
@@ -145,7 +160,14 @@ function Set-WzAutostartItem {
                 Disable-ScheduledTask -TaskPath $Item.TaskPath -TaskName $Item.Name -ErrorAction Stop | Out-Null
             }
         } else {
-            $approvedPath = $Item.ApprovedPath
+            # Geschrieben wird nur unter einem der drei StartupApproved-
+            # Schlüssel und nur ein schlichter Wertname. Das Eintragsobjekt
+            # kommt aus der Oberfläche zurück; was dort drinsteht, wird hier
+            # nicht blind übernommen.
+            $approvedPath = [string]$Item.ApprovedPath
+            if ($approvedPath -notmatch '\\Explorer\\StartupApproved\\(Run|Run32|StartupFolder)$') {
+                throw (Get-WzText 'auto.errApprovedPath' @{ pfad = $approvedPath })
+            }
             if (-not (Test-Path -LiteralPath $approvedPath)) {
                 [void](New-Item -Path $approvedPath -Force -ErrorAction Stop)
             }

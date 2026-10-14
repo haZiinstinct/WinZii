@@ -540,6 +540,7 @@
     "tipCommand": "{befehl}\n\nQuelle: {pfad}\nGilt für: {bereich}",
     "logToggleTest": "[Test] {name} würde {aktion}",
     "logToggleFailed": "{name} konnte nicht {aktion} werden: {grund}",
+    "errApprovedPath": "unerwarteter Schaltschlüssel, nichts geändert: {pfad}",
     "activeCount": "{anzahl} aktiv",
     "taskLoad": "Autostart einlesen",
     "actionEnabled": "aktiviert",
