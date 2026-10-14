@@ -220,7 +220,10 @@ function Get-WzFilePublisher {
         # Pfad aus der Befehlszeile herauslösen
         $path = if ($Command -match '^"([^"]+)"') {
             $Matches[1]
-        } elseif ($Command -match '^(\S+\.exe)') {
+        } elseif ($Command -match '^(.+?\.exe)(\s|$)') {
+            # Ohne Anführungszeichen, auch mit Leerzeichen im Pfad: Bisher
+            # endete der Pfad am ersten Leerzeichen, und jeder Eintrag unter
+            # »C:\Program Files« blieb ohne Herausgeber (Audit 2026-10, N).
             $Matches[1]
         } else {
             $Command
