@@ -303,7 +303,22 @@ function Invoke-WzDiskSpeedTest {
 
     # Auf dem Systemlaufwerk, nicht auf dem Stick: Gefragt ist die Platte, mit
     # der der Kunde arbeitet.
-    $folder = Join-Path $env:TEMP 'WinZii-Tempo'
+    # Bisher %TEMP%: Das liegt nicht immer auf dem Systemlaufwerk, der Ordner
+    # blieb nach der Messung stehen, und ob 256 MB frei waren, fragte niemand
+    # (Audit 2026-10, N). Jetzt ein eigener Wegwerf-Ordner unter
+    # %SystemDrive%\Windows\Temp, vorher Platz prüfen, danach alles weg.
+    $systemTemp = Join-Path $env:SystemRoot 'Temp'
+    if (-not (Test-Path -LiteralPath $systemTemp)) { $systemTemp = $env:TEMP }
+    try {
+        $laufwerk = New-Object IO.DriveInfo ([IO.Path]::GetPathRoot($systemTemp))
+        if ($laufwerk.AvailableFreeSpace -lt ($SizeMb * 1MB * 2)) {
+            $result.Ok = $false
+            $result.Verdict = Get-WzText 'health.diskNoSpace' @{ groesse = $SizeMb; laufwerk = $laufwerk.Name }
+            Write-WzLog $result.Verdict -Level Warn
+            return $result
+        }
+    } catch { }
+    $folder = Join-Path $systemTemp "WinZii-Tempo-$PID"
     [void](New-WzDirectory $folder)
     $file = Join-Path $folder 'messung.bin'
 
@@ -350,6 +365,7 @@ function Invoke-WzDiskSpeedTest {
         return $result
     } finally {
         Remove-Item -LiteralPath $file -Force -ErrorAction SilentlyContinue
+        Remove-Item -LiteralPath $folder -Force -ErrorAction SilentlyContinue
     }
 
     # Unter 100 MB/s schreibend ist es eine Festplatte oder eine SSD am Ende.

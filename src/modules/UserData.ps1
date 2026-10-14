@@ -323,6 +323,14 @@ function Get-WzBrowserProfiles {
             $bookmarks = @(Get-ChildItem -LiteralPath $browser.Path -Filter 'Bookmarks' -File -Recurse -Depth 1 -ErrorAction SilentlyContinue)
         } else {
             $bookmarks = @(Get-ChildItem -LiteralPath $browser.Path -Filter 'places.sqlite' -File -Recurse -Depth 1 -ErrorAction SilentlyContinue)
+            # places.sqlite ist bei laufendem Firefox gesperrt. Die jüngste
+            # automatische Sicherung daneben lässt sich immer lesen und taugt
+            # zum Wiederherstellen (Audit 2026-10, N).
+            foreach ($places in @($bookmarks)) {
+                $sicherung = Get-ChildItem -LiteralPath (Join-Path $places.DirectoryName 'bookmarkbackups') -Filter '*.jsonlz4' -File -ErrorAction SilentlyContinue |
+                    Sort-Object LastWriteTime -Descending | Select-Object -First 1
+                if ($sicherung) { $bookmarks += $sicherung }
+            }
         }
 
         $measure = Measure-WzPathSet -Paths @($browser.Path)
@@ -343,16 +351,33 @@ function Get-WzWlanProfiles {
     .SYNOPSIS
         Namen der gespeicherten WLAN-Netze.
     #>
-    $profiles = @()
     $result = Invoke-WzProcess -FilePath 'netsh.exe' -Arguments 'wlan show profiles' -TimeoutSeconds 30
     if ($result.ExitCode -ne 0) { return @() }
+    return @(ConvertFrom-WzWlanProfileList -Output $result.StdOut)
+}
 
-    foreach ($line in ($result.StdOut -split "`r?`n")) {
-        # Deutsch: "Alle Benutzerprofile : Name" · Englisch: "All User Profile : Name"
-        if ($line -match '^\s*(?:Alle Benutzerprofile|All User Profile)\s*:\s*(.+)$') {
-            $name = $Matches[1].Trim()
-            if ($name) { $profiles += $name }
-        }
+function ConvertFrom-WzWlanProfileList {
+    <#
+    .SYNOPSIS
+        Profilnamen aus der Ausgabe von »netsh wlan show profiles«.
+    #>
+    param([AllowEmptyString()][string]$Output)
+
+    $profiles = @()
+    # Sprachneutral: Die Beschriftung (»Alle Benutzerprofile«, »All User
+    # Profile«, »Tous les profils utilisateurs« …) ist übersetzt, der Aufbau
+    # nicht. Profile stehen eingerückt unter einer Trennlinie als
+    # »Beschriftung : Name«. Getrennt wird am ersten » : «, weil ein Netzname
+    # selbst Doppelpunkte enthalten darf. Bisher wurden nur Deutsch und
+    # Englisch erkannt (Audit 2026-10, N).
+    $nachTrennlinie = $false
+    foreach ($line in ($Output -split "`r?`n")) {
+        if ($line -match '^\s*-{3,}\s*$') { $nachTrennlinie = $true; continue }
+        if (-not $nachTrennlinie -or $line -notmatch '^\s{2,}\S') { continue }
+        $trenner = $line.IndexOf(' : ')
+        if ($trenner -lt 0) { continue }
+        $name = $line.Substring($trenner + 3).Trim()
+        if ($name) { $profiles += $name }
     }
     return @($profiles)
 }
@@ -369,12 +394,14 @@ function Export-WzWlanProfiles {
     [CmdletBinding()]
     param([switch]$IncludeKeys)
 
-    $target = New-WzDirectory (Join-Path (Get-WzUserDataDir) 'wlan')
+    # Angelegt wird erst nach der Testmodus-Weiche (Audit 2026-10, N).
+    $target = Get-WzPath 'offline' 'daten' $env:COMPUTERNAME 'wlan'
 
     if ($syncHash.DryRun) {
         Write-WzLog (Get-WzText 'data.logWlanTest' @{ ziel = $target }) -Level Test
         return [pscustomobject]@{ Count = 0; Path = $target }
     }
+    [void](New-WzDirectory $target)
 
     $arguments = "wlan export profile folder=`"$target`""
     if ($IncludeKeys) { $arguments += ' key=clear' }
@@ -624,10 +651,14 @@ function Export-WzBrowserBookmarks {
     #>
     param([Parameter(Mandatory = $true)]$Browsers)
 
-    $target = New-WzDirectory (Join-Path (Get-WzUserDataDir) 'lesezeichen')
+    $target = Get-WzPath 'offline' 'daten' $env:COMPUTERNAME 'lesezeichen'
+    if (-not $syncHash.DryRun) { [void](New-WzDirectory $target) }
     $count = 0
 
     foreach ($browser in $Browsers) {
+        if (-not $syncHash.DryRun -and (Get-WzBrowserProcess -BrowserName $browser.Name)) {
+            Write-WzLog (Get-WzText 'data.logBookmarkBrowserRuns' @{ browser = $browser.Name }) -Level Warn
+        }
         foreach ($file in $browser.BookmarkFiles) {
             if ($syncHash.DryRun) {
                 Write-WzLog (Get-WzText 'data.logBookmarkTest' @{ browser = $browser.Name; datei = (Split-Path -Leaf $file) }) -Level Test

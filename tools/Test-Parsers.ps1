@@ -216,6 +216,19 @@ foreach ($f in $pnputilFaelle) {
         "Erfolg=$($v.Success) Neustart=$($v.RebootRequired)"
 }
 
+# WLAN-Profile aus »netsh wlan show profiles« — sprachneutral, also auch
+# auf einem französischen Windows (Audit 2026-10, N).
+. (Join-Path $root 'src\modules\UserData.ps1')
+$netshAusgaben = @(
+    @{ Sprache = 'de'; Text = "Profile auf Schnittstelle WLAN:`r`n`r`nGruppenrichtlinienprofile (schreibgeschützt)`r`n---------------------------------`r`n    <Kein>`r`n`r`nBenutzerprofile`r`n---------------`r`n    Alle Benutzerprofile : FRITZ!Box 7590 XY`r`n    Alle Benutzerprofile : Büro: Gäste`r`n" }
+    @{ Sprache = 'en'; Text = "Profiles on interface Wi-Fi:`r`n`r`nGroup policy profiles (read only)`r`n---------------------------------`r`n    <None>`r`n`r`nUser profiles`r`n-------------`r`n    All User Profile     : FRITZ!Box 7590 XY`r`n    All User Profile     : Büro: Gäste`r`n" }
+    @{ Sprache = 'fr'; Text = "Profils sur l'interface Wi-Fi :`r`n`r`nProfils de stratégie de groupe (lecture seule)`r`n---------------------------------`r`n    <Aucun>`r`n`r`nProfils utilisateurs`r`n--------------------`r`n    Profil Tous les utilisateurs   : FRITZ!Box 7590 XY`r`n    Profil Tous les utilisateurs   : Büro: Gäste`r`n" }
+)
+foreach ($ausgabe in $netshAusgaben) {
+    $namen = @(ConvertFrom-WzWlanProfileList -Output $ausgabe.Text)
+    Pruefe "WLAN-Profile [$($ausgabe.Sprache)]" ($namen.Count -eq 2 -and $namen[0] -eq 'FRITZ!Box 7590 XY' -and $namen[1] -eq 'Büro: Gäste') ($namen -join ' | ')
+}
+
 # Die Download-Adresse kommt aus einer Skriptseite und wird eleviert
 # eingespielt. Nur HTTPS zu Microsoft oder Windows Update (Audit M9).
 $adressen = @(

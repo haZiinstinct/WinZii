@@ -234,6 +234,10 @@ function Test-WzInternetAccess {
         param([string]$Url, [bool]$Redirects)
         $request = [Net.HttpWebRequest]::Create($Url)
         $request.Timeout = $TimeoutMs
+        # Timeout gilt nur bis zur Antwort. Ein hängendes Portal, das die
+        # Kopfzeilen schickt und dann schweigt, hielt ReadToEnd bis zu
+        # 300 s fest (Audit 2026-10, N).
+        $request.ReadWriteTimeout = $TimeoutMs
         $request.UserAgent = 'WinZii'
         $request.AllowAutoRedirect = $Redirects
         $response = $request.GetResponse()

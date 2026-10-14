@@ -1147,7 +1147,25 @@ function Export-WzInventory {
         # Semikolon und UTF-8 mit BOM: So öffnet Excel die Datei im
         # deutschsprachigen Raum ohne Rückfrage und mit heilen Umlauten.
         $object = [pscustomobject]$record
-        $csv = @($object | ConvertTo-Csv -NoTypeInformation -Delimiter ';')
+
+        # Für die CSV eine eigene Fassung (Audit 2026-10, N):
+        # - Zahlen mit Dezimalkomma. Die Datei ist mit Semikolon für ein
+        #   deutsches Excel gebaut, und dort wurde »7.9« zum Datum.
+        # - Kunde, Auftragsnummer, Modell kommen von fremder Hand. Beginnt ein
+        #   Wert mit =, +, -, @, Tab oder CR, liest Excel ihn als Formel; ein
+        #   vorangestelltes ' macht ihn wieder zu Text.
+        $deutsch = [Globalization.CultureInfo]::GetCultureInfo('de-DE')
+        $csvRecord = [ordered]@{}
+        foreach ($key in $record.Keys) {
+            $value = $record[$key]
+            if ($value -is [double] -or $value -is [decimal]) {
+                $value = $value.ToString('0.0', $deutsch)
+            } elseif ($value -is [string] -and $value -match "^[=+\-@`t`r]") {
+                $value = "'" + $value
+            }
+            $csvRecord[$key] = $value
+        }
+        $csv = @([pscustomobject]$csvRecord | ConvertTo-Csv -NoTypeInformation -Delimiter ';')
         [IO.File]::WriteAllLines($result.CsvPath, $csv, (New-Object Text.UTF8Encoding($true)))
 
         $json = $object | ConvertTo-Json -Depth 4

@@ -68,24 +68,24 @@ Jeder Punkt: `- [ ] **Kennung** Datei:Zeile. Aufgabe. → Erledigt wenn …`
 - [ ] **H10** `src/modules/UserData.ps1:51-58, 95-108`, `src/modules/Migration.ps1:80-88`. Known-Folder-Ziele aus `HKCU\…\User Shell Folders` (Desktop, Personal, My Pictures, My Video, My Music, `{374DE290-…}`) auflösen; OneDrive-Ordner als eigenen Kopierauftrag anbieten; vor dem Kopieren bei Platzhaltern warnen. → Erledigt wenn auf einem Win11 mit Ordnersicherung die Bestandsaufnahme die richtigen Größen zeigt.
 - [x] **M20** `src/modules/Report.ps1:173-182` (`New-WzHtmlCard`). Zeilen als Objekte `@{Label;Value;Kind}` übergeben statt `|`-Strings; `$kind` gegen Whitelist `ok|warn|err|info`; mindestens `-split '\|', 3`. Aufrufer: `:347-348, 354-355, 625-628, 635, 654-655, 663-664, 900, 913, 916`. → Erledigt wenn eine SSID `Gast|" onmouseover="x` im Bericht als Text erscheint. Umgesetzt im Parser von New-WzHtmlCard (Art nur als letzter Teil und nur aus der Liste, Wert darf »|« enthalten) statt durch Umbau aller Aufrufer auf Objekte.
 - [x] **M21** `src/modules/Report.ps1:228-232` (`New-WzHtmlTable`). Heuristik `^<(span|a|strong|em)\b` entfernen; fertiges HTML nur über eigenen Marker (z. B. `[pscustomobject]@{Html=…}` oder Spaltenklasse `raw`), alles andere immer maskieren. → Erledigt wenn ein Prüfwerkzeug `Report.ps1` mit einem Programmnamen `<span onclick=x>` lädt und das Ergebnis maskiert ist.
-- [ ] **M23** `src/modules/Migration.ps1:406-417`. `Test-WzWlanProfileHasKey`: zusätzlich `sharedKey.protected -ne 'true'`. → Erledigt wenn ein Profil mit DPAPI-Blob als »ohne Schlüssel« gelistet wird.
+- [x] **M23** `src/modules/Migration.ps1:406-417`. `Test-WzWlanProfileHasKey`: zusätzlich `sharedKey.protected -ne 'true'`. → Erledigt wenn ein Profil mit DPAPI-Blob als »ohne Schlüssel« gelistet wird.
 - [ ] **M24** `src/modules/Migration.ps1:478, 570`. Netzlaufwerke und Druckerverbindungen im Kontext des angemeldeten Anwenders anlegen (geplante Aufgabe als interaktiver Benutzer oder Benutzer-Token); mindestens Warnung im Dialog und Ergebnis, wenn `Get-WzInteractiveProfile` ein fremdes Konto erkennt. `rest.drivesMessage` entsprechend anpassen.
 - [ ] **M25** `src/modules/UserData.ps1:216-240`, `src/modules/Migration.ps1:270-279`, `src/modules/Cleanup.ps1` (`Measure-WzPathSet`). Eigene rekursive Enumeration mit try/catch je Verzeichnis, Reparsepunkte überspringen, abgebrochene Zweige zählen und als »unvollständig« melden. → Erledigt wenn `Documents` mit den Kompatibilitäts-Junctions eine plausible Größe liefert.
 - [ ] **M26** `src/modules/UserData.ps1:379-380, 508-524`, `src/modules/Migration.ps1:283-313`, `src/pages/Restore.ps1`. Nach erfolgreichem Rückspielen »Sicherung von diesem Stick löschen« anbieten; Zurückspielen-Seite zeigt standardmäßig nur den eigenen Rechner, fremde hinter einer Warnung. Optional: Export mit Techniker-Passphrase (AES).
 - [ ] **M27** `src/modules/HealthCheck.ps1:56-172`, `src/pages/Diagnostics.ps1:383`. Task `-Cancelable`, Flag in der Messschleife prüfen, `$worker.Shell.Stop()` vor `EndInvoke`. → Erledigt wenn »Abbrechen« den Belastungstest innerhalb von 2 s beendet.
-- [ ] **N** `src/modules/Report.ps1:1096, 1124-1125`. `ArbeitsspeicherGB` über `Format-WzNumber` als Text oder ganzzahlig in MB.
-- [ ] **N** `src/modules/Report.ps1:1082-1108`. Werte, die mit `=`, `+`, `-`, `@` beginnen, mit `'` voranstellen (CSV-Formel-Injektion).
+- [x] **N** `src/modules/Report.ps1:1096, 1124-1125`. `ArbeitsspeicherGB` über `Format-WzNumber` als Text oder ganzzahlig in MB.
+- [x] **N** `src/modules/Report.ps1:1082-1108`. Werte, die mit `=`, `+`, `-`, `@` beginnen, mit `'` voranstellen (CSV-Formel-Injektion).
 - [ ] **N** `src/modules/Diagnostics.ps1:28-46`, `data/eventmap.json`. Exakter Vergleich gegen `ProviderName` mit Aliasliste; Level 3 für kartierte Provider/IDs mitholen oder die `warning`-Einträge streichen; »DCOM« gegen `Microsoft-Windows-DistributedCOM`.
 - [ ] **N** `src/modules/Diagnostics.ps1:256-267`. `ValidDump` (Bytes 4-8) auf `DU64` prüfen, sonst Offset 0x28.
 - [ ] **N** `src/modules/Diagnostics.ps1:453-477`. chkdsk-Texte für Code 2 und 3 korrigieren, Dateisystem vor `/scan` prüfen.
 - [ ] **N** `src/modules/Report.ps1:287-301, 1020-1021, 1030`, `src/modules/Diagnostics.ps1:294-298, 348, 351`, `src/modules/Core.System.ps1:285, 325`, `src/modules/UserData.ps1:519`, `src/pages/Dashboard.ps1:310`. Typ- und Bereichs-Codes sprachneutral halten (`crash`, `report`, `setup`, `check`), erst bei Anzeige übersetzen; Zahlen über `Format-WzSeconds`/`Format-WzNumber`; `-like '*neu gestartet*'` durch Code-Vergleich ersetzen. → Erledigt wenn `Test-Language` Einzelwort-Literale in `-Area`, `-ConfirmText`, `-Title` streng prüft.
-- [ ] **N** `src/modules/UserData.ps1:352`. netsh-Profilliste sprachneutral parsen (Text nach dem letzten Doppelpunkt je Zeile).
-- [ ] **N** `src/modules/HealthCheck.ps1:306-308, 352`. Ordner `WinZii-Tempo` entfernen, vorher `FreeSpace` prüfen, Pfad auf `$env:SystemDrive` ableiten.
-- [ ] **N** `src/modules/NetworkDiag.ps1:235-244`. `$request.ReadWriteTimeout = $TimeoutMs`.
-- [ ] **N** `src/modules/UserData.ps1:323-325, 636-644`. `Get-WzBrowserProcess` vor dem Lesezeichen-Export prüfen oder zusätzlich `bookmarkbackups\*.jsonlz4` sichern.
-- [ ] **N** `src/modules/UserData.ps1:372, 627`, `src/pages/Diagnostics.ps1:461`. DryRun-Abfrage vor die Ordneranlage ziehen; `mdsched.exe` im Testmodus nur protokollieren.
-- [ ] **N** `src/modules/Migration.ps1:212`. `attrib` zusätzlich mit `"$Path\*"`; Dialog `data.hydrateMessage2` nennt die bleibende Einstellung »Immer auf diesem Gerät behalten«.
-- [ ] **N** `src/modules/Core.System.ps1:866-869`. `PendingFileRenameOperations` nur mit nicht-leeren Zielpfaden werten oder nur CBS/WU-Schlüssel.
+- [x] **N** `src/modules/UserData.ps1:352`. netsh-Profilliste sprachneutral parsen (Text nach dem letzten Doppelpunkt je Zeile).
+- [x] **N** `src/modules/HealthCheck.ps1:306-308, 352`. Ordner `WinZii-Tempo` entfernen, vorher `FreeSpace` prüfen, Pfad auf `$env:SystemDrive` ableiten.
+- [x] **N** `src/modules/NetworkDiag.ps1:235-244`. `$request.ReadWriteTimeout = $TimeoutMs`.
+- [x] **N** `src/modules/UserData.ps1:323-325, 636-644`. `Get-WzBrowserProcess` vor dem Lesezeichen-Export prüfen oder zusätzlich `bookmarkbackups\*.jsonlz4` sichern.
+- [x] **N** `src/modules/UserData.ps1:372, 627`, `src/pages/Diagnostics.ps1:461`. DryRun-Abfrage vor die Ordneranlage ziehen; `mdsched.exe` im Testmodus nur protokollieren.
+- [x] **N** `src/modules/Migration.ps1:212`. `attrib` zusätzlich mit `"$Path\*"`; Dialog `data.hydrateMessage2` nennt die bleibende Einstellung »Immer auf diesem Gerät behalten«.
+- [x] **N** `src/modules/Core.System.ps1:866-869`. `PendingFileRenameOperations` nur mit nicht-leeren Zielpfaden werten oder nur CBS/WU-Schlüssel.
 
 ### Oberfläche und Laufzeit
 
