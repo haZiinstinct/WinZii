@@ -118,9 +118,19 @@ function Start-WzUninstallSelected {
         $summary = $result.Summary
         $leftovers = @($result.Leftovers | Where-Object { $_ })
 
+        # Ins Übergabeblatt nur, was wirklich weg ist; was blieb, mit Präfix
+        # (Audit 2026-10, M1). Im Testmodus ist nichts entfernt, dort steht
+        # die Auswahl — der Eintrag ist ohnehin als Test markiert.
+        $detail = if ($syncHash.DryRun) {
+            @($selected | ForEach-Object { $_.Name })
+        } else {
+            $weg = @($summary.RemovedPrograms | ForEach-Object { $_.Name })
+            $weg + @($selected | Where-Object { $weg -notcontains $_.Name } |
+                ForEach-Object { Get-WzText 'unin.detailFailed' @{ name = $_.Name } })
+        }
         Add-WzAction -Area 'Programme' `
             -Summary ((Get-WzText 'unin.actionRemoved' @{ anzahl = $summary.Removed }) + $(if ($summary.Failed -gt 0) { Get-WzText 'unin.actionFailedSuffix' @{ anzahl = $summary.Failed } })) `
-            -Detail @($selected | ForEach-Object { $_.Name })
+            -Detail @($detail)
 
         if ($leftovers.Count -eq 0) {
             Show-WzInfo -Title (Get-WzText 'unin.doneTitle') `
@@ -143,7 +153,8 @@ function Start-WzUninstallSelected {
                 # Kind steuert auch den Loeschweg und bleibt deshalb deutsch —
                 # uebersetzt wird nur die Anzeige.
                 $art = if ($_.Kind -eq 'Registry') { Get-WzText 'unin.kindRegistry' } else { Get-WzText 'unin.kindFolder' }
-                "$($art): $($_.Path)$(if ($_.SizeBytes -gt 0) { " — $(Format-WzBytes $_.SizeBytes)" })"
+                $zusatz = if ($_.PSObject.Properties['UserData'] -and $_.UserData) { Get-WzText 'unin.userDataSuffix' } else { '' }
+                "$($art): $($_.Path)$(if ($_.SizeBytes -gt 0) { " — $(Format-WzBytes $_.SizeBytes)" })$zusatz"
             }) `
             -ConfirmText (Get-WzText 'unin.btnRemoveLeftovers') -Danger
         if (-not $answer.Confirmed) {

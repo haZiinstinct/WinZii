@@ -53,6 +53,14 @@ function Get-WzInstalledPrograms {
             $quiet = [string]$entry.QuietUninstallString
             $command = if ($quiet) { $quiet } else { [string]$entry.UninstallString }
             $productCode = if ($entry.PSChildName -match '^\{[0-9A-Fa-f-]{36}\}$') { $entry.PSChildName } else { '' }
+            # Manche MSI-Pakete tragen einen Schlüsselnamen ohne GUID, rufen
+            # aber »MsiExec.exe /I{GUID}« auf. /I öffnet den Ändern-Dialog
+            # statt still zu entfernen; die GUID aus dem Aufruf ist derselbe
+            # Produktcode.
+            if (-not $productCode -and -not $quiet -and
+                [string]$entry.UninstallString -match '(?i)^"?msiexec(\.exe)?"?\s+/[IX]\s*(?<guid>\{[0-9A-Fa-f-]{36}\})') {
+                $productCode = $Matches['guid']
+            }
 
             $programs += [pscustomobject]@{
                 Name            = $entry.DisplayName.Trim()
@@ -293,7 +301,12 @@ function Get-WzLeftoverNameCandidates {
         Herausgebernamen wären zu breit — unter »Google« oder »Adobe« wohnen
         mehrere Programme.
     #>
-    param([Parameter(Mandatory = $true)]$Program)
+    param(
+        [Parameter(Mandatory = $true)]$Program,
+        # Namen der Programme, die installiert bleiben. Ein Kandidat, unter dem
+        # auch eines von ihnen wohnen könnte, fällt weg.
+        [string[]]$ForeignNames = @()
+    )
 
     $names = @()
     $base = $Program.Name.Trim()
@@ -304,7 +317,34 @@ function Get-WzLeftoverNameCandidates {
 
     # Zu kurze Namen treffen zu leicht den falschen Ordner; Zeichen, die in
     # Pfaden nichts verloren haben, fliegen gleich mit raus.
-    return @($names | Where-Object { $_.Length -ge 4 -and $_ -notmatch '[\\/:*?"<>|]' })
+    $names = @($names | Where-Object { $_.Length -ge 4 -and $_ -notmatch '[\\/:*?"<>|]' })
+
+    # Aus »Python 3.12.1 (64-bit)« wird »Python« — und unter
+    # HKLM:\SOFTWARE\Python und %LOCALAPPDATA%\Programs\Python wohnen alle
+    # anderen Python-Versionen mit. Heißt ein verbleibendes Programm genauso
+    # oder beginnt es mit dem Kandidaten plus Leerzeichen, ist der Name
+    # geteilt und kein Rest (Audit 2026-10, H2).
+    return @($names | Where-Object {
+        $kandidat = $_
+        -not @($ForeignNames | Where-Object {
+            $_ -and ($_ -eq $kandidat -or $_.StartsWith("$kandidat ", [StringComparison]::OrdinalIgnoreCase))
+        }).Count
+    })
+}
+
+function Get-WzForeignProgramNames {
+    <#
+    .SYNOPSIS
+        Anzeigenamen aller installierten Programme außer den übergebenen.
+    #>
+    param($Excluding)
+
+    $eigene = @{}
+    foreach ($program in @($Excluding | Where-Object { $_ })) {
+        if ($program.Name) { $eigene[[string]$program.Name] = $true }
+    }
+    return @(Get-WzInstalledPrograms | Where-Object { $_.Name -and -not $eigene.ContainsKey($_.Name) } |
+        ForEach-Object { [string]$_.Name } | Sort-Object -Unique)
 }
 
 function Get-WzForeignInstallLocations {
@@ -457,16 +497,24 @@ function Find-WzUninstallLeftovers {
 
     # Einmal für den ganzen Lauf: Wo wohnen die Programme, die bleiben sollen?
     $foreignLocations = @(Get-WzForeignInstallLocations -Excluding $Programs)
+    $foreignNames = @(Get-WzForeignProgramNames -Excluding $Programs)
 
     foreach ($program in @($Programs | Where-Object { $_ })) {
-        $names = @(Get-WzLeftoverNameCandidates -Program $program)
+        $names = @(Get-WzLeftoverNameCandidates -Program $program -ForeignNames $foreignNames)
 
+        # Was direkt unter %LOCALAPPDATA% oder %APPDATA% liegt, sind bei vielen
+        # Programmen Benutzerdaten (Nachrichten, Vaults, Spielstände). Die
+        # Fundliste sagt das dazu; gesichert wird ein Ordner nicht.
+        $userDataFolders = @{}
         $folderCandidates = @()
         if ($program.InstallLocation) { $folderCandidates += $program.InstallLocation }
         foreach ($name in $names) {
             if ($env:ProgramData) { $folderCandidates += Join-Path $env:ProgramData $name }
-            if ($localApp) { $folderCandidates += Join-Path $localApp $name }
-            if ($roamingApp) { $folderCandidates += Join-Path $roamingApp $name }
+            foreach ($appData in @($localApp, $roamingApp) | Where-Object { $_ }) {
+                $userFolder = Join-Path $appData $name
+                $folderCandidates += $userFolder
+                $userDataFolders[$userFolder.ToLowerInvariant()] = $true
+            }
             foreach ($menu in $startMenus) { $folderCandidates += Join-Path $menu $name }
         }
 
@@ -492,6 +540,7 @@ function Find-WzUninstallLeftovers {
                 TargetPath = $folder
                 SizeBytes  = $bytes
                 Program    = $program.Name
+                UserData   = [bool]$userDataFolders.ContainsKey($folder.ToLowerInvariant())
             }
         }
 
