@@ -467,10 +467,19 @@ function Install-WzApps {
                 }
             }
             'reboot' {
-                $summary.Installed++
-                $summary.InstalledNames += $app.name
-                $summary.RebootRequired = $true
-                Write-WzLog "  $($outcome.Text)" -Level Ok
+                # Auch hier nachmessen: Bis 0.7.0 stand 0x8A150104 (fehlende
+                # Abhängigkeit) auf »reboot«, und ein Fehlschlag kam als
+                # installiert ins Übergabeblatt (Audit 2026-10, H4).
+                if (Test-WzAppInstalled -WingetPath $wingetPath -Id $app.wingetId) {
+                    $summary.Installed++
+                    $summary.InstalledNames += $app.name
+                    $summary.RebootRequired = $true
+                    Write-WzLog "  $($outcome.Text)" -Level Ok
+                } else {
+                    $summary.Failed++
+                    $summary.Details += "$($app.name): $(Get-WzText 'apps.detailSuccessButMissing')"
+                    Write-WzLog (Get-WzText 'apps.logSuccessButMissing') -Level Warn
+                }
             }
             'skip' {
                 $summary.Skipped++

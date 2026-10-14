@@ -1,118 +1,318 @@
 {
-  "schemaVersion": 1,
-  "_hinweis": "Rückgabewerte von winget in Klartext. outcome steuert die Zählung: ok = installiert, skip = war schon da oder nichts zu tun, reboot = erfolgreich, Neustart nötig, retry = mit anderem Bereich erneut versuchen, fail = Fehlschlag. Unbekannte Codes gelten als fail und werden mit ihrer Zahl angezeigt.",
+  "schemaVersion": 2,
+  "_hinweis": "Rückgabewerte von winget in Klartext. hex und symbol stammen aus winget-cli, src/AppInstallerSharedLib/Public/AppInstallerErrors.h (MSI-Werte aus winerror.h); code ist derselbe Wert als vorzeichenbehaftete 32-Bit-Zahl, so wie winget ihn als Exit-Code liefert. Test-Catalogs prüft hex gegen code. outcome steuert die Zählung: ok = installiert, skip = war schon da oder nichts zu tun, reboot = erfolgreich, Neustart nötig, retry = mit Benutzerbereich statt systemweit erneut versuchen, fail = Fehlschlag. Unbekannte Codes gelten als fail und werden mit ihrer Zahl angezeigt.",
   "codes": [
     {
       "code": 0,
+      "hex": "0x00000000",
+      "symbol": "S_OK",
       "outcome": "ok",
       "text": "installiert"
     },
     {
       "code": -1978335189,
+      "hex": "0x8A15002B",
+      "symbol": "UPDATE_NOT_APPLICABLE",
       "outcome": "skip",
-      "text": "bereits in aktueller Fassung vorhanden"
+      "text": "kein anwendbares Update — bereits aktuell"
     },
     {
       "code": -1978335135,
-      "outcome": "skip",
-      "text": "kein Update verfügbar"
-    },
-    {
-      "code": -1978335188,
+      "hex": "0x8A150061",
+      "symbol": "PACKAGE_ALREADY_INSTALLED",
       "outcome": "skip",
       "text": "das Paket ist bereits installiert"
     },
     {
-      "code": -1978334972,
+      "code": -1978334963,
+      "hex": "0x8A15010D",
+      "symbol": "INSTALL_ALREADY_INSTALLED",
+      "outcome": "skip",
+      "text": "bereits installiert"
+    },
+    {
+      "code": -1978334962,
+      "hex": "0x8A15010E",
+      "symbol": "INSTALL_DOWNGRADE",
+      "outcome": "skip",
+      "text": "eine neuere Fassung ist bereits installiert"
+    },
+    {
+      "code": -1978334967,
+      "hex": "0x8A150109",
+      "symbol": "INSTALL_REBOOT_REQUIRED_TO_FINISH",
       "outcome": "reboot",
       "text": "installiert — ein Neustart schließt die Einrichtung ab",
       "requiresReboot": true
     },
     {
+      "code": -1978334965,
+      "hex": "0x8A15010B",
+      "symbol": "INSTALL_REBOOT_INITIATED",
+      "outcome": "reboot",
+      "text": "installiert — der Installer hat einen Neustart angestoßen",
+      "requiresReboot": true
+    },
+    {
+      "code": 3010,
+      "hex": "0x00000BC2",
+      "symbol": "ERROR_SUCCESS_REBOOT_REQUIRED (MSI 3010)",
+      "outcome": "reboot",
+      "text": "installiert — ein Neustart schließt die Einrichtung ab",
+      "requiresReboot": true
+    },
+    {
+      "code": 1641,
+      "hex": "0x00000669",
+      "symbol": "ERROR_SUCCESS_REBOOT_INITIATED (MSI 1641)",
+      "outcome": "reboot",
+      "text": "installiert — der Installer hat einen Neustart angestoßen",
+      "requiresReboot": true
+    },
+    {
       "code": -1978335216,
+      "hex": "0x8A150010",
+      "symbol": "NO_APPLICABLE_INSTALLER",
       "outcome": "retry",
       "text": "kein passendes Installationsprogramm für diesen Bereich"
     },
     {
+      "code": -1978334966,
+      "hex": "0x8A15010A",
+      "symbol": "INSTALL_REBOOT_REQUIRED_FOR_INSTALL",
+      "outcome": "fail",
+      "text": "erst nach einem Neustart installierbar — neu starten und erneut versuchen"
+    },
+    {
       "code": -1978335212,
+      "hex": "0x8A150014",
+      "symbol": "NO_APPLICATIONS_FOUND",
       "outcome": "fail",
       "text": "in den winget-Quellen nicht gefunden"
     },
     {
-      "code": -1978335215,
+      "code": -1978335210,
+      "hex": "0x8A150016",
+      "symbol": "MULTIPLE_APPLICATIONS_FOUND",
       "outcome": "fail",
-      "text": "der Installer wurde abgebrochen"
+      "text": "mehrere Pakete passen auf die Angabe"
     },
     {
-      "code": -1978335210,
+      "code": -1978335209,
+      "hex": "0x8A150017",
+      "symbol": "NO_MANIFEST_FOUND",
+      "outcome": "fail",
+      "text": "kein Manifest gefunden"
+    },
+    {
+      "code": -1978335224,
+      "hex": "0x8A150008",
+      "symbol": "DOWNLOAD_FAILED",
       "outcome": "fail",
       "text": "der Download ist fehlgeschlagen"
     },
     {
-      "code": -1978335209,
+      "code": -1978335186,
+      "hex": "0x8A15002E",
+      "symbol": "DOWNLOAD_SIZE_MISMATCH",
+      "outcome": "fail",
+      "text": "die geladene Datei hat die falsche Größe"
+    },
+    {
+      "code": -1978335215,
+      "hex": "0x8A150011",
+      "symbol": "INSTALLER_HASH_MISMATCH",
       "outcome": "fail",
       "text": "die Prüfsumme des Downloads stimmt nicht — Datei beschädigt oder unterwegs verändert"
     },
     {
-      "code": -1978335231,
+      "code": -1978335140,
+      "hex": "0x8A15005C",
+      "symbol": "EXTRACT_ARCHIVE_FAILED",
+      "outcome": "fail",
+      "text": "das Archiv des Installers ließ sich nicht entpacken"
+    },
+    {
+      "code": -1978335138,
+      "hex": "0x8A15005E",
+      "symbol": "PINNED_CERTIFICATE_MISMATCH",
+      "outcome": "fail",
+      "text": "das Zertifikat der Quelle stimmt nicht — Verbindung abgefangen oder Quelle verändert"
+    },
+    {
+      "code": -1978335221,
+      "hex": "0x8A15000B",
+      "symbol": "SOURCES_INVALID",
       "outcome": "fail",
       "text": "die winget-Quellen sind ungültig — winget source reset hilft meist"
     },
     {
-      "code": -1978335230,
+      "code": -1978335211,
+      "hex": "0x8A150015",
+      "symbol": "NO_SOURCES_DEFINED",
       "outcome": "fail",
       "text": "es sind keine winget-Quellen eingerichtet"
     },
     {
-      "code": -1978335138,
+      "code": -1978335157,
+      "hex": "0x8A15004B",
+      "symbol": "FAILED_TO_OPEN_ALL_SOURCES",
       "outcome": "fail",
-      "text": "für dieses Paket fehlt die Berechtigung im Microsoft Store"
+      "text": "keine winget-Quelle ließ sich öffnen — Netz oder Proxy prüfen"
     },
     {
-      "code": -1978335140,
+      "code": -1978335231,
+      "hex": "0x8A150001",
+      "symbol": "INTERNAL_ERROR",
       "outcome": "fail",
-      "text": "das Paket verlangt eine interaktive Installation und lässt sich nicht still einrichten"
+      "text": "interner Fehler in winget"
+    },
+    {
+      "code": -1978335230,
+      "hex": "0x8A150002",
+      "symbol": "INVALID_CL_ARGUMENTS",
+      "outcome": "fail",
+      "text": "winget hat die Befehlszeile abgelehnt"
     },
     {
       "code": -1978335143,
+      "hex": "0x8A150059",
+      "symbol": "UNSUPPORTED_ARGUMENT",
       "outcome": "fail",
-      "text": "die Installation braucht Administratorrechte"
+      "text": "diese winget-Fassung kennt ein Argument nicht — winget aktualisieren"
+    },
+    {
+      "code": -1978335188,
+      "hex": "0x8A15002C",
+      "symbol": "UPDATE_ALL_HAS_FAILURE",
+      "outcome": "fail",
+      "text": "mindestens ein Update ist fehlgeschlagen"
+    },
+    {
+      "code": -1978335207,
+      "hex": "0x8A150019",
+      "symbol": "COMMAND_REQUIRES_ADMIN",
+      "outcome": "fail",
+      "text": "der Vorgang braucht Administratorrechte"
     },
     {
       "code": -1978335146,
+      "hex": "0x8A150056",
+      "symbol": "INSTALLER_PROHIBITS_ELEVATION",
       "outcome": "fail",
       "text": "die Installation darf nicht mit erhöhten Rechten laufen — dieses Paket verlangt ein normales Benutzerkonto"
     },
     {
-      "code": -1978334969,
+      "code": -1978335174,
+      "hex": "0x8A15003A",
+      "symbol": "BLOCKED_BY_POLICY",
+      "outcome": "fail",
+      "text": "per Gruppenrichtlinie gesperrt"
+    },
+    {
+      "code": -1978334961,
+      "hex": "0x8A15010F",
+      "symbol": "INSTALL_BLOCKED_BY_POLICY",
+      "outcome": "fail",
+      "text": "die Installation ist per Richtlinie gesperrt"
+    },
+    {
+      "code": -1978335205,
+      "hex": "0x8A15001B",
+      "symbol": "MSSTORE_BLOCKED_BY_POLICY",
+      "outcome": "fail",
+      "text": "der Microsoft Store ist per Richtlinie gesperrt"
+    },
+    {
+      "code": -1978334975,
+      "hex": "0x8A150101",
+      "symbol": "INSTALL_PACKAGE_IN_USE",
+      "outcome": "fail",
+      "text": "das Programm läuft gerade — schließen und erneut versuchen"
+    },
+    {
+      "code": -1978334959,
+      "hex": "0x8A150111",
+      "symbol": "INSTALL_PACKAGE_IN_USE_BY_APPLICATION",
+      "outcome": "fail",
+      "text": "ein anderes Programm hält Dateien des Pakets offen — schließen und erneut versuchen"
+    },
+    {
+      "code": -1978334973,
+      "hex": "0x8A150103",
+      "symbol": "INSTALL_FILE_IN_USE",
+      "outcome": "fail",
+      "text": "eine benötigte Datei ist gerade in Benutzung"
+    },
+    {
+      "code": -1978334974,
+      "hex": "0x8A150102",
+      "symbol": "INSTALL_INSTALL_IN_PROGRESS",
+      "outcome": "fail",
+      "text": "eine andere Installation läuft gerade — später erneut versuchen"
+    },
+    {
+      "code": -1978334972,
+      "hex": "0x8A150104",
+      "symbol": "INSTALL_MISSING_DEPENDENCY",
+      "outcome": "fail",
+      "text": "eine Abhängigkeit des Pakets fehlt"
+    },
+    {
+      "code": -1978334971,
+      "hex": "0x8A150105",
+      "symbol": "INSTALL_DISK_FULL",
       "outcome": "fail",
       "text": "nicht genügend freier Speicherplatz"
     },
     {
-      "code": -1978335211,
+      "code": -1978334970,
+      "hex": "0x8A150106",
+      "symbol": "INSTALL_INSUFFICIENT_MEMORY",
       "outcome": "fail",
-      "text": "der Installer ist bereits gestartet oder ein anderer Vorgang blockiert"
+      "text": "nicht genügend Arbeitsspeicher"
+    },
+    {
+      "code": -1978334969,
+      "hex": "0x8A150107",
+      "symbol": "INSTALL_NO_NETWORK",
+      "outcome": "fail",
+      "text": "der Installer braucht eine Netzverbindung"
+    },
+    {
+      "code": -1978334964,
+      "hex": "0x8A15010C",
+      "symbol": "INSTALL_CANCELLED_BY_USER",
+      "outcome": "fail",
+      "text": "die Installation wurde abgebrochen"
+    },
+    {
+      "code": -1978334957,
+      "hex": "0x8A150113",
+      "symbol": "INSTALL_SYSTEM_NOT_SUPPORTED",
+      "outcome": "fail",
+      "text": "dieses Windows wird vom Paket nicht unterstützt"
     },
     {
       "code": 1602,
+      "hex": "0x00000642",
+      "symbol": "ERROR_INSTALL_USEREXIT (MSI 1602)",
       "outcome": "fail",
       "text": "die Installation wurde abgebrochen"
     },
     {
       "code": 1603,
+      "hex": "0x00000643",
+      "symbol": "ERROR_INSTALL_FAILURE (MSI 1603)",
       "outcome": "fail",
       "text": "die Installation ist mit einem schweren Fehler abgebrochen"
     },
     {
       "code": 1618,
+      "hex": "0x00000652",
+      "symbol": "ERROR_INSTALL_ALREADY_RUNNING (MSI 1618)",
       "outcome": "fail",
       "text": "eine andere Installation läuft gerade — später erneut versuchen"
-    },
-    {
-      "code": 3010,
-      "outcome": "reboot",
-      "text": "installiert — ein Neustart schließt die Einrichtung ab",
-      "requiresReboot": true
     }
   ]
 }

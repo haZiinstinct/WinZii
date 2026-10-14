@@ -250,6 +250,57 @@ if ($bloatware) {
     Write-Host "  bloatware   $($bloatware.safe.Count) unstrittig, $($bloatware.extended.Count) erweitert" -ForegroundColor Gray
 }
 
+# --- wingetcodes -----------------------------------------------------------
+# Der Katalog war zum großen Teil falsch zugeordnet: Dezimalwerte von Hand
+# übertragen, 0x8A150104 (fehlende Abhängigkeit) zählte als Erfolg (Audit
+# 2026-10, H4). Jetzt führt jeder Eintrag hex und symbol aus winget-cli mit,
+# und hier wird hex gegen code gerechnet. Dazu ein paar feste Zuordnungen,
+# die nie wieder kippen dürfen.
+$winget = Read-Catalog 'wingetcodes'
+if ($winget) {
+    $seenCodes = @{}
+    foreach ($entry in $winget.codes) {
+        $checked++
+        foreach ($field in @('hex', 'symbol', 'outcome', 'text')) {
+            if (-not $entry.$field) { Add-Problem 'wingetcodes' "$($entry.code) : Feld '$field' fehlt" }
+        }
+        if ($entry.hex -notmatch '^0x[0-9A-F]{8}$') {
+            Add-Problem 'wingetcodes' "$($entry.code) : hex '$($entry.hex)' ist keine achtstellige Hexzahl"
+        } else {
+            $ausHex = [BitConverter]::ToInt32([BitConverter]::GetBytes([uint32]$entry.hex), 0)
+            if ($ausHex -ne [int64]$entry.code) {
+                Add-Problem 'wingetcodes' "$($entry.hex) ergibt $ausHex, eingetragen ist $($entry.code)"
+            }
+        }
+        if ($entry.outcome -notin @('ok', 'skip', 'reboot', 'retry', 'fail')) {
+            Add-Problem 'wingetcodes' "$($entry.hex) : unbekanntes outcome '$($entry.outcome)'"
+        }
+        if ($entry.outcome -eq 'reboot' -and -not $entry.requiresReboot) {
+            Add-Problem 'wingetcodes' "$($entry.hex) : reboot ohne requiresReboot"
+        }
+        if ($seenCodes.ContainsKey([string]$entry.code)) { Add-Problem 'wingetcodes' "$($entry.hex) doppelt" }
+        $seenCodes[[string]$entry.code] = $entry
+    }
+    $fest = @(
+        @{ Hex = '0x8A150104'; Outcome = 'fail';   Was = 'fehlende Abhängigkeit ist kein Erfolg' }
+        @{ Hex = '0x8A150109'; Outcome = 'reboot'; Was = 'Neustart zum Abschluss ist Erfolg mit Neustart' }
+        @{ Hex = '0x8A15010D'; Outcome = 'skip';   Was = 'bereits installiert' }
+        @{ Hex = '0x8A15010E'; Outcome = 'skip';   Was = 'höhere Version vorhanden' }
+        @{ Hex = '0x8A150010'; Outcome = 'retry';  Was = 'kein Installer für diesen Bereich' }
+        @{ Hex = '0x8A15002C'; Outcome = 'fail';   Was = 'Sammel-Update mit Fehlern ist kein »bereits installiert«' }
+    )
+    foreach ($soll in $fest) {
+        $checked++
+        $treffer = @($winget.codes | Where-Object { $_.hex -eq $soll.Hex })
+        if ($treffer.Count -ne 1) {
+            Add-Problem 'wingetcodes' "$($soll.Hex) fehlt ($($soll.Was))"
+        } elseif ($treffer[0].outcome -ne $soll.Outcome) {
+            Add-Problem 'wingetcodes' "$($soll.Hex) ist '$($treffer[0].outcome)', erwartet '$($soll.Outcome)' ($($soll.Was))"
+        }
+    }
+    Write-Host "  wingetcodes $(@($winget.codes).Count) Codes, hex gegen code gerechnet" -ForegroundColor Gray
+}
+
 # --- Uebersetzung der Kataloge ---------------------------------------------
 # Die Katalogdateien sind deutsch; data\lang\kataloge.<code>.json legt die
 # uebersetzten Anzeigefelder darueber. Fehlt dort ein Eintrag, faellt WinZii

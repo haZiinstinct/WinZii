@@ -73,55 +73,124 @@
         "text": "installed"
       },
       "-1978335189": {
-        "text": "already present in the current version"
+        "text": "no applicable update — already up to date"
       },
       "-1978335135": {
-        "text": "no update available"
-      },
-      "-1978335188": {
         "text": "the package is already installed"
       },
-      "-1978334972": {
+      "-1978334963": {
+        "text": "already installed"
+      },
+      "-1978334962": {
+        "text": "a newer version is already installed"
+      },
+      "-1978334967": {
         "text": "installed — a restart completes the setup"
+      },
+      "-1978334965": {
+        "text": "installed — the installer has initiated a restart"
+      },
+      "3010": {
+        "text": "installed — a restart completes the setup"
+      },
+      "1641": {
+        "text": "installed — the installer has initiated a restart"
       },
       "-1978335216": {
         "text": "no suitable installer for this scope"
       },
+      "-1978334966": {
+        "text": "can only be installed after a restart — restart and try again"
+      },
       "-1978335212": {
         "text": "not found in the winget sources"
       },
-      "-1978335215": {
-        "text": "the installer was cancelled"
-      },
       "-1978335210": {
-        "text": "the download failed"
+        "text": "several packages match the request"
       },
       "-1978335209": {
+        "text": "no manifest found"
+      },
+      "-1978335224": {
+        "text": "the download failed"
+      },
+      "-1978335186": {
+        "text": "the downloaded file has the wrong size"
+      },
+      "-1978335215": {
         "text": "the download's checksum does not match — the file is damaged or was altered in transit"
       },
-      "-1978335231": {
-        "text": "the winget sources are invalid — winget source reset usually helps"
-      },
-      "-1978335230": {
-        "text": "no winget sources are set up"
+      "-1978335140": {
+        "text": "the installer's archive could not be extracted"
       },
       "-1978335138": {
-        "text": "this package lacks the entitlement in the Microsoft Store"
+        "text": "the source's certificate does not match — connection intercepted or source altered"
       },
-      "-1978335140": {
-        "text": "the package demands an interactive installation and cannot be set up silently"
+      "-1978335221": {
+        "text": "the winget sources are invalid — winget source reset usually helps"
+      },
+      "-1978335211": {
+        "text": "no winget sources are set up"
+      },
+      "-1978335157": {
+        "text": "no winget source could be opened — check network or proxy"
+      },
+      "-1978335231": {
+        "text": "internal error in winget"
+      },
+      "-1978335230": {
+        "text": "winget rejected the command line"
       },
       "-1978335143": {
-        "text": "the installation needs administrator rights"
+        "text": "this winget version does not know an argument — update winget"
+      },
+      "-1978335188": {
+        "text": "at least one update failed"
+      },
+      "-1978335207": {
+        "text": "the operation needs administrator rights"
       },
       "-1978335146": {
         "text": "the installation must not run elevated — this package wants a normal user account"
       },
-      "-1978334969": {
+      "-1978335174": {
+        "text": "blocked by group policy"
+      },
+      "-1978334961": {
+        "text": "the installation is blocked by policy"
+      },
+      "-1978335205": {
+        "text": "the Microsoft Store is blocked by policy"
+      },
+      "-1978334975": {
+        "text": "the program is running — close it and try again"
+      },
+      "-1978334959": {
+        "text": "another program holds the package's files open — close it and try again"
+      },
+      "-1978334973": {
+        "text": "a required file is in use"
+      },
+      "-1978334974": {
+        "text": "another installation is running — try again later"
+      },
+      "-1978334972": {
+        "text": "one of the package's dependencies is missing"
+      },
+      "-1978334971": {
         "text": "not enough free disk space"
       },
-      "-1978335211": {
-        "text": "the installer is already running, or another operation is blocking"
+      "-1978334970": {
+        "text": "not enough memory"
+      },
+      "-1978334969": {
+        "text": "the installer needs a network connection"
+      },
+      "-1978334964": {
+        "text": "the installation was cancelled"
+      },
+      "-1978334957": {
+        "text": "this Windows is not supported by the package"
       },
       "1602": {
         "text": "the installation was cancelled"
@@ -131,9 +200,6 @@
       },
       "1618": {
         "text": "another installation is running — try again later"
-      },
-      "3010": {
-        "text": "installed — a restart completes the setup"
       }
     }
   },
