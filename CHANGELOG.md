@@ -86,6 +86,26 @@ Alle nennenswerten Änderungen an WinZii. Die Fassungen folgen
   aufgeräumt, Farben kommen aus dem Theme, Bildschirmleser bekommen Namen.
 - **Autostart nennt den Herausgeber auch bei Pfaden mit Leerzeichen ohne
   Anführungszeichen.**
+- **Herstellerwerkzeuge:** Lenovo Thin Installer nimmt keine Pakete mehr, die
+  den PC selbst neu starten (H7). Rückgabewerte werden nach Herstellerdoku
+  gedeutet — Dells »Neustart nötig« und »nichts zu tun« galten als
+  Fehlschlag (M11).
+- **winget-Nachinstallation auf LTSC** gibt der Bereitstellung für alle
+  Konten die Abhängigkeiten mit (M19).
+- **Übergabeblatt als PDF** auch bei laufendem Edge (M22).
+- **Belastungstest misst den Ist-Takt.** Der bisherige Wert stand fest in
+  der Firmware; eine Drosselung war daran nie zu sehen.
+- **Papierkorb:** Unter einem Technikerkonto wird der des Kunden gemessen und
+  geleert, nicht der eigene.
+- **Programme-Vorrat verspricht keine Installation ohne Internet mehr** —
+  winget lädt auch dann von der Herstelleradresse (H6, siehe
+  `docs/AUDIT-2026-10-FRAGEN.md`, F3).
+
+### Sicherheit
+
+- **LSA-Schutz** setzt die Variante ohne UEFI-Sperre (`RunAsPPL=2`, ab
+  Windows 11 22H2). Die bisherige ließ sich auf Geräten mit Secure Boot über
+  die Rücknahme nicht aufheben (M3).
 
 ### Geändert
 
