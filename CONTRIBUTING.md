@@ -56,6 +56,23 @@ fremder Hardware, Punkt für Punkt, mit dem Stand, was davon schon gelaufen ist.
 `Test-Pages.ps1` öffnet jede Seite in einem echten Fenster und prüft zusätzlich den Start
 über den Launcher. Es findet Verdrahtungsfehler, die eine reine Syntaxprüfung nicht sieht.
 
+### Selbsttest-Variablen (nur Entwicklung)
+
+`main.ps1` kennt einen Selbsttest, den die Prüfwerkzeuge über Umgebungsvariablen steuern.
+Im normalen Betrieb ist keine davon gesetzt.
+
+| Variable | Wirkung |
+| --- | --- |
+| `WZ_SELFTEST` | Millisekunden bis zum Abbild; danach schließt sich das Fenster ohne Rückfrage |
+| `WZ_SELFTEST_PAGE` | Seite, die vor dem Abbild geöffnet wird |
+| `WZ_SELFTEST_LANG` | Sprache für diesen Lauf, ohne sie zu speichern |
+| `WZ_SELFTEST_OUT` | Pfad des Abbilds (PNG) |
+| `WZ_SELFTEST_ACTION` | Pfad eines Skripts, das **im laufenden Programm** ausgeführt wird, mit Zugriff auf `$syncHash` — so prüft `Test-LanguageSwitch` den Sprachwechsel am echten Fenster |
+
+`WZ_SELFTEST_ACTION` führt beliebigen Code aus. Das ist für Prüfwerkzeuge gedacht und
+nur dort zu setzen; wer WinZii mit fremden Umgebungsvariablen startet, gibt dem Aufrufer
+damit die Rechte des Programms.
+
 ## Inhalte statt Code
 
 Für neue Programme, Optimierungen, Ereignisdeutungen oder Bereinigungspfade ist **keine

@@ -60,6 +60,8 @@
     <SolidColorBrush x:Key="WzRed"          Color="#EF4444" />
     <SolidColorBrush x:Key="WzRedText"      Color="#FCA5A5" />
     <SolidColorBrush x:Key="WzAmber"        Color="#F59E0B" />
+    <SolidColorBrush x:Key="WzAmberSubtle"  Color="#14F59E0B" />
+    <SolidColorBrush x:Key="WzAmberBorder"  Color="#4DF59E0B" />
     <SolidColorBrush x:Key="WzGreen"        Color="#22C55E" />
     <SolidColorBrush x:Key="WzOrange"       Color="#F97316" />
 

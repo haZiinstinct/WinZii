@@ -109,7 +109,9 @@ Register-WzCrashGuard -Window $window
 function Set-WzFonts {
     $fontDir = Get-WzFontDir
     if (-not (Test-Path -LiteralPath $fontDir)) { return }
-    $uriBase = 'file:///' + ($fontDir -replace '\\', '/') + '/'
+    # Über [Uri] statt per Textersatz: Ein »#« oder »%« im Stickpfad zerbrach
+    # sonst die Adresse vor »#Inter« (Audit 2026-10, N).
+    $uriBase = ([Uri]($fontDir.TrimEnd('\') + '\')).AbsoluteUri
     try {
         # .PSObject.BaseObject ist nötig: sonst landet ein PSObject-Wrapper im
         # ResourceDictionary und WPF kann ihn nicht in FontFamily umwandeln.
@@ -226,6 +228,15 @@ $window.Add_SizeChanged({ Update-WzCardLayout })
 $syncHash.LogHeader.Add_MouseLeftButtonUp({
     Set-WzConsoleCollapsed -Collapsed ($syncHash.LogConsole.Visibility -eq [Windows.Visibility]::Visible)
 })
+# Auch per Tastatur: Bisher ließ sich die Klappzeile nur mit der Maus
+# bedienen (Audit 2026-10, N).
+$syncHash.LogHeader.Add_KeyDown({
+    param($sender, $eventArgs)
+    if ($eventArgs.Key -in @([Windows.Input.Key]::Enter, [Windows.Input.Key]::Space)) {
+        Set-WzConsoleCollapsed -Collapsed ($syncHash.LogConsole.Visibility -eq [Windows.Visibility]::Visible)
+        $eventArgs.Handled = $true
+    }
+})
 
 # Auf einem niedrigen Bildschirm bleibt für den Seiteninhalt sonst kaum etwas
 # übrig: 150 px Konsole, 52 px Kopfleiste, Klappzeile und Statusleiste sind bei
@@ -274,6 +285,13 @@ $syncHash.LanguagePicker.Add_Click({ Show-WzLanguageChooser })
 # --- haZii-Credit ---------------------------------------------------------
 $syncHash.HaziiBadge.Add_MouseLeftButtonUp({
     Start-Process 'https://hazii.org'
+})
+$syncHash.HaziiBadge.Add_KeyDown({
+    param($sender, $eventArgs)
+    if ($eventArgs.Key -eq [Windows.Input.Key]::Enter) {
+        Start-Process 'https://hazii.org'
+        $eventArgs.Handled = $true
+    }
 })
 
 # --- Kommandopalette (Strg+K) ---------------------------------------------

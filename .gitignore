@@ -24,3 +24,11 @@ $RECYCLE.BIN/
 # Editor
 .vscode/
 *.swp
+
+# Nebendateien der Einstellungen (Sicherung einer kaputten Datei, Zwischenstand beim Schreiben)
+/einstellungen.json.bak
+/einstellungen.json.tmp
+
+# Abbilder aus Selbsttest und Layoutprüfung
+/selftest.png
+/abbilder/

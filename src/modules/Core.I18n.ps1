@@ -418,6 +418,11 @@ function Update-WzLanguageUi {
 
     $current = $syncHash.CurrentPage
     $syncHash.Pages.Clear()
+    # Die alten Kartengitter gehören zu verworfenen Seiten. Ohne Leeren
+    # wuchsen Liste und Breitenspeicher mit jedem Wechsel (Audit 2026-10, N).
+    if ($syncHash.CardGrids) { $syncHash.CardGrids.Clear() }
+    $script:WzCardWidths = @{}
+    $script:WzCardColumnsNow = @{}
     # Die »Geladen«-Merker der Seiten mit zurücksetzen, sonst überspringt
     # Update-Wz<X>Page die Neubefüllung. Nicht nur *Loaded: Die Programme-Seite
     # hängt an AppsChecked, und nach dem Neuaufbau blieb ihr Installieren-Knopf
@@ -427,6 +432,18 @@ function Update-WzLanguageUi {
         $syncHash[$flag] = $false
     }
     if ($current) { Show-WzPage -Id $current }
+
+    # Was Code in die Fensterleiste geschrieben hat, erreicht kein Wörterbuch:
+    # »Bereit«, der Hinweis der Konsole, das Dateisystem in der Statuszeile
+    # (Audit 2026-10, N). Ein laufender Vorgang behält seinen Namen.
+    if (-not $syncHash.Busy) { Set-WzBusy -Off }
+    if ($syncHash.LogConsole) {
+        Set-WzConsoleCollapsed -Collapsed ($syncHash.LogConsole.Visibility -ne [Windows.Visibility]::Visible)
+    }
+    if ($syncHash.StatusPath) {
+        $volume = Get-WzVolumeInfo
+        $syncHash.StatusPath.Text = "$($volume.DisplayName) $($volume.FileSystem)"
+    }
 
     # Aktivierung, BitLocker und Virenschutz sind fertige Sätze aus einer
     # Messung — die schaltet kein Wörterbuch um. Sie werden im Hintergrund
@@ -461,7 +478,14 @@ function Get-WzSetting {
                     $script:WzSettings[$property.Name] = $property.Value
                 }
             } catch {
-                # Eine kaputte Einstellungsdatei darf den Start nicht aufhalten
+                # Eine kaputte Einstellungsdatei darf den Start nicht aufhalten.
+                # Sie wird aber als .bak beiseitegelegt und genannt — bisher
+                # überschrieb das nächste Speichern sie lautlos mit nur dem
+                # neuen Schlüssel (Audit 2026-10, N).
+                try {
+                    Copy-Item -LiteralPath $path -Destination "$path.bak" -Force -ErrorAction Stop
+                    Write-WzLog (Get-WzText 'core.settingsBroken' @{ datei = "$path.bak" }) -Level Warn
+                } catch { }
             }
         }
     }
@@ -491,7 +515,12 @@ function Save-WzSetting {
     try {
         $object = [pscustomobject]$script:WzSettings
         $json = $object | ConvertTo-Json -Depth 4
-        [IO.File]::WriteAllText((Get-WzSettingsPath), $json, (New-Object Text.UTF8Encoding($false)))
+        # Erst in eine Nachbardatei, dann ersetzen: Ein abgezogener Stick
+        # mitten im Schreiben hinterließ sonst eine halbe Datei.
+        $path = Get-WzSettingsPath
+        $temp = "$path.tmp"
+        [IO.File]::WriteAllText($temp, $json, (New-Object Text.UTF8Encoding($false)))
+        Move-Item -LiteralPath $temp -Destination $path -Force -ErrorAction Stop
         return $true
     } catch {
         return $false

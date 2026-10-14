@@ -52,6 +52,16 @@ function Register-WzNames {
         if (-not $name) { continue }
         $element = $Root.FindName($name)
         if (-not $element) { continue }
+        # Zwei Seiten mit demselben Elementnamen überschrieben sich bisher
+        # still im $syncHash, und die Handler der einen griffen ins Leere
+        # (Audit 2026-10, N). Ein Neuaufbau derselben Seite (Sprachwechsel)
+        # trägt denselben Präfix und ist erlaubt.
+        if (-not $syncHash.WzNameOwners) { $syncHash.WzNameOwners = @{} }
+        $besitzer = $syncHash.WzNameOwners[$name]
+        if ($null -ne $besitzer -and $besitzer -ne $Prefix) {
+            throw (Get-WzText 'core.duplicateName' @{ name = $name; seite = $Prefix; andere = $besitzer })
+        }
+        $syncHash.WzNameOwners[$name] = $Prefix
         $syncHash[$name] = $element
 
         # Behälter für Infozeilen bekommen einen gemeinsamen Größenbereich:
@@ -373,7 +383,7 @@ function Show-WzConfirm {
         [string]$OptionText,
         [bool]$OptionDefault = $true,
         [string[]]$Choices = @(),
-        [string]$ChoiceLabel = 'Auswahl',
+        [string]$ChoiceLabel,
         [int]$ChoiceDefault = 0,
         [string]$ConfirmText,
         [switch]$Danger,
@@ -472,9 +482,9 @@ function Show-WzConfirm {
 
     $eyebrow = New-Object Windows.Controls.TextBlock
     $eyebrow.Text = if ($Danger) {
-        '// ACHTUNG'
+        Get-WzText 'core.eyebrowDanger'
     } elseif ($HideCancel) {
-        '// HINWEIS'
+        Get-WzText 'core.eyebrowNotice'
     } else {
         Get-WzText 'core.confirmEyebrow'
     }
@@ -560,7 +570,7 @@ function Show-WzConfirm {
     $choiceBox = $null
     if ($Choices.Count -gt 0) {
         $choiceCaption = New-Object Windows.Controls.TextBlock
-        $choiceCaption.Text = $ChoiceLabel
+        $choiceCaption.Text = if ($ChoiceLabel) { $ChoiceLabel } else { Get-WzText 'core.choiceLabel' }
         $choiceCaption.Style = $syncHash.Window.FindResource('WzLabel')
         $choiceCaption.Margin = New-Object Windows.Thickness(0, 0, 0, 5)
         [void]$stack.Children.Add($choiceCaption)
