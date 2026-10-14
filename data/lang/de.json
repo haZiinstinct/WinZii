@@ -2440,6 +2440,7 @@
     "warnNotEnoughRoom": "Auf {laufwerk} sind nur {frei} frei — das reicht nicht für {noetig}.",
     "warnFat32Target": "Das Ziel ist FAT32: Dateien über 4 GB scheitern einzeln, der Rest wird trotzdem kopiert.",
     "warnWinZiiTarget": "Das Ziel ist der WinZii-Datenträger. Kundendaten haben darauf nichts verloren.",
+    "warnOneDriveFolders": "{ordner} liegen in OneDrive (Ordnersicherung). Dateien, die nur in der Cloud liegen, lädt robocopy beim Kopieren herunter — ohne Netz fehlen sie. Vorher auf der OneDrive-Karte »Alle Dateien herunterladen« ausführen.",
     "copyMessage": "Die Ordner werden nach {ziel} kopiert. Die Quelle bleibt vollständig erhalten — WinZii löscht und verschiebt nichts.",
     "copyItem": "{name} — {groesse} in {anzahl} Datei(en)",
     "copyTitle": "Dateien kopieren",
