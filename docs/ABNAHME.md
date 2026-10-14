@@ -10,17 +10,19 @@ bequemen Zweig. Genau daraus sind die drei Symptome entstanden, die den Audit au
 haben. Alles unten ist der Teil, der auf dem Entwicklungsrechner **grundsätzlich nicht**
 prüfbar ist.
 
-Stand: **0.7.0**, veröffentlicht am 20.09.2026 (Fensterlage, zweispaltige Karten,
-`Test-Layout`, dazu die sichtbaren Bedienelemente: Knöpfe mit Rand und Fläche,
-Fokusrahmen, ganze Zeile statt Kästchen). Alle Prüfwerkzeuge grün.
+Stand: **0.7.0**, veröffentlicht am 20.09.2026 (Ersteinrichtung, Windows Update,
+Herstellerwerkzeuge und Update-Katalog für Treiber, Belastungstest, Momentaufnahme,
+Übergabeblatt als PDF — dafür die Punkte 23 bis 29). Danach der Audit vom Oktober 2026
+(`docs/AUDIT-2026-10.md`), dessen Befunde unter [Unveröffentlicht] im CHANGELOG stehen.
+Alle Prüfwerkzeuge grün.
 
-**Auf 0.6.0 noch nicht wiederholt:** der Sandbox-Lauf und der Start aus dem
+**Seit 0.6.0 noch nicht wiederholt:** der Sandbox-Lauf und der Start aus dem
 Release-Archiv mit leerem `offline\` — beides zuletzt mit 0.5.3 über das WLAN des
 Notebooks bestanden. Am Verhalten hat sich seither nichts geändert, nur am Aussehen und
 an der Trefferfläche der Zeilen; nachzuholen ist es trotzdem.
 
-> **Was die CI seither abnimmt.** Seit `.github/workflows/pruefung.yml` laufen die zwölf
-> Werkzeuge bei jedem Push auf einem **englischen** Windows-Server, und die Oberfläche
+> **Was die CI seither abnimmt.** Seit `.github/workflows/pruefung.yml` laufen alle
+> Werkzeuge bei jedem Push auf main und jedem Pull Request auf einem **englischen** Windows-Server, und die Oberfläche
 > wird dort in beiden Sprachen gestartet und abgebildet. Damit ist der statische Teil
 > von »nicht-deutsches Windows« dauerhaft gedeckt — Zahlen- und Datumsformate,
 > Sprachtabellen, Kataloge, Seitenaufbau. **Was die CI nicht kann:** echte
@@ -30,7 +32,9 @@ an der Trefferfläche der Zeilen; nachzuholen ist es trotzdem.
 
 Drei Läufe haben die Tabelle gefüllt: zwei auf dem zweiten Notebook (0.5.1 mit Rechten,
 0.5.3 ohne) und einer auf dem Entwicklungsrechner (0.5.2). Damit hier niemand nachzählen
-muss, was noch aussteht, stehen **alle 29** Punkte in einer Tabelle:
+muss, was noch aussteht, stehen **alle 29** Punkte in einer Tabelle. Sie ist die
+vollständige Quelle: Ausführliche Kapitel weiter unten gibt es für die Punkte 1 bis 22;
+für 23 bis 29 steht das Vorgehen direkt in der Tabellenzeile.
 
 | Punkt | Stand |
 | --- | --- |
@@ -46,12 +50,12 @@ muss, was noch aussteht, stehen **alle 29** Punkte in einer Tabelle:
 | 10 — Sandbox | **Erledigt** (Entwicklungsrechner 01.09., Notebook 05.09.). Mit 0.5.2 gelaufen: **39 Prüfungen, kein Fehler.** Am 05.09. auf dem Notebook nach Einschalten des Features und Neustart: **42 Prüfungen, kein Fehler, 2,3 Minuten**, über das WLAN des Laptops (FRITZ!Box) — winget war in der Sandbox nicht vorhanden, die Nachinstallation lief den ganzen Weg samt Bereitstellung für alle Benutzer, 7-Zip danach über winget, Office-Werkzeug geladen. Von den vier erwarteten `[--]`-Zeilen bleibt nur der Drucker. Nebenbefund: Dass die Bereitstellung **in der Sandbox** gelingt und auf dem Host nicht, belegt den `Appx`-Schlüssel des Laptops als Ursache (Punkt 4). |
 | 11 — Akku, BitLocker, OneDrive | **Halb.** Der Akku ist geprüft. Ein verschlüsselter Datenträger und ein OneDrive mit Platzhaltern fehlen weiterhin — beides gibt es auf keinem der zwei Geräte. |
 | 12 — Restesuche | **Erledigt** (Notebook, 0.5.1) und der ergiebigste Punkt: zwei echte Fehler. |
-| 13 — englisches Windows | **Halb.** Die CI deckt den statischen Teil bei jedem Push. Dazu prüft `tools\Test-Parsers.ps1` alle neun Stellen, die Windows-Ausgaben deuten, gegen die **echten** deutschen und englischen Wortlaute — alle treffen. `DISM` und `chkdsk` werten gar keinen Text aus, sondern Rückgabewerte, und können dort nicht brechen. Offen bleibt der Lauf auf einem wirklich englischen System. |
-| 14 — Sprachwechsel im Betrieb | **Erledigt** (01.09.) — **mit Befund.** `Update-WzMeasuredTexts` bewirkte nichts: zwei Hintergrundaufgaben gleichzeitig angestoßen, die zweite abgewiesen. Behoben, und `tools\Test-LanguageSwitch.ps1` prüft es seither bei jedem Push. Am 05.09. ein zweiter Befund, am Werkzeug selbst: Es schaltete auf Englisch **ohne** `-NoSave` und hinterließ »en« in `einstellungen.json` — der nächste echte Start auf dem deutschen Notebook kam auf Englisch hoch. Behoben; belegt, dass die Datei nach dem Lauf wegbleibt. |
+| 13 — englisches Windows | **Halb.** Die CI deckt den statischen Teil bei jedem Push auf main und jedem Pull Request. Dazu prüft `tools\Test-Parsers.ps1` alle neun Stellen, die Windows-Ausgaben deuten, gegen die **echten** deutschen und englischen Wortlaute — alle treffen. `DISM` und `chkdsk` werten gar keinen Text aus, sondern Rückgabewerte, und können dort nicht brechen. Offen bleibt der Lauf auf einem wirklich englischen System. |
+| 14 — Sprachwechsel im Betrieb | **Erledigt** (01.09.) — **mit Befund.** `Update-WzMeasuredTexts` bewirkte nichts: zwei Hintergrundaufgaben gleichzeitig angestoßen, die zweite abgewiesen. Behoben, und `tools\Test-LanguageSwitch.ps1` prüft es seither bei jedem Push auf main und jedem Pull Request. Am 05.09. ein zweiter Befund, am Werkzeug selbst: Es schaltete auf Englisch **ohne** `-NoSave` und hinterließ »en« in `einstellungen.json` — der nächste echte Start auf dem deutschen Notebook kam auf Englisch hoch. Behoben; belegt, dass die Datei nach dem Lauf wegbleibt. |
 | 15 — Windows 10 | **Offen.** Steht seit der ersten Fassung als Grenze im README, ein vollständiger Durchlauf fehlt. |
 | 16 — schreibgeschützter Stick, FAT32 | **Erledigt, mit Befund.** Schreibschutz geprüft (01.09.): WinZii startet, meldet es in Konsole und auf der Protokollseite, legt nichts an. Befund: Die Ausgabeknöpfe luden weiter zum Klicken ein — jetzt abgeschaltet, wenn nichts geschrieben werden kann. FAT32 am 05.09. auf dem Notebook geprüft, auf einer virtuellen Platte (diskpart, 600 MB, FAT32): `Test-Smoke` läuft aus der Kopie, `Get-WzVolumeInfo` erkennt FAT32, `Test-WzOfficeTarget` lehnt den Datenträger **vor** dem Download ab — in beiden Sprachen —, das Dashboard zeigt den Hinweisbalken und »W: FAT32« in der Statuszeile, WinZii startet und rendert von dort. Ohne Befund. Was fehlt, ist nur noch ein echter Stick statt einer virtuellen Platte. |
 | 17 — Domänen-PC mit Richtlinien | **Offen.** Der Launcher warnt davor, geprüft ist es nie. Firmenkunden sind der Normalfall. |
-| 18 — Start ohne Rechte | **Erledigt** (01.09., Notebook 05.09.) — **mit zwei Befunden.** Alle fünfzehn Seiten laden sauber, aber WinZii merkte gar nicht, dass ihm die Rechte fehlen. Der Hinweis steht jetzt in den ersten Protokollzeilen, mit der Liste der betroffenen Seiten — auf dem Notebook bestätigt, als dritte und vierte Zeile, in beiden Sprachen. Zweiter Befund dort: Secure Boot meldete »n/v (kein UEFI oder gesperrt)« auf einem UEFI-Notebook, weil `Confirm-SecureBootUEFI` ohne Rechte den Zugriff verweigert. Jetzt »ohne Administratorrechte nicht abfragbar«. |
+| 18 — Start ohne Rechte | **Erledigt** (01.09., Notebook 05.09.) — **mit zwei Befunden.** Alle damals fünfzehn Seiten laden sauber, aber WinZii merkte gar nicht, dass ihm die Rechte fehlen. Der Hinweis steht jetzt in den ersten Protokollzeilen, mit der Liste der betroffenen Seiten — auf dem Notebook bestätigt, als dritte und vierte Zeile, in beiden Sprachen. Zweiter Befund dort: Secure Boot meldete »n/v (kein UEFI oder gesperrt)« auf einem UEFI-Notebook, weil `Confirm-SecureBootUEFI` ohne Rechte den Zugriff verweigert. Jetzt »ohne Administratorrechte nicht abfragbar«. |
 | 19 — langsames Gerät | **Offen.** Alle Zeitlimits sind auf schneller Hardware gemessen. |
 | 20 — fremder Virenscanner | **Erledigt** (Notebook, 0.5.3) — **mit Befund.** Malwarebytes läuft neben Defender; das Sicherheitscenter kennt beide, die Karte »Virenschutz« nannte nur Defender. Der abgeleitete Fall wiegt schwerer: Neben Norton oder McAfee ist Defender passiv, `Get-MpComputerStatus` antwortet trotzdem — mit »Echtzeitschutz AUS« und einer Warnung im Übergabeblatt für einen geschützten PC. Behoben: erst das Sicherheitscenter, dann Defender; »Defender passiv« ohne Warnung, und Defenders Signaturalter zählt nur, wenn Defender der Schutz ist. Ungesehen bleibt ein Gerät, auf dem Defender wirklich passiv ist, und ob der Scanner WinZii selbst anhält. |
 | 21 — hohe Skalierung, zweiter Monitor | **Halb, ohne Befund.** 1920×1080 (200 % auf 4K), das Mindestmaß 1000×560 und ein sehr breites 2560×720 sitzen alle (01.09.). Ein zweiter Monitor mit abweichender Skalierung fehlt. |
@@ -311,7 +315,7 @@ muss auf der Seite **Rücknahme** auftauchen.
 
 ## 13. Englisches Windows (neu, erst seit der Mehrsprachigkeit prüfbar)
 
-Die CI prüft bei jedem Push auf einem englischen Windows-Server, was sich ohne Eingriff
+Die CI prüft bei jedem Push auf main und jedem Pull Request auf einem englischen Windows-Server, was sich ohne Eingriff
 prüfen lässt. Was dort nicht geht: die **Windows-Werkzeuge wirklich laufen lassen**.
 Genau dort liegt die Fehlerklasse, die in den drei Übersetzungsetappen dreimal
 aufgetaucht ist — ein Vergleich gegen ein deutsches Wort, das auf Englisch nie zutrifft.
@@ -353,7 +357,7 @@ Protokoll ist ein Verlauf.
 
 ## 15. Windows 10, vollständiger Durchlauf
 
-Die Versionsweiche greift (33 Einträge für beide Systeme, 7 nur für 11, 1 nur für 10),
+Die Versionsweiche greift (41 Einträge für beide Systeme, 7 nur für 11, 1 nur für 10),
 aber es lief dort nie ein ganzer Ablauf. Auf einem Windows-10-Gerät einmal alles:
 Dashboard, Diagnose, Optimierung anwenden **und zurücknehmen**, Bereinigung, Autostart,
 Übergabeblatt.
@@ -392,7 +396,7 @@ wurde das nie, und Firmenkunden sind der Normalfall.
 dabei landet dort jeder, der die Rechteabfrage wegklickt.
 
 - `Start.bat -NoElevate` starten. Läuft die Oberfläche?
-- Auf jede der vierzehn Seiten wechseln. Keine darf mit einer Ausnahme abbrechen.
+- Auf jede der sechzehn Seiten wechseln. Keine darf mit einer Ausnahme abbrechen.
 - Etwas anstoßen, das Rechte braucht (Optimierung, Bereinigung). WinZii muss **sagen**,
   dass die Rechte fehlen — nicht stumm nichts tun und nicht »erledigt« melden.
 
@@ -456,7 +460,7 @@ powershell -NoProfile -ExecutionPolicy Bypass -File tools/Repair-Encoding.ps1
 Dann die Prüfwerkzeuge: `Test-Smoke`, `Test-Catalogs`, `Test-Pages`, `Test-Language`,
 `Test-LanguageSwitch`, `Test-Parsers`, `Test-Undo`, `Test-Office`, `Test-Layout`,
 `Test-Process`, `Test-Contrast`, `Test-Dialogs`, `Invoke-Analyzer` — dieselben, die die CI
-bei jedem Push auf dem englischen Server laufen lässt.
+bei jedem Push auf main und jedem Pull Request auf dem englischen Server laufen lässt.
 
 Fällt bei der Abnahme etwas auf, das Anwender betrifft, wird daraus die **nächste
 Patch-Fassung**. Der

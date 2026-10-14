@@ -37,7 +37,7 @@ powershell -NoProfile -ExecutionPolicy Bypass -STA -File tools\Test-Pages.ps1
 ```
 
 Die weiteren Prüfwerkzeuge lohnen sich, wenn du in dem jeweiligen Bereich gearbeitet hast
-— die CI lässt sie ohnehin alle bei jedem Push laufen, auf einem englischen Windows:
+— die CI lässt sie ohnehin alle bei jedem Push auf main und jedem Pull Request laufen, auf einem englischen Windows:
 
 | Werkzeug | Wofür |
 | --- | --- |

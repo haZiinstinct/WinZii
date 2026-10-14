@@ -9,12 +9,17 @@ sie meldet.
 Bitte **kein öffentliches Issue** anlegen, wenn sich damit ein System schädigen lässt.
 Stattdessen:
 
-- über die private Meldefunktion von GitHub („Security" → „Report a vulnerability"), oder
-- per Mail an die im Repository hinterlegte Adresse.
+über die private Meldefunktion von GitHub (Private Vulnerability Reporting:
+„Security" → „Report a vulnerability"). Andere Wege gibt es nicht.
 
 Hilfreich: welche Fassung, welches Windows, welcher Ablauf, und was im schlimmsten Fall
 passieren kann. Eine Antwort kommt, sobald es die Zeit erlaubt — WinZii ist ein
 Nebenprojekt, keine betreute Software mit Reaktionszusage.
+
+## Unterstützte Fassungen
+
+Unterstützt wird die jeweils neueste veröffentlichte Fassung. Korrekturen erscheinen
+als neue Fassung, ältere werden nicht nachgebessert.
 
 ## Was **kein** Sicherheitsproblem ist
 
@@ -35,9 +40,20 @@ Nebenprojekt, keine betreute Software mit Reaktionszusage.
 Damit man es nicht selbst nachlesen muss:
 
 - **Keine Telemetrie**, keine Nutzungszählung, kein Aufruf nach Hause.
-- Verbindungen ins Internet nur, wenn ihr sie ausdrücklich anstoßt: winget-Installationen,
-  Office-Download über das Bereitstellungswerkzeug von Microsoft, die Nachinstallation von
-  winget selbst — und die drei Erreichbarkeitsprüfungen der Netzwerk-Diagnose.
+- Verbindungen ins Internet nur, wenn ihr sie ausdrücklich anstoßt:
+  - winget-Installationen und -Aktualisierungen, die Nachinstallation von winget selbst
+    und die Herstellerwerkzeuge für Treiber (Dell, Lenovo, HP, Intel), die über winget
+    kommen und danach selbst beim Hersteller suchen,
+  - Office-Download über das Bereitstellungswerkzeug von Microsoft,
+  - Treibersuche und -download im Microsoft Update-Katalog
+    (`catalog.update.microsoft.com`, Downloads nur über HTTPS von Microsoft),
+  - Windows Update über die Windows-Update-Schnittstelle (COM) — die Verbindung baut
+    Windows selbst auf,
+  - die Erreichbarkeitsprüfungen der Netzwerk-Diagnose.
+- **Eine Ausnahme mit Zustimmung:** Die Versionsprüfung fragt beim ersten Start einmal,
+  ob sie bei GitHub (`api.github.com`) nach einer neueren Fassung sehen darf. Nur nach
+  einem Ja geht bei jedem Start eine einzelne Anfrage dorthin; wer ablehnt, wird nie
+  wieder gefragt.
 - Alles, was WinZii schreibt, landet unterhalb des eigenen Ordners in `logs\`,
   `backups\`, `reports\` und `offline\`.
 
