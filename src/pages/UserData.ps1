@@ -419,7 +419,9 @@ function Start-WzFileMigration {
         -ConfirmText (Get-WzText 'data.btnCopyGo') -Danger:($warnings.Count -gt 0)
     if (-not $answer.Confirmed) { return }
 
-    Invoke-WzTask -Name (Get-WzText 'data.taskCopy') -Cancelable -ArgumentList (, $jobs) -ScriptBlock {
+    # Kooperativ: »Abbrechen« beendet robocopy, und der Umzug meldet danach
+    # noch, bis wohin er kam (Audit H9).
+    Invoke-WzTask -Name (Get-WzText 'data.taskCopy') -CooperativeCancel -ArgumentList (, $jobs) -ScriptBlock {
         param($jobs)
         Invoke-WzFileMigration -Jobs $jobs
     } -OnComplete {
@@ -428,7 +430,9 @@ function Start-WzFileMigration {
         $lines = @($result.Applied) + @($result.Failed | ForEach-Object { Get-WzText 'data.copyFailedItem' @{ name = $_ } })
         if ($lines.Count -eq 0) { $lines = @(Get-WzText 'data.copyNothing') }
         [void](Show-WzConfirm -Title (Get-WzText 'data.copyDoneTitle') -HideCancel -ConfirmText (Get-WzText 'dialog.understood') `
-            -Message $(if (@($result.Failed).Count -gt 0) {
+            -Message $(if ($result.CanceledAt) {
+                Get-WzText 'data.copyCanceledAt' @{ name = $result.CanceledAt }
+            } elseif (@($result.Failed).Count -gt 0) {
                 Get-WzText 'data.copyPartial'
             } else {
                 Get-WzText 'data.copyDone' @{ groesse = (Format-WzBytes $result.CopiedBytes) }

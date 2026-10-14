@@ -109,6 +109,7 @@ function Invoke-WzFileMigration {
     $failed = @()
     $copiedBytes = [int64]0
     $index = 0
+    $canceledAt = $null
 
     foreach ($job in $Jobs) {
         $index++
@@ -120,6 +121,7 @@ function Invoke-WzFileMigration {
             # Zwischen zwei Ordnern aussteigen statt mitten in einem: Ein
             # halb kopierter Ordner sieht auf dem Ziel aus wie ein ganzer.
             Write-WzLog (Get-WzText 'data.logCopyCancelled') -Level Warn
+            $canceledAt = $job.Name
             break
         }
 
@@ -130,7 +132,17 @@ function Invoke-WzFileMigration {
         # /COPY:DAT ohne Berechtigungen — die passen auf einem anderen PC ohnehin nicht.
         $arguments = '"{0}" "{1}" /E /COPY:DAT /DCOPY:DAT /XJ /R:1 /W:2 /NP /NFL /NDL /NJH /NJS' -f `
             $job.Source.TrimEnd('\'), $job.Destination.TrimEnd('\')
-        $result = Invoke-WzProcess -FilePath 'robocopy.exe' -Arguments $arguments
+        # -KillOnCancel: robocopy ist wiederanlaufbar, ein abgebrochener Ordner
+        # wird beim nächsten Lauf ergänzt. Ohne den Schalter lief es nach
+        # »Abbrechen« verwaist weiter, während der Techniker die Platte zog
+        # (Audit 2026-10, H9). Die Seite startet den Vorgang mit
+        # -CooperativeCancel, damit dieser Zweig auch erreicht wird.
+        $result = Invoke-WzProcess -FilePath 'robocopy.exe' -Arguments $arguments -KillOnCancel
+        if ($result.Canceled) {
+            $canceledAt = $job.Name
+            Write-WzLog (Get-WzText 'data.logCopyCancelledAt' @{ name = $job.Name }) -Level Warn
+            break
+        }
 
         $measure = Measure-WzPathSet -Paths @($job.Destination)
         if ($result.ExitCode -ge 8 -or $null -eq $result.ExitCode) {
@@ -153,6 +165,7 @@ function Invoke-WzFileMigration {
         Applied     = @($done)
         Failed      = @($failed)
         CopiedBytes = $copiedBytes
+        CanceledAt  = $canceledAt
     }
 }
 
