@@ -14,6 +14,12 @@ Das Audit schlug vor, standardmäßig nur die Sicherung des eigenen Rechners zu 
 
 **Annahme:** Fremde Rechner bleiben sichtbar, die vorhandene Warnung bleibt. Gegen das eigentliche Risiko — Klartext-Schlüssel, die zum nächsten Kunden mitwandern — fragt WinZii nach dem WLAN-Import, ob die Schlüssel vom Stick gelöscht werden. Die BitLocker-Schlüsseldatei (`backups\<PC>\…-bitlocker`) bleibt unangetastet, weil sie bis zur Rückgabe des Geräts gebraucht werden kann. Offen: Soll es eine Verschlüsselung mit Techniker-Passphrase geben?
 
+### F2 — Aufbewahrung alter Protokolle
+
+Das Audit wollte Sitzungsordner »älter als N Tage« beim Start aufräumen, ohne N festzulegen.
+
+**Annahme:** 90 Tage, für alle Rechner auf dem Stick, mit einer Protokollzeile über die Anzahl. Wer Protokolle als Nachweis länger braucht, ändert `Remove-WzOldLogSessions -Days` in `src\modules\Core.Logging.ps1` oder sagt Bescheid.
+
 ## Selbst zu tun
 
 - **M24 — Abnahme Netzlaufwerke im Benutzerkontext.** WinZii mit einem Technikerkonto erhöhen, eine Sicherung mit Netzlaufwerk und Druckerverbindung zurückspielen: Laufwerk und Drucker müssen im Explorer des Kunden erscheinen, nicht beim Techniker. Kurz blitzt dabei kein Fenster auf (versteckte Aufgabe), sonst bitte melden.
