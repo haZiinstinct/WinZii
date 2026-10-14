@@ -193,6 +193,8 @@ try {
     Write-Check 'Silent-Schalter abgewiesen' ($null -ne (Test-WzVaultManifest -Directory $vorrat -WingetId 'Beispiel.Paket' -Installers $dateien))
     Set-Manifest 'Beispiel.Paket' $hash "  InstallerSwitches: { Silent: /evil }"
     Write-Check 'Schalter in Kurzschreibweise abgewiesen' ($null -ne (Test-WzVaultManifest -Directory $vorrat -WingetId 'Beispiel.Paket' -Installers $dateien))
+    Set-Manifest 'Beispiel.Paket' $hash "  'InstallerSwitches':`n    `"Silent`": /evil"
+    Write-Check 'Schalter in Anführungszeichen abgewiesen' ($null -ne (Test-WzVaultManifest -Directory $vorrat -WingetId 'Beispiel.Paket' -Installers $dateien))
     Set-Manifest 'Beispiel.Paket' $hash "Description: |-`n  Ein ganz normales Programm."
     Write-Check 'Block-Text bleibt erlaubt' ($null -eq (Test-WzVaultManifest -Directory $vorrat -WingetId 'Beispiel.Paket' -Installers $dateien))
 
