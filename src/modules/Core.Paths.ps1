@@ -230,14 +230,21 @@ function Test-WzWritableRoot {
     .SYNOPSIS
         Prüft, ob auf den Stick geschrieben werden kann (Protokolle, Berichte, Cache).
     #>
+    # Eine Minute lang gemerkt: Das Dashboard schrieb bei jedem Aufbau eine
+    # Probedatei (Audit 2026-10, N). Länger nicht — vor einem Eingriff zählt
+    # der aktuelle Stand, ein Stick kann zwischendurch gesperrt werden.
+    if ($script:WzWritableCheck -and ((Get-Date) - $script:WzWritableCheck.Time).TotalSeconds -lt 60) {
+        return $script:WzWritableCheck.Result
+    }
     $probe = Join-Path (Get-WzRoot) '.wz-write-test'
+    $ok = $false
     try {
         [IO.File]::WriteAllText($probe, 'x')
         Remove-Item -LiteralPath $probe -Force -ErrorAction SilentlyContinue
-        return $true
-    } catch {
-        return $false
-    }
+        $ok = $true
+    } catch { }
+    $script:WzWritableCheck = @{ Time = Get-Date; Result = $ok }
+    return $ok
 }
 
 function Get-WzVolumeInfo {
@@ -269,7 +276,22 @@ function Get-WzVolumeInfo {
         IsFat32     = $false
         IsRemovable = $false
     }
-    if (-not $driveLetter) { return $result }
+    if (-not $driveLetter) {
+        # UNC-Freigabe: Bisher blieb FreeBytes bei 0, und der Treiberexport
+        # meldete »kein Platz« (Audit 2026-10, N). Das FileSystemObject kennt
+        # Freigaben ohne Laufwerksbuchstaben.
+        if ($displayName -like '\\*') {
+            try {
+                $fso = New-Object -ComObject Scripting.FileSystemObject
+                $drive = $fso.GetDrive($displayName)
+                $result.FreeBytes = [int64]$drive.FreeSpace
+                $result.SizeBytes = [int64]$drive.TotalSize
+                $result.FileSystem = [string]$drive.FileSystem
+                [void][Runtime.InteropServices.Marshal]::ReleaseComObject($fso)
+            } catch { }
+        }
+        return $result
+    }
 
     try {
         $volume = Get-CimInstance -ClassName Win32_LogicalDisk -Filter "DeviceID='$driveLetter`:'" -ErrorAction Stop

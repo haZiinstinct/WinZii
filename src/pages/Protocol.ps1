@@ -55,7 +55,9 @@ function Initialize-WzProtocolPage {
 
     $syncHash.ProtoBtnOpenLog.Add_Click({
         if ($syncHash.LogFile -and (Test-Path -LiteralPath $syncHash.LogFile)) {
-            Start-Process notepad.exe -ArgumentList $syncHash.LogFile
+            # In Anführungszeichen: Bei »D:\Mein Stick\« öffnete Notepad sonst
+            # »D:\Mein« (Audit 2026-10, N).
+            Start-Process notepad.exe -ArgumentList ('"{0}"' -f $syncHash.LogFile)
         } else {
             Write-WzLog (Get-WzText 'log.logNoFile') -Level Warn
         }

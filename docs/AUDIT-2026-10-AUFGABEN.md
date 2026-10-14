@@ -94,22 +94,22 @@ Jeder Punkt: `- [ ] **Kennung** Datei:Zeile. Aufgabe. → Erledigt wenn …`
 - [x] **M28** `src/modules/Core.Runspace.ps1:107-137`. Abholung in `try/finally` mit `CurrentTask=$null; Set-WzBusy -Off` im `finally`.
 - [x] **M29** `src/modules/Core.Ui.ps1:178-184`. Bei Fehler im Initializer `$syncHash.Pages.Remove($Id)`.
 - [x] **M31** `src/modules/Core.I18n.ps1:68-77, 511-515`, `src/launcher.ps1:34-41`. Nicht-deutsche Primärsprache ohne eigene Datei auf `en` statt `de`. → Erledigt wenn `Test-Language` Abschnitt 8 die Funktion `Get-WzSystemLanguage` wirklich aufruft (siehe auch Stufe 3).
-- [ ] **N** `src/modules/Core.Ui.ps1:372, 471, 473`. `'Auswahl'`, `'// ACHTUNG'`, `'// HINWEIS'` über `Get-WzText`.
-- [ ] **N** `src/launcher.ps1:130-134`, `tools/Test-Pages.ps1:68`, `tools/Test-LanguageSwitch.ps1:165`. Im `&`-Zweig `$mainScript` ohne eigene Anführungszeichen übergeben; einmal mit Pfad mit Leerzeichen prüfen.
-- [ ] **N** `src/pages/Protocol.ps1:58`. `-ArgumentList ('"{0}"' -f $syncHash.LogFile)`.
-- [ ] **N** `src/modules/Core.Runspace.ps1:180`, `src/modules/Core.Ui.ps1:256-262`, `src/main.ps1:191-192`. In `Update-WzLanguageUi` `Set-WzBusy -Off`, `Set-WzConsoleCollapsed` und Statuszeile nachziehen.
-- [ ] **N** `src/launcher.ps1:90-99`. Unblock-Scan auf `src`, `data`, `tools`, `assets`, `Start.bat` beschränken.
-- [ ] **N** `src/modules/Core.Palette.ps1:134-136`. `[WildcardPattern]::Escape($needle)` oder `IndexOf(…, OrdinalIgnoreCase)`.
-- [ ] **N** `src/modules/Core.Logging.ps1:46`. `[AllowEmptyString()]` und leere Meldung ignorieren. Aufrufer: `Drivers.ps1:316, 487, 656, 677, 683`, `Diagnostics.ps1:421, 449, 476`, `pages/AiRemoval.ps1:70`, `pages/Toolbox.ps1:84`.
-- [ ] **N** `src/modules/Core.Logging.ps1:71-77`. Schreibzugriff mit Retry oder Lock; `src/modules/Core.Paths.ps1:51-60` Sitzungsordner älter als N Tage beim Start aufräumen (mit Hinweis).
-- [ ] **N** `src/modules/Core.Ui.ps1:67-73, 119-121`, `src/modules/Core.I18n.ps1:417`. In `Update-WzLanguageUi` `CardGrids.Clear()` und `$script:WzCardWidths` leeren.
-- [ ] **N** `src/modules/Core.I18n.ps1:452-459, 485-492`. Defekte `einstellungen.json` als `.bak` sichern und Warnzeile; in temp schreiben und `Move-Item -Force`.
-- [ ] **N** `src/modules/Core.Paths.ps1:107-114`. Ergebnis von `Test-WzWritableRoot` einmal je Sitzung merken.
-- [ ] **N** `src/modules/Core.Paths.ps1:146`. UNC-Wurzel: freien Platz über `GetDiskFreeSpaceEx` ermitteln.
-- [ ] **N** `src/modules/Core.Ui.ps1:47, 55`. Dublette in `Register-WzNames` als Fehler werfen.
-- [ ] **N** `src/xaml/MainWindow.xaml:169, 222-227, 238`. Klappzeile und Credit per Tastatur erreichbar, Chrome-Knöpfe mit `AutomationProperties.Name`; 31 hart kodierte Farben auf Theme-Pinsel.
-- [ ] **N** `src/main.ps1:112`. Schrift-URI mit `[Uri]::EscapeUriString` bilden.
-- [ ] **N** `src/main.ps1:337-340`. `WZ_SELFTEST_ACTION` in CONTRIBUTING.md als Entwicklerpfad dokumentieren.
+- [x] **N** `src/modules/Core.Ui.ps1:372, 471, 473`. `'Auswahl'`, `'// ACHTUNG'`, `'// HINWEIS'` über `Get-WzText`.
+- [x] **N** `src/launcher.ps1:130-134`, `tools/Test-Pages.ps1:68`, `tools/Test-LanguageSwitch.ps1:165`. Im `&`-Zweig `$mainScript` ohne eigene Anführungszeichen übergeben; einmal mit Pfad mit Leerzeichen prüfen.
+- [x] **N** `src/pages/Protocol.ps1:58`. `-ArgumentList ('"{0}"' -f $syncHash.LogFile)`.
+- [x] **N** `src/modules/Core.Runspace.ps1:180`, `src/modules/Core.Ui.ps1:256-262`, `src/main.ps1:191-192`. In `Update-WzLanguageUi` `Set-WzBusy -Off`, `Set-WzConsoleCollapsed` und Statuszeile nachziehen.
+- [x] **N** `src/launcher.ps1:90-99`. Unblock-Scan auf `src`, `data`, `tools`, `assets`, `Start.bat` beschränken.
+- [x] **N** `src/modules/Core.Palette.ps1:134-136`. `[WildcardPattern]::Escape($needle)` oder `IndexOf(…, OrdinalIgnoreCase)`.
+- [x] **N** `src/modules/Core.Logging.ps1:46`. `[AllowEmptyString()]` und leere Meldung ignorieren. Aufrufer: `Drivers.ps1:316, 487, 656, 677, 683`, `Diagnostics.ps1:421, 449, 476`, `pages/AiRemoval.ps1:70`, `pages/Toolbox.ps1:84`.
+- [x] **N** `src/modules/Core.Logging.ps1:71-77`. Schreibzugriff mit Retry oder Lock; `src/modules/Core.Paths.ps1:51-60` Sitzungsordner älter als N Tage beim Start aufräumen (mit Hinweis).
+- [x] **N** `src/modules/Core.Ui.ps1:67-73, 119-121`, `src/modules/Core.I18n.ps1:417`. In `Update-WzLanguageUi` `CardGrids.Clear()` und `$script:WzCardWidths` leeren.
+- [x] **N** `src/modules/Core.I18n.ps1:452-459, 485-492`. Defekte `einstellungen.json` als `.bak` sichern und Warnzeile; in temp schreiben und `Move-Item -Force`.
+- [x] **N** `src/modules/Core.Paths.ps1:107-114`. Ergebnis von `Test-WzWritableRoot` einmal je Sitzung merken.
+- [x] **N** `src/modules/Core.Paths.ps1:146`. UNC-Wurzel: freien Platz über `GetDiskFreeSpaceEx` ermitteln.
+- [x] **N** `src/modules/Core.Ui.ps1:47, 55`. Dublette in `Register-WzNames` als Fehler werfen.
+- [x] **N** `src/xaml/MainWindow.xaml:169, 222-227, 238`. Klappzeile und Credit per Tastatur erreichbar, Chrome-Knöpfe mit `AutomationProperties.Name`; 31 hart kodierte Farben auf Theme-Pinsel.
+- [x] **N** `src/main.ps1:112`. Schrift-URI mit `[Uri]::EscapeUriString` bilden.
+- [x] **N** `src/main.ps1:337-340`. `WZ_SELFTEST_ACTION` in CONTRIBUTING.md als Entwicklerpfad dokumentieren.
 
 ## Stufe 3: CI, Prüfwerkzeuge, Release
 
@@ -125,7 +125,7 @@ Jeder Punkt: `- [ ] **Kennung** Datei:Zeile. Aufgabe. → Erledigt wenn …`
 - [ ] **Neue Prüfwerkzeuge** für die neun Module ohne funktionale Aussage, in dieser Reihenfolge: Report (HTML-Escaping mit Injektions-Mustern, CSV), Setup (Validierung Rechnername/Konto/Schlüssel), WindowsUpdate (HResult-Kette, Get-WzUpdateResultCode), Toolbox, AiRemoval, Autostart, HealthCheck, Snapshot, Core.Version (Test-WzVersionNewer). → Erledigt wenn die Tabelle »Testabdeckung je Modul« im Audit keine Zeile »keines« mehr hat.
 - [ ] **N** `tools/New-Release.ps1:98-105`. Zweite Zeile mit `WinZii.zip` in die `.sha256`.
 - [ ] **N** `.gitattributes:27-31`. `.github/ export-ignore`.
-- [ ] **N** `.gitignore`. `/selftest.png`, `/abbilder/`.
+- [x] **N** `.gitignore`. `/selftest.png`, `/abbilder/`.
 - [ ] **N** `.editorconfig:9`. `[*.{yml,yaml,txt,gitattributes,gitignore,editorconfig}] end_of_line = lf`.
 - [x] **N** `tools/Test-Language.ps1:201-216`. `Core.I18n.ps1` dot-sourcen und `Get-WzSystemLanguage` mit umgebogener `Get-UICulture` aufrufen; Z. 259: Einzelwort-Literale in `-ConfirmText`, `-Title`, `-Area` prüfen.
 - [ ] **N** `tools/Test-Pages.ps1:51, 71`, `tools/Test-Layout.ps1:229`, `tools/Test-Sandbox.ps1:51, 63`. Zusätzlich `$LASTEXITCODE -ne 0` als Fehlschlag.

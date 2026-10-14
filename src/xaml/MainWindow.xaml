@@ -2,7 +2,7 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         Title="WinZii" Height="820" Width="1280" MinHeight="560" MinWidth="1000"
         WindowStartupLocation="CenterScreen"
-        Background="#0A0A0F"
+        Background="{DynamicResource WzBgPage}"
         UseLayoutRounding="True"
         TextOptions.TextFormattingMode="Display">
 
@@ -19,7 +19,7 @@
         <!-- ============================================================
              Seitenleiste
              ============================================================ -->
-        <Border Grid.Column="0" Background="#06060A" BorderBrush="#14FFFFFF" BorderThickness="0,0,1,0">
+        <Border Grid.Column="0" Background="{DynamicResource WzBgDarker}" BorderBrush="{DynamicResource WzBorder}" BorderThickness="0,0,1,0">
             <Grid>
                 <Grid.RowDefinitions>
                     <RowDefinition Height="Auto" />
@@ -31,13 +31,13 @@
                 <StackPanel Grid.Row="0" Margin="22,26,22,20">
                     <TextBlock FontSize="25" FontWeight="Bold"
                                FontFamily="{DynamicResource WzFontMono}">
-                        <Run Text="Win" Foreground="#00D4FF" /><Run Text="Z" Foreground="#F8FAFC" /><Run Text="ii" Foreground="#00D4FF" />
+                        <Run Text="Win" Foreground="{DynamicResource WzCyan}" /><Run Text="Z" Foreground="{DynamicResource WzTextBright}" /><Run Text="ii" Foreground="{DynamicResource WzCyan}" />
                     </TextBlock>
                     <StackPanel Orientation="Horizontal" Margin="0,7,0,0">
                         <Ellipse Style="{DynamicResource WzPulseDot}" VerticalAlignment="Center" />
                         <TextBlock Text="{DynamicResource L.app.subtitle}" Margin="7,0,0,0"
                                    FontFamily="{DynamicResource WzFontMono}" FontSize="10.5"
-                                   Foreground="#00D4FF" VerticalAlignment="Center" />
+                                   Foreground="{DynamicResource WzCyan}" VerticalAlignment="Center" />
                     </StackPanel>
                 </StackPanel>
 
@@ -154,7 +154,7 @@
 
                 <!-- Fußzeile: Sprache, Version und haZii-Credit -->
                 <StackPanel Grid.Row="2" Margin="22,16,22,18">
-                    <Border Height="1" Background="#14FFFFFF" Margin="0,0,0,14" />
+                    <Border Height="1" Background="{DynamicResource WzBorder}" Margin="0,0,0,14" />
                     <!-- Bewusst ein Knopf statt eines Auswahlfelds: In der Fußzeile
                          steht sonst kein einziges umrandetes Bedienelement, und ein
                          Kasten neben dem Credit stört dessen Ruhe. Das Menü baut
@@ -167,8 +167,9 @@
                                FontFamily="{DynamicResource WzFontMono}" FontSize="10.5"
                                Foreground="{DynamicResource WzTextFaint}" Margin="0,0,0,7" />
                     <TextBlock Name="HaziiBadge" FontFamily="{DynamicResource WzFontMono}" FontSize="11.5" Cursor="Hand"
+                               Focusable="True" KeyboardNavigation.IsTabStop="True" AutomationProperties.Name="hazii.org"
                                ToolTip="https://hazii.org">
-                        <Run Text="// code:" Foreground="#94A3B8" /><Run Text=" " Foreground="#94A3B8" /><Run Text="ha" Foreground="#00D4FF" FontWeight="Bold" /><Run Text="Z" Foreground="#F8FAFC" FontWeight="Bold" /><Run Text="ii" Foreground="#00D4FF" FontWeight="Bold" /><Run Text=".org" Foreground="#00A8CC" FontWeight="Bold" />
+                        <Run Text="// code:" Foreground="{DynamicResource WzTextDim}" /><Run Text=" " Foreground="{DynamicResource WzTextDim}" /><Run Text="ha" Foreground="{DynamicResource WzCyan}" FontWeight="Bold" /><Run Text="Z" Foreground="{DynamicResource WzTextBright}" FontWeight="Bold" /><Run Text="ii" Foreground="{DynamicResource WzCyan}" FontWeight="Bold" /><Run Text=".org" Foreground="{DynamicResource WzCyanDim}" FontWeight="Bold" />
                     </TextBlock>
                 </StackPanel>
             </Grid>
@@ -187,43 +188,43 @@
             </Grid.RowDefinitions>
 
             <!-- Kopfleiste (zugleich Fenstergriff) -->
-            <Grid Grid.Row="0" Background="#0A0A0F">
-                <Border BorderBrush="#14FFFFFF" BorderThickness="0,0,0,1" />
+            <Grid Grid.Row="0" Background="{DynamicResource WzBgPage}">
+                <Border BorderBrush="{DynamicResource WzBorder}" BorderThickness="0,0,0,1" />
                 <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Margin="26,0,0,0">
-                    <Border Background="#12121A" BorderBrush="#14FFFFFF" BorderThickness="1"
+                    <Border Background="{DynamicResource WzBgCard}" BorderBrush="{DynamicResource WzBorder}" BorderThickness="1"
                             CornerRadius="999" Padding="11,3,11,3">
                         <StackPanel Orientation="Horizontal">
                             <TextBlock Text="&#xE977;" FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets"
                                        FontSize="11" Foreground="{DynamicResource WzTextFaint}" VerticalAlignment="Center" Margin="0,0,7,0" />
                             <TextBlock Name="HeaderHost" Text="COMPUTERNAME"
                                        FontFamily="{DynamicResource WzFontMono}" FontSize="10.5"
-                                       Foreground="#94A3B8" VerticalAlignment="Center" />
+                                       Foreground="{DynamicResource WzTextDim}" VerticalAlignment="Center" />
                         </StackPanel>
                     </Border>
-                    <Border Background="#1A00D4FF" BorderBrush="#3300D4FF" BorderThickness="1"
+                    <Border Background="{DynamicResource WzCyanSubtle}" BorderBrush="{DynamicResource WzCyanBorder}" BorderThickness="1"
                             CornerRadius="999" Padding="11,3,11,3" Margin="9,0,0,0">
                         <StackPanel Orientation="Horizontal">
                             <Ellipse Style="{DynamicResource WzPulseDot}" Width="6" Height="6" VerticalAlignment="Center" />
                             <TextBlock Name="HeaderOs" Text="WINDOWS" Margin="7,0,0,0"
                                        FontFamily="{DynamicResource WzFontMono}" FontSize="10.5"
-                                       Foreground="#00D4FF" VerticalAlignment="Center" />
+                                       Foreground="{DynamicResource WzCyan}" VerticalAlignment="Center" />
                         </StackPanel>
                     </Border>
-                    <Border Name="DryRunBadge" Background="#14F59E0B" BorderBrush="#4DF59E0B" BorderThickness="1"
+                    <Border Name="DryRunBadge" Background="{DynamicResource WzAmberSubtle}" BorderBrush="{DynamicResource WzAmberBorder}" BorderThickness="1"
                             CornerRadius="999" Padding="11,3,11,3" Margin="9,0,0,0" Visibility="Collapsed">
                         <TextBlock Text="{DynamicResource L.shell.dryRunBadge}" FontFamily="{DynamicResource WzFontMono}"
-                                   FontSize="10.5" Foreground="#F59E0B" />
+                                   FontSize="10.5" Foreground="{DynamicResource WzAmber}" />
                     </Border>
                 </StackPanel>
 
                 <!-- Fenstersteuerung -->
                 <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Stretch"
                             WindowChrome.IsHitTestVisibleInChrome="True">
-                    <Button Name="BtnMinimize" Style="{DynamicResource WzBtnChrome}" Width="44" Padding="0"
+                    <Button Name="BtnMinimize" Style="{DynamicResource WzBtnChrome}" Width="44" Padding="0" AutomationProperties.Name="{DynamicResource L.shell.a11yMinimize}"
                             Content="&#xE921;" FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets" FontSize="10" />
-                    <Button Name="BtnMaximize" Style="{DynamicResource WzBtnChrome}" Width="44" Padding="0"
+                    <Button Name="BtnMaximize" Style="{DynamicResource WzBtnChrome}" Width="44" Padding="0" AutomationProperties.Name="{DynamicResource L.shell.a11yMaximize}"
                             Content="&#xE922;" FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets" FontSize="10" />
-                    <Button Name="BtnClose" Style="{DynamicResource WzBtnChrome}" Width="46" Padding="0"
+                    <Button Name="BtnClose" Style="{DynamicResource WzBtnChrome}" Width="46" Padding="0" AutomationProperties.Name="{DynamicResource L.shell.a11yClose}"
                             Content="&#xE8BB;" FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets" FontSize="10" />
                 </StackPanel>
             </Grid>
@@ -235,11 +236,12 @@
             </ScrollViewer>
 
             <!-- Log-Konsole -->
-            <Border Grid.Row="2" Name="LogHeader" Background="#06060A" BorderBrush="#14FFFFFF" BorderThickness="0,1,0,0">
+            <Border Grid.Row="2" Name="LogHeader" Background="{DynamicResource WzBgDarker}" BorderBrush="{DynamicResource WzBorder}" BorderThickness="0,1,0,0"
+                Focusable="True" KeyboardNavigation.IsTabStop="True" AutomationProperties.Name="{DynamicResource L.shell.a11yConsole}">
                 <Grid Height="34">
                     <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Margin="26,0,0,0">
                         <TextBlock Text="{DynamicResource L.shell.consoleEyebrow}" FontFamily="{DynamicResource WzFontMono}"
-                                   FontSize="10.5" Foreground="#00D4FF" VerticalAlignment="Center" />
+                                   FontSize="10.5" Foreground="{DynamicResource WzCyan}" VerticalAlignment="Center" />
                         <TextBlock Name="LogHint" Text="{DynamicResource L.shell.consoleHint}" Margin="12,0,0,0"
                                    FontFamily="{DynamicResource WzFontMono}" FontSize="10.5"
                                    Foreground="{DynamicResource WzTextFaint}" VerticalAlignment="Center" />
@@ -256,14 +258,14 @@
                          Style="{DynamicResource WzLogConsole}" />
 
             <!-- Statusleiste -->
-            <Grid Grid.Row="4" Background="#06060A">
-                <Border BorderBrush="#14FFFFFF" BorderThickness="0,1,0,0" />
+            <Grid Grid.Row="4" Background="{DynamicResource WzBgDarker}">
+                <Border BorderBrush="{DynamicResource WzBorder}" BorderThickness="0,1,0,0" />
                 <ProgressBar Name="BusyBar" Style="{DynamicResource WzProgress}" VerticalAlignment="Top"
                              Visibility="Collapsed" />
                 <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Margin="26,0,0,0">
                     <TextBlock Name="StatusText" Text="{DynamicResource L.shell.statusReady}"
                                FontFamily="{DynamicResource WzFontMono}" FontSize="10.5"
-                               Foreground="#94A3B8" VerticalAlignment="Center" />
+                               Foreground="{DynamicResource WzTextDim}" VerticalAlignment="Center" />
                     <Button Name="BtnCancelTask" Style="{DynamicResource WzBtnChip}" Content="{DynamicResource L.shell.cancel}"
                             FontSize="10.5" Padding="8,1,8,1" Margin="12,0,0,0"
                             VerticalAlignment="Center" Visibility="Collapsed"

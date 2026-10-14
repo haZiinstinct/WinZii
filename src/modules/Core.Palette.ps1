@@ -137,9 +137,11 @@ function Select-WzPaletteMatches {
     $needle = $Query.Trim()
     # Erst die Einträge, die vorn passen, dann die übrigen Treffer: Wer »dash«
     # tippt, will das Dashboard oben sehen und nicht an dritter Stelle.
-    $starts = @($Entries | Where-Object { $_.Title -like "$needle*" })
+    # Vergleich ohne Platzhalter: Ein »[« in der Eingabe warf bei -like eine
+    # Ausnahme (Audit 2026-10, N).
+    $starts = @($Entries | Where-Object { "$($_.Title)".StartsWith($needle, [StringComparison]::OrdinalIgnoreCase) })
     $contains = @($Entries | Where-Object {
-        $_ -notin $starts -and ("$($_.Title) $($_.Detail)" -like "*$needle*") })
+        $_ -notin $starts -and "$($_.Title) $($_.Detail)".IndexOf($needle, [StringComparison]::OrdinalIgnoreCase) -ge 0 })
 
     return @($starts + $contains)
 }

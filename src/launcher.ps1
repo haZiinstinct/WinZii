@@ -90,8 +90,14 @@ try {
 # --- Downloadsperre entfernen (nur beim ersten Start relevant) -------------
 # Auf FAT32- und exFAT-Sticks gibt es keine Zone-Markierung, dann passiert nichts.
 try {
-    $blocked = Get-ChildItem -Path $root -Recurse -File -Include '*.ps1', '*.xaml', '*.json', '*.bat', '*.html' -ErrorAction SilentlyContinue |
-        Where-Object { Get-Item $_.FullName -Stream Zone.Identifier -ErrorAction SilentlyContinue }
+    # Nur die Programmteile. Der ganze Stick samt offline\ und backups\ kostete
+    # bei großem Vorrat Sekunden und hob die Sperre auch von fremden Dateien
+    # (Audit 2026-10, N).
+    $programmteile = @('src', 'data', 'tools', 'assets') | ForEach-Object { Join-Path $root $_ } |
+        Where-Object { Test-Path -LiteralPath $_ }
+    $blocked = @(Get-ChildItem -LiteralPath $programmteile -Recurse -File -Include '*.ps1', '*.xaml', '*.json', '*.html' -ErrorAction SilentlyContinue) +
+        @(Get-Item -LiteralPath (Join-Path $root 'Start.bat') -ErrorAction SilentlyContinue) |
+        Where-Object { $_ -and (Get-Item $_.FullName -Stream Zone.Identifier -ErrorAction SilentlyContinue) }
     if ($blocked) {
         Write-Boot (Get-BootText 'unblocking' @{ anzahl = $blocked.Count }) 'DarkGray'
         $blocked | Unblock-File -ErrorAction SilentlyContinue
@@ -129,7 +135,10 @@ if (-not $isAdmin -and -not $NoElevate) {
 # --- STA sicherstellen (Pflicht für WPF) ----------------------------------
 if ([Threading.Thread]::CurrentThread.GetApartmentState() -ne 'STA') {
     Write-Boot (Get-BootText 'restartSta') 'DarkGray'
-    $argList = @('-NoProfile', '-ExecutionPolicy', 'Bypass', '-STA', '-File', ('"{0}"' -f $mainScript))
+    # Ohne eigene Anführungszeichen: & übergibt jedes Element als ein Argument
+    # und setzt bei Leerzeichen selbst Anführungszeichen. Doppelt gequotet
+    # scheiterte der Neustart auf einem Stick wie »D:\Mein Stick« (Audit N).
+    $argList = @('-NoProfile', '-ExecutionPolicy', 'Bypass', '-STA', '-File', $mainScript)
     if ($DryRun) { $argList += '-DryRun' }
     if ($Language) { $argList += @('-Language', $Language) }
     & (Get-Process -Id $PID).Path $argList

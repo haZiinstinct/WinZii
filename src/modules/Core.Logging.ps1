@@ -32,7 +32,33 @@ function Start-WzSession {
         # Stick schreibgeschützt — Protokoll nur im Speicher führen
         $syncHash.LogFile = $null
     }
+    if ($syncHash.LogFile) { Remove-WzOldLogSessions }
     return $syncHash.LogFile
+}
+
+function Remove-WzOldLogSessions {
+    <#
+    .SYNOPSIS
+        Räumt Sitzungsordner unter logs\ auf, die älter als 90 Tage sind —
+        aller Rechner. Ohne das wuchs der Ordner mit jedem Start
+        (Audit 2026-10, N; Aufbewahrungsdauer: Fragenkatalog F2).
+    #>
+    param([int]$Days = 90)
+
+    $logs = Get-WzPath 'logs'
+    if (-not (Test-Path -LiteralPath $logs)) { return }
+    $grenze = (Get-Date).AddDays(-$Days)
+    $weg = 0
+    foreach ($rechner in @(Get-ChildItem -LiteralPath $logs -Directory -ErrorAction SilentlyContinue)) {
+        foreach ($sitzung in @(Get-ChildItem -LiteralPath $rechner.FullName -Directory -ErrorAction SilentlyContinue)) {
+            if ($sitzung.LastWriteTime -ge $grenze) { continue }
+            try { Remove-WzTree -LiteralPath $sitzung.FullName; $weg++ } catch { }
+        }
+        if (-not (Get-ChildItem -LiteralPath $rechner.FullName -Force -ErrorAction SilentlyContinue)) {
+            Remove-Item -LiteralPath $rechner.FullName -Force -ErrorAction SilentlyContinue
+        }
+    }
+    if ($weg -gt 0) { Write-WzLog (Get-WzText 'core.logOldSessionsRemoved' @{ anzahl = $weg; tage = $Days }) -Level Info }
 }
 
 function Write-WzLog {
@@ -43,9 +69,13 @@ function Write-WzLog {
         Info | Ok | Warn | Error | Action | Test — steuert Farbe und Symbol.
     #>
     param(
-        [Parameter(Mandatory = $true, Position = 0)][string]$Message,
+        # Leer erlaubt: Aufrufer reichen rohe Felder durch (Ausgabe eines
+        # Werkzeugs, Grund aus einer Ausnahme). Bisher warf eine leere Meldung
+        # bei der Parameterbindung, mitten im Fehlerzweig (Audit 2026-10, N).
+        [Parameter(Mandatory = $true, Position = 0)][AllowEmptyString()][AllowNull()][string]$Message,
         [ValidateSet('Info', 'Ok', 'Warn', 'Error', 'Action', 'Test')][string]$Level = 'Info'
     )
+    if ([string]::IsNullOrWhiteSpace($Message)) { return }
 
     $timestamp = Get-Date -Format 'HH:mm:ss'
     $prefix = switch ($Level) {
@@ -69,10 +99,27 @@ function Write-WzLog {
     }
 
     if ($syncHash -and $syncHash.LogFile) {
-        try {
-            [IO.File]::AppendAllText($syncHash.LogFile, $line + [Environment]::NewLine, [Text.Encoding]::UTF8)
-        } catch {
-            # Schreibfehler dürfen den Ablauf nie stoppen
+        # UI-Faden und Hintergrund-Runspaces schreiben in dieselbe Datei. Ohne
+        # Sperre verlor die zweite Zeile ihre Sharing-Violation still im catch
+        # (Audit 2026-10, N). Die Sperre gilt prozessweit über den gemeinsamen
+        # $syncHash; ein fremder Prozess (Virenscanner, Editor) bekommt drei
+        # kurze Wiederholungen.
+        $lock = $syncHash.SyncRoot
+        for ($versuch = 0; $versuch -lt 3; $versuch++) {
+            try {
+                [Threading.Monitor]::Enter($lock)
+                try {
+                    [IO.File]::AppendAllText($syncHash.LogFile, $line + [Environment]::NewLine, [Text.Encoding]::UTF8)
+                } finally {
+                    [Threading.Monitor]::Exit($lock)
+                }
+                break
+            } catch [IO.IOException] {
+                Start-Sleep -Milliseconds 40
+            } catch {
+                # Schreibfehler dürfen den Ablauf nie stoppen
+                break
+            }
         }
     }
 
