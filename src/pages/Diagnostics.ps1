@@ -458,6 +458,13 @@ function Start-WzMemoryDiagnostic {
         -ConfirmText (Get-WzText 'health.btnMemDiagOpen')
     if (-not $answer.Confirmed) { return }
 
+    # Testmodus: mdsched plant auf Wunsch einen Neustart ein, das ist ein
+    # Eingriff (Audit 2026-10, N).
+    if ($syncHash.DryRun) {
+        Write-WzLog (Get-WzText 'health.logMemDiagTest') -Level Test
+        return
+    }
+
     try {
         Start-Process 'mdsched.exe' -ErrorAction Stop
         Write-WzLog (Get-WzText 'health.logMemDiagOpened') -Level Info

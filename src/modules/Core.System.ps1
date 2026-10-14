@@ -864,8 +864,17 @@ function Test-WzPendingReboot {
         $reasons += Get-WzText 'core.rebootWindowsUpdate'
     }
     $sessionManager = Get-ItemProperty 'HKLM:\SYSTEM\CurrentControlSet\Control\Session Manager' -ErrorAction SilentlyContinue
+    # Die Liste kommt paarweise: Quelle, Ziel. Ein leeres Ziel heißt »beim
+    # Neustart löschen« — das hinterlässt fast jede Installation und meldete
+    # den PC damit dauerhaft als »Neustart ausstehend«. Gezählt werden nur
+    # echte Umbenennungen, also Paare mit Ziel (Audit 2026-10, N).
     if ($sessionManager -and $sessionManager.PendingFileRenameOperations) {
-        $reasons += Get-WzText 'core.rebootFileRename'
+        $eintraege = @($sessionManager.PendingFileRenameOperations)
+        $umbenennungen = 0
+        for ($i = 0; $i + 1 -lt $eintraege.Count; $i += 2) {
+            if ("$($eintraege[$i + 1])".Trim()) { $umbenennungen++ }
+        }
+        if ($umbenennungen -gt 0) { $reasons += Get-WzText 'core.rebootFileRename' }
     }
     if ($reasons.Count -eq 0) { return $null }
     return ($reasons -join ', ')

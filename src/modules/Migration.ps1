@@ -222,7 +222,12 @@ function Invoke-WzOneDriveHydration {
     }
 
     Write-WzLog (Get-WzText 'data.logPlaceholdersFound' @{ anzahl = $before }) -Level Action
-    $attrib = Invoke-WzProcess -FilePath 'attrib.exe' -Arguments "+P -U /s /d `"$Path`"" -TimeoutSeconds 120
+    # Zweimal: »attrib … /s /d Ordner« trifft nur Einträge, die so heißen wie
+    # der Ordner. Den Inhalt erreicht erst »Ordner\*« (Audit 2026-10, N).
+    $attrib = Invoke-WzProcess -FilePath 'attrib.exe' -Arguments "+P -U `"$Path`"" -TimeoutSeconds 120
+    if ($attrib.ExitCode -eq 0) {
+        $attrib = Invoke-WzProcess -FilePath 'attrib.exe' -Arguments "+P -U /s /d `"$Path\*`"" -TimeoutSeconds 120
+    }
     if ($attrib.ExitCode -ne 0) {
         $result.Reason = Get-WzText 'data.reasonAttribFailed' @{ code = $attrib.ExitCode }
         return $result
@@ -425,7 +430,12 @@ function Test-WzWlanProfileHasKey {
     param([Parameter(Mandatory = $true)][string]$Path)
     try {
         $xml = [xml][IO.File]::ReadAllText($Path)
-        return [bool]$xml.WLANProfile.MSM.security.sharedKey.keyMaterial
+        $sharedKey = $xml.WLANProfile.MSM.security.sharedKey
+        # Ohne key=clear steht dort ein DPAPI-Blob mit <protected>true</protected>.
+        # Der lässt sich nur auf dem Ursprungsgerät entschlüsseln und galt
+        # bisher trotzdem als »mit Schlüssel« (Audit 2026-10, M23).
+        if ("$($sharedKey.protected)".Trim() -eq 'true') { return $false }
+        return [bool]$sharedKey.keyMaterial
     } catch { return $false }
 }
 
