@@ -189,7 +189,14 @@ function Install-WzWingetBootstrap {
         # Bereitstellung sorgt dafür, dass jedes Konto es bekommt.
         if ($package.File -like '*.msixbundle') {
             try {
-                Add-AppxProvisionedPackage -Online -PackagePath $package.File -SkipLicense -ErrorAction Stop | Out-Null
+                # Die Bereitstellung löst Abhängigkeiten nicht selbst auf.
+                # Ohne -DependencyPackagePath scheitert sie auf einem LTSC ohne
+                # VCLibs und WindowsAppRuntime an der Abhängigkeitsprüfung
+                # (0x80073CF3) — die Pakete oben sind nur für das eigene Konto
+                # eingerichtet (Audit 2026-10, M19).
+                $provision = @{ Online = $true; PackagePath = $package.File; SkipLicense = $true; ErrorAction = 'Stop' }
+                if ($dependencyFiles.Count -gt 0) { $provision.DependencyPackagePath = @($dependencyFiles | ForEach-Object { $_.FullName }) }
+                Add-AppxProvisionedPackage @provision | Out-Null
                 Write-WzLog (Get-WzText 'apps.logProvisioned') -Level Ok
             } catch {
                 # »Zugriff verweigert« trotz Administratorrechten: Der
@@ -394,9 +401,7 @@ function Install-WzApps {
     }
 
     # Ohne Internet scheitert jede einzelne Installation mit einer anderen,
-    # nichtssagenden Meldung. Einmal vorher fragen ist ehrlicher — aber nur,
-    # wenn überhaupt etwas aus dem Netz geholt werden muss. Liegt alles im
-    # Vorrat auf dem Stick, ist der Netzzugang gleichgültig.
+    # nichtssagenden Meldung. Einmal vorher fragen ist ehrlicher.
     $vaultApps = @($Apps | Where-Object { Get-WzOfflineInstallerPath -App $_ -Verify })
     # Ohne LocalManifestFiles bricht »install --manifest« ab. Lässt sich die
     # Einstellung nicht setzen, geht alles online.
@@ -407,8 +412,11 @@ function Install-WzApps {
         $vaultAllowed = [bool]$lokaleManifeste.Ok
     }
     try {
-        $needsNet = (-not $vaultAllowed -and $vaultApps.Count -gt 0) -or ($vaultApps.Count -lt @($Apps).Count)
-        if (-not $syncHash.DryRun -and $needsNet) {
+        # Auch der Vorrat braucht Netz: »winget install --manifest« lädt den
+        # Installer von der InstallerUrl und nimmt die Datei daneben nicht
+        # (winget-cli #4358, #4361). Bisher wurde die Prüfung übersprungen,
+        # wenn alles im Vorrat lag (Audit 2026-10, H6).
+        if (-not $syncHash.DryRun) {
             $net = Test-WzInternetAccess
             if ($net.Kind -ne 'ok') {
                 $reason = switch ($net.Kind) {

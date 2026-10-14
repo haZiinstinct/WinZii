@@ -1,5 +1,5 @@
 {
-  "_hinweis": "Werkzeuge der Gerätehersteller für Treiber. 'match' wird gegen Hersteller und Modell aus der Firmware geprüft. 'paths' sind Kandidaten — nach der Installation wird der erste genommen, den es wirklich gibt. Alle winget-Kennungen am 20.09.2026 gegen die Quelle 'winget' geprüft.",
+  "_hinweis": "Werkzeuge der Gerätehersteller für Treiber. 'match' wird gegen Hersteller und Modell aus der Firmware geprüft. 'paths' sind Kandidaten — nach der Installation wird der erste genommen, den es wirklich gibt. Alle winget-Kennungen am 20.09.2026 gegen die Quelle 'winget' geprüft. 'exitCodes' ordnet Rückgabewerte nach Herstellerdoku zu (ok, reboot = Erfolg mit ausstehendem Neustart, skip = nichts zu tun, retry = später oder nach einem Neustart erneut); was fehlt, gilt als Fehlschlag. Quellen: Dell Command Update CLI Reference Guide (Error Codes), Lenovo Thin Installer Deployment Guide Kap. 5, HP Image Assistant User Guide — Stand 14.10.2026.",
   "tools": [
     {
       "id": "dell",
@@ -14,6 +14,7 @@
       ],
       "scanArgs": "/scan -silent",
       "applyArgs": "/applyUpdates -reboot=disable -silent",
+      "exitCodes": { "0": "ok", "1": "reboot", "500": "skip", "5": "retry", "3003": "retry", "3004": "retry", "3005": "retry" },
       "description": "Sucht bei Dell nach Treibern, BIOS und Firmware für genau dieses Gerät und spielt sie ein. Neu gestartet wird nicht."
     },
     {
@@ -28,7 +29,8 @@
         "%ProgramFiles%\\Lenovo\\ThinInstaller\\ThinInstaller.exe"
       ],
       "scanArgs": "/CM -search A -action LIST -noicon",
-      "applyArgs": "/CM -search A -action INSTALL -includerebootpackages 1,3 -noreboot -noicon",
+      "applyArgs": "/CM -search A -action INSTALL -includerebootpackages 3 -noreboot -noicon",
+      "exitCodes": { "0": "ok", "3010": "reboot" },
       "description": "Das Werkzeug für Lenovo-Geschäftsgeräte. Sucht Treiber und Firmware für genau dieses Modell. Pakete, die einen Neustart erzwingen würden, bleiben außen vor."
     },
     {
@@ -45,6 +47,7 @@
       ],
       "scanArgs": "/Operation:Analyze /Category:Drivers /Selection:All /Action:List /Silent",
       "applyArgs": "/Operation:Analyze /Category:Drivers /Selection:All /Action:Install /Silent /noninteractive",
+      "exitCodes": { "0": "ok", "256": "skip", "257": "skip", "3010": "reboot" },
       "description": "HPs eigenes Werkzeug für Treiber und Firmware. Es vergleicht den Bestand mit dem, was HP für dieses Modell führt."
     },
     {

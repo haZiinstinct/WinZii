@@ -1181,9 +1181,10 @@
       "level": "hard",
       "risk": "medium",
       "name": "Anmeldedaten im Speicher schützen",
-      "description": "Der Anmeldedienst läuft danach geschützt, und Werkzeuge wie Mimikatz kommen nicht mehr an die Kennwörter im Arbeitsspeicher. Greift erst nach dem Neustart. Ältere Treiber und Fingerabdruckleser, die sich in die Anmeldung einklinken, können danach ausfallen — dann hilft nur das Zurücknehmen.",
+      "description": "Der Anmeldedienst läuft danach geschützt, und Werkzeuge wie Mimikatz kommen nicht mehr an die Kennwörter im Arbeitsspeicher. Greift erst nach dem Neustart. Ältere Treiber und Fingerabdruckleser, die sich in die Anmeldung einklinken, können danach ausfallen — dann hilft nur das Zurücknehmen. Gesetzt wird die Variante ohne UEFI-Sperre, die sich wieder zurücknehmen lässt; Windows kennt sie erst ab Windows 11 22H2.",
       "defaultChecked": false,
-      "appliesTo": "all",
+      "appliesTo": "win11",
+      "minBuild": 22621,
       "requiresReboot": true,
       "actions": [
         {
@@ -1191,7 +1192,7 @@
           "path": "HKLM:\\SYSTEM\\CurrentControlSet\\Control\\Lsa",
           "name": "RunAsPPL",
           "valueType": "DWord",
-          "value": 1
+          "value": 2
         }
       ]
     },

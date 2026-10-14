@@ -92,6 +92,23 @@ function Measure-WzCleanupCategory {
             $result.AgeText = Format-WzPathSetAge -Measure $measure
         }
         'recycleBin' {
+            # Unter einem Technikerkonto zeigt die Shell dessen Papierkorb.
+            # Gemessen wird dann der des Anwenders, direkt in $Recycle.Bin.
+            if (Get-WzInteractiveProfile) {
+                foreach ($ordner in @(Get-WzInteractiveRecycleBinPaths)) {
+                    foreach ($eintrag in @(Get-ChildItem -LiteralPath $ordner -Force -Filter '$R*' -ErrorAction SilentlyContinue)) {
+                        $result.Items++
+                        if ($eintrag.PSIsContainer) {
+                            $summe = (Get-ChildItem -LiteralPath $eintrag.FullName -Recurse -File -Force -ErrorAction SilentlyContinue |
+                                Measure-Object -Property Length -Sum).Sum
+                            if ($summe) { $result.Bytes += [int64]$summe }
+                        } else {
+                            $result.Bytes += [int64]$eintrag.Length
+                        }
+                    }
+                }
+                break
+            }
             try {
                 $shell = New-Object -ComObject Shell.Application
                 $bin = $shell.NameSpace(0x0a)
@@ -361,10 +378,38 @@ function Remove-WzPathSet {
     return [pscustomobject]@{ Removed = $removed; Failed = $failed }
 }
 
+function Get-WzInteractiveRecycleBinPaths {
+    <#
+    .SYNOPSIS
+        Papierkorb-Ordner des angemeldeten Anwenders auf allen festen
+        Laufwerken — vorhandene, als Liste.
+    #>
+    $sid = Get-WzInteractiveUserSid
+    if (-not $sid) { return @() }
+    $ordner = foreach ($laufwerk in @(Get-CimInstance -ClassName Win32_LogicalDisk -Filter 'DriveType=3' -ErrorAction SilentlyContinue)) {
+        $pfad = Join-Path "$($laufwerk.DeviceID)\" "`$Recycle.Bin\$sid"
+        if (Test-Path -LiteralPath $pfad) { $pfad }
+    }
+    return @($ordner)
+}
+
 function Clear-WzRecycleBin {
     if ($syncHash.DryRun) {
         Write-WzLog (Get-WzText 'clean.logWouldEmptyBin') -Level Test
         return [pscustomobject]@{ Removed = 0; Failed = 0 }
+    }
+    # Clear-RecycleBin leert nur den Papierkorb des aufrufenden Kontos. Läuft
+    # WinZii unter einem Technikerkonto, war das dessen eigener, und der des
+    # Kunden blieb voll (Audit 2026-10, N). Dann im Kontext des Anwenders.
+    if (Get-WzInteractiveProfile) {
+        $skript = 'try { Clear-RecycleBin -Force -ErrorAction Stop } catch { ' +
+            'if (@((New-Object -ComObject Shell.Application).NameSpace(10).Items()).Count -gt 0) { exit 1 } }; exit 0'
+        $lauf = Invoke-WzAsInteractiveUser -Script $skript -TimeoutSeconds 120
+        if ($lauf.Ran -and $lauf.ExitCode -eq 0) { return [pscustomobject]@{ Removed = 1; Failed = 0 } }
+        $grund = if ($lauf.Error) { $lauf.Error } else { "Code $($lauf.ExitCode)" }
+        $rest = Measure-WzCleanupCategory -Category ([pscustomobject]@{ id = 'recycle-bin'; method = 'recycleBin' })
+        Write-WzLog (Get-WzText 'clean.logBinFailed' @{ anzahl = $rest.Items; grund = $grund }) -Level Warn
+        return [pscustomobject]@{ Removed = 0; Failed = 1 }
     }
     try {
         Clear-RecycleBin -Force -ErrorAction Stop

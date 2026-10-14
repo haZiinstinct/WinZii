@@ -1104,7 +1104,7 @@
       },
       "sec-lsa-protection": {
         "name": "Protect credentials in memory",
-        "description": "The logon service then runs protected, and tools like Mimikatz can no longer reach the passwords in memory. Takes effect after the restart. Older drivers and fingerprint readers that hook into the logon can fail afterwards — then only undoing helps."
+        "description": "The logon service then runs protected, and tools like Mimikatz can no longer reach the passwords in memory. Takes effect after the restart. Older drivers and fingerprint readers that hook into the logon can fail afterwards — then only undoing helps. WinZii sets the variant without the UEFI lock, which can be undone; Windows supports it from Windows 11 22H2 on."
       },
       "ai-copilot-policy": {
         "name": "Block Copilot",

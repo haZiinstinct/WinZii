@@ -20,7 +20,7 @@ $syncHash.DryRun = $false
 $syncHash.Language = 'de'
 
 foreach ($modul in 'Core.Paths', 'Core.Logging', 'Core.Json', 'Core.I18n', 'Core.Version', 'Setup',
-    'WindowsUpdate', 'AiRemoval', 'Toolbox', 'Autostart', 'HealthCheck', 'Snapshot') {
+    'WindowsUpdate', 'AiRemoval', 'Toolbox', 'Autostart', 'HealthCheck', 'Snapshot', 'Drivers') {
     . (Join-Path $root "src\modules\$modul.ps1")
 }
 [void](Import-WzLanguage)
@@ -256,6 +256,29 @@ Write-Check 'neue Optimierung' (@($vergleich.NewTweaks) -join ',' -eq 'bing-off'
 $c = @($vergleich.SpaceChange | Where-Object { $_.Letter -eq 'C' })
 Write-Check 'Platzänderung je Laufwerk' ($c.Count -eq 1 -and $c[0].Bytes -eq -10GB) "$($c[0].Bytes)"
 Write-Check 'neues Laufwerk ohne Vergleichswert' (@($vergleich.SpaceChange | Where-Object { $_.Letter -eq 'D' }).Count -eq 0)
+
+# --- Drivers: Rückgabewerte der Herstellerwerkzeuge --------------------------
+Write-Host ''
+Write-Host '8. Rückgabewerte der Herstellerwerkzeuge (Drivers)' -ForegroundColor White
+$werkzeuge = @{}
+foreach ($t in (Get-WzCatalog -Name 'oemtools').tools) { $werkzeuge[$t.id] = $t }
+$faelle = @(
+    @{ Id = 'dell';   Code = 0;    Soll = 'ok' }
+    @{ Id = 'dell';   Code = 1;    Soll = 'reboot'; Was = 'Dell 1 ist Erfolg mit Neustart' }
+    @{ Id = 'dell';   Code = 500;  Soll = 'skip';   Was = 'Dell 500 ist »nichts zu tun«' }
+    @{ Id = 'dell';   Code = 5;    Soll = 'retry' }
+    @{ Id = 'dell';   Code = 2;    Soll = 'fail' }
+    @{ Id = 'lenovo'; Code = 3010; Soll = 'reboot' }
+    @{ Id = 'hp';     Code = 256;  Soll = 'skip' }
+    @{ Id = 'hp';     Code = 3020; Soll = 'fail';   Was = 'HP 3020 (SoftPaq gescheitert) ist Fehlschlag' }
+    @{ Id = 'dell';   Code = $null; Soll = 'fail' }
+)
+foreach ($fall in $faelle) {
+    $ist = Get-WzOemOutcome -Tool $werkzeuge[$fall.Id] -ExitCode $fall.Code
+    $was = if ($fall.Was) { $fall.Was } else { "$($fall.Id) $($fall.Code) → $($fall.Soll)" }
+    Write-Check $was ($ist -eq $fall.Soll) $ist
+}
+Write-Check 'Lenovo nimmt keine Pakete mit erzwungenem Neustart' ($werkzeuge['lenovo'].applyArgs -match '-includerebootpackages 3(\s|$)') $werkzeuge['lenovo'].applyArgs
 
 Write-Host ''
 if ($script:fehler -eq 0) {

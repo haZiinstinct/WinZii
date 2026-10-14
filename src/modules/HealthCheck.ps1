@@ -50,6 +50,21 @@ function Get-WzCpuClock {
         $result.MaxMhz = [int]$cpu.MaxClockSpeed
         $result.LoadPercent = [int]$cpu.LoadPercentage
     } catch { }
+    # CurrentClockSpeed ist das SMBIOS-Feld »Current Speed«, ein fester Wert
+    # der Firmware — meist gleich dem Grundtakt. Eine Drosselung unter Last
+    # konnte daran nie sichtbar werden (Audit 2026-10, N). Den Ist-Takt
+    # liefert der Leistungszähler, so rechnet auch der Task-Manager: Leistung
+    # in Prozent des Grundtakts, über Turbo auch mehr als 100. Über WMI statt
+    # Get-Counter, weil die Zählerpfade auf einem deutschen Windows übersetzt
+    # sind.
+    try {
+        $perf = Get-CimInstance -ClassName Win32_PerfFormattedData_Counters_ProcessorInformation `
+            -Filter "Name='_Total'" -ErrorAction Stop
+        $basis = if ([int]$perf.ProcessorFrequency -gt 0) { [int]$perf.ProcessorFrequency } else { $result.MaxMhz }
+        if ($basis -gt 0 -and [int]$perf.PercentProcessorPerformance -gt 0) {
+            $result.CurrentMhz = [int]($basis * [int]$perf.PercentProcessorPerformance / 100)
+        }
+    } catch { }
     return $result
 }
 

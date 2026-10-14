@@ -42,7 +42,7 @@ Jeder Punkt: `- [ ] **Kennung** Datei:Zeile. Aufgabe. → Erledigt wenn …`
 ### Beschaffung und Ausführung
 
 - [x] **H4** `data/wingetcodes.json`, `src/modules/Apps.ps1:469-474`. Katalog aus `AppInstallerErrors.h` neu ableiten, Hex-Wert je Eintrag mitführen (wie `updatecodes.json`). Ergänzen: 0x8A150109 (reboot), 0x8A15010D (skip, bereits installiert), 0x8A15010E (skip, höhere Version), 0x8A150101/0102 (retry, in Benutzung). Korrigieren: 0x8A150104, 0x8A15002C, 0x8A150011, 0x8A150017, 0x8A150016, 0x8A150015, 0x8A150001, 0x8A150002, 0x8A150107, 0x8A150056/59/5C/5E/61. Im `reboot`-Zweig `Test-WzAppInstalled` aufrufen. → Erledigt wenn `Test-Catalogs` oder ein neues Werkzeug Hex ↔ Dezimal ↔ Outcome gegenprüft und 0x8A150104 nicht mehr als Erfolg zählt. Abweichung: 0x8A150101/0102 stehen auf fail mit Handlungshinweis, nicht auf retry — »retry« heißt in WinZii »Benutzerbereich statt systemweit« und hilft bei einem laufenden Programm nicht.
-- [ ] **H6** `src/modules/Apps.ps1:400-413, 433-434, 573-593`. Vor der Vorrat-Installation `winget settings --enable LocalManifestFiles` ausführen und protokollieren (Systemänderung, DryRun beachten), oder bei Fehlschlag auf Online-Installation zurückfallen. Offline-Pfad einmal auf einem Gerät ohne Netz abnehmen (nutzt `install --manifest` die Datei neben dem Manifest?). → Erledigt wenn ABNAHME.md einen bestandenen Offline-Durchlauf nennt. Stand: Code umgesetzt (LocalManifestFiles wird geprüft und bei Bedarf gesetzt, Online-Rückfall bei Fehlschlag aus dem Vorrat). Offen bleibt die Abnahme auf einem Gerät ohne Netz.
+- [ ] **H6** `src/modules/Apps.ps1:400-413, 433-434, 573-593`. Vor der Vorrat-Installation `winget settings --enable LocalManifestFiles` ausführen und protokollieren (Systemänderung, DryRun beachten), oder bei Fehlschlag auf Online-Installation zurückfallen. Offline-Pfad einmal auf einem Gerät ohne Netz abnehmen (nutzt `install --manifest` die Datei neben dem Manifest?). → Erledigt wenn ABNAHME.md einen bestandenen Offline-Durchlauf nennt. Stand: Code umgesetzt (LocalManifestFiles wird geprüft und bei Bedarf gesetzt, Online-Rückfall bei Fehlschlag aus dem Vorrat). Offen bleibt die Abnahme auf einem Gerät ohne Netz. **Nachtrag Stufe 5:** Die Abnahme würde scheitern — `install --manifest` nutzt die Datei daneben nicht. Siehe F3 im Fragenkatalog.
 - [x] **M8** `src/modules/Office.ps1:197-198, 210-213, 427`. Vor Ausführung von `offline\odt\setup.exe` `Get-AuthenticodeSignature` mit Status `Valid` und Subject »Microsoft Corporation« verlangen, sonst verwerfen und neu laden. Vorrat-Installer (`offline\installers\*`) zumindest auf Signaturstatus prüfen. → Erledigt wenn eine manipulierte `setup.exe` abgelehnt wird (Testfall mit beliebiger unsignierter EXE).
 - [x] **M9** `src/modules/Drivers.ps1:615-620`. Download-URL gegen `^https://[^/]*\.(windowsupdate|microsoft)\.com/` prüfen, sonst verwerfen.
 - [x] **M10** `src/modules/Drivers.ps1:308`. pnputil: 0, 3010, 1641 als Erfolg (3010/1641 mit `RebootRequired`), 259 als »nichts eingespielt«. → Erledigt wenn `Test-Parsers` 3010 als Erfolg prüft.
@@ -148,12 +148,26 @@ Jeder Punkt: `- [ ] **Kennung** Datei:Zeile. Aufgabe. → Erledigt wenn …`
 
 Diese Punkte sind im Audit als Vermutung gekennzeichnet. Erst nachlesen, dann entscheiden.
 
-- [ ] **H7** `data/oemtools.json:31`. Lenovo Thin Installer: Bedeutet Reboot-Typ 1 »Reboot forced« und unterdrückt `-noreboot` nur Typ 3? Dann `-includerebootpackages 3`. Dasselbe für HPIA `/Action:Install` belegen.
-- [ ] **M3** `data/tweaks.json:1179-1197`. LSA: Ist `RunAsPPL=1` die Variante mit UEFI-Sperre und `2` ohne (Win11 22H2+)? Dann Wert 2 mit `minBuild: 22621`, auf älteren Builds als nicht rücknehmbar kennzeichnen.
-- [ ] **M11** `src/modules/Drivers.ps1:475-485`, `data/oemtools.json:15-16`. Dell Command Update: Exit 1 = Erfolg mit Neustart, 500 = keine Updates? Dann Exit-Code-Tabelle je Werkzeug im Katalog.
-- [ ] **M19** `src/modules/Apps.ps1:192`. Braucht `Add-AppxProvisionedPackage` auf LTSC `-DependencyPackagePath`? Dann die entpackten Abhängigkeiten mitgeben und Fehlschlag deutlich melden.
-- [ ] **M22** `src/modules/Report.ps1:1176-1191`. Erzeugt Edge headless bei laufendem Edge mit demselben Profil kein PDF? Dann `--user-data-dir="$env:TEMP\winzii-edge"` und danach löschen.
-- [ ] **N** `src/modules/HealthCheck.ps1:47-51, 149-152`. Liefert `Win32_Processor.CurrentClockSpeed` den Ist-Takt? Sonst `\Processor Information(_Total)\% Processor Performance`.
-- [ ] **N** `src/modules/Setup.ps1:587-595`. Liefert `slmgr /ipk` bei Fehlern einen Exit-Code ≠ 0? Sonst StdOut auf `0x[0-9A-F]{8}` prüfen.
-- [ ] **N** `src/modules/Cleanup.ps1:319-331`. Leert `Clear-RecycleBin` nur den Papierkorb des aufrufenden Kontos?
-- [ ] **N** `src/modules/Apps.ps1:433-434`. Nutzt `winget install --manifest` die Datei neben dem Manifest oder lädt es die InstallerUrl neu? (Teil von H6.)
+- [x] **H7** `data/oemtools.json:31`. Lenovo Thin Installer: Bedeutet Reboot-Typ 1 »Reboot forced« und unterdrückt `-noreboot` nur Typ 3? Dann `-includerebootpackages 3`. Dasselbe für HPIA `/Action:Install` belegen.
+- [x] **M3** `data/tweaks.json:1179-1197`. LSA: Ist `RunAsPPL=1` die Variante mit UEFI-Sperre und `2` ohne (Win11 22H2+)? Dann Wert 2 mit `minBuild: 22621`, auf älteren Builds als nicht rücknehmbar kennzeichnen.
+- [x] **M11** `src/modules/Drivers.ps1:475-485`, `data/oemtools.json:15-16`. Dell Command Update: Exit 1 = Erfolg mit Neustart, 500 = keine Updates? Dann Exit-Code-Tabelle je Werkzeug im Katalog.
+- [x] **M19** `src/modules/Apps.ps1:192`. Braucht `Add-AppxProvisionedPackage` auf LTSC `-DependencyPackagePath`? Dann die entpackten Abhängigkeiten mitgeben und Fehlschlag deutlich melden.
+- [x] **M22** `src/modules/Report.ps1:1176-1191`. Erzeugt Edge headless bei laufendem Edge mit demselben Profil kein PDF? Dann `--user-data-dir="$env:TEMP\winzii-edge"` und danach löschen.
+- [x] **N** `src/modules/HealthCheck.ps1:47-51, 149-152`. Liefert `Win32_Processor.CurrentClockSpeed` den Ist-Takt? Sonst `\Processor Information(_Total)\% Processor Performance`.
+- [x] **N** `src/modules/Setup.ps1:587-595`. Liefert `slmgr /ipk` bei Fehlern einen Exit-Code ≠ 0? Sonst StdOut auf `0x[0-9A-F]{8}` prüfen.
+- [x] **N** `src/modules/Cleanup.ps1:319-331`. Leert `Clear-RecycleBin` nur den Papierkorb des aufrufenden Kontos?
+- [ ] **N** `src/modules/Apps.ps1:433-434`. Nutzt `winget install --manifest` die Datei neben dem Manifest oder lädt es die InstallerUrl neu? (Teil von H6.) **Ergebnis:** Nein — winget lädt immer von der InstallerUrl (winget-cli #4358, #4361). Text und Netzprüfung korrigiert; wie es weitergeht, ist Frage F3 im Fragenkatalog.
+
+### Ergebnisse der Nachprüfung (14.10.2026)
+
+| Punkt | Herstellerdoku sagt | Umgesetzt |
+| --- | --- | --- |
+| H7 | Lenovo: Typ 1 = Paket startet selbst neu, `-noreboot` unterdrückt nur Typ 3 (Exit 3010). HPIA: kein Schalter gegen Neustart dokumentiert, meldet ihn über 3010; 256/257 = nichts zu tun. | `-includerebootpackages 3`; Rückgabewerte je Werkzeug in `oemtools.json` |
+| M3 | `RunAsPPL=1` mit UEFI-Sperre, `2` ohne, erst ab 22H2 (22621). Wert 1 lässt sich nur mit dem EFI-Opt-out-Werkzeug zurücknehmen. | Wert 2, `minBuild 22621`, nur Windows 11 |
+| M11 | Dell: 0 ok, 1 Neustart nötig, 500 nichts zu tun, 5/3003-3005 später erneut. | Tabelle im Katalog, `Get-WzOemOutcome` |
+| M19 | Ja: Abhängigkeiten werden nicht aufgelöst, sonst 0x80073CF3. | `-DependencyPackagePath` mit den entpackten Abhängigkeiten |
+| M22 | Ja bei belegtem Profil (Chromium-Quelltext), neuere Fassungen weichen selbst aus. | eigenes Temp-Profil, danach gelöscht |
+| N Takt | `CurrentClockSpeed` ist das SMBIOS-Feld, kein Ist-Takt. | Leistungszähler über WMI (sprachneutral) |
+| N slmgr | Exit ≠ 0 mit HRESULT (slmgr.vbs: `QuitIfError` → `WScript.Quit`). | Meldung nennt den Code als Hexzahl |
+| N Papierkorb | Nur der des aufrufenden Kontos. | Unter fremdem Konto: Messung in `$Recycle.Bin\<SID>`, Leeren im Anwenderkontext |
+| N winget | `--manifest` lädt immer von der InstallerUrl. | siehe F3 |

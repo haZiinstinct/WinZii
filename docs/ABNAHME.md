@@ -357,7 +357,7 @@ Protokoll ist ein Verlauf.
 
 ## 15. Windows 10, vollständiger Durchlauf
 
-Die Versionsweiche greift (41 Einträge für beide Systeme, 7 nur für 11, 1 nur für 10),
+Die Versionsweiche greift (40 Einträge für beide Systeme, 8 nur für 11, 1 nur für 10),
 aber es lief dort nie ein ganzer Ablauf. Auf einem Windows-10-Gerät einmal alles:
 Dashboard, Diagnose, Optimierung anwenden **und zurücknehmen**, Bereinigung, Autostart,
 Übergabeblatt.
