@@ -194,9 +194,17 @@ function Get-WzOdtSetup {
 
     # Eine abgebrochene oder abgefangene Übertragung hinterließ hier bisher eine
     # Datei, die für immer wiederverwendet wurde — setup.exe ist rund 7 MB groß.
+    # Dazu die Signatur: setup.exe läuft eleviert, und der Stick ist auf jedem
+    # Kundenrechner beschreibbar. Nur eine gültige Microsoft-Signatur zählt;
+    # alles andere wird verworfen und neu geladen (Audit 2026-10, M8).
     if (Test-Path -LiteralPath $setupPath) {
-        if ((Get-Item -LiteralPath $setupPath).Length -gt 1MB) { return $setupPath }
-        Write-WzLog (Get-WzText 'off.logSetupTooSmall') -Level Warn
+        if ((Get-Item -LiteralPath $setupPath).Length -le 1MB) {
+            Write-WzLog (Get-WzText 'off.logSetupTooSmall') -Level Warn
+        } elseif (-not (Test-WzFileSignature -Path $setupPath -RequireMicrosoft)) {
+            Write-WzLog (Get-WzText 'off.logSetupUnsigned') -Level Warn
+        } else {
+            return $setupPath
+        }
         try { Remove-Item -LiteralPath $setupPath -Force -ErrorAction Stop } catch { }
     }
 
@@ -208,6 +216,11 @@ function Get-WzOdtSetup {
     $catalog = Get-WzOfficeCatalog
     Write-WzLog (Get-WzText 'off.logOdtDownload') -Level Action
     if (Get-WzDownload -Url $catalog.odtSetupUrl -TargetPath $setupPath) {
+        if (-not (Test-WzFileSignature -Path $setupPath -RequireMicrosoft)) {
+            Write-WzLog (Get-WzText 'off.logSetupUnsigned') -Level Error
+            try { Remove-Item -LiteralPath $setupPath -Force -ErrorAction Stop } catch { }
+            return $null
+        }
         Write-WzLog (Get-WzText 'off.logOdtReady') -Level Ok
         return $setupPath
     }

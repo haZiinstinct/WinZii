@@ -140,6 +140,35 @@ function Remove-WzTree {
     for ($i = $dirs.Count - 1; $i -ge 0; $i--) { $dirs[$i].Delete() }
 }
 
+function Test-WzFileSignature {
+    <#
+    .SYNOPSIS
+        Trägt die Datei eine gültige Authenticode-Signatur — auf Wunsch von
+        Microsoft?
+    .NOTES
+        Der Stick wandert beschreibbar zwischen Kundenrechnern. Schadsoftware
+        auf PC A kann eine EXE im Vorrat ersetzen, die auf PC B eleviert
+        startet. Für Appx und Treiber prüft Windows selbst; für EXE und MSI
+        tat es bisher niemand (Audit 2026-10, M8).
+    #>
+    param(
+        [Parameter(Mandatory = $true)][string]$Path,
+        [switch]$RequireMicrosoft
+    )
+
+    try {
+        $signature = Get-AuthenticodeSignature -LiteralPath $Path -ErrorAction Stop
+    } catch {
+        return $false
+    }
+    if ($signature.Status -ne 'Valid') { return $false }
+    if ($RequireMicrosoft) {
+        $subject = [string]$signature.SignerCertificate.Subject
+        if ($subject -notmatch '(^|,\s*)O=Microsoft Corporation(,|$)') { return $false }
+    }
+    return $true
+}
+
 function Test-WzWritableRoot {
     <#
     .SYNOPSIS
