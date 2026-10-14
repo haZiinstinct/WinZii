@@ -299,6 +299,12 @@ function Test-WzOfficeCache {
             $result.Detail = Get-WzText 'off.cacheOtherBitness' @{ bit = $Edition }
             return $result
         }
+        # Auch die Größenschranke unten darf nur zählen, was zu dieser
+        # Architektur gehört. Sonst brächte ein voller 32-Bit-Satz einen
+        # angefangenen 64-Bit-Satz über die 2 GB.
+        $fremd = ($streams | Where-Object { $_.Name -notlike "stream.$arch.*" } |
+            Measure-Object -Property Length -Sum).Sum
+        if ($fremd) { $result.Bytes -= [int64]$fremd }
         $streams = $passend
     }
     $neutral = @($streams | Where-Object { $_.Name -like '*x-none*' })
