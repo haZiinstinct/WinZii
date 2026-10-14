@@ -483,6 +483,9 @@ function Start-WzCatalogSearch {
         Find-WzCatalogDrivers -HardwareId $hardwareId
     } -OnComplete {
         param($hits)
+        # $null heißt: Die Suche ist gescheitert, der Grund steht im
+        # Protokoll. Kein Dialog mit einem leeren Treffer.
+        if ($null -eq $hits) { return }
         $hits = @($hits)
         if ($hits.Count -eq 0) {
             Show-WzInfo -Title (Get-WzText 'drv.catalogTitle') `

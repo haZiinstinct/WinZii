@@ -49,7 +49,7 @@ Jeder Punkt: `- [ ] **Kennung** Datei:Zeile. Aufgabe. → Erledigt wenn …`
 - [ ] **M12** `src/modules/Office.ps1:226, 229-299, 326, 404-405`. Edition in Cache-Pfad und `Test-WzOfficeCache` (stream.x86 vs stream.x64) einbeziehen; bei fehlender Bitness im Vorrat online installieren und das im Dialog sagen. → Erledigt wenn `Test-Office.ps1` Fall 10 zwischen x86 und x64 unterscheidet.
 - [ ] **M13** `src/pages/Office.ps1:214, 278, 362`. `-Cancelable` von Install, Remove und LibreOffice entfernen (oder `-KillOnCancel` mit Warnung).
 - [ ] **M14** `src/pages/Updates.ps1:212-213`. `Start-WzUpdateScan` im `OnComplete` von `Write-WzUpdateState` starten. → Erledigt wenn nach einer Installation die Liste ohne »beschäftigt«-Dialog neu geladen wird.
-- [ ] **M15** `src/modules/Core.Runspace.ps1:152-157`. Bei leerem Ergebnis `@()` statt `$null` an `OnComplete` übergeben. Gegenprobe in `src/pages/Drivers.ps1:486` und `src/pages/Toolbox.ps1:242`. → Erledigt wenn eine Katalogsuche ohne Treffer »keine Treffer« meldet.
+- [x] **M15** `src/modules/Core.Runspace.ps1:152-157`. Bei leerem Ergebnis `@()` statt `$null` an `OnComplete` übergeben. Gegenprobe in `src/pages/Drivers.ps1:486` und `src/pages/Toolbox.ps1:242`. → Erledigt wenn eine Katalogsuche ohne Treffer »keine Treffer« meldet.
 - [ ] **M16** `src/pages/Drivers.ps1:396-400`, `src/modules/Apps.ps1:400, 430`. Pseudo-App-Objekt mit `id` versehen oder `Get-WzOfflineInstallerPath` bei fehlender `id` `$null` liefern lassen.
 - [ ] **M17** `src/pages/Office.ps1:275`. `New-WzRestorePoint` in den Remove-Task vor Stufe 1 verlagern.
 - [ ] **M18** `src/modules/Setup.ps1:667-676`, `src/modules/Migration.ps1:451-455, 530`, `src/pages/Setup.ps1:402`. DryRun-Ergebnis aus `Import-WzPrinters` durchreichen; `Add-WzAction` nur an einer Stelle.
@@ -91,7 +91,7 @@ Jeder Punkt: `- [ ] **Kennung** Datei:Zeile. Aufgabe. → Erledigt wenn …`
 
 - [ ] **H11** `src/modules/Core.I18n.ps1:420-422`. Merker `AppsChecked`, `OffChecked`, `AiStatesChecked`, `OptStatesChecked`, `CleanScanned` beim Sprachwechsel zurücksetzen (oder alle auf `*Loaded` umbenennen). → Erledigt wenn `Test-LanguageSwitch` einen Apps-Durchlauf enthält und der Installieren-Knopf nach dem Wechsel aktiv ist.
 - [ ] **H12** `src/main.ps1:205-213`. `$window.Add_Closing({ if ($syncHash.Busy) { Rückfrage; $e.Cancel = -not $answer.Confirmed } })`; `BtnClose` ruft nur noch `Close()`. → Erledigt wenn Alt+F4 während einer Aufgabe die Rückfrage zeigt.
-- [ ] **M28** `src/modules/Core.Runspace.ps1:107-137`. Abholung in `try/finally` mit `CurrentTask=$null; Set-WzBusy -Off` im `finally`.
+- [x] **M28** `src/modules/Core.Runspace.ps1:107-137`. Abholung in `try/finally` mit `CurrentTask=$null; Set-WzBusy -Off` im `finally`.
 - [ ] **M29** `src/modules/Core.Ui.ps1:178-184`. Bei Fehler im Initializer `$syncHash.Pages.Remove($Id)`.
 - [ ] **M31** `src/modules/Core.I18n.ps1:68-77, 511-515`, `src/launcher.ps1:34-41`. Nicht-deutsche Primärsprache ohne eigene Datei auf `en` statt `de`. → Erledigt wenn `Test-Language` Abschnitt 8 die Funktion `Get-WzSystemLanguage` wirklich aufruft (siehe auch Stufe 3).
 - [ ] **N** `src/modules/Core.Ui.ps1:372, 471, 473`. `'Auswahl'`, `'// ACHTUNG'`, `'// HINWEIS'` über `Get-WzText`.

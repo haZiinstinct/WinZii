@@ -2021,6 +2021,7 @@
     "rpDoneTitle": "Wiederherstellungspunkt",
     "taskBloatScan": "Vorinstallierte Apps suchen",
     "bloatNone": "Nichts gefunden — der PC ist bereits aufgeräumt",
+    "bloatUnreadable": "Paketliste nicht lesbar — Einzelheiten im Protokoll",
     "bloatCount": "{anzahl} App(s) gefunden",
     "logBloatFound": "{anzahl} vorinstallierte App(s) gefunden, die entfernt werden können.",
     "bloatMessage": "{anzahl} App(s) werden für alle Benutzer entfernt und auch für neu angelegte Konten nicht mehr bereitgestellt. Über den Microsoft Store lassen sie sich bei Bedarf wieder installieren.",

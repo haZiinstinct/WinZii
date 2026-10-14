@@ -108,33 +108,42 @@ function Invoke-WzTask {
 
         $result = $null
         $failed = $false
+        # Alles bis zur Freigabe in try/finally: Warf hier eine Zeile, blieb
+        # CurrentTask gesetzt, und jeder weitere Vorgang wurde als »läuft
+        # schon« abgewiesen, bis WinZii neu startete (Audit 2026-10, M28).
         try {
-            $result = $state.PowerShell.EndInvoke($handle)
+            try {
+                $result = $state.PowerShell.EndInvoke($handle)
+            } catch {
+                if ($state.Canceled) {
+                    # Der Abbruch beendet die Pipeline mit einer Ausnahme — das ist
+                    # gewollt und kein Fehler.
+                } else {
+                    $failed = $true
+                    Write-WzLog (Get-WzText 'core.logTaskFailed' @{ name = $state.Name; grund = $_.Exception.Message }) -Level Error
+                }
+            }
+
+            if (-not $state.Canceled) {
+                foreach ($errorRecord in $state.PowerShell.Streams.Error) {
+                    Write-WzLog (Get-WzText 'core.logTaskError' @{ name = $state.Name; grund = $errorRecord.Exception.Message }) -Level Error
+                    $failed = $true
+                }
+            }
+
+            # Nachzügler abholen, bevor die Abschlussmeldung geschrieben wird
+            Sync-WzConsoleQueue
+
+            $state.PowerShell.Dispose()
+            $state.Runspace.Close()
+            $state.Runspace.Dispose()
         } catch {
-            if ($state.Canceled) {
-                # Der Abbruch beendet die Pipeline mit einer Ausnahme — das ist
-                # gewollt und kein Fehler.
-            } else {
-                $failed = $true
-                Write-WzLog (Get-WzText 'core.logTaskFailed' @{ name = $state.Name; grund = $_.Exception.Message }) -Level Error
-            }
+            $failed = $true
+            Write-WzLog (Get-WzText 'core.logTaskFailed' @{ name = $state.Name; grund = $_.Exception.Message }) -Level Error
+        } finally {
+            $syncHash.CurrentTask = $null
+            Set-WzBusy -Off
         }
-
-        if (-not $state.Canceled) {
-            foreach ($errorRecord in $state.PowerShell.Streams.Error) {
-                Write-WzLog (Get-WzText 'core.logTaskError' @{ name = $state.Name; grund = $errorRecord.Exception.Message }) -Level Error
-                $failed = $true
-            }
-        }
-
-        # Nachzügler abholen, bevor die Abschlussmeldung geschrieben wird
-        Sync-WzConsoleQueue
-
-        $state.PowerShell.Dispose()
-        $state.Runspace.Close()
-        $state.Runspace.Dispose()
-        $syncHash.CurrentTask = $null
-        Set-WzBusy -Off
 
         if (-not $state.Silent -or $state.Canceled) {
             $seconds = Format-WzNumber ((Get-Date) - $state.Started).TotalSeconds
@@ -149,10 +158,14 @@ function Invoke-WzTask {
 
         if ($state.OnComplete) {
             try {
+                # $null nur, wenn der Vorgang gescheitert ist. Lief er durch
+                # und lieferte nichts, kommt eine leere Liste: Aus $null
+                # machte »@($hits)« beim Aufrufer eine Liste mit einem leeren
+                # Eintrag — »1 Treffer« für eine Suche ohne Treffer (M15).
                 $payload = $null
-                if ($null -ne $result -and $result.Count -gt 0) {
+                if ($null -ne $result) {
                     # EndInvoke liefert eine Collection; bei einem Element dieses direkt reichen
-                    $payload = if ($result.Count -eq 1) { $result[0] } else { @($result) }
+                    $payload = if ($result.Count -eq 1) { $result[0] } elseif ($result.Count -eq 0) { , @() } else { @($result) }
                 }
                 & $state.OnComplete $payload
             } catch {

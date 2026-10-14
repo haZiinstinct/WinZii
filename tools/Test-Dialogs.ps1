@@ -319,6 +319,42 @@ $window.Add_ContentRendered({
     })
     if (-not $sperreOk) { $script:failed++ }
 
+    # Ergebnisübergabe: Ein Task ohne Ausgabe liefert eine leere Liste, ein
+    # gescheiterter $null — und danach ist WinZii wieder frei (Audit M15, M28).
+    # Nicht $script: — GetNewClosure() bindet den Block an ein eigenes Modul,
+    # dort zeigte $script: woandershin. Die Hashtable reist per Closure mit.
+    $taskErgebnisse = @{}
+    foreach ($fall in @(
+            @{ Name = 'leer'; Block = { } }
+            @{ Name = 'fehler'; Block = { throw 'Selbsttest: absichtlicher Fehler' } }
+        )) {
+        $name = $fall.Name
+        Invoke-WzTask -Name "Selbsttest $name" -Silent -ScriptBlock $fall.Block -OnComplete {
+            param($ergebnis)
+            $taskErgebnisse[$name] = @{ Wert = $ergebnis; IstNull = ($null -eq $ergebnis) }
+        }.GetNewClosure()
+        $grenze = (Get-Date).AddSeconds(15)
+        while (-not $taskErgebnisse.ContainsKey($name) -and (Get-Date) -lt $grenze) {
+            Invoke-WzDoEvents
+            Start-Sleep -Milliseconds 50
+        }
+    }
+    $leer = $taskErgebnisse['leer']
+    $fehler = $taskErgebnisse['fehler']
+    $leerOk = ($leer -and -not $leer.IstNull -and @($leer.Wert).Count -eq 0)
+    $fehlerOk = ($fehler -and $fehler.IstNull)
+    $frei = (-not $syncHash.Busy -and $null -eq $syncHash.CurrentTask)
+    $uebergabeOk = ($leerOk -and $fehlerOk -and $frei)
+    [void]$script:results.Add([pscustomobject]@{
+        Name = 'ergebnis'
+        Weg  = 'Task'
+        Bild = $leerOk
+        Zu   = $fehlerOk
+        Abbr = $frei
+        Ok   = $uebergabeOk
+    })
+    if (-not $uebergabeOk) { $script:failed++ }
+
     $window.Close()
 })
 
@@ -330,6 +366,11 @@ foreach ($entry in $script:results) {
     $color = if ($entry.Ok) { 'Green' } else { 'Red' }
     if ($entry.Weg -eq 'Dispatcher') {
         Write-Host ("  {0} {1,-11} Fehler im UI-Faden   Fenster lebt={2,-5} Dialog zu={3,-5} protokolliert={4}" -f `
+            $symbol, $entry.Name, $entry.Bild, $entry.Zu, $entry.Abbr) -ForegroundColor $color
+        continue
+    }
+    if ($entry.Weg -eq 'Task') {
+        Write-Host ("  {0} {1,-11} Ergebnisübergabe     leer=@()={2,-5} Fehler=null={3,-5} danach frei={4}" -f `
             $symbol, $entry.Name, $entry.Bild, $entry.Zu, $entry.Abbr) -ForegroundColor $color
         continue
     }
