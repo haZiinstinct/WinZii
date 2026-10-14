@@ -774,6 +774,32 @@ try {
     Write-Check 'Bereitstellung unlesbar: kein »angewendet«' `
         ($ohneBereitstellung.Failed -eq 1 -and $ohneBereitstellung.Applied -eq 0) "Applied=$($ohneBereitstellung.Applied) Failed=$($ohneBereitstellung.Failed)"
     Write-Check 'installiertes Paket trotzdem entfernt' ($script:appxEntfernt -contains 'WinZiiSelbsttest.App_1.0_x64__test')
+
+    # Treffer im eigenen Konto, andere Konten ungelesen: auch das ist kein
+    # »angewendet«.
+    function Get-AppxPackage { param([switch]$AllUsers)
+        if ($AllUsers) { throw 'Selbsttest: Zugriff verweigert' }
+        [pscustomobject]@{ Name = 'WinZiiSelbsttest.App'; PackageFullName = 'WinZiiSelbsttest.App_1.0_x64__test'; NonRemovable = $false } }
+    function Get-AppxProvisionedPackage { param([switch]$Online) @() }
+    $script:WzAppxCache = $null
+    $eigenesMitTreffer = Invoke-WzTweaks -Tweaks @($appxTweak) -Scope 'selbsttest-appx'
+    Write-Check 'Treffer nur im eigenen Konto: kein »angewendet«' `
+        ($eigenesMitTreffer.Failed -eq 1 -and $eigenesMitTreffer.Applied -eq 0) "Applied=$($eigenesMitTreffer.Applied) Failed=$($eigenesMitTreffer.Failed)"
+
+    # Zustandsanzeige: Ein erfüllter Registry-Wert plus eine nicht messbare
+    # Paketaktion ist »teilweise«, nicht »angewendet«.
+    function Get-AppxPackage { param([switch]$AllUsers) if ($AllUsers) { throw 'Selbsttest: Zugriff verweigert' }; @() }
+    $script:WzAppxCache = $null
+    Set-ItemProperty -Path $testKey -Name 'Zustand' -Value 1 -Type DWord
+    $zustandTweak = [pscustomobject]@{
+        id = 'selbsttest-zustand'; name = 'Selbsttest — Zustand'
+        actions = @(
+            [pscustomobject]@{ type = 'registry'; path = $testKey; name = 'Zustand'; valueType = 'DWord'; value = 1 }
+            [pscustomobject]@{ type = 'appx'; patterns = @('WinZiiSelbsttest*') }
+        )
+    }
+    $zustand = Test-WzTweakState -Tweak $zustandTweak
+    Write-Check 'unvollständige Paketliste: Zustand nicht »angewendet«' ($zustand -ne 'Applied') "Zustand=$zustand"
 } finally {
     Remove-Item -LiteralPath Function:\Get-AppxPackage, Function:\Get-AppxProvisionedPackage, Function:\Remove-AppxPackage -ErrorAction SilentlyContinue
     $script:WzAppxCache = $null

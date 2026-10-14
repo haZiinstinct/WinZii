@@ -97,16 +97,15 @@ function Test-WzTweakState {
                 # main.ps1 alle Module; wird zum Prüfen nur der Optimizer
                 # geladen, fehlt sie — dann ist der Zustand nicht messbar und
                 # darf auch nicht mitgezählt werden.
-                # Ist die Paketliste nicht lesbar, gilt dasselbe.
                 if (Get-Command Get-WzAppxMatches -ErrorAction SilentlyContinue) {
+                    # Unlesbar oder nur das eigene Konto gelesen: Die Aktion
+                    # zählt mit, gilt aber nicht als erfüllt. Weglassen hätte
+                    # einen Eintrag mit weiteren Aktionen als »angewendet«
+                    # erscheinen lassen.
+                    $checkable++
                     try {
                         $treffer = @(Get-WzAppxMatches -Patterns $action.patterns)
-                        # Nur das eigene Konto gelesen: »kein Treffer« wäre
-                        # eine Behauptung über alle Konten, die nicht belegt ist.
-                        if (-not $script:WzAppxPartial) {
-                            $checkable++
-                            if ($treffer.Count -eq 0) { $matching++ }
-                        }
+                        if (-not $script:WzAppxPartial -and $treffer.Count -eq 0) { $matching++ }
                     } catch { }
                 }
             }
