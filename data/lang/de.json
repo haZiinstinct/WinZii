@@ -185,6 +185,7 @@
     "logRemovedPackage": "  entfernt: {name}",
     "logRemoveFailed": "  konnte nicht entfernt werden: {name} — {grund}",
     "logCapUnreadable": "  Systemfunktionen nicht abfragbar: {grund}",
+    "logProvUnreadable": "  Bereitstellungen nicht abfragbar: {grund}",
     "logNoMatchingCap": "  keine passende Systemfunktion installiert",
     "logRemoveCapTest": "  [Test] Funktion entfernen: {name}",
     "noteOptionalFeatures": "Über Einstellungen > Optionale Features wieder installierbar",
