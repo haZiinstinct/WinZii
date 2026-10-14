@@ -140,6 +140,55 @@ function Remove-WzTree {
     for ($i = $dirs.Count - 1; $i -ge 0; $i--) { $dirs[$i].Delete() }
 }
 
+function Get-WzDirectoryTree {
+    <#
+    .SYNOPSIS
+        Alle lesbaren Ordner unterhalb eines Pfads (einschließlich des Pfads
+        selbst), ohne Reparsepunkte, samt Zahl der unlesbaren Zweige.
+    .DESCRIPTION
+        [IO.Directory]::EnumerateFiles(…, AllDirectories) bricht beim ersten
+        Unterordner ab, den es nicht lesen darf — und in »Dokumente« liegen
+        Kompatibilitäts-Junctions mit Deny-ACL für »Jeder«. Der äußere catch
+        schluckte das: Ordnergrößen zu klein, Platzwarnung ohne Wirkung,
+        Platzhalterzahl 0 (Audit 2026-10, M25).
+        Hier wird Ordner für Ordner einzeln gelesen. Reparsepunkte werden
+        übersprungen (sie zeigen woandershin und führen teils im Kreis),
+        unlesbare Ordner werden gezählt. Die Dateien liest der Aufrufer je
+        Ordner mit EnumerateFiles() — so bleibt ein Zeitbudget wirksam.
+    .OUTPUTS
+        PSCustomObject mit Directories (List[IO.DirectoryInfo]) und Skipped.
+    #>
+    param([Parameter(Mandatory = $true)][string]$Path)
+
+    $result = [pscustomobject]@{
+        Directories = New-Object System.Collections.Generic.List[IO.DirectoryInfo]
+        Skipped     = 0
+    }
+    try {
+        $root = New-Object IO.DirectoryInfo $Path
+        if (-not $root.Exists) { return $result }
+    } catch {
+        $result.Skipped++
+        return $result
+    }
+
+    $stack = New-Object System.Collections.Generic.Stack[IO.DirectoryInfo]
+    $stack.Push($root)
+    while ($stack.Count -gt 0) {
+        $dir = $stack.Pop()
+        $result.Directories.Add($dir)
+        try {
+            foreach ($child in $dir.EnumerateDirectories()) {
+                if ($child.Attributes -band [IO.FileAttributes]::ReparsePoint) { continue }
+                $stack.Push($child)
+            }
+        } catch {
+            $result.Skipped++
+        }
+    }
+    return $result
+}
+
 function Test-WzFileSignature {
     <#
     .SYNOPSIS

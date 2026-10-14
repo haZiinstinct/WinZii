@@ -211,11 +211,11 @@ function Get-WzFolderBytes {
     param([Parameter(Mandatory = $true)][string]$Path)
 
     $bytes = [int64]0
-    try {
-        foreach ($file in [IO.Directory]::EnumerateFiles($Path, '*', [IO.SearchOption]::AllDirectories)) {
-            try { $bytes += (New-Object IO.FileInfo($file)).Length } catch { }
-        }
-    } catch { }
+    foreach ($dir in (Get-WzDirectoryTree -Path $Path).Directories) {
+        try {
+            foreach ($info in $dir.EnumerateFiles()) { $bytes += $info.Length }
+        } catch { }
+    }
     return $bytes
 }
 
