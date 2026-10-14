@@ -1461,6 +1461,7 @@
     "cpuThrottled": "The clock drops to {takt} of {max} MHz under load. That is throttling, not power saving — check the fan, the thermal paste and the vents.",
     "cpuHot": "Highest measured temperature {grad} °C — from here on the hardware throttles itself.",
     "cpuNoClock": "This machine reports no clock speed. Nothing can be said about throttling from that.",
+    "cpuCanceled": "Stress test cancelled — no verdict, nothing in the handover sheet.",
     "memOk": "{groesse} tested, no deviation.",
     "memErrors": "{anzahl} deviation(s) in memory. That is a certain finding — test the modules one by one; until then the machine cannot be trusted.",
     "memNoReading": "The free memory cannot be read.",
