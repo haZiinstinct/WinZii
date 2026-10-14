@@ -400,3 +400,13 @@ if ($env:WZ_SELFTEST) {
 }
 
 [void]$window.ShowDialog()
+
+# Selbsttest: Fehler, die nur ins Protokoll gingen (etwa beim Verdrahten einer
+# Seite in Initialize-Wz<X>Page), sah Test-Pages bisher nicht — der Lauf
+# endete mit 0. Jetzt stehen sie auf stdout und setzen den Exit-Code
+# (Audit 2026-10, M30).
+if ($env:WZ_SELFTEST) {
+    $protokollFehler = @($syncHash.LogEntries | Where-Object { $_.Level -eq 'Error' })
+    foreach ($eintrag in $protokollFehler) { Write-Host "  WZTEST-FEHLER $($eintrag.Message)" }
+    if ($protokollFehler.Count -gt 0) { exit 3 }
+}

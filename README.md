@@ -217,7 +217,7 @@ powershell -NoProfile -ExecutionPolicy Bypass -File tools\Test-Catalogs.ps1
 | `tools\Test-Contrast.ps1` | Schrift- und Flächenkontraste gegen WCAG 2.1 rechnen |
 | `tools\Test-Dialogs.ps1` | Prüft, dass sich jeder Dialog auf allen vier Wegen schließen lässt |
 | `tools\Test-Process.ps1` | Rückgabewerte externer Programme, auch im Hintergrund-Runspace |
-| `tools\Test-Undo.ps1` | Sicherung und Rücknahme an einem eigenen Registry-Schlüssel durchspielen |
+| `tools\Test-Undo.ps1` | Sicherung und Rücknahme an einem eigenen Registry-Schlüssel durchspielen. **Ändert als Administrator kurzzeitig den aktiven Energieplan** (Abschnitt 7) und stellt ihn in jedem Fall wieder her; ohne Adminrechte wird der Abschnitt übersprungen |
 | `tools\Test-Language.ps1` | Sprachdateien auf gleiche Schlüssel, Platzhalter und Kulturen prüfen |
 | `tools\Test-LanguageSwitch.ps1` | Startet WinZii, schaltet im Betrieb um und prüft, ob auch die gemessenen Texte mitgehen |
 | `tools\Test-Parsers.ps1` | Deutungen von sfc-, pnputil- und winget-Ausgaben gegen deutsche **und** englische Wortlaute |

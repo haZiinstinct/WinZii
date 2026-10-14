@@ -295,547 +295,555 @@ if (-not $istAdmin) {
 } elseif (-not $planVorher) {
     Write-Host '  [--]   übersprungen: aktiver Energieplan nicht auslesbar' -ForegroundColor DarkGray
 } else {
-    $planTweak = [pscustomobject]@{
-        id             = 'selbsttest-powerplan'
-        name           = 'Selbsttest Energieplan'
+    try {
+        $planTweak = [pscustomobject]@{
+            id             = 'selbsttest-powerplan'
+            name           = 'Selbsttest Energieplan'
+            requiresReboot = $false
+            actions        = @(
+                [pscustomobject]@{
+                    type            = 'powerplan'
+                    planName        = $planName
+                    planDescription = 'Wegwerf-Plan des WinZii-Selbsttests.'
+                    baseScheme      = '381b4222-f694-41f0-9685-ff5bb260df2e'
+                    settings        = @(
+                        [pscustomobject]@{ subgroup = 'SUB_PROCESSOR'; setting = 'PROCTHROTTLEMIN'; ac = 10; dc = 5 }
+                    )
+                }
+            )
+        }
+
+        # Testmodus zuerst — er darf nichts anlegen.
+        $syncHash.DryRun = $true
+        [void](Invoke-WzTweaks -Tweaks @($planTweak) -Scope 'selbsttest-plan-trocken')
+        $syncHash.DryRun = $false
+        Write-Check 'Testmodus legt keinen Plan an' ((Get-WzTestSchemeCount -Name $planName) -eq 0)
+
+        $planLauf = Invoke-WzTweaks -Tweaks @($planTweak) -Scope 'selbsttest-plan'
+        Write-Check 'Eintrag angewendet' ($planLauf.Applied -eq 1 -and $planLauf.Failed -eq 0) "Applied=$($planLauf.Applied) Failed=$($planLauf.Failed)"
+
+        # Verglichen werden GUIDs, nicht Namen: In der Ausgabe von powercfg steht
+        # statt des Geviertstrichs ein »-«, ein Textvergleich träfe nie zu.
+        $planGuid = Find-WzPowerScheme -Name $planName
+        Write-Check 'Plan ist eingetragen' ([bool]$planGuid) "GUID: $planGuid"
+
+        $nachLauf = Invoke-WzProcess -FilePath 'powercfg.exe' -Arguments '/getactivescheme' -TimeoutSeconds 30
+        Write-Check 'Plan ist aktiv' ($planGuid -and $nachLauf.StdOut -match [regex]::Escape($planGuid))
+
+        # Zweiter Durchlauf darf keinen weiteren Plan anlegen — sonst wächst die
+        # Planliste mit jedem Technikereinsatz.
+        [void](Invoke-WzTweaks -Tweaks @($planTweak) -Scope 'selbsttest-plan-zweitlauf')
+        $anzahl = Get-WzTestSchemeCount -Name $planName
+        Write-Check 'zweiter Durchlauf legt keine Kopie an' ($anzahl -eq 1) "gefunden: $anzahl"
+
+        if ($planLauf.UndoFile) {
+            $planRestore = Restore-WzUndoSession -UndoFile $planLauf.UndoFile
+            Write-Check 'Rücknahme meldet Erfolg' ($planRestore.Failed -eq 0) "Restored=$($planRestore.Restored) Failed=$($planRestore.Failed)"
+
+            $nachUndo = Invoke-WzProcess -FilePath 'powercfg.exe' -Arguments '/getactivescheme' -TimeoutSeconds 30
+            Write-Check 'vorheriger Plan wieder aktiv' ($nachUndo.StdOut -match [regex]::Escape($planVorher))
+
+            Write-Check 'Wegwerf-Plan wurde entfernt' ((Get-WzTestSchemeCount -Name $planName) -eq 0)
+        } else {
+            Write-Check 'Sicherungsdatei geschrieben' $false 'keine undo.json'
+        }
+
+    } finally {
+        # Sicherheitsnetz im finally: Bricht oben etwas ab, bleibt weder ein fremder Plan aktiv
+        # noch der Wegwerf-Plan liegen.
+        [void](Invoke-WzProcess -FilePath 'powercfg.exe' -Arguments "/setactive $planVorher" -TimeoutSeconds 30)
+        # Begrenzt, damit ein Plan, der sich nicht löschen lässt, den Selbsttest
+        # nicht in eine Endlosschleife schickt.
+        for ($versuch = 0; $versuch -lt 5; $versuch++) {
+            $uebrig = Find-WzPowerScheme -Name $planName
+            if (-not $uebrig) { break }
+            [void](Invoke-WzProcess -FilePath 'powercfg.exe' -Arguments "/delete $uebrig" -TimeoutSeconds 30)
+        }
+    }
+}
+
+# Ab hier legt der Test Ordner, Schlüssel und Junctions an. Das Aufräumen
+# steht im finally: Brach der Lauf vorher ab, blieb bisher alles liegen
+# (Audit 2026-10, M36).
+try {
+    # --- 8. Restesuche nach dem Deinstallieren ----------------------------------
+    # Hier wird endgültig gelöscht, deshalb steht vor dem Löschen zweimal dasselbe
+    # Regelwerk. Beide werden zuerst trocken durchgeprüft — auf Pfade, die es gibt,
+    # aber niemand anfassen darf. Erst danach läuft die Kette an einem Wegwerf-
+    # Programm, das dieser Abschnitt selbst anlegt.
+    Write-Host ''
+    Write-Host '8. Restesuche: Regeln, Fund und Rücknahme' -ForegroundColor White
+
+    # Die Wurzeln kommen aus derselben Quelle wie in der Prüfung selbst. Unter einem
+    # Technikerkonto zeigen $env:LOCALAPPDATA und Get-WzUserFolder auf verschiedene
+    # Profile — mit $env:… prüfte der Test etwas anderes als den Ernstfall.
+    $lokal = Get-WzUserFolder -Kind 'LocalAppData'
+    $programme = $env:ProgramFiles
+    $startmenue = Join-Path $env:ProgramData 'Microsoft\Windows\Start Menu\Programs'
+
+    $pfadRegeln = @(
+        @{ Pfad = $programme;                                          Erlaubt = $false; Was = 'Wurzel selbst' }
+        @{ Pfad = 'C:\';                                               Erlaubt = $false; Was = 'Laufwerkswurzel' }
+        @{ Pfad = 'C:\Windows\System32';                               Erlaubt = $false; Was = 'außerhalb der Wurzeln' }
+        @{ Pfad = (Join-Path $programme 'Common Files');               Erlaubt = $false; Was = 'Sammelordner' }
+        @{ Pfad = (Join-Path $programme 'WindowsApps\Wegwerf');        Erlaubt = $false; Was = 'Store-Apps, auch darunter' }
+        @{ Pfad = (Join-Path $lokal 'Temp\Wegwerf');                   Erlaubt = $false; Was = 'Zwischenspeicher, auch darunter' }
+        @{ Pfad = (Join-Path $lokal 'Programs');                       Erlaubt = $false; Was = 'Programs als Sammelordner' }
+        @{ Pfad = (Join-Path $programme 'Wegwerfprogramm');            Erlaubt = $true;  Was = 'Programmordner' }
+        @{ Pfad = (Join-Path $lokal 'Programs\Wegwerfprogramm');       Erlaubt = $true;  Was = 'Programm unter Programs' }
+        @{ Pfad = (Join-Path $startmenue 'Wegwerfprogramm');           Erlaubt = $true;  Was = 'Startmenü-Eintrag' }
+    )
+    foreach ($regel in $pfadRegeln) {
+        Write-Check "Ordner: $($regel.Was)" ((Test-WzLeftoverPathSafe -Path $regel.Pfad) -eq $regel.Erlaubt)
+    }
+
+    $keyRegeln = @(
+        @{ Pfad = 'HKLM:\SOFTWARE';                                      Erlaubt = $false; Was = 'Zweig selbst' }
+        @{ Pfad = 'HKLM:\SOFTWARE\WOW6432Node';                          Erlaubt = $false; Was = '32-Bit-Zweig selbst' }
+        @{ Pfad = 'HKLM:\SYSTEM\CurrentControlSet\Services';             Erlaubt = $false; Was = 'außerhalb von SOFTWARE' }
+        @{ Pfad = 'HKLM:\SOFTWARE\Wegwerfprogramm';                      Erlaubt = $true;  Was = 'Schlüssel unter SOFTWARE' }
+        @{ Pfad = 'HKLM:\SOFTWARE\WOW6432Node\Wegwerfprogramm';          Erlaubt = $true;  Was = 'Schlüssel im 32-Bit-Zweig' }
+        @{ Pfad = 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Uninstall\Wegwerf'; Erlaubt = $true; Was = 'Deinstallationsschlüssel' }
+        # Dieselben beiden Fälle in der Schreibweise, die unter fremdem Konto entsteht.
+        @{ Pfad = 'Registry::HKEY_USERS\S-1-5-21-1-2-3-1001\SOFTWARE';   Erlaubt = $false; Was = 'fremdes Konto, Zweig selbst' }
+        @{ Pfad = 'Registry::HKEY_USERS\S-1-5-21-1-2-3-1001\SOFTWARE\Wegwerf'; Erlaubt = $true; Was = 'fremdes Konto, Schlüssel' }
+    )
+    foreach ($regel in $keyRegeln) {
+        Write-Check "Registry: $($regel.Was)" ((Test-WzLeftoverKeySafe -Path $regel.Pfad) -eq $regel.Erlaubt)
+    }
+
+    # Aus dem Anzeigenamen wird der Ordnername. Trifft er zu breit, räumt die Suche
+    # beim Nachbarprogramm auf.
+    $namensFaelle = @(
+        @{ Name = 'Mozilla Firefox 128.0 (x64 de)'; Erwartet = 'Mozilla Firefox'; Was = 'Version und Klammer fallen weg' }
+        @{ Name = 'VLC';                            Erwartet = $null;             Was = 'zu kurzer Name fällt raus' }
+        @{ Name = 'C:\Unsinn';                      Erwartet = $null;             Was = 'Pfadzeichen fallen raus' }
+    )
+    foreach ($fall in $namensFaelle) {
+        $kandidaten = @(Get-WzLeftoverNameCandidates -Program ([pscustomobject]@{ Name = $fall.Name }))
+        $ok = if ($fall.Erwartet) { $kandidaten -contains $fall.Erwartet } else { $kandidaten.Count -eq 0 }
+        Write-Check "Name: $($fall.Was)" $ok ($kandidaten -join ', ')
+    }
+
+    # Geteilte Namen: Bleibt eine andere Python-Version installiert, ist
+    # »Python« kein Rest, sondern ihr Zuhause (Audit 2026-10, H2).
+    $python = [pscustomobject]@{ Name = 'Python 3.12.1 (64-bit)' }
+    $geteiltFaelle = @(
+        @{ Fremd = @('Python 3.11.5 (64-bit)'); Erwartet = $false; Was = 'andere Version bleibt' }
+        @{ Fremd = @('Python Launcher');        Erwartet = $false; Was = 'Programm gleichen Stamms bleibt' }
+        @{ Fremd = @('Pythonista Viewer');      Erwartet = $true;  Was = 'nur Präfix ohne Leerzeichen zählt nicht' }
+        @{ Fremd = @();                         Erwartet = $true;  Was = 'ohne Nachbarn bleibt der Kandidat' }
+    )
+    foreach ($fall in $geteiltFaelle) {
+        $kandidaten = @(Get-WzLeftoverNameCandidates -Program $python -ForeignNames $fall.Fremd)
+        Write-Check "Geteilter Name: $($fall.Was)" (($kandidaten -contains 'Python') -eq $fall.Erwartet) ($kandidaten -join ', ')
+    }
+
+    # Ein Wegwerf-Programm: ein Ordner mit Inhalt und ein eigener Schlüssel.
+    $restName = 'WinZii-Selbsttest-Restprogramm'
+    $restKey = "HKCU:\Software\$restName"
+    $restOrdner = Join-Path $lokal $restName
+
+    if (-not (Test-Path -LiteralPath $restKey)) { [void](New-Item -Path $restKey -Force) }
+    Set-ItemProperty -Path $restKey -Name 'DisplayName' -Value $restName -Force
+    [void](New-Item -Path $restOrdner -ItemType Directory -Force)
+    Set-Content -LiteralPath (Join-Path $restOrdner 'rest.txt') -Value 'Wegwerfdatei des Selbsttests'
+
+    # Ein Assistent, den der Techniker wegklickt, meldet mitunter trotzdem Erfolg.
+    # Steht der Eintrag danach noch in der Liste, ist nichts entfernt worden.
+    Write-Check 'noch eingetragen gilt als nicht entfernt' `
+        (-not (Test-WzProgramGone -Program ([pscustomobject]@{ Name = $restName; RegistryPath = $restKey })))
+    Write-Check 'fehlender Schlüssel gilt als entfernt' `
+        (Test-WzProgramGone -Program ([pscustomobject]@{ Name = $restName; RegistryPath = "$restKey-GibtEsNicht" }))
+    Write-Check 'ohne Schlüsselpfad gilt als entfernt' `
+        (Test-WzProgramGone -Program ([pscustomobject]@{ Name = $restName; RegistryPath = '' }))
+
+    # Die Nachfrist für Deinstallierer, die vor sich selbst zurückkehren. Geprüft
+    # wird beides: dass sie wirklich gewartet wird, und dass sie nicht anfällt,
+    # wenn der Schlüssel längst weg ist — sonst kostete jede Deinstallation Zeit.
+    $uhr = [Diagnostics.Stopwatch]::StartNew()
+    $nochDa = Test-WzProgramGone -Program ([pscustomobject]@{ Name = $restName; RegistryPath = $restKey }) -WaitSeconds 2
+    $gewartet = $uhr.Elapsed.TotalSeconds
+    Write-Check 'Nachfrist wartet und urteilt dann' `
+        ((-not $nochDa) -and $gewartet -ge 2) ("{0:N1} s gewartet" -f $gewartet)
+
+    $uhr = [Diagnostics.Stopwatch]::StartNew()
+    $schonWeg = Test-WzProgramGone -Program ([pscustomobject]@{ Name = $restName; RegistryPath = "$restKey-GibtEsNicht" }) -WaitSeconds 10
+    $sofort = $uhr.Elapsed.TotalSeconds
+    Write-Check 'Nachfrist kostet nichts, wenn es weg ist' `
+        ($schonWeg -and $sofort -lt 1) ("{0:N2} s" -f $sofort)
+
+    $restProgramm = [pscustomobject]@{
+        Name            = $restName
+        InstallLocation = $restOrdner
+        RegistryPath    = $restKey
+    }
+    $funde = @(Find-WzUninstallLeftovers -Programs @($restProgramm))
+    $ordnerFunde = @($funde | Where-Object { $_.Kind -eq 'Ordner' })
+    $keyFunde = @($funde | Where-Object { $_.Kind -eq 'Registry' })
+
+    Write-Check 'Ordner gefunden, genau einmal' `
+        ($ordnerFunde.Count -eq 1 -and $ordnerFunde[0].TargetPath -eq $restOrdner) ("{0} Fund(e)" -f $ordnerFunde.Count)
+    Write-Check 'Größe des Ordners ermittelt' ($ordnerFunde.Count -eq 1 -and $ordnerFunde[0].SizeBytes -gt 0)
+    Write-Check 'Schlüssel gefunden, genau einmal' ($keyFunde.Count -eq 1) ("{0} Fund(e)" -f $keyFunde.Count)
+
+    # Ein Programm ohne Reste darf auch keine melden — sonst stünde nach jeder
+    # Deinstallation ein Dialog mit fremden Ordnern darin.
+    $ohneReste = @(Find-WzUninstallLeftovers -Programs @([pscustomobject]@{
+        Name = 'WinZii-Selbsttest-GibtEsNicht'; InstallLocation = ''; RegistryPath = '' }))
+    Write-Check 'ohne Reste bleibt die Liste leer' ($ohneReste.Count -eq 0) ("{0} Fund(e)" -f $ohneReste.Count)
+
+    # Der Fall vom Abnahmelaptop: Ein Hersteller trägt als Installationsordner den
+    # Sammelordner der ganzen Familie ein, und ein Nachbarprogramm wohnt darunter.
+    # Angeboten werden darf der Sammelordner dann nicht — das Löschen ist endgültig.
+    $sammelOrdner = Join-Path $lokal 'WinZii-Selbsttest-Sammelordner'
+    $nachbarOrdner = Join-Path $sammelOrdner 'Nachbarprogramm'
+    $nachbarKey = 'HKCU:\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\WinZii-Selbsttest-Nachbar'
+    [void](New-Item -Path $nachbarOrdner -ItemType Directory -Force)
+    Set-Content -LiteralPath (Join-Path $nachbarOrdner 'nachbar.txt') -Value 'Gehört dem Nachbarprogramm'
+    if (-not (Test-Path -LiteralPath $nachbarKey)) { [void](New-Item -Path $nachbarKey -Force) }
+    Set-ItemProperty -Path $nachbarKey -Name 'DisplayName' -Value 'WinZii-Selbsttest-Nachbarprogramm' -Force
+    Set-ItemProperty -Path $nachbarKey -Name 'UninstallString' -Value 'cmd.exe /c rem' -Force
+    Set-ItemProperty -Path $nachbarKey -Name 'InstallLocation' -Value $nachbarOrdner -Force
+
+    $sammelProgramm = [pscustomobject]@{
+        Name            = 'WinZii-Selbsttest-Sammelprogramm'
+        InstallLocation = $sammelOrdner
+        RegistryPath    = ''
+    }
+    $sammelFunde = @(Find-WzUninstallLeftovers -Programs @($sammelProgramm))
+    Write-Check 'geteilter Ordner wird nicht angeboten' `
+        (@($sammelFunde | Where-Object { $_.TargetPath -eq $sammelOrdner }).Count -eq 0) `
+        ("{0} Fund(e)" -f $sammelFunde.Count)
+
+    # Und wenn er trotzdem in der Liste steht — aus einem älteren Lauf, aus einem
+    # Hintergrundlauf vor der Installation des Nachbarn —, muss ihn die Nachprüfung
+    # unmittelbar vor dem Löschen abweisen.
+    $sammelAbgewiesen = Remove-WzUninstallLeftovers -Leftovers @([pscustomobject]@{
+        Kind = 'Ordner'; Path = $sammelOrdner; TargetPath = $sammelOrdner
+        SizeBytes = 0; Program = $sammelProgramm.Name })
+    Write-Check 'geteilter Ordner wird vor dem Löschen abgewiesen' `
+        ($sammelAbgewiesen.Removed -eq 0 -and $sammelAbgewiesen.Failed -eq 1) `
+        "Removed=$($sammelAbgewiesen.Removed) Failed=$($sammelAbgewiesen.Failed)"
+    Write-Check 'Nachbarprogramm steht danach noch' (Test-Path -LiteralPath $nachbarOrdner)
+
+    # Der eigene Unterordner bleibt erlaubt, sonst wäre nach dieser Regel gar
+    # nichts mehr aufräumbar, was unter einem geteilten Ordner liegt.
+    $eigenerUnterordner = Join-Path $sammelOrdner 'WinZii-Selbsttest-Eigenprogramm'
+    [void](New-Item -Path $eigenerUnterordner -ItemType Directory -Force)
+    Set-Content -LiteralPath (Join-Path $eigenerUnterordner 'eigen.txt') -Value 'Wegwerfdatei'
+    $eigeneFunde = @(Find-WzUninstallLeftovers -Programs @([pscustomobject]@{
+        Name            = 'WinZii-Selbsttest-Eigenprogramm'
+        InstallLocation = $eigenerUnterordner
+        RegistryPath    = '' }))
+    Write-Check 'eigener Unterordner bleibt auffindbar' `
+        (@($eigeneFunde | Where-Object { $_.TargetPath -eq $eigenerUnterordner }).Count -eq 1) `
+        ("{0} Fund(e)" -f $eigeneFunde.Count)
+
+    Remove-Item -LiteralPath $nachbarKey -Recurse -Force -ErrorAction SilentlyContinue
+    Remove-Item -LiteralPath $sammelOrdner -Recurse -Force -ErrorAction SilentlyContinue
+
+    $syncHash.DryRun = $true
+    $trockenReste = Remove-WzUninstallLeftovers -Leftovers $funde
+    $syncHash.DryRun = $false
+    Write-Check 'Testmodus fasst nichts an' `
+        ((Test-Path -LiteralPath $restOrdner) -and (Test-Path -LiteralPath $restKey))
+    Write-Check 'Testmodus legt keine Sicherung an' ($null -eq $trockenReste.UndoFile)
+
+    # Zwischen Suchen und Bestätigen liegt ein Dialog. Was danach gelöscht wird,
+    # muss noch einmal durch dasselbe Regelwerk — hier mit einem Ordner, den es
+    # wirklich gibt, der aber gesperrt ist.
+    $verboten = Join-Path $lokal 'Temp\winzii-selbsttest-verboten'
+    [void](New-Item -Path $verboten -ItemType Directory -Force)
+    $abgewiesen = Remove-WzUninstallLeftovers -Leftovers @([pscustomobject]@{
+        Kind = 'Ordner'; Path = $verboten; TargetPath = $verboten; SizeBytes = 0; Program = 'Selbsttest' })
+    Write-Check 'gesperrter Ordner wird abgewiesen' `
+        ($abgewiesen.Removed -eq 0 -and $abgewiesen.Failed -eq 1) "Removed=$($abgewiesen.Removed) Failed=$($abgewiesen.Failed)"
+    Write-Check 'gesperrter Ordner steht danach noch' (Test-Path -LiteralPath $verboten)
+    Remove-Item -LiteralPath $verboten -Recurse -Force -ErrorAction SilentlyContinue
+
+    $restLauf = Remove-WzUninstallLeftovers -Leftovers $funde
+    Write-Check 'beide Reste entfernt' `
+        ($restLauf.Removed -eq 2 -and $restLauf.Failed -eq 0) "Removed=$($restLauf.Removed) Failed=$($restLauf.Failed)"
+    Write-Check 'Ordner ist weg' (-not (Test-Path -LiteralPath $restOrdner))
+    Write-Check 'Schlüssel ist weg' (-not (Test-Path -LiteralPath $restKey))
+    Write-Check 'freigewordener Platz gezählt' ($restLauf.Bytes -gt 0) ("{0} Byte" -f $restLauf.Bytes)
+
+    Write-Check 'undo.json geschrieben' ($restLauf.UndoFile -and (Test-Path -LiteralPath $restLauf.UndoFile)) $restLauf.UndoFile
+    if ($restLauf.UndoFile) {
+        $restSession = Split-Path -Parent $restLauf.UndoFile
+        $restRegDateien = @(Get-ChildItem -LiteralPath $restSession -Filter '*.reg' -ErrorAction SilentlyContinue)
+        Write-Check '.reg-Sicherung des Schlüssels' ($restRegDateien.Count -ge 1) ("{0} Datei(en)" -f $restRegDateien.Count)
+        if ($restRegDateien.Count -ge 1) {
+            $restText = [IO.File]::ReadAllText($restRegDateien[0].FullName, [Text.Encoding]::Unicode)
+            Write-Check '.reg enthält den Schlüssel' ($restText -match [regex]::Escape($restName))
+        }
+
+        $restManifest = Read-WzJson -Path $restLauf.UndoFile
+        $restEintraege = @($restManifest.entries)
+        Write-Check 'Sicherung nennt die entfernten Pfade' `
+            ($restEintraege.Count -eq 1 -and @($restEintraege[0].previous.paths).Count -eq 2) ("{0} Pfad(e)" -f @($restEintraege[0].previous.paths).Count)
+
+        # Die Rücknahme spielt den gesicherten Schlüssel wieder ein; der Ordner
+        # bleibt weg und wird im Hinweis genannt.
+        $restRueck = Restore-WzUndoSession -UndoFile $restLauf.UndoFile
+        Write-Check 'Rücknahme holt den Schlüssel zurück' ((Test-Path -LiteralPath $restKey) -and $restRueck.Restored -eq 1) "Restored=$($restRueck.Restored) Failed=$($restRueck.Failed)"
+        Write-Check 'Rücknahme nennt den gelöschten Ordner' (@($restRueck.Notes).Count -ge 1)
+
+        try { Remove-Item -LiteralPath $restSession -Recurse -Force -ErrorAction Stop } catch { }
+    }
+
+    # --- 9. Rekursives Löschen folgt keiner Junction -----------------------------
+    # Windows PowerShell 5.1 löscht bei »Remove-Item -Recurse« den Inhalt hinter
+    # einer Junction mit. In Windows.old zeigen solche Junctions ins lebende Profil
+    # (Audit 2026-10, K2). Nachgebaut im TEMP-Ordner: ein Wegwerf-Ordner mit einer
+    # Junction auf einen Zielordner, der danach noch voll sein muss.
+    Write-Host ''
+    Write-Host '9. Rekursives Löschen folgt keiner Junction' -ForegroundColor White
+
+    $junctionBasis = Join-Path $env:TEMP 'WinZii-Selbsttest-Junction'
+    $junctionZiel = Join-Path $junctionBasis 'ziel'
+    $wegwerf = Join-Path $junctionBasis 'wegwerf'
+    $einzelLink = Join-Path $junctionBasis 'einzel-link'
+    [void](New-Item -Path (Join-Path $wegwerf 'unter') -ItemType Directory -Force)
+    [void](New-Item -Path $junctionZiel -ItemType Directory -Force)
+    Set-Content -LiteralPath (Join-Path $junctionZiel 'profil.txt') -Value 'muss bleiben'
+    Set-Content -LiteralPath (Join-Path $wegwerf 'unter\weg.txt') -Value 'darf weg'
+    $schreibgeschuetzt = Join-Path $wegwerf 'schreibgeschuetzt.txt'
+    Set-Content -LiteralPath $schreibgeschuetzt -Value 'darf weg'
+    (Get-Item -LiteralPath $schreibgeschuetzt).IsReadOnly = $true
+
+    $junctionAngelegt = $false
+    try {
+        [void](New-Item -ItemType Junction -Path (Join-Path $wegwerf 'unter\Application Data') -Value $junctionZiel -ErrorAction Stop)
+        [void](New-Item -ItemType Junction -Path $einzelLink -Value $junctionZiel -ErrorAction Stop)
+        $junctionAngelegt = $true
+    } catch {
+        Write-Host "  [--]   übersprungen: Junction nicht anlegbar ($($_.Exception.Message))" -ForegroundColor DarkGray
+    }
+
+    if ($junctionAngelegt) {
+        $loeschFehler = $null
+        try { Remove-WzTree -LiteralPath $wegwerf } catch { $loeschFehler = $_.Exception.Message }
+        Write-Check 'Ordner mit Junction gelöscht' (-not (Test-Path -LiteralPath $wegwerf)) $loeschFehler
+        Write-Check 'Junction-Ziel noch voll' (Test-Path -LiteralPath (Join-Path $junctionZiel 'profil.txt'))
+
+        # Ist der Startpunkt selbst eine Junction, verschwindet nur der Verweis.
+        $loeschFehler = $null
+        try { Remove-WzTree -LiteralPath $einzelLink } catch { $loeschFehler = $_.Exception.Message }
+        Write-Check 'Junction als Startpunkt: nur der Verweis weg' `
+            ((-not (Test-Path -LiteralPath $einzelLink)) -and (Test-Path -LiteralPath (Join-Path $junctionZiel 'profil.txt'))) $loeschFehler
+    }
+
+    # --- 10. Rücknahme im Detail ------------------------------------------------
+    # Angelegte Schlüssel, Werttyp und Aufgabenzustand (Audit 2026-10, M6 und
+    # Stufe-2-Kleinpunkte). Alles unter dem eigenen Testschlüssel; die
+    # Aufgaben-Cmdlets werden durch Attrappen ersetzt, kein echter Eingriff.
+    Write-Host ''
+    Write-Host '10. Rücknahme im Detail' -ForegroundColor White
+
+    $angelegt = "$testKey\Angelegt"
+    $schluesselTweak = [pscustomobject]@{
+        id             = 'selbsttest-schluessel'
+        name           = 'Selbsttest — neuer Schlüssel'
         requiresReboot = $false
         actions        = @(
-            [pscustomobject]@{
-                type            = 'powerplan'
-                planName        = $planName
-                planDescription = 'Wegwerf-Plan des WinZii-Selbsttests.'
-                baseScheme      = '381b4222-f694-41f0-9685-ff5bb260df2e'
-                settings        = @(
-                    [pscustomobject]@{ subgroup = 'SUB_PROCESSOR'; setting = 'PROCTHROTTLEMIN'; ac = 10; dc = 5 }
-                )
-            }
+            [pscustomobject]@{ type = 'registry'; path = $angelegt; name = 'A'; valueType = 'DWord'; value = 1 }
+            [pscustomobject]@{ type = 'registry'; path = $angelegt; name = 'B'; valueType = 'DWord'; value = 2 }
         )
     }
+    $schluesselLauf = Invoke-WzTweaks -Tweaks @($schluesselTweak) -Scope 'selbsttest-schluessel'
+    Write-Check 'Schlüssel beim Anwenden angelegt' (Test-Path -LiteralPath $angelegt)
+    if ($schluesselLauf.UndoFile) {
+        $schluesselRueck = Restore-WzUndoSession -UndoFile $schluesselLauf.UndoFile
+        Write-Check 'angelegter Schlüssel nach Rücknahme weg' (-not (Test-Path -LiteralPath $angelegt)) "Restored=$($schluesselRueck.Restored)"
+        Write-Check 'beide Werte als zurückgesetzt gezählt' ($schluesselRueck.Restored -eq 2 -and $schluesselRueck.Failed -eq 0)
 
-    # Testmodus zuerst — er darf nichts anlegen.
-    $syncHash.DryRun = $true
-    [void](Invoke-WzTweaks -Tweaks @($planTweak) -Scope 'selbsttest-plan-trocken')
-    $syncHash.DryRun = $false
-    Write-Check 'Testmodus legt keinen Plan an' ((Get-WzTestSchemeCount -Name $planName) -eq 0)
-
-    $planLauf = Invoke-WzTweaks -Tweaks @($planTweak) -Scope 'selbsttest-plan'
-    Write-Check 'Eintrag angewendet' ($planLauf.Applied -eq 1 -and $planLauf.Failed -eq 0) "Applied=$($planLauf.Applied) Failed=$($planLauf.Failed)"
-
-    # Verglichen werden GUIDs, nicht Namen: In der Ausgabe von powercfg steht
-    # statt des Geviertstrichs ein »-«, ein Textvergleich träfe nie zu.
-    $planGuid = Find-WzPowerScheme -Name $planName
-    Write-Check 'Plan ist eingetragen' ([bool]$planGuid) "GUID: $planGuid"
-
-    $nachLauf = Invoke-WzProcess -FilePath 'powercfg.exe' -Arguments '/getactivescheme' -TimeoutSeconds 30
-    Write-Check 'Plan ist aktiv' ($planGuid -and $nachLauf.StdOut -match [regex]::Escape($planGuid))
-
-    # Zweiter Durchlauf darf keinen weiteren Plan anlegen — sonst wächst die
-    # Planliste mit jedem Technikereinsatz.
-    [void](Invoke-WzTweaks -Tweaks @($planTweak) -Scope 'selbsttest-plan-zweitlauf')
-    $anzahl = Get-WzTestSchemeCount -Name $planName
-    Write-Check 'zweiter Durchlauf legt keine Kopie an' ($anzahl -eq 1) "gefunden: $anzahl"
-
-    if ($planLauf.UndoFile) {
-        $planRestore = Restore-WzUndoSession -UndoFile $planLauf.UndoFile
-        Write-Check 'Rücknahme meldet Erfolg' ($planRestore.Failed -eq 0) "Restored=$($planRestore.Restored) Failed=$($planRestore.Failed)"
-
-        $nachUndo = Invoke-WzProcess -FilePath 'powercfg.exe' -Arguments '/getactivescheme' -TimeoutSeconds 30
-        Write-Check 'vorheriger Plan wieder aktiv' ($nachUndo.StdOut -match [regex]::Escape($planVorher))
-
-        Write-Check 'Wegwerf-Plan wurde entfernt' ((Get-WzTestSchemeCount -Name $planName) -eq 0)
-    } else {
-        Write-Check 'Sicherungsdatei geschrieben' $false 'keine undo.json'
+        # Zweite Rücknahme derselben Sicherung: die Werte gibt es nicht mehr,
+        # gezählt werden darf nichts.
+        $nochmal = Restore-WzUndoSession -UndoFile $schluesselLauf.UndoFile
+        Write-Check 'fehlender Wert zählt nicht als zurückgesetzt' ($nochmal.Restored -eq 0 -and $nochmal.Failed -eq 0) "Restored=$($nochmal.Restored) Failed=$($nochmal.Failed)"
     }
 
-    # Sicherheitsnetz: Bricht oben etwas ab, bleibt weder ein fremder Plan aktiv
-    # noch der Wegwerf-Plan liegen.
-    [void](Invoke-WzProcess -FilePath 'powercfg.exe' -Arguments "/setactive $planVorher" -TimeoutSeconds 30)
-    # Begrenzt, damit ein Plan, der sich nicht löschen lässt, den Selbsttest
-    # nicht in eine Endlosschleife schickt.
-    for ($versuch = 0; $versuch -lt 5; $versuch++) {
-        $uebrig = Find-WzPowerScheme -Name $planName
-        if (-not $uebrig) { break }
-        [void](Invoke-WzProcess -FilePath 'powercfg.exe' -Arguments "/delete $uebrig" -TimeoutSeconds 30)
+    # Gleicher Wert, falscher Typ: muss neu gesetzt werden.
+    Set-ItemProperty -Path $testKey -Name 'Typ' -Value '1' -Type String
+    $typTweak = [pscustomobject]@{
+        id = 'selbsttest-typ'; name = 'Selbsttest — Werttyp'; requiresReboot = $false
+        actions = @([pscustomobject]@{ type = 'registry'; path = $testKey; name = 'Typ'; valueType = 'DWord'; value = 1 })
     }
-}
+    [void](Invoke-WzTweaks -Tweaks @($typTweak) -Scope 'selbsttest-typ')
+    $typNachher = (Get-Item -LiteralPath $testKey).GetValueKind('Typ')
+    Write-Check 'REG_SZ "1" gilt nicht als DWORD 1' ($typNachher -eq 'DWord') "Typ=$typNachher"
 
-# --- 8. Restesuche nach dem Deinstallieren ----------------------------------
-# Hier wird endgültig gelöscht, deshalb steht vor dem Löschen zweimal dasselbe
-# Regelwerk. Beide werden zuerst trocken durchgeprüft — auf Pfade, die es gibt,
-# aber niemand anfassen darf. Erst danach läuft die Kette an einem Wegwerf-
-# Programm, das dieser Abschnitt selbst anlegt.
-Write-Host ''
-Write-Host '8. Restesuche: Regeln, Fund und Rücknahme' -ForegroundColor White
+    # Ein Eintrag, dessen Ziel es auf dem Gerät nicht gibt, ist »nicht
+    # zutreffend«, nicht »angewendet« (Audit 2026-10, M2). Die Namen je Ergebnis
+    # speisen das Übergabeblatt (M1).
+    $fehltTweak = [pscustomobject]@{
+        id = 'selbsttest-fehlt'; name = 'Selbsttest — Dienst fehlt'; requiresReboot = $true
+        actions = @([pscustomobject]@{ type = 'service'; serviceName = 'WinZiiSelbsttestGibtEsNicht'; startupType = 'Disabled' })
+    }
+    $fehltLauf = Invoke-WzTweaks -Tweaks @($fehltTweak, $typTweak, $kaputt) -Scope 'selbsttest-fehlt'
+    Write-Check 'fehlender Dienst: nicht zutreffend' ($fehltLauf.NotApplicable -eq 1 -and $fehltLauf.NotApplicableNames -contains $fehltTweak.name) "Applied=$($fehltLauf.Applied) NotApplicable=$($fehltLauf.NotApplicable)"
+    Write-Check 'kein Neustart für Nicht-Zutreffendes' (-not $fehltLauf.RebootRequired)
+    Write-Check 'Namen je Ergebnis getrennt' (
+        $fehltLauf.AppliedNames -contains $typTweak.name -and $fehltLauf.FailedNames -contains $kaputt.name -and
+        $fehltLauf.AppliedNames -notcontains $kaputt.name) "angewendet=$($fehltLauf.AppliedNames -join ', ') fehlgeschlagen=$($fehltLauf.FailedNames -join ', ')"
 
-# Die Wurzeln kommen aus derselben Quelle wie in der Prüfung selbst. Unter einem
-# Technikerkonto zeigen $env:LOCALAPPDATA und Get-WzUserFolder auf verschiedene
-# Profile — mit $env:… prüfte der Test etwas anderes als den Ernstfall.
-$lokal = Get-WzUserFolder -Kind 'LocalAppData'
-$programme = $env:ProgramFiles
-$startmenue = Join-Path $env:ProgramData 'Microsoft\Windows\Start Menu\Programs'
-
-$pfadRegeln = @(
-    @{ Pfad = $programme;                                          Erlaubt = $false; Was = 'Wurzel selbst' }
-    @{ Pfad = 'C:\';                                               Erlaubt = $false; Was = 'Laufwerkswurzel' }
-    @{ Pfad = 'C:\Windows\System32';                               Erlaubt = $false; Was = 'außerhalb der Wurzeln' }
-    @{ Pfad = (Join-Path $programme 'Common Files');               Erlaubt = $false; Was = 'Sammelordner' }
-    @{ Pfad = (Join-Path $programme 'WindowsApps\Wegwerf');        Erlaubt = $false; Was = 'Store-Apps, auch darunter' }
-    @{ Pfad = (Join-Path $lokal 'Temp\Wegwerf');                   Erlaubt = $false; Was = 'Zwischenspeicher, auch darunter' }
-    @{ Pfad = (Join-Path $lokal 'Programs');                       Erlaubt = $false; Was = 'Programs als Sammelordner' }
-    @{ Pfad = (Join-Path $programme 'Wegwerfprogramm');            Erlaubt = $true;  Was = 'Programmordner' }
-    @{ Pfad = (Join-Path $lokal 'Programs\Wegwerfprogramm');       Erlaubt = $true;  Was = 'Programm unter Programs' }
-    @{ Pfad = (Join-Path $startmenue 'Wegwerfprogramm');           Erlaubt = $true;  Was = 'Startmenü-Eintrag' }
-)
-foreach ($regel in $pfadRegeln) {
-    Write-Check "Ordner: $($regel.Was)" ((Test-WzLeftoverPathSafe -Path $regel.Pfad) -eq $regel.Erlaubt)
-}
-
-$keyRegeln = @(
-    @{ Pfad = 'HKLM:\SOFTWARE';                                      Erlaubt = $false; Was = 'Zweig selbst' }
-    @{ Pfad = 'HKLM:\SOFTWARE\WOW6432Node';                          Erlaubt = $false; Was = '32-Bit-Zweig selbst' }
-    @{ Pfad = 'HKLM:\SYSTEM\CurrentControlSet\Services';             Erlaubt = $false; Was = 'außerhalb von SOFTWARE' }
-    @{ Pfad = 'HKLM:\SOFTWARE\Wegwerfprogramm';                      Erlaubt = $true;  Was = 'Schlüssel unter SOFTWARE' }
-    @{ Pfad = 'HKLM:\SOFTWARE\WOW6432Node\Wegwerfprogramm';          Erlaubt = $true;  Was = 'Schlüssel im 32-Bit-Zweig' }
-    @{ Pfad = 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Uninstall\Wegwerf'; Erlaubt = $true; Was = 'Deinstallationsschlüssel' }
-    # Dieselben beiden Fälle in der Schreibweise, die unter fremdem Konto entsteht.
-    @{ Pfad = 'Registry::HKEY_USERS\S-1-5-21-1-2-3-1001\SOFTWARE';   Erlaubt = $false; Was = 'fremdes Konto, Zweig selbst' }
-    @{ Pfad = 'Registry::HKEY_USERS\S-1-5-21-1-2-3-1001\SOFTWARE\Wegwerf'; Erlaubt = $true; Was = 'fremdes Konto, Schlüssel' }
-)
-foreach ($regel in $keyRegeln) {
-    Write-Check "Registry: $($regel.Was)" ((Test-WzLeftoverKeySafe -Path $regel.Pfad) -eq $regel.Erlaubt)
-}
-
-# Aus dem Anzeigenamen wird der Ordnername. Trifft er zu breit, räumt die Suche
-# beim Nachbarprogramm auf.
-$namensFaelle = @(
-    @{ Name = 'Mozilla Firefox 128.0 (x64 de)'; Erwartet = 'Mozilla Firefox'; Was = 'Version und Klammer fallen weg' }
-    @{ Name = 'VLC';                            Erwartet = $null;             Was = 'zu kurzer Name fällt raus' }
-    @{ Name = 'C:\Unsinn';                      Erwartet = $null;             Was = 'Pfadzeichen fallen raus' }
-)
-foreach ($fall in $namensFaelle) {
-    $kandidaten = @(Get-WzLeftoverNameCandidates -Program ([pscustomobject]@{ Name = $fall.Name }))
-    $ok = if ($fall.Erwartet) { $kandidaten -contains $fall.Erwartet } else { $kandidaten.Count -eq 0 }
-    Write-Check "Name: $($fall.Was)" $ok ($kandidaten -join ', ')
-}
-
-# Geteilte Namen: Bleibt eine andere Python-Version installiert, ist
-# »Python« kein Rest, sondern ihr Zuhause (Audit 2026-10, H2).
-$python = [pscustomobject]@{ Name = 'Python 3.12.1 (64-bit)' }
-$geteiltFaelle = @(
-    @{ Fremd = @('Python 3.11.5 (64-bit)'); Erwartet = $false; Was = 'andere Version bleibt' }
-    @{ Fremd = @('Python Launcher');        Erwartet = $false; Was = 'Programm gleichen Stamms bleibt' }
-    @{ Fremd = @('Pythonista Viewer');      Erwartet = $true;  Was = 'nur Präfix ohne Leerzeichen zählt nicht' }
-    @{ Fremd = @();                         Erwartet = $true;  Was = 'ohne Nachbarn bleibt der Kandidat' }
-)
-foreach ($fall in $geteiltFaelle) {
-    $kandidaten = @(Get-WzLeftoverNameCandidates -Program $python -ForeignNames $fall.Fremd)
-    Write-Check "Geteilter Name: $($fall.Was)" (($kandidaten -contains 'Python') -eq $fall.Erwartet) ($kandidaten -join ', ')
-}
-
-# Ein Wegwerf-Programm: ein Ordner mit Inhalt und ein eigener Schlüssel.
-$restName = 'WinZii-Selbsttest-Restprogramm'
-$restKey = "HKCU:\Software\$restName"
-$restOrdner = Join-Path $lokal $restName
-
-if (-not (Test-Path -LiteralPath $restKey)) { [void](New-Item -Path $restKey -Force) }
-Set-ItemProperty -Path $restKey -Name 'DisplayName' -Value $restName -Force
-[void](New-Item -Path $restOrdner -ItemType Directory -Force)
-Set-Content -LiteralPath (Join-Path $restOrdner 'rest.txt') -Value 'Wegwerfdatei des Selbsttests'
-
-# Ein Assistent, den der Techniker wegklickt, meldet mitunter trotzdem Erfolg.
-# Steht der Eintrag danach noch in der Liste, ist nichts entfernt worden.
-Write-Check 'noch eingetragen gilt als nicht entfernt' `
-    (-not (Test-WzProgramGone -Program ([pscustomobject]@{ Name = $restName; RegistryPath = $restKey })))
-Write-Check 'fehlender Schlüssel gilt als entfernt' `
-    (Test-WzProgramGone -Program ([pscustomobject]@{ Name = $restName; RegistryPath = "$restKey-GibtEsNicht" }))
-Write-Check 'ohne Schlüsselpfad gilt als entfernt' `
-    (Test-WzProgramGone -Program ([pscustomobject]@{ Name = $restName; RegistryPath = '' }))
-
-# Die Nachfrist für Deinstallierer, die vor sich selbst zurückkehren. Geprüft
-# wird beides: dass sie wirklich gewartet wird, und dass sie nicht anfällt,
-# wenn der Schlüssel längst weg ist — sonst kostete jede Deinstallation Zeit.
-$uhr = [Diagnostics.Stopwatch]::StartNew()
-$nochDa = Test-WzProgramGone -Program ([pscustomobject]@{ Name = $restName; RegistryPath = $restKey }) -WaitSeconds 2
-$gewartet = $uhr.Elapsed.TotalSeconds
-Write-Check 'Nachfrist wartet und urteilt dann' `
-    ((-not $nochDa) -and $gewartet -ge 2) ("{0:N1} s gewartet" -f $gewartet)
-
-$uhr = [Diagnostics.Stopwatch]::StartNew()
-$schonWeg = Test-WzProgramGone -Program ([pscustomobject]@{ Name = $restName; RegistryPath = "$restKey-GibtEsNicht" }) -WaitSeconds 10
-$sofort = $uhr.Elapsed.TotalSeconds
-Write-Check 'Nachfrist kostet nichts, wenn es weg ist' `
-    ($schonWeg -and $sofort -lt 1) ("{0:N2} s" -f $sofort)
-
-$restProgramm = [pscustomobject]@{
-    Name            = $restName
-    InstallLocation = $restOrdner
-    RegistryPath    = $restKey
-}
-$funde = @(Find-WzUninstallLeftovers -Programs @($restProgramm))
-$ordnerFunde = @($funde | Where-Object { $_.Kind -eq 'Ordner' })
-$keyFunde = @($funde | Where-Object { $_.Kind -eq 'Registry' })
-
-Write-Check 'Ordner gefunden, genau einmal' `
-    ($ordnerFunde.Count -eq 1 -and $ordnerFunde[0].TargetPath -eq $restOrdner) ("{0} Fund(e)" -f $ordnerFunde.Count)
-Write-Check 'Größe des Ordners ermittelt' ($ordnerFunde.Count -eq 1 -and $ordnerFunde[0].SizeBytes -gt 0)
-Write-Check 'Schlüssel gefunden, genau einmal' ($keyFunde.Count -eq 1) ("{0} Fund(e)" -f $keyFunde.Count)
-
-# Ein Programm ohne Reste darf auch keine melden — sonst stünde nach jeder
-# Deinstallation ein Dialog mit fremden Ordnern darin.
-$ohneReste = @(Find-WzUninstallLeftovers -Programs @([pscustomobject]@{
-    Name = 'WinZii-Selbsttest-GibtEsNicht'; InstallLocation = ''; RegistryPath = '' }))
-Write-Check 'ohne Reste bleibt die Liste leer' ($ohneReste.Count -eq 0) ("{0} Fund(e)" -f $ohneReste.Count)
-
-# Der Fall vom Abnahmelaptop: Ein Hersteller trägt als Installationsordner den
-# Sammelordner der ganzen Familie ein, und ein Nachbarprogramm wohnt darunter.
-# Angeboten werden darf der Sammelordner dann nicht — das Löschen ist endgültig.
-$sammelOrdner = Join-Path $lokal 'WinZii-Selbsttest-Sammelordner'
-$nachbarOrdner = Join-Path $sammelOrdner 'Nachbarprogramm'
-$nachbarKey = 'HKCU:\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\WinZii-Selbsttest-Nachbar'
-[void](New-Item -Path $nachbarOrdner -ItemType Directory -Force)
-Set-Content -LiteralPath (Join-Path $nachbarOrdner 'nachbar.txt') -Value 'Gehört dem Nachbarprogramm'
-if (-not (Test-Path -LiteralPath $nachbarKey)) { [void](New-Item -Path $nachbarKey -Force) }
-Set-ItemProperty -Path $nachbarKey -Name 'DisplayName' -Value 'WinZii-Selbsttest-Nachbarprogramm' -Force
-Set-ItemProperty -Path $nachbarKey -Name 'UninstallString' -Value 'cmd.exe /c rem' -Force
-Set-ItemProperty -Path $nachbarKey -Name 'InstallLocation' -Value $nachbarOrdner -Force
-
-$sammelProgramm = [pscustomobject]@{
-    Name            = 'WinZii-Selbsttest-Sammelprogramm'
-    InstallLocation = $sammelOrdner
-    RegistryPath    = ''
-}
-$sammelFunde = @(Find-WzUninstallLeftovers -Programs @($sammelProgramm))
-Write-Check 'geteilter Ordner wird nicht angeboten' `
-    (@($sammelFunde | Where-Object { $_.TargetPath -eq $sammelOrdner }).Count -eq 0) `
-    ("{0} Fund(e)" -f $sammelFunde.Count)
-
-# Und wenn er trotzdem in der Liste steht — aus einem älteren Lauf, aus einem
-# Hintergrundlauf vor der Installation des Nachbarn —, muss ihn die Nachprüfung
-# unmittelbar vor dem Löschen abweisen.
-$sammelAbgewiesen = Remove-WzUninstallLeftovers -Leftovers @([pscustomobject]@{
-    Kind = 'Ordner'; Path = $sammelOrdner; TargetPath = $sammelOrdner
-    SizeBytes = 0; Program = $sammelProgramm.Name })
-Write-Check 'geteilter Ordner wird vor dem Löschen abgewiesen' `
-    ($sammelAbgewiesen.Removed -eq 0 -and $sammelAbgewiesen.Failed -eq 1) `
-    "Removed=$($sammelAbgewiesen.Removed) Failed=$($sammelAbgewiesen.Failed)"
-Write-Check 'Nachbarprogramm steht danach noch' (Test-Path -LiteralPath $nachbarOrdner)
-
-# Der eigene Unterordner bleibt erlaubt, sonst wäre nach dieser Regel gar
-# nichts mehr aufräumbar, was unter einem geteilten Ordner liegt.
-$eigenerUnterordner = Join-Path $sammelOrdner 'WinZii-Selbsttest-Eigenprogramm'
-[void](New-Item -Path $eigenerUnterordner -ItemType Directory -Force)
-Set-Content -LiteralPath (Join-Path $eigenerUnterordner 'eigen.txt') -Value 'Wegwerfdatei'
-$eigeneFunde = @(Find-WzUninstallLeftovers -Programs @([pscustomobject]@{
-    Name            = 'WinZii-Selbsttest-Eigenprogramm'
-    InstallLocation = $eigenerUnterordner
-    RegistryPath    = '' }))
-Write-Check 'eigener Unterordner bleibt auffindbar' `
-    (@($eigeneFunde | Where-Object { $_.TargetPath -eq $eigenerUnterordner }).Count -eq 1) `
-    ("{0} Fund(e)" -f $eigeneFunde.Count)
-
-Remove-Item -LiteralPath $nachbarKey -Recurse -Force -ErrorAction SilentlyContinue
-Remove-Item -LiteralPath $sammelOrdner -Recurse -Force -ErrorAction SilentlyContinue
-
-$syncHash.DryRun = $true
-$trockenReste = Remove-WzUninstallLeftovers -Leftovers $funde
-$syncHash.DryRun = $false
-Write-Check 'Testmodus fasst nichts an' `
-    ((Test-Path -LiteralPath $restOrdner) -and (Test-Path -LiteralPath $restKey))
-Write-Check 'Testmodus legt keine Sicherung an' ($null -eq $trockenReste.UndoFile)
-
-# Zwischen Suchen und Bestätigen liegt ein Dialog. Was danach gelöscht wird,
-# muss noch einmal durch dasselbe Regelwerk — hier mit einem Ordner, den es
-# wirklich gibt, der aber gesperrt ist.
-$verboten = Join-Path $lokal 'Temp\winzii-selbsttest-verboten'
-[void](New-Item -Path $verboten -ItemType Directory -Force)
-$abgewiesen = Remove-WzUninstallLeftovers -Leftovers @([pscustomobject]@{
-    Kind = 'Ordner'; Path = $verboten; TargetPath = $verboten; SizeBytes = 0; Program = 'Selbsttest' })
-Write-Check 'gesperrter Ordner wird abgewiesen' `
-    ($abgewiesen.Removed -eq 0 -and $abgewiesen.Failed -eq 1) "Removed=$($abgewiesen.Removed) Failed=$($abgewiesen.Failed)"
-Write-Check 'gesperrter Ordner steht danach noch' (Test-Path -LiteralPath $verboten)
-Remove-Item -LiteralPath $verboten -Recurse -Force -ErrorAction SilentlyContinue
-
-$restLauf = Remove-WzUninstallLeftovers -Leftovers $funde
-Write-Check 'beide Reste entfernt' `
-    ($restLauf.Removed -eq 2 -and $restLauf.Failed -eq 0) "Removed=$($restLauf.Removed) Failed=$($restLauf.Failed)"
-Write-Check 'Ordner ist weg' (-not (Test-Path -LiteralPath $restOrdner))
-Write-Check 'Schlüssel ist weg' (-not (Test-Path -LiteralPath $restKey))
-Write-Check 'freigewordener Platz gezählt' ($restLauf.Bytes -gt 0) ("{0} Byte" -f $restLauf.Bytes)
-
-Write-Check 'undo.json geschrieben' ($restLauf.UndoFile -and (Test-Path -LiteralPath $restLauf.UndoFile)) $restLauf.UndoFile
-if ($restLauf.UndoFile) {
-    $restSession = Split-Path -Parent $restLauf.UndoFile
-    $restRegDateien = @(Get-ChildItem -LiteralPath $restSession -Filter '*.reg' -ErrorAction SilentlyContinue)
-    Write-Check '.reg-Sicherung des Schlüssels' ($restRegDateien.Count -ge 1) ("{0} Datei(en)" -f $restRegDateien.Count)
-    if ($restRegDateien.Count -ge 1) {
-        $restText = [IO.File]::ReadAllText($restRegDateien[0].FullName, [Text.Encoding]::Unicode)
-        Write-Check '.reg enthält den Schlüssel' ($restText -match [regex]::Escape($restName))
+    # Ein Lesefehler ist kein »gibt es nicht«: Sonst würde aus »Zugriff
+    # verweigert« ein »nicht zutreffend« (Sicherheitsprüfung zu M2). Die
+    # Abfragen werden durch Attrappen ersetzt, die nicht mit ObjectNotFound
+    # scheitern.
+    function Get-Service { throw [UnauthorizedAccessException]'Selbsttest: Zugriff verweigert' }
+    function Get-WindowsOptionalFeature { throw [UnauthorizedAccessException]'Selbsttest: erfordert erhöhte Rechte' }
+    try {
+        $lesefehlerTweak = [pscustomobject]@{
+            id = 'selbsttest-lesefehler'; name = 'Selbsttest — Lesefehler'; requiresReboot = $false
+            actions = @(
+                [pscustomobject]@{ type = 'service'; serviceName = 'WinZiiSelbsttest'; startupType = 'Disabled' }
+                [pscustomobject]@{ type = 'feature'; featureName = 'WinZiiSelbsttest'; state = 'Disabled' }
+            )
+        }
+        $lesefehlerLauf = Invoke-WzTweaks -Tweaks @($lesefehlerTweak) -Scope 'selbsttest-lesefehler'
+        Write-Check 'Lesefehler zählt als Fehlschlag, nicht als »nicht zutreffend«' `
+            ($lesefehlerLauf.Failed -eq 1 -and $lesefehlerLauf.NotApplicable -eq 0) "Failed=$($lesefehlerLauf.Failed) NotApplicable=$($lesefehlerLauf.NotApplicable)"
+    } finally {
+        Remove-Item -LiteralPath Function:\Get-Service, Function:\Get-WindowsOptionalFeature -ErrorAction SilentlyContinue
     }
 
-    $restManifest = Read-WzJson -Path $restLauf.UndoFile
-    $restEintraege = @($restManifest.entries)
-    Write-Check 'Sicherung nennt die entfernten Pfade' `
-        ($restEintraege.Count -eq 1 -and @($restEintraege[0].previous.paths).Count -eq 2) ("{0} Pfad(e)" -f @($restEintraege[0].previous.paths).Count)
-
-    # Die Rücknahme spielt den gesicherten Schlüssel wieder ein; der Ordner
-    # bleibt weg und wird im Hinweis genannt.
-    $restRueck = Restore-WzUndoSession -UndoFile $restLauf.UndoFile
-    Write-Check 'Rücknahme holt den Schlüssel zurück' ((Test-Path -LiteralPath $restKey) -and $restRueck.Restored -eq 1) "Restored=$($restRueck.Restored) Failed=$($restRueck.Failed)"
-    Write-Check 'Rücknahme nennt den gelöschten Ordner' (@($restRueck.Notes).Count -ge 1)
-
-    try { Remove-Item -LiteralPath $restSession -Recurse -Force -ErrorAction Stop } catch { }
-}
-
-# --- 9. Rekursives Löschen folgt keiner Junction -----------------------------
-# Windows PowerShell 5.1 löscht bei »Remove-Item -Recurse« den Inhalt hinter
-# einer Junction mit. In Windows.old zeigen solche Junctions ins lebende Profil
-# (Audit 2026-10, K2). Nachgebaut im TEMP-Ordner: ein Wegwerf-Ordner mit einer
-# Junction auf einen Zielordner, der danach noch voll sein muss.
-Write-Host ''
-Write-Host '9. Rekursives Löschen folgt keiner Junction' -ForegroundColor White
-
-$junctionBasis = Join-Path $env:TEMP 'WinZii-Selbsttest-Junction'
-$junctionZiel = Join-Path $junctionBasis 'ziel'
-$wegwerf = Join-Path $junctionBasis 'wegwerf'
-$einzelLink = Join-Path $junctionBasis 'einzel-link'
-[void](New-Item -Path (Join-Path $wegwerf 'unter') -ItemType Directory -Force)
-[void](New-Item -Path $junctionZiel -ItemType Directory -Force)
-Set-Content -LiteralPath (Join-Path $junctionZiel 'profil.txt') -Value 'muss bleiben'
-Set-Content -LiteralPath (Join-Path $wegwerf 'unter\weg.txt') -Value 'darf weg'
-$schreibgeschuetzt = Join-Path $wegwerf 'schreibgeschuetzt.txt'
-Set-Content -LiteralPath $schreibgeschuetzt -Value 'darf weg'
-(Get-Item -LiteralPath $schreibgeschuetzt).IsReadOnly = $true
-
-$junctionAngelegt = $false
-try {
-    [void](New-Item -ItemType Junction -Path (Join-Path $wegwerf 'unter\Application Data') -Value $junctionZiel -ErrorAction Stop)
-    [void](New-Item -ItemType Junction -Path $einzelLink -Value $junctionZiel -ErrorAction Stop)
-    $junctionAngelegt = $true
-} catch {
-    Write-Host "  [--]   übersprungen: Junction nicht anlegbar ($($_.Exception.Message))" -ForegroundColor DarkGray
-}
-
-if ($junctionAngelegt) {
-    $loeschFehler = $null
-    try { Remove-WzTree -LiteralPath $wegwerf } catch { $loeschFehler = $_.Exception.Message }
-    Write-Check 'Ordner mit Junction gelöscht' (-not (Test-Path -LiteralPath $wegwerf)) $loeschFehler
-    Write-Check 'Junction-Ziel noch voll' (Test-Path -LiteralPath (Join-Path $junctionZiel 'profil.txt'))
-
-    # Ist der Startpunkt selbst eine Junction, verschwindet nur der Verweis.
-    $loeschFehler = $null
-    try { Remove-WzTree -LiteralPath $einzelLink } catch { $loeschFehler = $_.Exception.Message }
-    Write-Check 'Junction als Startpunkt: nur der Verweis weg' `
-        ((-not (Test-Path -LiteralPath $einzelLink)) -and (Test-Path -LiteralPath (Join-Path $junctionZiel 'profil.txt'))) $loeschFehler
-}
-
-# --- 10. Rücknahme im Detail ------------------------------------------------
-# Angelegte Schlüssel, Werttyp und Aufgabenzustand (Audit 2026-10, M6 und
-# Stufe-2-Kleinpunkte). Alles unter dem eigenen Testschlüssel; die
-# Aufgaben-Cmdlets werden durch Attrappen ersetzt, kein echter Eingriff.
-Write-Host ''
-Write-Host '10. Rücknahme im Detail' -ForegroundColor White
-
-$angelegt = "$testKey\Angelegt"
-$schluesselTweak = [pscustomobject]@{
-    id             = 'selbsttest-schluessel'
-    name           = 'Selbsttest — neuer Schlüssel'
-    requiresReboot = $false
-    actions        = @(
-        [pscustomobject]@{ type = 'registry'; path = $angelegt; name = 'A'; valueType = 'DWord'; value = 1 }
-        [pscustomobject]@{ type = 'registry'; path = $angelegt; name = 'B'; valueType = 'DWord'; value = 2 }
-    )
-}
-$schluesselLauf = Invoke-WzTweaks -Tweaks @($schluesselTweak) -Scope 'selbsttest-schluessel'
-Write-Check 'Schlüssel beim Anwenden angelegt' (Test-Path -LiteralPath $angelegt)
-if ($schluesselLauf.UndoFile) {
-    $schluesselRueck = Restore-WzUndoSession -UndoFile $schluesselLauf.UndoFile
-    Write-Check 'angelegter Schlüssel nach Rücknahme weg' (-not (Test-Path -LiteralPath $angelegt)) "Restored=$($schluesselRueck.Restored)"
-    Write-Check 'beide Werte als zurückgesetzt gezählt' ($schluesselRueck.Restored -eq 2 -and $schluesselRueck.Failed -eq 0)
-
-    # Zweite Rücknahme derselben Sicherung: die Werte gibt es nicht mehr,
-    # gezählt werden darf nichts.
-    $nochmal = Restore-WzUndoSession -UndoFile $schluesselLauf.UndoFile
-    Write-Check 'fehlender Wert zählt nicht als zurückgesetzt' ($nochmal.Restored -eq 0 -and $nochmal.Failed -eq 0) "Restored=$($nochmal.Restored) Failed=$($nochmal.Failed)"
-}
-
-# Gleicher Wert, falscher Typ: muss neu gesetzt werden.
-Set-ItemProperty -Path $testKey -Name 'Typ' -Value '1' -Type String
-$typTweak = [pscustomobject]@{
-    id = 'selbsttest-typ'; name = 'Selbsttest — Werttyp'; requiresReboot = $false
-    actions = @([pscustomobject]@{ type = 'registry'; path = $testKey; name = 'Typ'; valueType = 'DWord'; value = 1 })
-}
-[void](Invoke-WzTweaks -Tweaks @($typTweak) -Scope 'selbsttest-typ')
-$typNachher = (Get-Item -LiteralPath $testKey).GetValueKind('Typ')
-Write-Check 'REG_SZ "1" gilt nicht als DWORD 1' ($typNachher -eq 'DWord') "Typ=$typNachher"
-
-# Ein Eintrag, dessen Ziel es auf dem Gerät nicht gibt, ist »nicht
-# zutreffend«, nicht »angewendet« (Audit 2026-10, M2). Die Namen je Ergebnis
-# speisen das Übergabeblatt (M1).
-$fehltTweak = [pscustomobject]@{
-    id = 'selbsttest-fehlt'; name = 'Selbsttest — Dienst fehlt'; requiresReboot = $true
-    actions = @([pscustomobject]@{ type = 'service'; serviceName = 'WinZiiSelbsttestGibtEsNicht'; startupType = 'Disabled' })
-}
-$fehltLauf = Invoke-WzTweaks -Tweaks @($fehltTweak, $typTweak, $kaputt) -Scope 'selbsttest-fehlt'
-Write-Check 'fehlender Dienst: nicht zutreffend' ($fehltLauf.NotApplicable -eq 1 -and $fehltLauf.NotApplicableNames -contains $fehltTweak.name) "Applied=$($fehltLauf.Applied) NotApplicable=$($fehltLauf.NotApplicable)"
-Write-Check 'kein Neustart für Nicht-Zutreffendes' (-not $fehltLauf.RebootRequired)
-Write-Check 'Namen je Ergebnis getrennt' (
-    $fehltLauf.AppliedNames -contains $typTweak.name -and $fehltLauf.FailedNames -contains $kaputt.name -and
-    $fehltLauf.AppliedNames -notcontains $kaputt.name) "angewendet=$($fehltLauf.AppliedNames -join ', ') fehlgeschlagen=$($fehltLauf.FailedNames -join ', ')"
-
-# Ein Lesefehler ist kein »gibt es nicht«: Sonst würde aus »Zugriff
-# verweigert« ein »nicht zutreffend« (Sicherheitsprüfung zu M2). Die
-# Abfragen werden durch Attrappen ersetzt, die nicht mit ObjectNotFound
-# scheitern.
-function Get-Service { throw [UnauthorizedAccessException]'Selbsttest: Zugriff verweigert' }
-function Get-WindowsOptionalFeature { throw [UnauthorizedAccessException]'Selbsttest: erfordert erhöhte Rechte' }
-try {
-    $lesefehlerTweak = [pscustomobject]@{
-        id = 'selbsttest-lesefehler'; name = 'Selbsttest — Lesefehler'; requiresReboot = $false
-        actions = @(
-            [pscustomobject]@{ type = 'service'; serviceName = 'WinZiiSelbsttest'; startupType = 'Disabled' }
-            [pscustomobject]@{ type = 'feature'; featureName = 'WinZiiSelbsttest'; state = 'Disabled' }
-        )
+    # Aufgabenzustand »Queued« war aktiv und muss aktiv zurückkommen.
+    $script:aufgabenAufrufe = @()
+    function global:Enable-ScheduledTask { param($TaskPath, $TaskName) $script:aufgabenAufrufe += "Enable:$TaskName" }
+    function global:Disable-ScheduledTask { param($TaskPath, $TaskName) $script:aufgabenAufrufe += "Disable:$TaskName" }
+    try {
+        $aufgabenSitzung = New-WzUndoSession -Scope 'selbsttest-aufgaben'
+        foreach ($zustand in 'Queued', 'Ready', 'Disabled') {
+            Save-WzUndoState -Session $aufgabenSitzung -ItemId 'selbsttest' -ItemName 'Selbsttest' `
+                -Action ([pscustomobject]@{ type = 'scheduledTask'; taskPath = '\WinZii-Selbsttest\'; taskName = $zustand }) `
+                -Previous @{ state = $zustand }
+        }
+        $aufgabenUndo = Complete-WzUndoSession -Session $aufgabenSitzung
+        [void](Restore-WzUndoSession -UndoFile $aufgabenUndo)
+        Write-Check 'Aufgabe »Queued« wird wieder aktiviert' ($script:aufgabenAufrufe -contains 'Enable:Queued') ($script:aufgabenAufrufe -join ', ')
+        Write-Check 'Aufgabe »Disabled« bleibt deaktiviert' ($script:aufgabenAufrufe -contains 'Disable:Disabled')
+    } finally {
+        Remove-Item -LiteralPath Function:\Enable-ScheduledTask, Function:\Disable-ScheduledTask -ErrorAction SilentlyContinue
     }
-    $lesefehlerLauf = Invoke-WzTweaks -Tweaks @($lesefehlerTweak) -Scope 'selbsttest-lesefehler'
-    Write-Check 'Lesefehler zählt als Fehlschlag, nicht als »nicht zutreffend«' `
-        ($lesefehlerLauf.Failed -eq 1 -and $lesefehlerLauf.NotApplicable -eq 0) "Failed=$($lesefehlerLauf.Failed) NotApplicable=$($lesefehlerLauf.NotApplicable)"
-} finally {
-    Remove-Item -LiteralPath Function:\Get-Service, Function:\Get-WindowsOptionalFeature -ErrorAction SilentlyContinue
-}
 
-# Aufgabenzustand »Queued« war aktiv und muss aktiv zurückkommen.
-$script:aufgabenAufrufe = @()
-function global:Enable-ScheduledTask { param($TaskPath, $TaskName) $script:aufgabenAufrufe += "Enable:$TaskName" }
-function global:Disable-ScheduledTask { param($TaskPath, $TaskName) $script:aufgabenAufrufe += "Disable:$TaskName" }
-try {
-    $aufgabenSitzung = New-WzUndoSession -Scope 'selbsttest-aufgaben'
-    foreach ($zustand in 'Queued', 'Ready', 'Disabled') {
-        Save-WzUndoState -Session $aufgabenSitzung -ItemId 'selbsttest' -ItemName 'Selbsttest' `
-            -Action ([pscustomobject]@{ type = 'scheduledTask'; taskPath = '\WinZii-Selbsttest\'; taskName = $zustand }) `
-            -Previous @{ state = $zustand }
+    # --- 11. Schreibgeschützter Datenträger ------------------------------------
+    # Ohne Sicherung kein Eingriff (Audit 2026-10, H3). Die Schreibprobe wird
+    # durch eine Attrappe ersetzt, die »nicht beschreibbar« meldet.
+    Write-Host ''
+    Write-Host '11. Schreibgeschützter Datenträger' -ForegroundColor White
+
+    $echteSchreibprobe = ${function:Test-WzWritableRoot}
+    function Test-WzWritableRoot { $false }
+    try {
+        Set-ItemProperty -Path $testKey -Name 'Vorhanden' -Value 42 -Type DWord
+        $gesperrt = Invoke-WzTweaks -Tweaks @($tweak) -Scope 'selbsttest-gesperrt'
+        Write-Check 'nichts angewendet' ((Get-ItemProperty -LiteralPath $testKey).Vorhanden -eq 42 -and $gesperrt.Applied -eq 0)
+        Write-Check 'Grund gemeldet' ($gesperrt.WriteBlocked -and @($gesperrt.Messages).Count -eq 1)
+
+        $restGesperrt = Remove-WzUninstallLeftovers -Leftovers @([pscustomobject]@{
+                Kind = 'Folder'; Path = 'X:\gibt-es-nicht'; TargetPath = 'X:\gibt-es-nicht'; SizeBytes = 0 })
+        Write-Check 'Programmreste: nichts gelöscht, Grund gemeldet' ($restGesperrt.Removed -eq 0 -and $restGesperrt.Failed -eq 1) "Failed=$($restGesperrt.Failed)"
+    } finally {
+        Set-Item -Path Function:\Test-WzWritableRoot -Value $echteSchreibprobe
     }
-    $aufgabenUndo = Complete-WzUndoSession -Session $aufgabenSitzung
-    [void](Restore-WzUndoSession -UndoFile $aufgabenUndo)
-    Write-Check 'Aufgabe »Queued« wird wieder aktiviert' ($script:aufgabenAufrufe -contains 'Enable:Queued') ($script:aufgabenAufrufe -join ', ')
-    Write-Check 'Aufgabe »Disabled« bleibt deaktiviert' ($script:aufgabenAufrufe -contains 'Disable:Disabled')
-} finally {
-    Remove-Item -LiteralPath Function:\Enable-ScheduledTask, Function:\Disable-ScheduledTask -ErrorAction SilentlyContinue
-}
 
-# --- 11. Schreibgeschützter Datenträger ------------------------------------
-# Ohne Sicherung kein Eingriff (Audit 2026-10, H3). Die Schreibprobe wird
-# durch eine Attrappe ersetzt, die »nicht beschreibbar« meldet.
-Write-Host ''
-Write-Host '11. Schreibgeschützter Datenträger' -ForegroundColor White
+    # --- 12. App-Pakete: unvollständig gelesen ist nicht »erledigt« -------------
+    # Ohne Adminrechte liest WinZii nur das eigene Konto; sind die
+    # Bereitstellungen nicht lesbar, bleiben sie womöglich bestehen. Beides darf
+    # weder »nicht zutreffend« noch »angewendet« ergeben. Alle Appx-Cmdlets sind
+    # Attrappen, am System ändert sich nichts.
+    Write-Host ''
+    Write-Host '12. App-Pakete: unvollständig gelesen' -ForegroundColor White
 
-$echteSchreibprobe = ${function:Test-WzWritableRoot}
-function Test-WzWritableRoot { $false }
-try {
-    Set-ItemProperty -Path $testKey -Name 'Vorhanden' -Value 42 -Type DWord
-    $gesperrt = Invoke-WzTweaks -Tweaks @($tweak) -Scope 'selbsttest-gesperrt'
-    Write-Check 'nichts angewendet' ((Get-ItemProperty -LiteralPath $testKey).Vorhanden -eq 42 -and $gesperrt.Applied -eq 0)
-    Write-Check 'Grund gemeldet' ($gesperrt.WriteBlocked -and @($gesperrt.Messages).Count -eq 1)
-
-    $restGesperrt = Remove-WzUninstallLeftovers -Leftovers @([pscustomobject]@{
-            Kind = 'Folder'; Path = 'X:\gibt-es-nicht'; TargetPath = 'X:\gibt-es-nicht'; SizeBytes = 0 })
-    Write-Check 'Programmreste: nichts gelöscht, Grund gemeldet' ($restGesperrt.Removed -eq 0 -and $restGesperrt.Failed -eq 1) "Failed=$($restGesperrt.Failed)"
-} finally {
-    Set-Item -Path Function:\Test-WzWritableRoot -Value $echteSchreibprobe
-}
-
-# --- 12. App-Pakete: unvollständig gelesen ist nicht »erledigt« -------------
-# Ohne Adminrechte liest WinZii nur das eigene Konto; sind die
-# Bereitstellungen nicht lesbar, bleiben sie womöglich bestehen. Beides darf
-# weder »nicht zutreffend« noch »angewendet« ergeben. Alle Appx-Cmdlets sind
-# Attrappen, am System ändert sich nichts.
-Write-Host ''
-Write-Host '12. App-Pakete: unvollständig gelesen' -ForegroundColor White
-
-. (Join-Path $root 'src\modules\AiRemoval.ps1')
-$appxTweak = [pscustomobject]@{
-    id = 'selbsttest-appx'; name = 'Selbsttest — App-Paket'; requiresReboot = $false
-    actions = @([pscustomobject]@{ type = 'appx'; patterns = @('WinZiiSelbsttest*'); removeProvisioned = $true })
-}
-$script:appxEntfernt = @()
-function Get-AppxPackage { param([switch]$AllUsers) if ($AllUsers) { throw 'Selbsttest: Zugriff verweigert' }; @() }
-function Get-AppxProvisionedPackage { param([switch]$Online) @() }
-function Remove-AppxPackage { param($Package, [switch]$AllUsers) $script:appxEntfernt += $Package }
-try {
-    $script:WzAppxCache = $null
-    $nurEigenes = Invoke-WzTweaks -Tweaks @($appxTweak) -Scope 'selbsttest-appx'
-    Write-Check 'nur eigenes Konto gelesen: kein »nicht zutreffend«' `
-        ($nurEigenes.Failed -eq 1 -and $nurEigenes.NotApplicable -eq 0) "Failed=$($nurEigenes.Failed) NotApplicable=$($nurEigenes.NotApplicable)"
-
-    function Get-AppxPackage { param([switch]$AllUsers)
-        [pscustomobject]@{ Name = 'WinZiiSelbsttest.App'; PackageFullName = 'WinZiiSelbsttest.App_1.0_x64__test'; NonRemovable = $false } }
-    function Get-AppxProvisionedPackage { param([switch]$Online) throw 'Selbsttest: DISM nicht erreichbar' }
-    $script:WzAppxCache = $null
-    $ohneBereitstellung = Invoke-WzTweaks -Tweaks @($appxTweak) -Scope 'selbsttest-appx'
-    Write-Check 'Bereitstellung unlesbar: kein »angewendet«' `
-        ($ohneBereitstellung.Failed -eq 1 -and $ohneBereitstellung.Applied -eq 0) "Applied=$($ohneBereitstellung.Applied) Failed=$($ohneBereitstellung.Failed)"
-    Write-Check 'installiertes Paket trotzdem entfernt' ($script:appxEntfernt -contains 'WinZiiSelbsttest.App_1.0_x64__test')
-
-    # Treffer im eigenen Konto, andere Konten ungelesen: auch das ist kein
-    # »angewendet«.
-    function Get-AppxPackage { param([switch]$AllUsers)
-        if ($AllUsers) { throw 'Selbsttest: Zugriff verweigert' }
-        [pscustomobject]@{ Name = 'WinZiiSelbsttest.App'; PackageFullName = 'WinZiiSelbsttest.App_1.0_x64__test'; NonRemovable = $false } }
-    function Get-AppxProvisionedPackage { param([switch]$Online) @() }
-    $script:WzAppxCache = $null
-    $eigenesMitTreffer = Invoke-WzTweaks -Tweaks @($appxTweak) -Scope 'selbsttest-appx'
-    Write-Check 'Treffer nur im eigenen Konto: kein »angewendet«' `
-        ($eigenesMitTreffer.Failed -eq 1 -and $eigenesMitTreffer.Applied -eq 0) "Applied=$($eigenesMitTreffer.Applied) Failed=$($eigenesMitTreffer.Failed)"
-
-    # Zustandsanzeige: Ein erfüllter Registry-Wert plus eine nicht messbare
-    # Paketaktion ist »teilweise«, nicht »angewendet«.
+    . (Join-Path $root 'src\modules\AiRemoval.ps1')
+    $appxTweak = [pscustomobject]@{
+        id = 'selbsttest-appx'; name = 'Selbsttest — App-Paket'; requiresReboot = $false
+        actions = @([pscustomobject]@{ type = 'appx'; patterns = @('WinZiiSelbsttest*'); removeProvisioned = $true })
+    }
+    $script:appxEntfernt = @()
     function Get-AppxPackage { param([switch]$AllUsers) if ($AllUsers) { throw 'Selbsttest: Zugriff verweigert' }; @() }
-    $script:WzAppxCache = $null
-    Set-ItemProperty -Path $testKey -Name 'Zustand' -Value 1 -Type DWord
-    $zustandTweak = [pscustomobject]@{
-        id = 'selbsttest-zustand'; name = 'Selbsttest — Zustand'
-        actions = @(
-            [pscustomobject]@{ type = 'registry'; path = $testKey; name = 'Zustand'; valueType = 'DWord'; value = 1 }
-            [pscustomobject]@{ type = 'appx'; patterns = @('WinZiiSelbsttest*') }
-        )
+    function Get-AppxProvisionedPackage { param([switch]$Online) @() }
+    function Remove-AppxPackage { param($Package, [switch]$AllUsers) $script:appxEntfernt += $Package }
+    try {
+        $script:WzAppxCache = $null
+        $nurEigenes = Invoke-WzTweaks -Tweaks @($appxTweak) -Scope 'selbsttest-appx'
+        Write-Check 'nur eigenes Konto gelesen: kein »nicht zutreffend«' `
+            ($nurEigenes.Failed -eq 1 -and $nurEigenes.NotApplicable -eq 0) "Failed=$($nurEigenes.Failed) NotApplicable=$($nurEigenes.NotApplicable)"
+
+        function Get-AppxPackage { param([switch]$AllUsers)
+            [pscustomobject]@{ Name = 'WinZiiSelbsttest.App'; PackageFullName = 'WinZiiSelbsttest.App_1.0_x64__test'; NonRemovable = $false } }
+        function Get-AppxProvisionedPackage { param([switch]$Online) throw 'Selbsttest: DISM nicht erreichbar' }
+        $script:WzAppxCache = $null
+        $ohneBereitstellung = Invoke-WzTweaks -Tweaks @($appxTweak) -Scope 'selbsttest-appx'
+        Write-Check 'Bereitstellung unlesbar: kein »angewendet«' `
+            ($ohneBereitstellung.Failed -eq 1 -and $ohneBereitstellung.Applied -eq 0) "Applied=$($ohneBereitstellung.Applied) Failed=$($ohneBereitstellung.Failed)"
+        Write-Check 'installiertes Paket trotzdem entfernt' ($script:appxEntfernt -contains 'WinZiiSelbsttest.App_1.0_x64__test')
+
+        # Treffer im eigenen Konto, andere Konten ungelesen: auch das ist kein
+        # »angewendet«.
+        function Get-AppxPackage { param([switch]$AllUsers)
+            if ($AllUsers) { throw 'Selbsttest: Zugriff verweigert' }
+            [pscustomobject]@{ Name = 'WinZiiSelbsttest.App'; PackageFullName = 'WinZiiSelbsttest.App_1.0_x64__test'; NonRemovable = $false } }
+        function Get-AppxProvisionedPackage { param([switch]$Online) @() }
+        $script:WzAppxCache = $null
+        $eigenesMitTreffer = Invoke-WzTweaks -Tweaks @($appxTweak) -Scope 'selbsttest-appx'
+        Write-Check 'Treffer nur im eigenen Konto: kein »angewendet«' `
+            ($eigenesMitTreffer.Failed -eq 1 -and $eigenesMitTreffer.Applied -eq 0) "Applied=$($eigenesMitTreffer.Applied) Failed=$($eigenesMitTreffer.Failed)"
+
+        # Zustandsanzeige: Ein erfüllter Registry-Wert plus eine nicht messbare
+        # Paketaktion ist »teilweise«, nicht »angewendet«.
+        function Get-AppxPackage { param([switch]$AllUsers) if ($AllUsers) { throw 'Selbsttest: Zugriff verweigert' }; @() }
+        $script:WzAppxCache = $null
+        Set-ItemProperty -Path $testKey -Name 'Zustand' -Value 1 -Type DWord
+        $zustandTweak = [pscustomobject]@{
+            id = 'selbsttest-zustand'; name = 'Selbsttest — Zustand'
+            actions = @(
+                [pscustomobject]@{ type = 'registry'; path = $testKey; name = 'Zustand'; valueType = 'DWord'; value = 1 }
+                [pscustomobject]@{ type = 'appx'; patterns = @('WinZiiSelbsttest*') }
+            )
+        }
+        $zustand = Test-WzTweakState -Tweak $zustandTweak
+        Write-Check 'unvollständige Paketliste: Zustand nicht »angewendet«' ($zustand -ne 'Applied') "Zustand=$zustand"
+    } finally {
+        Remove-Item -LiteralPath Function:\Get-AppxPackage, Function:\Get-AppxProvisionedPackage, Function:\Remove-AppxPackage -ErrorAction SilentlyContinue
+        $script:WzAppxCache = $null
     }
-    $zustand = Test-WzTweakState -Tweak $zustandTweak
-    Write-Check 'unvollständige Paketliste: Zustand nicht »angewendet«' ($zustand -ne 'Applied') "Zustand=$zustand"
+
 } finally {
-    Remove-Item -LiteralPath Function:\Get-AppxPackage, Function:\Get-AppxProvisionedPackage, Function:\Remove-AppxPackage -ErrorAction SilentlyContinue
-    $script:WzAppxCache = $null
-}
+    # --- Aufräumen --------------------------------------------------------------
+    if ($junctionBasis -and (Test-Path -LiteralPath $junctionBasis)) {
+        try { Remove-WzTree -LiteralPath $junctionBasis } catch { }
+    }
+    # Sicherheitsnetz: Bricht Abschnitt 8 mittendrin ab, bleibt weder der
+    # Wegwerf-Ordner noch der Schlüssel liegen.
+    foreach ($rest in @($restOrdner, $verboten, $sammelOrdner)) {
+        if ($rest -and (Test-Path -LiteralPath $rest)) {
+            try { Remove-Item -LiteralPath $rest -Recurse -Force -ErrorAction Stop } catch { }
+        }
+    }
+    foreach ($schluessel in @($restKey, $nachbarKey)) {
+        if ($schluessel -and (Test-Path -LiteralPath $schluessel)) {
+            try { Remove-Item -LiteralPath $schluessel -Recurse -Force -ErrorAction Stop } catch { }
+        }
+    }
+    try { Remove-Item -LiteralPath $testKey -Recurse -Force -ErrorAction Stop } catch { }
+    $backupRoot = Get-WzBackupRoot
+    if (Test-Path -LiteralPath $backupRoot) {
+        Get-ChildItem -LiteralPath $backupRoot -Directory -Filter '*-selbsttest*' -ErrorAction SilentlyContinue |
+            ForEach-Object { try { Remove-Item -LiteralPath $_.FullName -Recurse -Force -ErrorAction Stop } catch { } }
 
-# --- Aufräumen --------------------------------------------------------------
-if (Test-Path -LiteralPath $junctionBasis) {
-    try { Remove-WzTree -LiteralPath $junctionBasis } catch { }
-}
-# Sicherheitsnetz: Bricht Abschnitt 8 mittendrin ab, bleibt weder der
-# Wegwerf-Ordner noch der Schlüssel liegen.
-foreach ($rest in @($restOrdner, $verboten, $sammelOrdner)) {
-    if ($rest -and (Test-Path -LiteralPath $rest)) {
-        try { Remove-Item -LiteralPath $rest -Recurse -Force -ErrorAction Stop } catch { }
+        # Bleibt danach nichts übrig, verschwindet auch der Ordner mit dem
+        # Rechnernamen — sonst hinterlässt jeder Testlauf auf einem sauberen Gerät
+        # einen leeren Ordner. Entfernt wird ausschließlich, was wirklich leer ist:
+        # echte Sicherungen bleiben unangetastet.
+        if (-not (Get-ChildItem -LiteralPath $backupRoot -Force -ErrorAction SilentlyContinue)) {
+            try { Remove-Item -LiteralPath $backupRoot -Force -ErrorAction Stop } catch { }
+        }
     }
 }
-foreach ($schluessel in @($restKey, $nachbarKey)) {
-    if ($schluessel -and (Test-Path -LiteralPath $schluessel)) {
-        try { Remove-Item -LiteralPath $schluessel -Recurse -Force -ErrorAction Stop } catch { }
-    }
-}
-try { Remove-Item -LiteralPath $testKey -Recurse -Force -ErrorAction Stop } catch { }
-$backupRoot = Get-WzBackupRoot
-if (Test-Path -LiteralPath $backupRoot) {
-    Get-ChildItem -LiteralPath $backupRoot -Directory -Filter '*-selbsttest*' -ErrorAction SilentlyContinue |
-        ForEach-Object { try { Remove-Item -LiteralPath $_.FullName -Recurse -Force -ErrorAction Stop } catch { } }
-
-    # Bleibt danach nichts übrig, verschwindet auch der Ordner mit dem
-    # Rechnernamen — sonst hinterlässt jeder Testlauf auf einem sauberen Gerät
-    # einen leeren Ordner. Entfernt wird ausschließlich, was wirklich leer ist:
-    # echte Sicherungen bleiben unangetastet.
-    if (-not (Get-ChildItem -LiteralPath $backupRoot -Force -ErrorAction SilentlyContinue)) {
-        try { Remove-Item -LiteralPath $backupRoot -Force -ErrorAction Stop } catch { }
-    }
-}
-
 Write-Host ''
 if ($script:failed -eq 0) {
     Write-Host '  Ergebnis: Sicherung und Rücknahme arbeiten wie versprochen.' -ForegroundColor Green
