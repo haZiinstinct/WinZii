@@ -380,12 +380,18 @@ function Start-WzHealthCheck {
     $syncHash.DiagHealthTitle.Text = Get-WzText 'health.running'
     $syncHash.DiagHealth.Children.Clear()
 
-    Invoke-WzTask -Name (Get-WzText 'health.task') -ArgumentList @($seconds) -ScriptBlock {
+    # Abbrechbar, kooperativ: Die Messung hält die Kerne an und meldet den
+    # Abbruch, statt bis zu 300 s Volllast durchzuziehen (Audit M27).
+    Invoke-WzTask -Name (Get-WzText 'health.task') -CooperativeCancel -ArgumentList @($seconds) -ScriptBlock {
         param($cpuSeconds)
         Invoke-WzHealthCheck -CpuSeconds $cpuSeconds
     } -OnComplete {
         param($check)
         if (-not $check) { return }
+        if ($check.Canceled) {
+            $syncHash.DiagHealthTitle.Text = Get-WzText 'health.cpuCanceled'
+            return
+        }
         Write-WzHealthResult -Check $check
 
         Add-WzAction -Area 'Prüfung' -Summary $(if ($check.Ok) {

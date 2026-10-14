@@ -1461,6 +1461,7 @@
     "cpuThrottled": "Der Takt fällt unter Last auf {takt} von {max} MHz. Das ist Drosselung, kein Sparmodus — Lüfter, Wärmeleitpaste und Lüftungsschlitze prüfen.",
     "cpuHot": "Höchste gemessene Temperatur {grad} °C — ab hier riegelt die Hardware selbst ab.",
     "cpuNoClock": "Dieses Gerät meldet keinen Takt. Über die Drosselung lässt sich damit nichts sagen.",
+    "cpuCanceled": "Belastungstest abgebrochen — keine Aussage, nichts im Übergabeblatt.",
     "memOk": "{groesse} geprüft, keine Abweichung.",
     "memErrors": "{anzahl} Abweichung(en) im Arbeitsspeicher. Das ist ein sicherer Befund — Riegel einzeln prüfen, danach ist dem Gerät nicht zu trauen.",
     "memNoReading": "Der freie Arbeitsspeicher ist nicht abfragbar.",

@@ -81,6 +81,7 @@ function Invoke-WzCpuStress {
         Samples       = 0
         Verdict       = ''
         Ok            = $true
+        Canceled      = $false
     }
 
     $start = Get-WzTemperatures
@@ -101,18 +102,21 @@ function Invoke-WzCpuStress {
 
     # Je Kern ein eigener Faden. Bewusst reine Rechenarbeit ohne Speicher- oder
     # Dateizugriff: Sonst misst man die Platte mit und nicht die Kühlung.
+    # Gemeinsames Stopp-Flag: »Abbrechen« hält die Kerne an, statt sie bis zu
+    # 300 s weiterrechnen zu lassen (Audit 2026-10, M27).
     $workers = @()
+    $stop = [hashtable]::Synchronized(@{ Stop = $false })
     $deadline = (Get-Date).AddSeconds($Seconds)
     try {
         for ($index = 0; $index -lt $result.Cores; $index++) {
             $worker = [powershell]::Create()
             [void]$worker.AddScript({
-                param($until)
+                param($until, $stop)
                 $value = 0.0
-                while ((Get-Date) -lt $until) {
+                while ((Get-Date) -lt $until -and -not $stop.Stop) {
                     for ($step = 0; $step -lt 200000; $step++) { $value = [math]::Sqrt($value + $step) }
                 }
-            }).AddArgument($deadline)
+            }).AddArgument($deadline).AddArgument($stop)
             $workers += [pscustomobject]@{ Shell = $worker; Handle = $worker.BeginInvoke() }
         }
 
@@ -120,7 +124,16 @@ function Invoke-WzCpuStress {
         $clocks = @()
         $peak = $null
         while ((Get-Date) -lt $deadline) {
-            Start-Sleep -Milliseconds 2000
+            # In kurzen Schritten warten, damit ein Abbruch binnen einer
+            # Sekunde greift; gemessen wird weiter alle zwei Sekunden.
+            for ($tick = 0; $tick -lt 10; $tick++) {
+                if ($syncHash.CurrentTask -and $syncHash.CurrentTask.Canceled) { break }
+                Start-Sleep -Milliseconds 200
+            }
+            if ($syncHash.CurrentTask -and $syncHash.CurrentTask.Canceled) {
+                $result.Canceled = $true
+                break
+            }
             $sample = Get-WzCpuClock
             if ($sample.CurrentMhz -gt 0) { $clocks += $sample.CurrentMhz }
             $temperatures = Get-WzTemperatures
@@ -137,10 +150,17 @@ function Invoke-WzCpuStress {
         }
         $result.PeakCelsius = $peak
     } finally {
+        $stop.Stop = $true
         foreach ($worker in $workers) {
             try { [void]$worker.Shell.EndInvoke($worker.Handle) } catch { }
             try { $worker.Shell.Dispose() } catch { }
         }
+    }
+
+    if ($result.Canceled) {
+        $result.Verdict = Get-WzText 'health.cpuCanceled'
+        Write-WzLog $result.Verdict -Level Warn
+        return $result
     }
 
     # Unter 70 Prozent des Grundtakts über die ganze Messung hinweg ist kein
@@ -402,10 +422,19 @@ function Invoke-WzHealthCheck {
         Disk     = $null
         Ok       = $true
         Warnings = @()
+        Canceled = $false
     }
 
     $check.Cpu = Invoke-WzCpuStress -Seconds $CpuSeconds
     if (-not $check.Cpu.Ok) { $check.Warnings += $check.Cpu.Verdict }
+
+    # Abgebrochen: Die übrigen Messungen nicht mehr starten. Ein halber Check
+    # zählt nicht als bestanden und landet nicht im Übergabeblatt.
+    if ($check.Cpu.Canceled) {
+        $check.Canceled = $true
+        $check.Ok = $false
+        return $check
+    }
 
     if (-not $SkipMemory) {
         $check.Memory = Invoke-WzMemoryTest
