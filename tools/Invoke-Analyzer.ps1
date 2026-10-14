@@ -41,17 +41,27 @@ Write-Host ''
 Write-Host '  WinZii Code-Prüfung (Ziel: PowerShell 5.1)' -ForegroundColor Cyan
 Write-Host ''
 
-$results = @(Invoke-ScriptAnalyzer -Path (Join-Path $root 'src') -Recurse -Settings $settings -ErrorAction SilentlyContinue)
-$results += @(Invoke-ScriptAnalyzer -Path (Join-Path $root 'tools') -Recurse -Settings $settings -ErrorAction SilentlyContinue)
+# -ErrorAction Stop: Ließ sich ein Modul nicht laden, fiel das Ergebnis
+# bisher still auf 0 Befunde (Audit 2026-10, H13).
+$results = @(Invoke-ScriptAnalyzer -Path (Join-Path $root 'src') -Recurse -Settings $settings -ErrorAction Stop)
+$results += @(Invoke-ScriptAnalyzer -Path (Join-Path $root 'tools') -Recurse -Settings $settings -ErrorAction Stop)
 
-# Write-Host ist in den Dev-Werkzeugen erwünscht — sie haben keine Oberfläche
+# Write-Host ist in den Dev-Werkzeugen erwünscht — sie haben keine Oberfläche.
+# Drei Globale sind Absicht: Programm und Hintergrund-Runspaces teilen sie.
+# Jede weitere Globale fällt weiter auf.
+$gewollteGlobale = '\$global:(WzRootPath|WzSessionStamp|syncHash)\b'
 $results = @($results | Where-Object {
     -not ($_.RuleName -eq 'PSAvoidUsingWriteHost' -and $_.ScriptPath -like '*\tools\*') -and
     -not ($_.RuleName -eq 'PSAvoidUsingWriteHost' -and $_.ScriptName -eq 'launcher.ps1') -and
-    -not ($_.RuleName -eq 'PSAvoidUsingWriteHost' -and $_.ScriptName -eq 'main.ps1')
+    -not ($_.RuleName -eq 'PSAvoidUsingWriteHost' -and $_.ScriptName -eq 'main.ps1') -and
+    -not ($_.RuleName -eq 'PSAvoidGlobalVars' -and $_.Extent.Text -match $gewollteGlobale)
 })
 
-$errors = @($results | Where-Object { $_.Severity -eq 'Error' })
+# Fehler, Parse-Fehler und Warnungen zählen alle als Fehlschlag. Bisher
+# scheiterte die CI nur an Severity »Error«, und das hatte allein
+# PSUseCompatibleSyntax; ein »$x -eq $null« oder ein Syntaxfehler in
+# New-Release.ps1 ging durch (Audit 2026-10, H13).
+$errors = @($results | Where-Object { $_.Severity -eq 'Error' -or "$($_.Severity)" -eq 'ParseError' })
 $warnings = @($results | Where-Object { $_.Severity -eq 'Warning' })
 $information = @($results | Where-Object { $_.Severity -eq 'Information' })
 
@@ -60,18 +70,21 @@ foreach ($item in $errors) {
     Write-Host "         $($item.Message)" -ForegroundColor DarkGray
 }
 
+# Warnungen sind ein Fehlschlag und stehen deshalb immer da. -IncludeWarnings
+# zeigt zusätzlich die Hinweise (Severity Information).
+foreach ($item in $warnings) {
+    Write-Host "  [warn] $($item.ScriptName):$($item.Line)  $($item.RuleName)" -ForegroundColor Yellow
+    Write-Host "         $($item.Message)" -ForegroundColor DarkGray
+}
 if ($IncludeWarnings) {
-    foreach ($item in $warnings) {
-        Write-Host "  [warn] $($item.ScriptName):$($item.Line)  $($item.RuleName)" -ForegroundColor Yellow
-        Write-Host "         $($item.Message)" -ForegroundColor DarkGray
+    foreach ($item in $information) {
+        Write-Host "  [info] $($item.ScriptName):$($item.Line)  $($item.RuleName)" -ForegroundColor DarkGray
     }
 }
 
+$sauber = ($errors.Count -eq 0 -and $warnings.Count -eq 0)
 Write-Host ''
-Write-Host "  Ergebnis: $($errors.Count) Fehler, $($warnings.Count) Warnungen, $($information.Count) Hinweise." -ForegroundColor $(if ($errors.Count -eq 0) { 'Green' } else { 'Red' })
-if (-not $IncludeWarnings -and $warnings.Count -gt 0) {
-    Write-Host '  Warnungen anzeigen mit -IncludeWarnings' -ForegroundColor DarkGray
-}
+Write-Host "  Ergebnis: $($errors.Count) Fehler, $($warnings.Count) Warnungen, $($information.Count) Hinweise." -ForegroundColor $(if ($sauber) { 'Green' } else { 'Red' })
 Write-Host ''
 
-exit $(if ($errors.Count -eq 0) { 0 } else { 1 })
+exit $(if ($sauber) { 0 } else { 1 })

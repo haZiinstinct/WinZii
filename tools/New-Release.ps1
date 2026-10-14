@@ -7,10 +7,18 @@
 # vergessen werden.
 #
 # Aufruf:  powershell -NoProfile -ExecutionPolicy Bypass -File tools\New-Release.ps1
+#
+# -Release prüft vorher, ob wirklich veröffentlicht werden darf: sauberer
+# Arbeitsbaum, leerer Abschnitt [Unveröffentlicht], und Tag, $WzVersion,
+# README-Abzeichen und CHANGELOG-Kopf nennen dieselbe Fassung. Der
+# Release-Workflow (.github/workflows/release.yml) ruft es so auf; ohne den
+# Schalter ist es der Trockenlauf der CI (Audit 2026-10, M32, M40).
 [CmdletBinding()]
 param(
     [string]$OutputDir,
-    [switch]$KeepStaging
+    [switch]$KeepStaging,
+    [switch]$Release,
+    [string]$Tag
 )
 
 $ErrorActionPreference = 'Stop'
@@ -44,6 +52,35 @@ foreach ($file in $includeFiles) {
 if ($missing.Count -gt 0) {
     Write-Host "  [FEHL] Fehlt im Arbeitsordner: $($missing -join ', ')" -ForegroundColor Red
     exit 1
+}
+
+if ($Release) {
+    $einwaende = @()
+    $offen = @(& git -C $root status --porcelain 2>$null)
+    if ($LASTEXITCODE -ne 0) { $einwaende += 'git status nicht lesbar' }
+    elseif ($offen.Count -gt 0) { $einwaende += "Arbeitsbaum nicht sauber ($($offen.Count) Änderung(en))" }
+
+    $changelog = [IO.File]::ReadAllText((Join-Path $root 'CHANGELOG.md'), [Text.Encoding]::UTF8)
+    $unveroeffentlicht = [regex]::Match($changelog, '(?ms)^## \[Unveröffentlicht\]\s*(.*?)(?=^## \[)')
+    if ($unveroeffentlicht.Success -and $unveroeffentlicht.Groups[1].Value.Trim()) {
+        $einwaende += 'CHANGELOG: Abschnitt [Unveröffentlicht] ist nicht leer'
+    }
+    $ersteFassung = [regex]::Match($changelog, '(?m)^## \[(\d+\.\d+\.\d+)\]')
+    if (-not $ersteFassung.Success -or $ersteFassung.Groups[1].Value -ne $version) {
+        $einwaende += "CHANGELOG-Kopf nennt $($ersteFassung.Groups[1].Value), version.ps1 sagt $version"
+    }
+    $readme = [IO.File]::ReadAllText((Join-Path $root 'README.md'), [Text.Encoding]::UTF8)
+    if ($readme -notmatch [regex]::Escape("badge/Version-$version-")) {
+        $einwaende += "README-Abzeichen nennt nicht $version"
+    }
+    if ($Tag -and $Tag -ne "v$version") {
+        $einwaende += "Tag $Tag passt nicht zu v$version"
+    }
+    if ($einwaende.Count -gt 0) {
+        foreach ($einwand in $einwaende) { Write-Host "  [FEHL] $einwand" -ForegroundColor Red }
+        exit 1
+    }
+    Write-Host "  [ok]   Release-Vorbedingungen für v$version erfüllt" -ForegroundColor Green
 }
 
 # --- Bereitstellen --------------------------------------------------------
@@ -96,13 +133,17 @@ if (-not $KeepStaging) { Remove-Item -LiteralPath $staging -Recurse -Force }
 
 $info = Get-Item -LiteralPath $archive
 $hash = (Get-FileHash -LiteralPath $archive -Algorithm SHA256).Hash
-$checksumFile = "$archive.sha256"
-[IO.File]::WriteAllText($checksumFile, "$hash  $($info.Name)$([Environment]::NewLine)", (New-Object Text.UTF8Encoding($false)))
-
 # Kopie ohne Versionsnummer: hazii.org verlinkt releases/latest/download/WinZii.zip.
 # Beide Dateien gehören ins Release — sonst bricht der Link beim nächsten Tag.
 $stable = Join-Path $OutputDir 'WinZii.zip'
 Copy-Item -LiteralPath $archive -Destination $stable -Force
+
+# Beide Namen in die Prüfsummendatei: Wer über den stabilen Link lädt, hat
+# WinZii.zip und fand seinen Namen bisher nicht darin (Audit 2026-10, N).
+# Gleicher Inhalt, also gleiche Summe — »sha256sum -c« prüft beide.
+$checksumFile = "$archive.sha256"
+$zeilen = "$hash  $($info.Name)$([Environment]::NewLine)$hash  WinZii.zip$([Environment]::NewLine)"
+[IO.File]::WriteAllText($checksumFile, $zeilen, (New-Object Text.UTF8Encoding($false)))
 
 Write-Host ''
 Write-Host "  Archiv:    $archive" -ForegroundColor Cyan

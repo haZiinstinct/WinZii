@@ -48,8 +48,11 @@ $r = Invoke-WzProcess -FilePath 'cmd.exe' -Arguments '/c for /L %i in (1,1,3000)
 $zeilen = @($r.StdOut -split "`r?`n" | Where-Object { $_ -match 'Zeile-' }).Count
 Assert-Wz 'Viel Ausgabe ohne Haenger' ($zeilen -ge 3000 -and $r.ExitCode -eq 0) "$zeilen Zeilen"
 
-# Zeitbegrenzung
-$dauer = Measure-Command { $r = Invoke-WzProcess -FilePath 'cmd.exe' -Arguments '/c ping -n 20 127.0.0.1 >nul' -TimeoutSeconds 2 }
+# Zeitbegrenzung. Stoppuhr statt Measure-Command: Die Zuweisung im Block sah
+# für den Analyzer aus wie eine nie benutzte Variable.
+$uhr = [Diagnostics.Stopwatch]::StartNew()
+$r = Invoke-WzProcess -FilePath 'cmd.exe' -Arguments '/c ping -n 20 127.0.0.1 >nul' -TimeoutSeconds 2
+$dauer = $uhr.Elapsed
 Assert-Wz 'Zeitbegrenzung greift' ($r.TimedOut -and $dauer.TotalSeconds -lt 8) "$([math]::Round($dauer.TotalSeconds,1)) s, TimedOut=$($r.TimedOut)"
 
 # Arbeitsverzeichnis

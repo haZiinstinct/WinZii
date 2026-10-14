@@ -1,0 +1,80 @@
+# Veröffentlichung bei einem Versions-Tag (v1.2.3).
+#
+# Bisher war das Handarbeit: Archiv bauen, Prüfsumme in den Release-Text
+# kopieren, beide Zip-Dateien hochladen. README und SECURITY.md verweisen auf
+# die SHA256 — fehlte sie, stand der Hinweis ins Leere (Audit 2026-10, M32).
+#
+# Ablauf: die schnellen Prüfwerkzeuge, dann New-Release mit -Release. Das
+# bricht ab, wenn der Arbeitsbaum nicht sauber ist, [Unveröffentlicht] noch
+# Einträge hat oder Tag, version.ps1, README-Abzeichen und CHANGELOG-Kopf
+# auseinanderlaufen. Erst danach entsteht das Release mit beiden Zip-Dateien
+# und der Prüfsummendatei; der Text ist der CHANGELOG-Abschnitt der Fassung.
+
+name: Release
+
+on:
+  push:
+    tags: ['v*']
+
+permissions:
+  contents: write
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  release:
+    name: Release bauen und veröffentlichen
+    runs-on: windows-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Auschecken
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: PSScriptAnalyzer einrichten
+        shell: powershell
+        run: Install-Module PSScriptAnalyzer -RequiredVersion 1.25.0 -Scope CurrentUser -Force -SkipPublisherCheck
+
+      - name: Prüfwerkzeuge
+        shell: powershell
+        run: |
+          $fehler = 0
+          foreach ($werkzeug in 'Test-Smoke', 'Test-Language', 'Test-Catalogs', 'Test-Report', 'Test-Parsers', 'Invoke-Analyzer') {
+            Write-Host "::group::$werkzeug"
+            & ".\tools\$werkzeug.ps1"
+            if ($LASTEXITCODE -ne 0) { Write-Host "::error::$werkzeug ist fehlgeschlagen"; $fehler++ }
+            Write-Host '::endgroup::'
+          }
+          if ($fehler -gt 0) { exit 1 }
+
+      - name: Archiv bauen
+        shell: powershell
+        run: .\tools\New-Release.ps1 -Release -Tag $env:GITHUB_REF_NAME -OutputDir dist
+
+      - name: Release-Text aus dem CHANGELOG
+        shell: powershell
+        run: |
+          . .\src\version.ps1
+          $changelog = [IO.File]::ReadAllText('CHANGELOG.md', [Text.Encoding]::UTF8)
+          $abschnitt = [regex]::Match($changelog, "(?ms)^## \[$([regex]::Escape($WzVersion))\][^\n]*\n(.*?)(?=^## \[)")
+          $summe = (Get-Content "dist\WinZii-$WzVersion.zip.sha256" -TotalCount 1)
+          $text = $abschnitt.Groups[1].Value.Trim() + "`n`n---`n`n**SHA256**`n`n``````n$summe`n``````n"
+          [IO.File]::WriteAllText('dist\release-notes.md', $text, (New-Object Text.UTF8Encoding($false)))
+
+      - name: Veröffentlichen
+        shell: powershell
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          . .\src\version.ps1
+          $dateien = "dist\WinZii-$WzVersion.zip", 'dist\WinZii.zip', "dist\WinZii-$WzVersion.zip.sha256"
+          gh release view $env:GITHUB_REF_NAME 2>$null | Out-Null
+          if ($LASTEXITCODE -eq 0) {
+            # Von Hand angelegt: nur die Dateien nachreichen.
+            gh release upload $env:GITHUB_REF_NAME @dateien --clobber
+          } else {
+            gh release create $env:GITHUB_REF_NAME @dateien --title "WinZii $WzVersion" --notes-file dist\release-notes.md
+          }
+          if ($LASTEXITCODE -ne 0) { exit 1 }

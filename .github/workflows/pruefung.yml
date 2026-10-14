@@ -22,14 +22,30 @@ on:
     branches: [main]
   workflow_dispatch:
 
+# Der Lauf liest nur. Ohne diese Angabe bekam das Token die Standardrechte
+# des Repos (Audit 2026-10, M33).
+permissions:
+  contents: read
+
+# Ein neuer Push auf denselben Zweig bricht den alten Lauf ab, statt ihn
+# zehn Minuten weiterlaufen zu lassen.
+concurrency:
+  group: pruefung-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   pruefwerkzeuge:
     name: Prüfwerkzeuge (englisches Windows)
     runs-on: windows-latest
+    # Test-Dialogs blockiert in ShowDialog(); feuert ContentRendered nicht,
+    # hing der Job bisher bis zur Sechs-Stunden-Grenze (M33).
+    timeout-minutes: 30
 
     steps:
+      # Actions per Commit-SHA gepinnt, die Fassung steht dahinter (M34).
+      # Dependabot (.github/dependabot.yml) schlägt Aktualisierungen vor.
       - name: Auschecken
-        uses: actions/checkout@v7
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - name: Umgebung nennen
         shell: powershell
@@ -42,7 +58,9 @@ jobs:
       - name: PSScriptAnalyzer einrichten
         shell: powershell
         run: |
-          Install-Module PSScriptAnalyzer -Scope CurrentUser -Force -SkipPublisherCheck
+          # Feste Fassung: Eine neue Regel in einer neuen Fassung soll nicht
+          # unangekündigt die CI rot machen (M34).
+          Install-Module PSScriptAnalyzer -RequiredVersion 1.25.0 -Scope CurrentUser -Force -SkipPublisherCheck
           Write-Host "PSScriptAnalyzer $((Get-Module -ListAvailable PSScriptAnalyzer | Select-Object -First 1).Version)"
 
       # Die Werkzeuge laufen einzeln, damit im Protokoll steht, welches
@@ -118,18 +136,27 @@ jobs:
         shell: powershell
         run: .\tools\Test-LanguageSwitch.ps1
 
+      # Warnungen und Parse-Fehler zählen als Fehlschlag (H13).
       - name: Invoke-Analyzer
         if: always()
         shell: powershell
         run: .\tools\Invoke-Analyzer.ps1
 
+      # Das Release-Werkzeug lief bisher nie in der CI; ein Fehler darin fiel
+      # erst beim Veröffentlichen auf. Trockenlauf ins Temp-Verzeichnis (M40).
+      - name: New-Release (Trockenlauf)
+        if: always()
+        shell: powershell
+        run: .\tools\New-Release.ps1 -OutputDir $env:RUNNER_TEMP
+
   oberflaeche:
     name: Oberfläche starten und abbilden
     runs-on: windows-latest
+    timeout-minutes: 30
 
     steps:
       - name: Auschecken
-        uses: actions/checkout@v7
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       # Der Selbsttest baut das Fenster wirklich auf, wechselt auf eine Seite
       # und legt ein Abbild ab. Auf einem fremden System ist das der Nachweis,
@@ -150,9 +177,16 @@ jobs:
           }
           if ($fehler -gt 0) { exit 1 }
 
+      # Fährt jede Seite bei 1000×560 an und misst, ob ein Wort mitten
+      # durchbricht. Lief bisher nur von Hand (M40); dauert rund 5 Minuten.
+      - name: Test-Layout
+        if: always()
+        shell: powershell
+        run: powershell -NoProfile -ExecutionPolicy Bypass -STA -File .\tools\Test-Layout.ps1
+
       - name: Abbilder aufbewahren
         if: always()
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: dashboard-abbilder
           path: abbilder/
