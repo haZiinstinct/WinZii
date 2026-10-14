@@ -108,6 +108,11 @@ jobs:
         shell: powershell
         run: .\tools\Test-Report.ps1
 
+      - name: Test-Modules
+        if: always()
+        shell: powershell
+        run: .\tools\Test-Modules.ps1
+
       - name: Test-Process
         if: always()
         shell: powershell

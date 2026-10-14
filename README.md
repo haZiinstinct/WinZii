@@ -217,13 +217,19 @@ powershell -NoProfile -ExecutionPolicy Bypass -File tools\Test-Catalogs.ps1
 | `tools\Test-Contrast.ps1` | Schrift- und Flächenkontraste gegen WCAG 2.1 rechnen |
 | `tools\Test-Dialogs.ps1` | Prüft, dass sich jeder Dialog auf allen vier Wegen schließen lässt |
 | `tools\Test-Process.ps1` | Rückgabewerte externer Programme, auch im Hintergrund-Runspace |
+| `tools\Test-Report.ps1` | Fremder Text im Bericht bleibt Text — Injektionsmuster in Karten und Tabellen |
+| `tools\Test-Modules.ps1` | Setup, Windows Update, Toolbox, KI-Entfernung, Autostart, Belastungstest, Momentaufnahme, Versionsprüfung — Logik ohne Systemeingriff |
+| `tools\Test-Office.ps1` | Office-Vorrat und Bereitstellungskonfiguration |
+| `tools\Test-Layout.ps1` | Fährt jede Seite bei 1000×560 an und misst, ob ein Wort mitten durchbricht |
 | `tools\Test-Undo.ps1` | Sicherung und Rücknahme an einem eigenen Registry-Schlüssel durchspielen. **Ändert als Administrator kurzzeitig den aktiven Energieplan** (Abschnitt 7) und stellt ihn in jedem Fall wieder her; ohne Adminrechte wird der Abschnitt übersprungen |
 | `tools\Test-Language.ps1` | Sprachdateien auf gleiche Schlüssel, Platzhalter und Kulturen prüfen |
 | `tools\Test-LanguageSwitch.ps1` | Startet WinZii, schaltet im Betrieb um und prüft, ob auch die gemessenen Texte mitgehen |
 | `tools\Test-Parsers.ps1` | Deutungen von sfc-, pnputil- und winget-Ausgaben gegen deutsche **und** englische Wortlaute |
 | `tools\Invoke-Analyzer.ps1` | PSScriptAnalyzer mit Zielversion PowerShell 5.1 |
 | `tools\Repair-Encoding.ps1` | UTF-8 mit BOM erzwingen (Pflicht bei PowerShell 5.1 und Umlauten) |
-| `tools\New-Release.ps1` | Release-ZIP bauen und SHA256-Prüfsumme ausgeben |
+| `tools\New-Release.ps1` | Release-ZIP bauen und SHA256-Prüfsumme ausgeben; mit `-Release` vorher Versionsstellen und Arbeitsbaum prüfen |
+| `tools\New-Icon.ps1` | Programmsymbol `assets\winzii.ico` neu zeichnen |
+| `tools\Get-VaultSigners.ps1` | Aussteller der Installer im Vorrat auslesen und mit `signers` in `apps.json` vergleichen — nur auf einem eigenen Rechner direkt nach dem Vorabladen |
 | `tools\WinZii.wsb` | Windows Sandbox zum gefahrlosen Ausprobieren (schreibgeschützt) |
 | `tools\WinZii-Schreibend.wsb` | Dasselbe mit Schreibrecht — für Treibersicherung und Berichte. Bindet den ganzen Ordner ein, auch `backups\` mit Schlüsseln im Klartext |
 | `tools\Start-SandboxTest.ps1` | Selbsttest in der Sandbox: legt eine Kopie ohne `backups\`, `logs\` und `offline\` unter `sandbox-staging\` an und öffnet `Test-Sandbox.wsb`; Bericht und Abbild landen unter `sandbox-staging\sandbox-ergebnis\` |
