@@ -133,6 +133,18 @@ try {
     New-DuenneDatei -Pfad (Join-Path $fassung "stream.x86.$sprache.dat") -Groesse 600MB
     $u = Get-Urteil
     Write-Check '32-Bit-Satz gilt auch' ($u.Available) $u.Detail
+
+    # 4. Eine unsignierte setup.exe im Vorrat läuft nicht eleviert los (M8).
+    #    Im Testmodus, damit danach kein echter Download startet.
+    Write-Host ''
+    Write-Host '4. Signatur des Bereitstellungswerkzeugs' -ForegroundColor White
+    $fremdeSetup = Join-Path (Join-Path (Get-WzOfflineDir) 'odt') 'setup.exe'
+    New-DuenneDatei -Pfad $fremdeSetup -Groesse 2MB
+    $syncHash.DryRun = $true
+    $geliefert = Get-WzOdtSetup
+    $syncHash.DryRun = $false
+    Write-Check 'unsignierte setup.exe abgewiesen' ($null -eq $geliefert) "$geliefert"
+    Write-Check 'unsignierte setup.exe gelöscht' (-not (Test-Path -LiteralPath $fremdeSetup))
 } finally {
     Remove-Item -LiteralPath $spielwiese -Recurse -Force -ErrorAction SilentlyContinue
 }

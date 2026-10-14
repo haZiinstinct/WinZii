@@ -397,7 +397,7 @@ function Install-WzApps {
     # nichtssagenden Meldung. Einmal vorher fragen ist ehrlicher — aber nur,
     # wenn überhaupt etwas aus dem Netz geholt werden muss. Liegt alles im
     # Vorrat auf dem Stick, ist der Netzzugang gleichgültig.
-    $needsNet = @($Apps | Where-Object { -not (Get-WzOfflineInstallerPath -App $_) }).Count -gt 0
+    $needsNet = @($Apps | Where-Object { -not (Get-WzOfflineInstallerPath -App $_ -Verify) }).Count -gt 0
     if (-not $syncHash.DryRun -and $needsNet) {
         $net = Test-WzInternetAccess
         if ($net.Kind -ne 'ok') {
@@ -427,7 +427,7 @@ function Install-WzApps {
         # das versprach die Oberfläche bisher, ohne dass ein Codepfad es je tat.
         # »winget install --manifest« braucht das Manifest, das »winget download«
         # neben die Installationsdatei legt.
-        $vault = Get-WzOfflineInstallerPath -App $app
+        $vault = Get-WzOfflineInstallerPath -App $app -Verify
         if ($vault) {
             Write-WzLog (Get-WzText 'apps.logFromVault') -Level Info
             $base = "install --manifest `"$vault`" --silent " +
@@ -588,7 +588,13 @@ function Get-WzOfflineInstallerPath {
         ab. Genau das braucht »winget install --manifest«, um ohne Internet zu
         installieren. Ohne Manifest ist der Ordner unbrauchbar.
     #>
-    param([Parameter(Mandatory = $true)]$App)
+    param(
+        [Parameter(Mandatory = $true)]$App,
+        # Vor der Installation: EXE und MSI brauchen eine gültige Signatur,
+        # ZIP lässt sich nicht prüfen. Sonst wird online installiert.
+        # Appx/MSIX prüft Windows beim Einspielen selbst.
+        [switch]$Verify
+    )
 
     # Ohne id gibt es keinen Vorratsordner. Join-Path warf hier mit $null.
     if (-not $App.id) { return $null }
@@ -599,6 +605,18 @@ function Get-WzOfflineInstallerPath {
     $installer = @(Get-ChildItem -LiteralPath $dir -File -ErrorAction SilentlyContinue |
         Where-Object { $_.Extension -in @('.exe', '.msi', '.msix', '.msixbundle', '.appx', '.appxbundle', '.zip') })
     if ($manifest.Count -eq 0 -or $installer.Count -eq 0) { return $null }
+
+    if ($Verify) {
+        # Der Stick ist auf jedem Kundenrechner beschreibbar; was hier liegt,
+        # startet eleviert (Audit 2026-10, M8).
+        foreach ($file in $installer) {
+            $pruefbar = $file.Extension -in @('.exe', '.msi')
+            if ($file.Extension -eq '.zip' -or ($pruefbar -and -not (Test-WzFileSignature -Path $file.FullName))) {
+                Write-WzLog (Get-WzText 'apps.logVaultUnsigned' @{ datei = $file.Name }) -Level Warn
+                return $null
+            }
+        }
+    }
 
     return $dir
 }
