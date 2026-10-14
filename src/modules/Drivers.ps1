@@ -281,7 +281,7 @@ function Import-WzDrivers {
     [CmdletBinding()]
     param([Parameter(Mandatory = $true)][string]$Path)
 
-    $result = [pscustomobject]@{ Success = $false; Summary = '' }
+    $result = [pscustomobject]@{ Success = $false; Summary = ''; RebootRequired = $false }
 
     if (-not (Test-Path -LiteralPath $Path)) {
         $result.Summary = Get-WzText 'drv.summaryNoFolder' @{ pfad = $Path }
@@ -305,16 +305,45 @@ function Import-WzDrivers {
         $added = [int]$Matches[1]
     }
 
-    $result.Success = ($process.ExitCode -eq 0)
-    $result.Summary = if ($result.Success) {
-        if ($added -gt 0) { Get-WzText 'drv.importedCount' @{ anzahl = $added } }
-        else { Get-WzText 'drv.importedNone' }
-    } else {
+    $verdict = Get-WzPnputilVerdict -ExitCode $process.ExitCode
+    $result.Success = $verdict.Success
+    $result.RebootRequired = $verdict.RebootRequired
+    $result.Summary = if (-not $result.Success) {
         Get-WzText 'drv.importFailed' @{ code = $process.ExitCode }
+    } elseif ($added -gt 0 -and -not $verdict.NothingInstalled) {
+        Get-WzText 'drv.importedCount' @{ anzahl = $added }
+    } else {
+        Get-WzText 'drv.importedNone'
     }
+    if ($result.RebootRequired) { $result.Summary += ' ' + (Get-WzText 'drv.importReboot') }
 
     Write-WzLog $result.Summary -Level $(if ($result.Success) { 'Ok' } else { 'Warn' })
     return $result
+}
+
+function Get-WzPnputilVerdict {
+    <#
+    .SYNOPSIS
+        Deutet den Rückgabewert von »pnputil /add-driver … /install«.
+    .NOTES
+        Bisher galt nur 0 als Erfolg. 3010 ist aber der Normalfall bei Chipsatz
+        und Grafik: Treiber eingespielt, Neustart nötig. Das landete als
+        Fehlschlag weder im Übergabeblatt noch mit Neustart-Hinweis (Audit
+        2026-10, M10). 259 (ERROR_NO_MORE_ITEMS) heißt: lief durch, aber
+        nichts eingespielt, etwa weil alles schon da war.
+    .OUTPUTS
+        PSCustomObject mit Success, RebootRequired, NothingInstalled
+    #>
+    param($ExitCode)
+
+    $verdict = [pscustomobject]@{ Success = $false; RebootRequired = $false; NothingInstalled = $false }
+    switch ($ExitCode) {
+        0    { $verdict.Success = $true }
+        3010 { $verdict.Success = $true; $verdict.RebootRequired = $true }
+        1641 { $verdict.Success = $true; $verdict.RebootRequired = $true }
+        259  { $verdict.Success = $true; $verdict.NothingInstalled = $true }
+    }
+    return $verdict
 }
 
 function Get-WzDriverBackups {
@@ -644,7 +673,7 @@ function Install-WzCatalogDriver {
         [Parameter(Mandatory = $true)][string]$DeviceName
     )
 
-    $result = [pscustomobject]@{ Success = $false; Summary = ''; Path = '' }
+    $result = [pscustomobject]@{ Success = $false; Summary = ''; Path = ''; RebootRequired = $false }
 
     if ($syncHash.DryRun) {
         Write-WzLog (Get-WzText 'drv.logCatalogTest' @{ titel = $Entry.Title }) -Level Test
@@ -693,6 +722,7 @@ function Install-WzCatalogDriver {
 
     $import = Import-WzDrivers -Path $unpacked
     $result.Success = $import.Success
+    $result.RebootRequired = [bool]$import.RebootRequired
     $result.Path = $target
     $result.Summary = if ($import.Success) {
         Get-WzText 'drv.catalogInstalled' @{ geraet = $DeviceName }

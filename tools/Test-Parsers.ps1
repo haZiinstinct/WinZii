@@ -197,6 +197,25 @@ foreach ($z in $zustaende) {
         "an=$($deutung.Enabled) veraltet=$($deutung.OutOfDate)"
 }
 
+# --- Rückgabewerte von pnputil ---------------------------------------------
+# 3010 ist der Normalfall bei Chipsatz und Grafik und galt als Fehlschlag
+# (Audit 2026-10, M10).
+Write-Host ''
+. (Join-Path $root 'src\modules\Drivers.ps1')
+$pnputilFaelle = @(
+    @{ Code = 0;    Erfolg = $true;  Neustart = $false; Nichts = $false; Was = 'eingespielt' }
+    @{ Code = 3010; Erfolg = $true;  Neustart = $true;  Nichts = $false; Was = 'eingespielt, Neustart nötig' }
+    @{ Code = 1641; Erfolg = $true;  Neustart = $true;  Nichts = $false; Was = 'Neustart angestoßen' }
+    @{ Code = 259;  Erfolg = $true;  Neustart = $false; Nichts = $true;  Was = 'nichts eingespielt' }
+    @{ Code = 2;    Erfolg = $false; Neustart = $false; Nichts = $false; Was = 'Fehler' }
+)
+foreach ($f in $pnputilFaelle) {
+    $v = Get-WzPnputilVerdict -ExitCode $f.Code
+    Pruefe "pnputil $($f.Code): $($f.Was)" `
+        ($v.Success -eq $f.Erfolg -and $v.RebootRequired -eq $f.Neustart -and $v.NothingInstalled -eq $f.Nichts) `
+        "Erfolg=$($v.Success) Neustart=$($v.RebootRequired)"
+}
+
 Write-Host ''
 if ($script:fehler -eq 0) {
     Write-Host "  Ergebnis: alle $($faelle.Count) Deutungen treffen in beiden Sprachen, $($zustaende.Count) Scanner-Zustände gedeutet." -ForegroundColor Green

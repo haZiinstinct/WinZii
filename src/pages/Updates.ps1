@@ -41,36 +41,45 @@ function Write-WzUpdateState {
         Get-WzUpdateState
     } -OnComplete {
         param($state)
-        if (-not $state) { return }
+        try {
+            if (-not $state) { return }
 
-        # Ueber $syncHash statt ueber eine oertliche Variable: Wenn der
-        # Abschluss laeuft, ist Write-WzUpdateState laengst zurueck und ihr
-        # Gueltigkeitsbereich abgeraeumt. Eine mitgenommene Variable waere
-        # dann $null — der Fehler landete nur in der Nachbereitungsmeldung.
-        $rows = $syncHash.UpdatesStateRows
+            # Ueber $syncHash statt ueber eine oertliche Variable: Wenn der
+            # Abschluss laeuft, ist Write-WzUpdateState laengst zurueck und ihr
+            # Gueltigkeitsbereich abgeraeumt. Eine mitgenommene Variable waere
+            # dann $null — der Fehler landete nur in der Nachbereitungsmeldung.
+            $rows = $syncHash.UpdatesStateRows
 
-        $dienst = if ($state.ServiceOk) {
-            Get-WzText 'upd.serviceOk' @{ start = $state.ServiceStartup }
-        } else {
-            Get-WzText 'upd.serviceOff'
-        }
-        [void]$rows.Children.Add((New-WzInfoRow (Get-WzText 'upd.lblService') $dienst `
-            -Kind $(if ($state.ServiceOk) { 'ok' } else { 'warn' }) -LabelWidth 200))
+            $dienst = if ($state.ServiceOk) {
+                Get-WzText 'upd.serviceOk' @{ start = $state.ServiceStartup }
+            } else {
+                Get-WzText 'upd.serviceOff'
+            }
+            [void]$rows.Children.Add((New-WzInfoRow (Get-WzText 'upd.lblService') $dienst `
+                -Kind $(if ($state.ServiceOk) { 'ok' } else { 'warn' }) -LabelWidth 200))
 
-        $letzte = if ($state.LastInstall) {
-            Format-WzAgo $state.LastInstall
-        } else {
-            Get-WzText 'upd.neverInstalled'
-        }
-        [void]$rows.Children.Add((New-WzInfoRow (Get-WzText 'upd.lblLast') $letzte -LabelWidth 200))
+            $letzte = if ($state.LastInstall) {
+                Format-WzAgo $state.LastInstall
+            } else {
+                Get-WzText 'upd.neverInstalled'
+            }
+            [void]$rows.Children.Add((New-WzInfoRow (Get-WzText 'upd.lblLast') $letzte -LabelWidth 200))
 
-        if ($state.Managed) {
-            [void]$rows.Children.Add((New-WzInfoRow (Get-WzText 'upd.lblManaged') `
-                (Get-WzText 'upd.managed') -Kind 'warn' -LabelWidth 200))
-        }
-        if ($state.RebootPending) {
-            [void]$rows.Children.Add((New-WzInfoRow (Get-WzText 'upd.lblReboot') `
-                (Get-WzText 'upd.rebootPending') -Kind 'warn' -LabelWidth 200))
+            if ($state.Managed) {
+                [void]$rows.Children.Add((New-WzInfoRow (Get-WzText 'upd.lblManaged') `
+                    (Get-WzText 'upd.managed') -Kind 'warn' -LabelWidth 200))
+            }
+            if ($state.RebootPending) {
+                [void]$rows.Children.Add((New-WzInfoRow (Get-WzText 'upd.lblReboot') `
+                    (Get-WzText 'upd.rebootPending') -Kind 'warn' -LabelWidth 200))
+            }
+        } finally {
+            # Neusuche erst jetzt: Direkt hinter Write-WzUpdateState lief sie in
+            # die Busy-Sperre dieses Vorgangs und kam nie (Audit 2026-10, M14).
+            if ($syncHash.UpdatesRescanPending) {
+                $syncHash.UpdatesRescanPending = $false
+                Start-WzUpdateScan
+            }
         }
     }
 }
@@ -209,7 +218,7 @@ function Start-WzUpdateInstall {
         }
 
         # Nach dem Einspielen ist die Liste veraltet — der Zustand ebenso.
+        $syncHash.UpdatesRescanPending = $true
         Write-WzUpdateState
-        Start-WzUpdateScan
     }
 }
