@@ -101,8 +101,12 @@ function Test-WzTweakState {
                 if (Get-Command Get-WzAppxMatches -ErrorAction SilentlyContinue) {
                     try {
                         $treffer = @(Get-WzAppxMatches -Patterns $action.patterns)
-                        $checkable++
-                        if ($treffer.Count -eq 0) { $matching++ }
+                        # Nur das eigene Konto gelesen: »kein Treffer« wäre
+                        # eine Behauptung über alle Konten, die nicht belegt ist.
+                        if (-not $script:WzAppxPartial) {
+                            $checkable++
+                            if ($treffer.Count -eq 0) { $matching++ }
+                        }
                     } catch { }
                 }
             }

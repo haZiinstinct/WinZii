@@ -91,12 +91,16 @@ function Get-WzAllAppxPackages {
     if ($script:WzAppxCache) { return $script:WzAppxCache }
 
     $packages = @()
+    # Nur das eigene Konto gelesen? Dann sagt »kein Treffer« nichts über die
+    # anderen Konten — Handler und Zustandsanzeige fragen das ab.
+    $script:WzAppxPartial = $false
     try {
         $packages = @(Get-AppxPackage -AllUsers -ErrorAction Stop)
     } catch {
         # Ohne Administratorrechte geht nur das eigene Profil — das gehört
         # gesagt, sonst wirkt die Liste vollständig, obwohl sie es nicht ist.
         Write-WzLog (Get-WzText 'ai.logAppxOwnAccount') -Level Warn
+        $script:WzAppxPartial = $true
         try {
             $packages = @(Get-AppxPackage -ErrorAction Stop)
         } catch {
@@ -151,7 +155,9 @@ function Invoke-WzAppxAction {
         }
     }
 
-    if ($found.Count -eq 0 -and $provisioned.Count -eq 0 -and $provisionedUnreadable) {
+    # Ohne Treffer, aber unvollständig gelesen (nur eigenes Konto oder
+    # Bereitstellungen unlesbar): Das ist kein »nicht vorhanden«.
+    if ($found.Count -eq 0 -and $provisioned.Count -eq 0 -and ($provisionedUnreadable -or $script:WzAppxPartial)) {
         if ($Session) { $Session.ActionFailed = $true }
         return
     }
@@ -193,6 +199,10 @@ function Invoke-WzAppxAction {
             Write-WzLog (Get-WzText 'ai.logRemoveFailed' @{ name = $package.Name; grund = $_.Exception.Message }) -Level Warn
         }
     }
+
+    # Ließen sich die Bereitstellungen nicht lesen, bleiben sie womöglich
+    # bestehen — die App käme mit jedem neuen Konto zurück. Kein Erfolg.
+    if ($provisionedUnreadable -and $Session) { $Session.ActionFailed = $true }
 
     foreach ($package in $provisioned) {
         try {
