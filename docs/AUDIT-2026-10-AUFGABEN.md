@@ -53,14 +53,14 @@ Jeder Punkt: `- [ ] **Kennung** Datei:Zeile. Aufgabe. → Erledigt wenn …`
 - [x] **M16** `src/pages/Drivers.ps1:396-400`, `src/modules/Apps.ps1:400, 430`. Pseudo-App-Objekt mit `id` versehen oder `Get-WzOfflineInstallerPath` bei fehlender `id` `$null` liefern lassen.
 - [x] **M17** `src/pages/Office.ps1:275`. `New-WzRestorePoint` in den Remove-Task vor Stufe 1 verlagern.
 - [ ] **M18** `src/modules/Setup.ps1:667-676`, `src/modules/Migration.ps1:451-455, 530`, `src/pages/Setup.ps1:402`. DryRun-Ergebnis aus `Import-WzPrinters` durchreichen; `Add-WzAction` nur an einer Stelle.
-- [ ] **N** `src/modules/Core.Version.ps1:30`. `SecurityProtocol = SecurityProtocol -bor Tls12` wie in `Apps.ps1:236`.
-- [ ] **N** `src/modules/WindowsUpdate.ps1:231-236`. Bei Einzel-HResult 0 auf `$Result.HResult` zurückfallen.
+- [x] **N** `src/modules/Core.Version.ps1:30`. `SecurityProtocol = SecurityProtocol -bor Tls12` wie in `Apps.ps1:236`.
+- [x] **N** `src/modules/WindowsUpdate.ps1:231-236`. Bei Einzel-HResult 0 auf `$Result.HResult` zurückfallen.
 - [x] **N** `src/modules/Office.ps1:601-614`. ExitCode von `setup.exe` nach Stufe 1 prüfen und bei ≠ 0 als Warnung protokollieren.
 - [x] **N** `src/modules/Office.ps1:527`. `${env:ProgramFiles(x86)}` vor `Join-Path` auf `$null` prüfen.
-- [ ] **N** `src/modules/Drivers.ps1:238-242`, `src/pages/Drivers.ps1:219-229`. Eigener Testmodus-Text statt »0 Pakete, 0 B gesichert«.
+- [x] **N** `src/modules/Drivers.ps1:238-242`, `src/pages/Drivers.ps1:219-229`. Eigener Testmodus-Text statt »0 Pakete, 0 B gesichert«.
 - [x] **N** `src/pages/Office.ps1:325`, `src/pages/Apps.ps1:192`. Office-Download und Vorabladen `-Cancelable` machen (Module haben `-KillOnCancel` vorbereitet).
 - [x] **N** `src/modules/Drivers.ps1:555-556, 612-613`. `Invoke-WebRequest` mit `-UseDefaultCredentials` oder Proxy-Credentials wie in `Get-WzDownload`.
-- [ ] **N** `src/pages/Toolbox.ps1:90`. `-ConfirmText 'Starten'` über `Get-WzText`.
+- [x] **N** `src/pages/Toolbox.ps1:90`. `-ConfirmText 'Starten'` über `Get-WzText`.
 
 ### Kundendaten, Umzug, Berichte, Diagnose
 

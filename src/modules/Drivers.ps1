@@ -232,14 +232,17 @@ function Export-WzDrivers {
 
     # »treiber« ist der Ordnername auf dem Datentraeger, keine Anzeige — er
     # bleibt fest, sonst finden aeltere Sticks ihre Sicherungen nicht mehr.
-    $target = New-WzDirectory (Get-WzPath 'offline' 'treiber' $env:COMPUTERNAME)
-    $result = [pscustomobject]@{ Success = $false; Path = $target; Packages = 0; Bytes = 0 }
+    # Angelegt wird der Ordner erst nach der Testmodus-Weiche.
+    $target = Get-WzPath 'offline' 'treiber' $env:COMPUTERNAME
+    $result = [pscustomobject]@{ Success = $false; Path = $target; Packages = 0; Bytes = 0; DryRun = $false }
 
     if ($syncHash.DryRun) {
         Write-WzLog (Get-WzText 'drv.logExportTest' @{ ziel = $target }) -Level Test
         $result.Success = $true
+        $result.DryRun = $true
         return $result
     }
+    [void](New-WzDirectory $target)
 
     Write-WzLog (Get-WzText 'drv.logExportRunning') -Level Action
 

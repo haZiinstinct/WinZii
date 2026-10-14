@@ -87,7 +87,7 @@ function Write-WzNetworkDiagnosis {
 function Start-WzDefenderQuickScan {
     $answer = Show-WzConfirm -Title (Get-WzText 'tool.scanTitle') `
         -Message (Get-WzText 'tool.scanMessage') `
-        -ConfirmText 'Starten'
+        -ConfirmText (Get-WzText 'tool.btnScanStart')
     if (-not $answer.Confirmed) { return }
 
     Invoke-WzTask -Name (Get-WzText 'tool.scanTitle') -ScriptBlock {

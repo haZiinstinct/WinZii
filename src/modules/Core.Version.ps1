@@ -27,7 +27,10 @@ function Get-WzLatestVersion {
     try {
         # PowerShell 5.1 spricht ohne diese Zeile noch TLS 1.0, und GitHub
         # lehnt das ab. Der Fehler sähe aus wie »Verbindung geschlossen«.
-        [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
+        # Verodert, nicht zugewiesen: Eine Zuweisung schaltete ein zuvor aktives
+        # TLS 1.3 prozessweit ab, für alle späteren Verbindungen.
+        [Net.ServicePointManager]::SecurityProtocol =
+            [Net.ServicePointManager]::SecurityProtocol -bor [Net.SecurityProtocolType]::Tls12
 
         $anfrage = [Net.HttpWebRequest]::Create('https://api.github.com/repos/haZiinstinct/WinZii/releases/latest')
         $anfrage.Method = 'GET'
