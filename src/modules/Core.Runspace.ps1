@@ -98,6 +98,8 @@ function Invoke-WzTask {
         Silent     = $Silent.IsPresent
         Cancelable = $Cancelable.IsPresent
         Cooperative = $CooperativeCancel.IsPresent
+        CancelRequested = $null
+        HardStopped = $false
         Canceled   = $false
         Started    = Get-Date
     }
@@ -111,6 +113,14 @@ function Invoke-WzTask {
         # Zeilen aus dem Hintergrund gehören in die Konsole, während die Arbeit
         # läuft — nicht erst am Ende
         Sync-WzConsoleQueue
+        # Kooperativer Abbruch mit Frist: Fragt die Arbeit das Flag nicht ab,
+        # liefe sie sonst trotz »wird abgebrochen« einfach weiter. Nach 15 s
+        # wird die Pipeline doch gestoppt.
+        if (-not $handle.IsCompleted -and $state.Cooperative -and $state.CancelRequested -and
+            -not $state.HardStopped -and ((Get-Date) - $state.CancelRequested).TotalSeconds -gt 15) {
+            $state.HardStopped = $true
+            try { [void]$state.PowerShell.BeginStop($null, $null) } catch { }
+        }
         if (-not $handle.IsCompleted) { return }
         $timer.Stop()
 
@@ -147,6 +157,9 @@ function Invoke-WzTask {
             $state.Runspace.Dispose()
         } catch {
             $failed = $true
+            # Unklarer Zustand: kein Ergebnis weiterreichen, das nach Erfolg
+            # aussehen könnte. $null heißt für die Aufrufer »gescheitert«.
+            $result = $null
             Write-WzLog (Get-WzText 'core.logTaskFailed' @{ name = $state.Name; grund = $_.Exception.Message }) -Level Error
         } finally {
             $syncHash.CurrentTask = $null
@@ -260,7 +273,10 @@ function Stop-WzTask {
 
     $state.Canceled = $true
     Write-WzLog (Get-WzText 'core.taskCancelling' @{ name = $state.Name }) -Level Warn
-    if ($state.Cooperative) { return }
+    if ($state.Cooperative) {
+        $state.CancelRequested = Get-Date
+        return
+    }
     try {
         [void]$state.PowerShell.BeginStop($null, $null)
     } catch { }
