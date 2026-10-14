@@ -261,7 +261,9 @@ function Test-Anzeigetext {
 }
 
 # Anzeigeelemente werden streng geprueft, alles andere mit Leerzeichenregel.
-$streng = @('New-WzBadge -Text', 'New-WzInfoRow', '\.Text =', '\.Content =')
+# -Title und -ConfirmText sind immer Anzeigetext, auch als einzelnes Wort:
+# Ein fest verdrahtetes 'Starten' rutschte genau deshalb durch (Audit N).
+$streng = @('New-WzBadge -Text', 'New-WzInfoRow', '\.Text =', '\.Content =', '-Title', '-ConfirmText')
 $locker = @('Invoke-WzTask -Name', 'Write-WzLog')
 
 $fund = @()
@@ -296,6 +298,24 @@ Pruefe 'kein fester Anzeigetext im Code' ($fund.Count -eq 0) `
 if ($fund.Count -gt 0 -and $All) {
     foreach ($eintrag in $fund) { Write-Host "         $eintrag" -ForegroundColor DarkYellow }
 }
+
+# -Area ist bewusst eine feste deutsche Kennung — sie gruppiert das
+# Übergabeblatt und wird erst bei der Ausgabe übersetzt. Fehlt sie in der
+# Übersetzungsliste von Report.ps1, erscheint sie im englischen Bericht
+# deutsch: so bei »Bericht«, »Einrichtung« und »Prüfung« (Audit 2026-10, N).
+$reportText = [IO.File]::ReadAllText((Join-Path $root 'src\modules\Report.ps1'), [Text.Encoding]::UTF8)
+$bekannt = @([regex]::Matches($reportText, "(?m)^\s*'([^']+)'\s*\{\s*return Get-WzText 'rep\.area") | ForEach-Object { $_.Groups[1].Value })
+$unbekannt = @()
+foreach ($dir in $codeDirs) {
+    foreach ($datei in (Get-ChildItem -LiteralPath $dir -Filter '*.ps1' -File -ErrorAction SilentlyContinue)) {
+        $text = [IO.File]::ReadAllText($datei.FullName, [Text.Encoding]::UTF8)
+        foreach ($m in [regex]::Matches($text, "-Area\s+'([^']+)'")) {
+            if ($bekannt -cnotcontains $m.Groups[1].Value) { $unbekannt += "$($datei.Name): $($m.Groups[1].Value)" }
+        }
+    }
+}
+Pruefe 'jede -Area-Kennung wird übersetzt' ($bekannt.Count -gt 0 -and $unbekannt.Count -eq 0) `
+    $(if ($unbekannt.Count) { "fehlt: $(($unbekannt | Sort-Object -Unique) -join ', ')" } else { "$($bekannt.Count) Kennungen" })
 
 # --- Abschluss -------------------------------------------------------------
 Write-Host ''

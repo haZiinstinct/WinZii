@@ -65,7 +65,7 @@ function Write-WzDiagnosticsReliability {
     $container = $syncHash.DiagReliability
     $container.Children.Clear()
 
-    $problems = @($Records | Where-Object { $_.Type -ne 'Ereignis' })
+    $problems = @($Records | Where-Object { $_.Type -ne 'event' })
     $syncHash.DiagReliabilityTitle.Text = if ($Records.Count -eq 0) {
         Get-WzText 'diag.relNone'
     } elseif ($problems.Count -eq 0) {
@@ -77,12 +77,12 @@ function Write-WzDiagnosticsReliability {
     # Nur die jüngsten zeigen; die vollständige Liste steht im Bericht
     foreach ($record in ($Records | Select-Object -First 12)) {
         $kind = switch ($record.Type) {
-            'Absturz'       { 'error' }
-            'Programmfehler' { 'warn' }
-            default         { 'normal' }
+            'crash'    { 'error' }
+            'appError' { 'warn' }
+            default    { 'normal' }
         }
         [void]$container.Children.Add((New-WzInfoRow `
-            (Get-WzText 'diag.relRow' @{ zeit = $record.Time.ToString('g', (Get-WzLanguageCulture)); typ = $record.Type }) `
+            (Get-WzText 'diag.relRow' @{ zeit = $record.Time.ToString('g', (Get-WzLanguageCulture)); typ = (Get-WzReliabilityTypeText $record.Type) }) `
             (Get-WzText 'diag.relDetail' @{ quelle = $record.Source; meldung = $record.Message }) -Kind $kind -LabelWidth 190))
     }
     if ($Records.Count -gt 12) {

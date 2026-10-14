@@ -312,6 +312,9 @@ function Get-WzAreaLabel {
 
     switch ($Area) {
         'Autostart'           { return Get-WzText 'rep.areaAutostart' }
+        'Bericht'             { return Get-WzText 'rep.areaReport' }
+        'Einrichtung'         { return Get-WzText 'rep.areaSetup' }
+        'Prüfung'             { return Get-WzText 'rep.areaCheck' }
         'Datensicherung'      { return Get-WzText 'rep.areaBackup' }
         'Office'              { return Get-WzText 'rep.areaOffice' }
         'Programme'           { return Get-WzText 'rep.areaPrograms' }
@@ -494,7 +497,7 @@ function New-WzDiagReport {
         $reliabilityRows = @(foreach ($record in $reliability) {
             [pscustomobject]@{
                 Zeit    = $record.Time.ToString('g', (Get-WzLanguageCulture))
-                Art     = $record.Type
+                Art     = Get-WzReliabilityTypeText $record.Type
                 Was     = $record.Source
                 Details = $record.Message
             }
@@ -739,7 +742,7 @@ function Get-WzHandoverRecommendations {
     $result = @()
 
     if ($Info.PendingReboot -or @($Actions | Where-Object { $_.RebootRequired }).Count -gt 0) {
-        $result += @{ Kind = 'warn'; Text = (Get-WzText 'rep.recReboot') }
+        $result += @{ Id = 'reboot'; Kind = 'warn'; Text = (Get-WzText 'rep.recReboot') }
     }
 
     foreach ($volume in $Info.Volumes) {
@@ -1043,8 +1046,10 @@ function New-WzHealthSection {
     try { $boot = Get-WzBootPerformance -Count 5 } catch { }
     if ($boot -and @($boot.Runs).Count -gt 0) {
         $last = @($boot.Runs)[0]
-        $rows += "$(Get-WzText 'rep.rowBootLast')|$(Get-WzText 'rep.valSeconds' @{ sekunden = $last.TotalSeconds })"
-        $rows += "$(Get-WzText 'rep.rowBootAverage')|$(Get-WzText 'rep.valBootAverage' @{ sekunden = $boot.AverageSeconds; anzahl = @($boot.Runs).Count })"
+        # Zahlen über die Kultur der Sprache — roh stand »74.2« im deutschen
+        # und »74,2« nirgends (Audit 2026-10, N).
+        $rows += "$(Get-WzText 'rep.rowBootLast')|$(Get-WzText 'rep.valSeconds' @{ sekunden = (Format-WzNumber $last.TotalSeconds -Decimals 1) })"
+        $rows += "$(Get-WzText 'rep.rowBootAverage')|$(Get-WzText 'rep.valBootAverage' @{ sekunden = (Format-WzNumber $boot.AverageSeconds -Decimals 1); anzahl = @($boot.Runs).Count })"
         if ($boot.Hint) { $rows += "$(Get-WzText 'rep.rowBootVerdict')|$($boot.Hint)" }
     }
 

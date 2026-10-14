@@ -307,7 +307,9 @@ function Write-WzDashboardNotices {
         foreach ($recommendation in (Get-WzHandoverRecommendations -Info $Info `
                 -Security $syncHash.SecurityInfo -Actions (Get-WzActions))) {
             # Zum Neustart steht oben schon eine Zeile — die nennt sogar den Grund
-            if ($recommendation.Text -like '*neu gestartet*') { continue }
+            # Über die Kennung, nicht den Text: Der Textvergleich griff im
+            # englischen Programm nie (Audit 2026-10, N).
+            if ($recommendation.Id -eq 'reboot') { continue }
             $kind = if ($recommendation.Kind -eq 'err') { 'error' } else { $recommendation.Kind }
             [void]$notices.Items.Add((New-WzNotice -Kind $kind -Text $recommendation.Text))
         }

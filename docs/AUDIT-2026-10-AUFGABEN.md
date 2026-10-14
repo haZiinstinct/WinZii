@@ -1,4 +1,4 @@
-# Aufgabenliste zum Audit 2026-10
+﻿# Aufgabenliste zum Audit 2026-10
 
 Abhakliste zu [AUDIT-2026-10.md](AUDIT-2026-10.md). Dort steht zu jedem Punkt das Szenario und die Begründung; hier steht nur, was zu tun ist und woran man erkennt, dass es erledigt ist. Die Kennungen (K1, H4, M20 …) sind in beiden Dateien gleich.
 
@@ -78,7 +78,7 @@ Jeder Punkt: `- [ ] **Kennung** Datei:Zeile. Aufgabe. → Erledigt wenn …`
 - [x] **N** `src/modules/Diagnostics.ps1:28-46`, `data/eventmap.json`. Exakter Vergleich gegen `ProviderName` mit Aliasliste; Level 3 für kartierte Provider/IDs mitholen oder die `warning`-Einträge streichen; »DCOM« gegen `Microsoft-Windows-DistributedCOM`.
 - [x] **N** `src/modules/Diagnostics.ps1:256-267`. `ValidDump` (Bytes 4-8) auf `DU64` prüfen, sonst Offset 0x28.
 - [x] **N** `src/modules/Diagnostics.ps1:453-477`. chkdsk-Texte für Code 2 und 3 korrigieren, Dateisystem vor `/scan` prüfen.
-- [ ] **N** `src/modules/Report.ps1:287-301, 1020-1021, 1030`, `src/modules/Diagnostics.ps1:294-298, 348, 351`, `src/modules/Core.System.ps1:285, 325`, `src/modules/UserData.ps1:519`, `src/pages/Dashboard.ps1:310`. Typ- und Bereichs-Codes sprachneutral halten (`crash`, `report`, `setup`, `check`), erst bei Anzeige übersetzen; Zahlen über `Format-WzSeconds`/`Format-WzNumber`; `-like '*neu gestartet*'` durch Code-Vergleich ersetzen. → Erledigt wenn `Test-Language` Einzelwort-Literale in `-Area`, `-ConfirmText`, `-Title` streng prüft.
+- [x] **N** `src/modules/Report.ps1:287-301, 1020-1021, 1030`, `src/modules/Diagnostics.ps1:294-298, 348, 351`, `src/modules/Core.System.ps1:285, 325`, `src/modules/UserData.ps1:519`, `src/pages/Dashboard.ps1:310`. Typ- und Bereichs-Codes sprachneutral halten (`crash`, `report`, `setup`, `check`), erst bei Anzeige übersetzen; Zahlen über `Format-WzSeconds`/`Format-WzNumber`; `-like '*neu gestartet*'` durch Code-Vergleich ersetzen. → Erledigt wenn `Test-Language` Einzelwort-Literale in `-Area`, `-ConfirmText`, `-Title` streng prüft.
 - [x] **N** `src/modules/UserData.ps1:352`. netsh-Profilliste sprachneutral parsen (Text nach dem letzten Doppelpunkt je Zeile).
 - [x] **N** `src/modules/HealthCheck.ps1:306-308, 352`. Ordner `WinZii-Tempo` entfernen, vorher `FreeSpace` prüfen, Pfad auf `$env:SystemDrive` ableiten.
 - [x] **N** `src/modules/NetworkDiag.ps1:235-244`. `$request.ReadWriteTimeout = $TimeoutMs`.
