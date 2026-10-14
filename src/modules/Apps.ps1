@@ -678,7 +678,8 @@ function Test-WzVaultManifest {
     # Argumente beim Installer. Dazu YAML-Kurzschreibweisen (»{ … }«), Anker
     # und Typ-Etiketten, an denen ein zeilenweiser Blick vorbeisähe. Ein
     # legitimes Paket, das hier hängen bleibt, wird einfach online geladen.
-    $verboten = '^\s*-?\s*(InstallerSwitches|Silent|SilentWithProgress|Interactive|InstallLocation|Log|Upgrade|Custom|Repair|Commands|ElevationRequirement)\s*:'
+    # Auch in Anführungszeichen: YAML erlaubt »"Silent": …«.
+    $verboten = '^\s*-?\s*["'']?(InstallerSwitches|Silent|SilentWithProgress|Interactive|InstallLocation|Log|Upgrade|Custom|Repair|Commands|ElevationRequirement)["'']?\s*:'
     if (@($zeilen | Where-Object { $_ -match $verboten }).Count -gt 0) {
         return Get-WzText 'apps.vaultManifestSwitches'
     }
