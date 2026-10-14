@@ -216,6 +216,20 @@ foreach ($f in $pnputilFaelle) {
         "Erfolg=$($v.Success) Neustart=$($v.RebootRequired)"
 }
 
+# Die Download-Adresse kommt aus einer Skriptseite und wird eleviert
+# eingespielt. Nur HTTPS zu Microsoft oder Windows Update (Audit M9).
+$adressen = @(
+    @{ Url = 'https://catalog.s.download.windowsupdate.com/d/msdownload/update/driver/x.cab'; Ok = $true;  Was = 'Windows-Update-CDN' }
+    @{ Url = 'https://download.microsoft.com/download/x.cab';                               Ok = $true;  Was = 'download.microsoft.com' }
+    @{ Url = 'http://download.windowsupdate.com/x.cab';                                     Ok = $false; Was = 'ohne HTTPS' }
+    @{ Url = 'https://evil.example/x.cab?u=.microsoft.com/';                                Ok = $false; Was = 'Domain nur im Pfad' }
+    @{ Url = 'https://windowsupdate.com.evil.example/x.cab';                                Ok = $false; Was = 'Domain als Präfix' }
+    @{ Url = 'https://evilmicrosoft.com/x.cab';                                             Ok = $false; Was = 'Domain als Suffix ohne Punkt' }
+)
+foreach ($a in $adressen) {
+    Pruefe "Katalogadresse: $($a.Was)" ((Test-WzCatalogDownloadUrl $a.Url) -eq $a.Ok)
+}
+
 Write-Host ''
 if ($script:fehler -eq 0) {
     Write-Host "  Ergebnis: alle $($faelle.Count) Deutungen treffen in beiden Sprachen, $($zustaende.Count) Scanner-Zustände gedeutet." -ForegroundColor Green
