@@ -239,6 +239,14 @@ function Start-WzBloatwareScan {
         Get-WzBloatwareList -Level 'extended'
     } -OnComplete {
         param($packages)
+        # $null heißt: Die Paketliste war nicht lesbar. Das darf nicht als
+        # »nichts gefunden« erscheinen.
+        if ($null -eq $packages) {
+            $syncHash.ToolBloatPackages = @()
+            $syncHash.ToolBloatTitle.Text = Get-WzText 'tool.bloatUnreadable'
+            $syncHash.ToolBloatList.Children.Clear()
+            return
+        }
         $packages = @($packages)
         $syncHash.ToolBloatPackages = $packages
 

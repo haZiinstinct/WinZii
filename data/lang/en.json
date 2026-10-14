@@ -2021,6 +2021,7 @@
     "rpDoneTitle": "Restore point",
     "taskBloatScan": "Searching preinstalled apps",
     "bloatNone": "Nothing found — this PC is already tidy",
+    "bloatUnreadable": "Package list not readable — details in the log",
     "bloatCount": "{anzahl} app(s) found",
     "logBloatFound": "{anzahl} preinstalled app(s) found that can be removed.",
     "bloatMessage": "{anzahl} app(s) will be removed for all users and no longer provisioned for newly created accounts either. They can be reinstalled from the Microsoft Store if needed.",
