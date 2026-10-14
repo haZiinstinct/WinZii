@@ -393,7 +393,11 @@ function Start-WzOemToolInstall {
     # Über denselben Weg wie jedes andere Programm: Install-WzApps prüft die
     # Verbindung, wertet den Rückgabewert aus und sieht danach nach, ob das
     # Programm wirklich da ist.
-    $app = [pscustomobject]@{ name = $primary.Tool.name; wingetId = $primary.Tool.wingetId }
+    # Mit id: Install-WzApps schaut damit im Stick-Vorrat nach. Ohne id warf
+    # Join-Path, und die Installation galt immer als fehlgeschlagen, auch wenn
+    # winget sie erledigt hatte (Audit 2026-10, M16). »oem-« trennt die
+    # Vorratsordner von gleichnamigen Programmen aus apps.json.
+    $app = [pscustomobject]@{ id = "oem-$($primary.Tool.id)"; name = $primary.Tool.name; wingetId = $primary.Tool.wingetId }
 
     Invoke-WzTask -Name (Get-WzText 'drv.taskOemInstall') -ArgumentList (, @($app)) -ScriptBlock {
         param($apps)
@@ -524,7 +528,7 @@ function Start-WzCatalogInstall {
         param($result)
         if (-not $result) { return }
         if ($result.Success) {
-            Add-WzAction -Area 'Treiber' `
+            Add-WzAction -Area 'Treiber' -RebootRequired:([bool]$result.RebootRequired) `
                 -Summary (Get-WzText 'drv.actionCatalog' @{ geraet = $Device.Name }) `
                 -Detail @($Entry.Title)
         }

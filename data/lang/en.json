@@ -1097,6 +1097,7 @@
     "importedCount": "{anzahl} driver package(s) imported. A restart is recommended.",
     "importedNone": "The operation ran through. Apparently there were no new drivers.",
     "importFailed": "The import ended with code {code}.",
+    "importReboot": "Windows requires a restart for the drivers to take effect.",
     "err28Fix": "The classic after a reinstall — install the driver from the manufacturer or from the backup.",
     "err43Fix": "Often a hardware defect or a faulty driver version. With USB devices, try a different port first.",
     "logExportFailedReason": "Driver backup failed: {grund}",

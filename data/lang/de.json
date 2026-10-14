@@ -1097,6 +1097,7 @@
     "importedCount": "{anzahl} Treiberpaket(e) eingespielt. Ein Neustart wird empfohlen.",
     "importedNone": "Der Vorgang lief durch. Es waren offenbar keine neuen Treiber dabei.",
     "importFailed": "Das Einspielen endete mit Code {code}.",
+    "importReboot": "Windows verlangt einen Neustart, damit die Treiber greifen.",
     "err28Fix": "Das ist der Klassiker nach einer Neuinstallation — Treiber vom Hersteller oder aus der Sicherung einspielen.",
     "err43Fix": "Häufig ein Hardwaredefekt oder ein fehlerhafter Treiberstand. Bei USB-Geräten zuerst einen anderen Anschluss versuchen.",
     "logExportFailedReason": "Treibersicherung fehlgeschlagen: {grund}",

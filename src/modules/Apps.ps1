@@ -590,6 +590,8 @@ function Get-WzOfflineInstallerPath {
     #>
     param([Parameter(Mandatory = $true)]$App)
 
+    # Ohne id gibt es keinen Vorratsordner. Join-Path warf hier mit $null.
+    if (-not $App.id) { return $null }
     $dir = Join-Path (Join-Path (Get-WzOfflineDir) 'installers') $App.id
     if (-not (Test-Path -LiteralPath $dir)) { return $null }
 
