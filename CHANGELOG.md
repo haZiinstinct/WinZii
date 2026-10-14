@@ -1,4 +1,4 @@
-﻿# Änderungen
+# Änderungen
 
 Alle nennenswerten Änderungen an WinZii. Die Fassungen folgen
 [Semantic Versioning](https://semver.org/lang/de/).

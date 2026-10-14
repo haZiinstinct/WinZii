@@ -18,12 +18,14 @@ Viele Editoren entfernen die BOM stillschweigend. Deshalb:
 powershell -NoProfile -ExecutionPolicy Bypass -File tools\Repair-Encoding.ps1
 ```
 
-Das Skript setzt die BOM überall dort, wo sie hingehört. Es läuft gefahrlos beliebig oft.
-Die mitgelieferte `.editorconfig` weist Editoren zusätzlich an, die Codierung zu behalten
-— verlassen sollte man sich darauf nicht.
+Das Skript setzt die BOM überall dort, wo sie hingehört, und entfernt sie dort, wo sie
+stört. Es läuft gefahrlos beliebig oft. Die mitgelieferte `.editorconfig` weist Editoren
+zusätzlich an, die Codierung zu behalten — verlassen sollte man sich darauf nicht;
+`tools\Test-Smoke.ps1` prüft beide Richtungen.
 
-Bewusst **ohne** BOM: `data/*.json`, `src/templates/report.html` und `Start.bat`. Die
-Kataloge werden in `Core.Json.ps1` ausdrücklich als UTF-8 eingelesen.
+Bewusst **ohne** BOM: alle `.json`- (auch `data/lang/`), `.md`- und `.html`-Dateien sowie
+`Start.bat`. Die Kataloge werden in `Core.Json.ps1` ausdrücklich als UTF-8 eingelesen;
+externe Werkzeuge wie `jq` oder Pythons `json.load` scheitern dagegen an einer BOM.
 
 ## Vor jedem Commit
 

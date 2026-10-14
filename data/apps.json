@@ -1,4 +1,4 @@
-﻿{
+{
   "schemaVersion": 1,
   "wingetBootstrap": {
     "note": "Wird nur gebraucht, wenn winget fehlt (LTSC, ältere Windows-10-Stände, frisch aufgesetzte Systeme). Das Abhängigkeitspaket stammt aus demselben Release wie der App Installer und enthält alles, was dieser jeweils verlangt (inzwischen auch die WindowsAppRuntime).",

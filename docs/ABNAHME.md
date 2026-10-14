@@ -1,4 +1,4 @@
-﻿# Abnahme auf fremder Hardware
+# Abnahme auf fremder Hardware
 
 Diese Datei ist die Übergabe an die Claude-Code-Sitzung auf dem Laptop. Sie steht im
 Repo, damit dort ein `git pull` reicht.
