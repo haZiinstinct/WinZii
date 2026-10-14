@@ -134,14 +134,14 @@ Jeder Punkt: `- [ ] **Kennung** Datei:Zeile. Aufgabe. → Erledigt wenn …`
 
 ## Stufe 4: Dokumentation
 
-- [ ] **M35** `README.md:96`, `CONTRIBUTING.md:38`, `docs/ABNAHME.md:22`. »bei jedem Push« durch »bei jedem Push auf main und jedem PR« ersetzen, oder Workflow auf `branches: ['**']`.
-- [ ] **M38** `SECURITY.md:37-40`, `README.md:81`. Netzverbindungen ergänzen: `api.github.com` (Versionsprüfung, nur nach Zustimmung), `catalog.update.microsoft.com` (Treibersuche und -download), Windows-Update-COM, Herstellerwerkzeuge über winget.
-- [ ] **M41** `README.md:95`, `README.en.md:95`, `docs/ABNAHME.md:354-356`. »33 für beide« → 41 (oder Zahl aus dem Katalog erzeugen).
-- [ ] **N** `README.md:104` (»46 Prüfungen« → aus Test-Undo zählen), `:198` (`powerplan` in die Aktionstypen), `:212-229` (`Test-Office`, `Test-Layout`, `New-Icon` in die Werkzeugtabelle), `:218` (»drei Wegen« oder Abbrechen-Knopf in Test-Dialogs ergänzen), Startparameter `-Language`.
-- [ ] **N** `README.en.md`. Abschnitt »Entwicklung« mit Werkzeugtabelle nachziehen.
-- [ ] **N** `docs/ABNAHME.md:13-17, 33, 54, ~394`. Kopf auf 0.7.0-Inhalt, Kapitel 23-29 anlegen oder Tabelle als vollständige Quelle kennzeichnen, »sechzehn Seiten«.
-- [ ] **N** `SECURITY.md:13`. Mail-Adresse eintragen oder Satz streichen und auf GitHub Private Vulnerability Reporting verweisen; Satz »unterstützt wird die jeweils neueste Fassung«.
-- [ ] **N** `CHANGELOG.md`. Vergleichs-Links am Ende (Keep a Changelog).
+- [x] **M35** `README.md:96`, `CONTRIBUTING.md:38`, `docs/ABNAHME.md:22`. »bei jedem Push« durch »bei jedem Push auf main und jedem PR« ersetzen, oder Workflow auf `branches: ['**']`.
+- [x] **M38** `SECURITY.md:37-40`, `README.md:81`. Netzverbindungen ergänzen: `api.github.com` (Versionsprüfung, nur nach Zustimmung), `catalog.update.microsoft.com` (Treibersuche und -download), Windows-Update-COM, Herstellerwerkzeuge über winget.
+- [x] **M41** `README.md:95`, `README.en.md:95`, `docs/ABNAHME.md:354-356`. »33 für beide« → 41 (oder Zahl aus dem Katalog erzeugen).
+- [x] **N** `README.md:104` (»46 Prüfungen« → aus Test-Undo zählen), `:198` (`powerplan` in die Aktionstypen), `:212-229` (`Test-Office`, `Test-Layout`, `New-Icon` in die Werkzeugtabelle), `:218` (»drei Wegen« oder Abbrechen-Knopf in Test-Dialogs ergänzen), Startparameter `-Language`.
+- [x] **N** `README.en.md`. Abschnitt »Entwicklung« mit Werkzeugtabelle nachziehen.
+- [x] **N** `docs/ABNAHME.md:13-17, 33, 54, ~394`. Kopf auf 0.7.0-Inhalt, Kapitel 23-29 anlegen oder Tabelle als vollständige Quelle kennzeichnen, »sechzehn Seiten«.
+- [x] **N** `SECURITY.md:13`. Mail-Adresse eintragen oder Satz streichen und auf GitHub Private Vulnerability Reporting verweisen; Satz »unterstützt wird die jeweils neueste Fassung«.
+- [x] **N** `CHANGELOG.md`. Vergleichs-Links am Ende (Keep a Changelog).
 - [x] **N** `data/cleanup.json:34`. »auch der von anderen Benutzerkonten« streichen (siehe M7).
 
 ## Stufe 5: Gegen Herstellerdoku prüfen

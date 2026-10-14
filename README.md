@@ -62,7 +62,7 @@ Das war alles. WinZii braucht keine Installation, keine Laufzeitumgebung und kei
 
 **Voraussetzungen:** Windows 10 oder 11 mit Administratorrechten. PowerShell 5.1 und .NET Framework sind in Windows enthalten.
 
-**Erster Start empfohlen im Testmodus:** Der Schalter unten rechts protokolliert alle Änderungen, ohne sie auszuführen. So lässt sich jede Aktion vorher ansehen. `Start.bat` reicht Schalter durch — `Start.bat -DryRun` startet gleich im Testmodus, `Start.bat -NoElevate` ohne Rechteanforderung.
+**Erster Start empfohlen im Testmodus:** Der Schalter unten rechts protokolliert alle Änderungen, ohne sie auszuführen. So lässt sich jede Aktion vorher ansehen. `Start.bat` reicht Schalter durch — `Start.bat -DryRun` startet gleich im Testmodus, `Start.bat -NoElevate` ohne Rechteanforderung, `Start.bat -Language en` auf Englisch (ohne die Wahl zu speichern).
 
 ---
 
@@ -78,7 +78,7 @@ Ein Werkzeug, das tief ins System eingreift, muss den Weg zurück kennen:
 
 Alles landet unter `backups\<Computername>\<Zeitstempel>\`.
 
-Was **nicht** passiert: keine Telemetrie, keine Verbindung nach außen außer für ausdrücklich angestoßene Downloads (winget, Office, LibreOffice), kein Löschen persönlicher Dateien. Der Download-Ordner wird nur ausgewertet, nie geleert.
+Was **nicht** passiert: keine Telemetrie, keine Verbindung nach außen außer für ausdrücklich angestoßene Vorgänge (winget, Office, LibreOffice, Treibersuche im Update-Katalog, Windows Update, Herstellerwerkzeuge) und die Versionsprüfung bei GitHub, die nur nach einmaliger Zustimmung läuft — Liste in [SECURITY.md](SECURITY.md). Kein Löschen persönlicher Dateien. Der Download-Ordner wird nur ausgewertet, nie geleert.
 
 Zwei Ausgaben schreiben absichtlich Geheimnisse im Klartext auf den Datenträger, jeweils hinter einer eigenen Bestätigung: der **WLAN-Export mit Schlüsseln** und die **BitLocker-Wiederherstellungsschlüssel**. Der Stick gehört danach nicht in fremde Hände. Einzelheiten in [SECURITY.md](SECURITY.md).
 
@@ -92,8 +92,8 @@ Ehrlich gesagt, damit niemand böse überrascht wird: WinZii wurde auf **einem**
 
 | Bereich | Stand |
 | --- | --- |
-| **Windows 10** | Die Versionsweiche greift (33 Einträge für beide Systeme, 7 nur für Windows 11, 1 nur für Windows 10), aber es lief dort nie ein vollständiger Durchlauf. |
-| **Nicht-deutsches Windows** | Seit 0.5.2 laufen alle Prüfwerkzeuge bei jedem Push auf einem **englischen** Windows-Server, und die Oberfläche wird dort in beiden Sprachen gestartet. Ungeprüft bleibt, was echte Windows-Werkzeuge zurückgeben: `sfc`, `DISM`, `chkdsk` und `manage-bde` antworten dort englisch, und WinZii wertet das aus. Dafür ist Punkt 13 der Abnahme da. |
+| **Windows 10** | Die Versionsweiche greift (41 Einträge für beide Systeme, 7 nur für Windows 11, 1 nur für Windows 10), aber es lief dort nie ein vollständiger Durchlauf. |
+| **Nicht-deutsches Windows** | Seit 0.5.2 laufen alle Prüfwerkzeuge bei jedem Push auf main und jedem Pull Request auf einem **englischen** Windows-Server, und die Oberfläche wird dort in beiden Sprachen gestartet. Ungeprüft bleibt, was echte Windows-Werkzeuge zurückgeben: `sfc`, `DISM`, `chkdsk` und `manage-bde` antworten dort englisch, und WinZii wertet das aus. Dafür ist Punkt 13 der Abnahme da. |
 | **Akku** | Auf dem Notebook geprüft: Verschleiß wird gemessen und im Dashboard angezeigt. Bis 0.4.0 meldete dasselbe Gerät »kein Akku vorhanden«, weil die Erkennung an einer einzigen WMI-Klasse hing. |
 | **WLAN** | Verbindungsprüfung, Internetzugang und seit 0.5.1 auch Downloads über WLAN geprüft, ohne Kabel im Gerät: 93 MB in 32 s, eine Installation über winget mitsamt Nachprüfung, und ein Fehlschlag lässt nichts Halbfertiges liegen. |
 | **BitLocker, OneDrive** | Der »nicht vorhanden«-Pfad ist geprüft und meldet sauber, auf dem Notebook zusätzlich gegen `manage-bde` gegengehalten. Ein verschlüsselter Datenträger und ein OneDrive mit Platzhaltern fehlen weiterhin. |
@@ -101,7 +101,7 @@ Ehrlich gesagt, damit niemand böse überrascht wird: WinZii wurde auf **einem**
 | **Energieplan** | Anlegen, aktivieren, zweiter Durchlauf ohne Doppelkopie und Zurücknehmen sind auf dem Notebook durchgespielt. Was Netz und Akku unterscheidet, sind Kühlungsrichtlinie und Turbo-Verhalten — viele Hersteller blenden beide aus der Energieoberfläche aus. Setzen lassen sie sich trotzdem, nachsehen kann man sie dort dann aber nicht. Kann ein Gerät sie gar nicht setzen, sagt WinZii im Protokoll, dass der Plan nichts bewirkt. |
 | **Office auf den Datenträger laden** | Der Abbruch beendet das Bereitstellungswerkzeug, **nicht** den Download: Geladen wird vom Click-to-Run-Dienst von Windows, und der macht im Hintergrund weiter. Im Abnahmelauf wuchs der Ordner nach dem Abbruch von 39 MB auf 2,5 GB. WinZii sagt das im Protokoll und nennt den Ordner zum Löschen; ein angefangener Vorrat gilt seit 0.4.1 zuverlässig als unvollständig. |
 | **FAT32-Datenträger** | Seit 0.5.3 auf einer virtuellen FAT32-Platte geprüft: WinZii startet davon, das Dashboard zeigt den Hinweisbalken, und der Office-Download wird abgelehnt, **bevor** die 4-GB-Grenze zuschlägt. Ein echter FAT32-Stick fehlt weiterhin. |
-| **Restesuche nach dem Deinstallieren** | Die Regeln und die ganze Kette — finden, sichern, entfernen — sind in `tools\Test-Undo.ps1` mit 46 Prüfungen abgedeckt. Seit 0.5.1 ist sie auch gegen echte Deinstallierer gelaufen, auf einem Gerät mit 53 gewachsen installierten Programmen; der Lauf hat zwei Fehler gefunden, beide behoben (siehe [CHANGELOG](CHANGELOG.md)). Zwei Dinge gelten dauerhaft: **Gelöschte Ordner sind endgültig weg** — gesichert werden nur Registry-Schlüssel —, und die Suche ist absichtlich eng. Sie übersieht lieber einen Rest, als den Ordner eines anderen Programms anzufassen; seit 0.5.1 auch dann nicht, wenn der Hersteller selbst den Sammelordner der ganzen Familie als Installationsordner einträgt. |
+| **Restesuche nach dem Deinstallieren** | Die Regeln und die ganze Kette — finden, sichern, entfernen — sind in `tools\Test-Undo.ps1` mit über hundert Prüfungen abgedeckt. Seit 0.5.1 ist sie auch gegen echte Deinstallierer gelaufen, auf einem Gerät mit 53 gewachsen installierten Programmen; der Lauf hat zwei Fehler gefunden, beide behoben (siehe [CHANGELOG](CHANGELOG.md)). Zwei Dinge gelten dauerhaft: **Gelöschte Ordner sind endgültig weg** — gesichert werden nur Registry-Schlüssel —, und die Suche ist absichtlich eng. Sie übersieht lieber einen Rest, als den Ordner eines anderen Programms anzufassen; seit 0.5.1 auch dann nicht, wenn der Hersteller selbst den Sammelordner der ganzen Familie als Installationsordner einträgt. |
 | **Werkzeuge der Gerätehersteller** | Ungeprüft. Der Entwicklungsrechner ist ein Eigenbau, das Abnahme-Notebook stammt von keinem der drei Hersteller mit stiller Kommandozeile. Geprüft ist nur, was sich ohne Gerät prüfen lässt: Die winget-Kennungen im Katalog sind gegen die Quelle abgeglichen, und der Weg über »nicht auffindbar« ist der, den WinZii hier nimmt, wenn ein Pfad nicht stimmt. Ob Dell Command, der Thin Installer oder der Image Assistant mit diesen Argumenten wirklich durchlaufen, weiß nur ein Gerät, auf dem sie laufen. |
 | **Update-Katalog** | Die brüchigste Stelle im ganzen Werkzeug, und das mit Absicht: Microsoft bietet für den Katalog keine Schnittstelle an, gelesen wird die Suchseite. Ändert sich ihr Aufbau, findet WinZii nichts mehr — leer ausgehen tut es dann sauber, aber es merkt es nicht. Die Suche selbst ist gelaufen, das Herunterladen und Einspielen eines Katalogtreibers nie: Auf keinem der beiden Geräte fehlt ein Treiber. |
 | **Belastungstest** | Auf dem Entwicklungsrechner gelaufen, einem Desktop mit fester Kühlung: Der Takt hielt 3801 von 3801 MHz, die Plattenmessung ergab 574 MB/s schreibend und 1809 lesend, und die ungepufferte Leseschleife liefert alle Bytes. Genau der Fall, für den er gebaut ist — ein gedrosseltes Notebook — fehlt damit. Und Temperaturen meldet dieses Gerät gar nicht; der Pfad »nicht messbar« ist geprüft, der andere nicht. |
@@ -113,7 +113,7 @@ Ehrlich gesagt, damit niemand böse überrascht wird: WinZii wurde auf **einem**
 | **WLAN zurückspielen** | Die Profildateien werden richtig gelesen und ein Fehlschlag sauber gemeldet. Ein Profil wirklich einzurichten konnte nie geprüft werden — weder der Entwicklungsrechner noch die Sandbox hat einen WLAN-Adapter. |
 | **Kleine Bildschirme** | Das Fenster braucht mindestens 1000 × 560 Punkte und verkleinert sich beim Start selbst auf die Arbeitsfläche. Bei 1092 × 614 — einem 1366er-Laptop bei 125 % — ist alles geprüft: Konsole startet eingeklappt, die Seitenleiste holt den aktiven Eintrag ins Bild, nichts liegt außerhalb. Unter 1200 px Fensterbreite stehen die Karten zweispaltig — bei drei Spalten bleiben einer Karte 117 px für den Wert, und Seriennummer, IP-Adresse oder Kontoname passen dort nicht am Stück hinein. `tools\Test-Layout.ps1` misst das nach. Mit 0.5.3 auf dem Notebook selbst nachgesehen, nicht nur erzwungen: Das Fenster hält das Mindestmaß, wenn man es kleiner zieht, und der Erststart-Dialog passt hinein. |
 
-**In der Windows Sandbox geprüft** (`tools\Test-Sandbox.wsb`, ein frisches Windows 11 ohne winget): Start über den Launcher, echte Optimierungen anwenden und wieder zurücknehmen, Netzwerk-Diagnose, die winget-Nachinstallation, das Finden und Lesen einer Sicherung, das Anlegen eines Netzwerkdruckers samt Treiber sowie ein echter Dateiumzug mit Unterordnern — alles auf einem System, das nichts von diesem Projekt weiß. Zuletzt mit 0.5.3 auf dem Notebook, über dessen WLAN: 42 Prüfungen, kein Fehler.
+**In der Windows Sandbox geprüft** (`tools\Start-SandboxTest.ps1`, ein frisches Windows 11 ohne winget): Start über den Launcher, echte Optimierungen anwenden und wieder zurücknehmen, Netzwerk-Diagnose, die winget-Nachinstallation, das Finden und Lesen einer Sicherung, das Anlegen eines Netzwerkdruckers samt Treiber sowie ein echter Dateiumzug mit Unterordnern — alles auf einem System, das nichts von diesem Projekt weiß. Zuletzt mit 0.5.3 auf dem Notebook, über dessen WLAN: 42 Prüfungen, kein Fehler.
 
 Rückmeldungen von anderen Systemen sind ausdrücklich willkommen — besonders von Windows 10 und von nicht-deutschen Installationen.
 
@@ -195,7 +195,7 @@ Alle Inhalte stehen in `data/` als JSON. Für neue Einträge ist keine Zeile Cod
 }
 ```
 
-Aktionstypen: `registry`, `service`, `scheduledTask`, `feature`, `appx`, `capability`, `command`.
+Aktionstypen: `registry`, `service`, `scheduledTask`, `feature`, `appx`, `capability`, `command`, `powerplan` (eigener Energieplan mit Netz- und Akkuwerten).
 
 **Ereignis deuten** (`data/eventmap.json`): Quelle, Kennung, Titel, Erklärung und Empfehlung eintragen — die Diagnose übernimmt den Rest.
 
@@ -215,7 +215,7 @@ powershell -NoProfile -ExecutionPolicy Bypass -File tools\Test-Catalogs.ps1
 | `tools\Test-Catalogs.ps1` | Kataloge auf Pflichtfelder und Konsistenz prüfen |
 | `tools\Test-Pages.ps1` | Jede Seite laden und auf Verdrahtungsfehler prüfen |
 | `tools\Test-Contrast.ps1` | Schrift- und Flächenkontraste gegen WCAG 2.1 rechnen |
-| `tools\Test-Dialogs.ps1` | Prüft, dass sich jeder Dialog auf allen vier Wegen schließen lässt |
+| `tools\Test-Dialogs.ps1` | Prüft, dass sich jeder Dialog auf allen drei Wegen schließen lässt (Escape, Klick daneben, Schließkreuz) |
 | `tools\Test-Process.ps1` | Rückgabewerte externer Programme, auch im Hintergrund-Runspace |
 | `tools\Test-Report.ps1` | Fremder Text im Bericht bleibt Text — Injektionsmuster in Karten und Tabellen |
 | `tools\Test-Modules.ps1` | Setup, Windows Update, Toolbox, KI-Entfernung, Autostart, Belastungstest, Momentaufnahme, Versionsprüfung — Logik ohne Systemeingriff |

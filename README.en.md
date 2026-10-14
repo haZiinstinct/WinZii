@@ -62,7 +62,7 @@ That is all. WinZii needs no installation, no runtime, no particular drive lette
 
 **Requirements:** Windows 10 or 11 with administrator rights. PowerShell 5.1 and .NET Framework ship with Windows.
 
-**First run: use test mode.** The toggle in the bottom right logs every change without executing it. `Start.bat` passes switches through — `Start.bat -DryRun` starts straight into test mode, `Start.bat -NoElevate` skips the elevation prompt.
+**First run: use test mode.** The toggle in the bottom right logs every change without executing it. `Start.bat` passes switches through — `Start.bat -DryRun` starts straight into test mode, `Start.bat -NoElevate` skips the elevation prompt, `Start.bat -Language de` starts in German (without saving the choice).
 
 ---
 
@@ -92,8 +92,8 @@ To be blunt, so nobody gets surprised: WinZii was developed on **one** machine �
 
 | Area | Status |
 | --- | --- |
-| **Windows 10** | The version switch works (33 tweaks for both systems, 7 Windows-11-only, 1 Windows-10-only), but a full run never happened there. |
-| **Non-German Windows** | Since 0.5.2 every check tool runs on an **English** Windows server on each push, and the interface is started there in both languages. What remains untested is what real Windows tools return: `sfc`, `DISM`, `chkdsk` and `manage-bde` answer in English there, and WinZii parses that. Point 13 of the acceptance list covers it. |
+| **Windows 10** | The version switch works (41 tweaks for both systems, 7 Windows-11-only, 1 Windows-10-only), but a full run never happened there. |
+| **Non-German Windows** | Since 0.5.2 every check tool runs on an **English** Windows server on every push to main and every pull request, and the interface is started there in both languages. What remains untested is what real Windows tools return: `sfc`, `DISM`, `chkdsk` and `manage-bde` answer in English there, and WinZii parses that. Point 13 of the acceptance list covers it. |
 | **Battery** | Verified on the notebook: wear is measured and shown on the dashboard. Up to 0.4.0 that same device reported "no battery present", because detection hung on a single WMI class. |
 | **Wi-Fi** | Connection check, internet access and, since 0.5.1, downloads verified over Wi-Fi with no cable in the machine: 93 MB in 32 s, an install through winget including the follow-up check, and a failed download leaves nothing half-finished behind. |
 | **BitLocker, OneDrive** | The "not present" path is verified and reports cleanly, on the notebook additionally cross-checked against `manage-bde`. An encrypted volume and a OneDrive with placeholders are still missing. |
@@ -101,7 +101,7 @@ To be blunt, so nobody gets surprised: WinZii was developed on **one** machine �
 | **Power plan** | Creating, activating, a second run without a duplicate copy, and undoing have been exercised on the notebook. What separates mains from battery are the cooling policy and the turbo behaviour — many vendors hide both from the power UI. They can still be set, you just cannot inspect them there afterwards. If a device cannot set them at all, WinZii says in the log that the plan achieves nothing. |
 | **Downloading Office** | Cancelling ends the deployment tool, **not** the download: the fetching is done by the Windows Click-to-Run service, which carries on in the background. During the acceptance run the folder grew from 39 MB to 2.5 GB after the cancel. WinZii says so in the log and names the folder to delete; since 0.4.1 a partial cache is reliably reported as incomplete. |
 | **FAT32 media** | Since 0.5.3 verified on a virtual FAT32 disk: WinZii starts from it, the dashboard shows the notice bar, and the Office download is refused **before** the 4 GB limit bites. A real FAT32 stick is still missing. |
-| **Leftover cleanup after uninstalling** | The rules and the whole chain — find, back up, remove — are covered by 46 checks in `tools\Test-Undo.ps1`. Since 0.5.1 it has also faced real uninstallers, on a machine with 53 programs grown over the years; that run found two bugs, both fixed (see the [CHANGELOG](CHANGELOG.md)). Two things hold permanently: **deleted folders are gone for good** — only registry keys are backed up — and the search is deliberately narrow. It would rather miss a leftover than touch another program's folder — since 0.5.1 not even when the vendor itself records the whole family's shared folder as the install location. |
+| **Leftover cleanup after uninstalling** | The rules and the whole chain — find, back up, remove — are covered by more than a hundred checks in `tools\Test-Undo.ps1`. Since 0.5.1 it has also faced real uninstallers, on a machine with 53 programs grown over the years; that run found two bugs, both fixed (see the [CHANGELOG](CHANGELOG.md)). Two things hold permanently: **deleted folders are gone for good** — only registry keys are backed up — and the search is deliberately narrow. It would rather miss a leftover than touch another program's folder — since 0.5.1 not even when the vendor itself records the whole family's shared folder as the install location. |
 | **Vendor tools** | Untested. The development machine is a self-build, and the acceptance laptop comes from none of the three vendors with a silent command line. What could be tested without the hardware was: the winget IDs in the catalog are checked against the source, and the "cannot be found" path is the one WinZii takes when a path is wrong. Whether Dell Command, the Thin Installer or the Image Assistant really run through with these arguments is only known on a machine that has them. |
 | **Update Catalog** | The most brittle spot in the whole tool, and deliberately so: Microsoft offers no interface for the catalog, so the search page is read. If its layout changes, WinZii finds nothing — it goes empty cleanly, but it does not notice. The search itself has run; downloading and installing a catalog driver never has, because neither machine is missing a driver. |
 | **Stress test** | Run on the development machine, a desktop with fixed cooling: the clock held 3801 of 3801 MHz, the drive measured 574 MB/s writing and 1809 reading, and the unbuffered read loop returns every byte. The very case it was built for — a throttled laptop — is therefore missing. And this machine reports no temperatures at all; the "not measurable" path is tested, the other one is not. |
@@ -113,7 +113,7 @@ To be blunt, so nobody gets surprised: WinZii was developed on **one** machine �
 | **Restoring Wi-Fi** | Profile files are read correctly and a failure is reported cleanly. Actually creating a profile could never be verified — neither the development machine nor the Sandbox has a Wi-Fi adapter. |
 | **Small screens** | The window needs at least 1000 × 560 device-independent pixels and shrinks itself to the working area. At 1092 × 614 — a 1366-wide laptop at 125 % — everything checks out: the console starts collapsed, the sidebar scrolls the active entry into view, nothing sits outside the window. Below 1200 px window width the cards switch to two columns — with three, a card is left 117 px for its value, and a serial number, IP address or account name does not fit in one piece. `tools\Test-Layout.ps1` measures this. With 0.5.3 checked on the notebook itself rather than forced: the window holds its minimum when dragged smaller, and the first-run dialog fits inside. |
 
-**Verified in Windows Sandbox** (`tools\Test-Sandbox.wsb`, a pristine Windows 11 without winget): launcher startup, applying real tweaks and reverting them, network diagnosis, the winget bootstrap, finding and reading a backup, adding a network printer including its driver, and a real file migration with subfolders — all on a system that knows nothing about this project. Most recently with 0.5.3 on the notebook, over its Wi-Fi: 42 checks, no failures.
+**Verified in Windows Sandbox** (`tools\Start-SandboxTest.ps1`, a pristine Windows 11 without winget): launcher startup, applying real tweaks and reverting them, network diagnosis, the winget bootstrap, finding and reading a backup, adding a network printer including its driver, and a real file migration with subfolders — all on a system that knows nothing about this project. Most recently with 0.5.3 on the notebook, over its Wi-Fi: 42 checks, no failures.
 
 Feedback from other systems is very welcome — especially from Windows 10 and non-German installations.
 
@@ -170,6 +170,37 @@ powershell -NoProfile -ExecutionPolicy Bypass -File tools\Test-Catalogs.ps1
 ```
 
 Contribution guidelines (including the **UTF-8 BOM requirement** for all `.ps1`/`.xaml` files — PowerShell 5.1 reads files without a BOM as ANSI and destroys non-ASCII text) are in [CONTRIBUTING.md](CONTRIBUTING.md) (German). Version history: [CHANGELOG.md](CHANGELOG.md) (German).
+
+---
+
+## 🧪 Development
+
+The CI runs every check below on an English Windows Server on every push to main and every pull request.
+
+| Tool | Purpose |
+| --- | --- |
+| `tools\Test-Smoke.ps1` | Syntax, XAML, catalogs, encoding and log levels in one pass |
+| `tools\Test-Catalogs.ps1` | Catalogs: required fields, references, winget IDs, code tables |
+| `tools\Test-Pages.ps1` | Loads every page and checks the launcher start |
+| `tools\Test-Layout.ps1` | Opens every page at 1000×560 and measures whether a word breaks mid-word |
+| `tools\Test-Contrast.ps1` | Text and surface contrast against WCAG 2.1 |
+| `tools\Test-Dialogs.ps1` | Every dialog closes three ways (Escape, click beside it, close button) |
+| `tools\Test-Process.ps1` | Exit codes of external programs, including inside a background runspace |
+| `tools\Test-Undo.ps1` | Backup and undo on a dedicated registry key. **As administrator it briefly changes the active power plan** and always restores it |
+| `tools\Test-Report.ps1` | Foreign text in the report stays text — injection patterns in cards and tables |
+| `tools\Test-Modules.ps1` | Setup, Windows Update, toolbox, AI removal, autostart, stress test, snapshot, version check — logic without touching the system |
+| `tools\Test-Office.ps1` | Office cache and deployment configuration |
+| `tools\Test-Language.ps1` | Language files: same keys, placeholders and cultures |
+| `tools\Test-LanguageSwitch.ps1` | Starts WinZii, switches language at runtime and checks measured texts follow |
+| `tools\Test-Parsers.ps1` | Parsing of sfc, pnputil and winget output against real German **and** English wording |
+| `tools\Invoke-Analyzer.ps1` | PSScriptAnalyzer targeting PowerShell 5.1; warnings fail the build |
+| `tools\Repair-Encoding.ps1` | Enforces UTF-8 with BOM for `.ps1`/`.xaml`, without BOM for JSON, Markdown, HTML |
+| `tools\New-Release.ps1` | Builds the release ZIP and SHA256 checksum; `-Release` checks version strings and a clean tree first |
+| `tools\New-Icon.ps1` | Redraws `assets\winzii.ico` |
+| `tools\Get-VaultSigners.ps1` | Reads installer signers in the cache and compares them with `signers` in `apps.json` — only on your own machine right after pre-downloading |
+| `tools\WinZii.wsb` | Windows Sandbox for safe trying out (read-only) |
+| `tools\WinZii-Schreibend.wsb` | Same with write access. Maps the whole folder, including `backups\` with plaintext keys |
+| `tools\Start-SandboxTest.ps1` | Self-test in the sandbox on a copy without `backups\`, `logs\` and `offline\`; results in `sandbox-staging\sandbox-ergebnis\` |
 
 ---
 
