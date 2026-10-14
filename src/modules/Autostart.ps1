@@ -58,7 +58,15 @@ function Get-WzAutostartItems {
         # Profil des laufenden Kontos ein, nicht das des Anwenders.
         $eingetragen = (Get-Item -LiteralPath $shellFolders -ErrorAction Stop).GetValue('Startup', $null,
             [Microsoft.Win32.RegistryValueOptions]::DoNotExpandEnvironmentNames)
-        if ($eingetragen) { $userStartup = Expand-WzUserPath $eingetragen }
+        if ($eingetragen) {
+            # Der Wert liegt in HKCU und ist vom Anwender beschreibbar. Nur ein
+            # lokaler Laufwerkspfad wird übernommen: Ein UNC-Pfad ließe den
+            # elevierten Prozess sich mit seinen Anmeldedaten an einem
+            # beliebigen Server melden. Ein umgeleiteter Ordner auf einer
+            # Freigabe fällt damit auf den Standardpfad zurück.
+            $kandidat = Expand-WzUserPath $eingetragen
+            if ($kandidat -match '^[A-Za-z]:\\' -and $kandidat -notmatch '[\x00-\x1F]') { $userStartup = $kandidat }
+        }
     } catch { }
     if (-not $userStartup) {
         $roaming = Get-WzUserFolder -Kind 'RoamingAppData'
@@ -165,7 +173,14 @@ function Set-WzAutostartItem {
             # kommt aus der Oberfläche zurück; was dort drinsteht, wird hier
             # nicht blind übernommen.
             $approvedPath = [string]$Item.ApprovedPath
-            if ($approvedPath -notmatch '\\Explorer\\StartupApproved\\(Run|Run32|StartupFolder)$') {
+            $erlaubt = @(
+                'HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\StartupApproved\Run'
+                'HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\StartupApproved\Run32'
+                'HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\StartupApproved\StartupFolder'
+                (Resolve-WzRegistryPath 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer\StartupApproved\Run')
+                (Resolve-WzRegistryPath 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer\StartupApproved\StartupFolder')
+            )
+            if ($erlaubt -notcontains $approvedPath) {
                 throw (Get-WzText 'auto.errApprovedPath' @{ pfad = $approvedPath })
             }
             if (-not (Test-Path -LiteralPath $approvedPath)) {
