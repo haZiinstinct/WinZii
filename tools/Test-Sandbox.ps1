@@ -47,8 +47,10 @@ Schreib "  Windows-Build: $build"
 Schreib ''
 Schreib '1. Smoke-Test (Syntax, XAML, Kataloge, BOM)'
 $smoke = & powershell.exe -NoProfile -ExecutionPolicy Bypass -File (Join-Path $root 'tools\Test-Smoke.ps1') 2>&1
+$smokeExit = $LASTEXITCODE
 $smokeText = $smoke -join "`n"
-Pruefe 'Test-Smoke' ($smokeText -match 'keine Fehler') ($smoke | Select-Object -Last 1)
+# Rückgabewert statt nur Wortlaut (Audit 2026-10, N)
+Pruefe 'Test-Smoke' ($smokeExit -eq 0 -and $smokeText -match 'keine Fehler') "Exit=$smokeExit $($smoke | Select-Object -Last 1)"
 
 # --- 2. Start über den Launcher + Abbild ----------------------------------
 Schreib ''
@@ -57,9 +59,11 @@ $env:WZ_SELFTEST = '2500'
 $env:WZ_SELFTEST_PAGE = 'Dashboard'
 $env:WZ_SELFTEST_OUT = Join-Path $resultDir 'sandbox-dashboard.png'
 $start = & powershell.exe -NoProfile -ExecutionPolicy Bypass -File (Join-Path $root 'src\launcher.ps1') 2>&1
+$startExit = $LASTEXITCODE
 Remove-Item Env:\WZ_SELFTEST, Env:\WZ_SELFTEST_PAGE, Env:\WZ_SELFTEST_OUT -ErrorAction SilentlyContinue
 $startText = $start -join "`n"
 Pruefe 'Fenster gerendert, Abbild gespeichert' (Test-Path (Join-Path $resultDir 'sandbox-dashboard.png'))
+Pruefe 'Launcher endet mit 0' ($startExit -eq 0) "Exit=$startExit"
 Pruefe 'keine Fehler beim Start' ($startText -notmatch 'wurde nicht als Name|Exception|fehlgeschlagen')
 
 # --- 3. Module laden für die Modultests ------------------------------------
@@ -397,6 +401,12 @@ if ($officeBefore.Installed) {
 }
 
 # --- Abschluss --------------------------------------------------------------
+# Die erfundene Sicherung samt WLAN-Profil liegt im eingebundenen Ordner und
+# überlebt die Sandbox. Sie wäre beim nächsten Lauf eine zweite Quelle und
+# auf dem Host ein Fremdkörper unter offline\daten\ (Audit 2026-10, M39).
+Remove-Item -LiteralPath $backupDir -Recurse -Force -ErrorAction SilentlyContinue
+Pruefe 'Test-Sicherung wieder entfernt' (-not (Test-Path -LiteralPath $backupDir))
+
 Schreib ''
 Schreib "Protokollzeilen aus dem Modul-Teil:"
 foreach ($e in @($syncHash.LogEntries.ToArray() | Select-Object -Last 25)) {

@@ -87,7 +87,7 @@ Write-Host ''
 Write-Host '  Encoding (UTF-8 mit BOM)' -ForegroundColor White
 $noBom = @()
 foreach ($file in Get-ChildItem $root -Recurse -Include '*.ps1', '*.xaml' -File |
-    Where-Object { $_.FullName -notmatch '\\(offline|logs|backups|reports)\\' }) {
+    Where-Object { $_.FullName -notmatch '\\(offline|logs|backups|reports|dist|sandbox-staging)\\' }) {
     $bytes = [IO.File]::ReadAllBytes($file.FullName)
     if (-not ($bytes.Length -ge 3 -and $bytes[0] -eq 0xEF -and $bytes[1] -eq 0xBB -and $bytes[2] -eq 0xBF)) {
         $noBom += $file.FullName.Substring($root.Length + 1)
@@ -106,7 +106,7 @@ if ($noBom.Count -eq 0) {
 # Pythons json.load scheiterten daran (Audit 2026-10, M37).
 $withBom = @()
 foreach ($file in Get-ChildItem $root -Recurse -Include '*.json', '*.md', '*.html' -File |
-    Where-Object { $_.FullName -notmatch '\\(offline|logs|backups|reports|dist|\.git)\\' }) {
+    Where-Object { $_.FullName -notmatch '\\(offline|logs|backups|reports|dist|sandbox-staging|\.git)\\' }) {
     $bytes = [IO.File]::ReadAllBytes($file.FullName)
     if ($bytes.Length -ge 3 -and $bytes[0] -eq 0xEF -and $bytes[1] -eq 0xBB -and $bytes[2] -eq 0xBF) {
         $withBom += $file.FullName.Substring($root.Length + 1)

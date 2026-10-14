@@ -35,7 +35,9 @@ $archive = Join-Path $OutputDir "WinZii-$version.zip"
 $includeFolders = @('src', 'data', 'assets')
 $includeFiles = @('Start.bat', 'LICENSE', 'README.md', 'README.en.md', 'CHANGELOG.md', 'SECURITY.md')
 # Aus tools\ nur die Sandbox-Konfigurationen — die Prüfwerkzeuge sind Entwicklerkram.
-$includeToolPatterns = @('*.wsb')
+# Test-Sandbox.wsb nicht: Es braucht Test-Sandbox.ps1 und sandbox-staging\,
+# beides gibt es im Release nicht.
+$includeToolPatterns = @('WinZii*.wsb')
 
 Write-Host ''
 Write-Host "  WinZii $version — Release bauen" -ForegroundColor Cyan

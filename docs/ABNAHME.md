@@ -237,7 +237,7 @@ Neun Einträge, alle nur auf ihre Paketkennung geprüft — installiert wurde ke
 
 ## 10. Sandbox mit dem Netzweg dieses Geräts
 
-`tools\Test-Sandbox.wsb` läuft auch hier — dann über die Verbindung des Laptops statt über
+`tools\Start-SandboxTest.ps1` läuft auch hier — dann über die Verbindung des Laptops statt über
 die des Entwicklungsrechners. Das war im Plan ausdrücklich vorgesehen, weil der Sandbox-Lauf
 in diesem Projekt bisher sieben echte Fehler gefunden hat.
 

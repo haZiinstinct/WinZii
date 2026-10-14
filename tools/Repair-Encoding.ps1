@@ -13,7 +13,7 @@ $utf8 = New-Object Text.UTF8Encoding($false)
 $changed = 0
 
 $files = Get-ChildItem -Path $root -Recurse -File -Include '*.ps1', '*.xaml', '*.json', '*.md', '*.html' |
-    Where-Object { $_.FullName -notmatch '\\(offline|logs|backups|reports|dist|\.git)\\' }
+    Where-Object { $_.FullName -notmatch '\\(offline|logs|backups|reports|dist|sandbox-staging|\.git)\\' }
 
 foreach ($file in $files) {
     $bytes = [IO.File]::ReadAllBytes($file.FullName)

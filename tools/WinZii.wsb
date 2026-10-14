@@ -7,6 +7,10 @@
     Arbeitsverzeichnis nicht verändern. Für alles, was schreiben muss
     (Treibersicherung, Berichte, Protokolle), gibt es WinZii-Schreibend.wsb.
 
+    Schreibgeschützt heißt nicht unsichtbar: backups\ mit WLAN- und
+    BitLocker-Schlüsseln im Klartext ist in der Sandbox lesbar, und die hat
+    Netz (Audit 2026-10, M39).
+
     HostFolder steht relativ zu dieser Datei — ".." ist der WinZii-Ordner.
     Sollte Windows das ablehnen, hier den vollständigen Pfad eintragen.
 
