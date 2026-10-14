@@ -159,6 +159,35 @@ try {
     $syncHash.DryRun = $false
     Write-Check 'unsignierte setup.exe abgewiesen' ($null -eq $geliefert) "$geliefert"
     Write-Check 'unsignierte setup.exe gelöscht' (-not (Test-Path -LiteralPath $fremdeSetup))
+
+    # 5. Programme-Vorrat: Das Manifest muss zur winget-ID und zur Datei
+    #    daneben passen und darf keine eigenen Schalter mitbringen.
+    Write-Host ''
+    Write-Host '5. Manifest im Programme-Vorrat' -ForegroundColor White
+    . (Join-Path $repo 'src\modules\Apps.ps1')
+    $vorrat = Join-Path $spielwiese 'vorrat-test'
+    [void](New-Item -ItemType Directory -Path $vorrat -Force)
+    $setupDatei = Join-Path $vorrat 'Beispiel_1.0.exe'
+    [IO.File]::WriteAllText($setupDatei, 'kein echtes Programm')
+    $hash = (Get-FileHash -LiteralPath $setupDatei -Algorithm SHA256).Hash
+    $manifestPfad = Join-Path $vorrat 'Beispiel.Paket_1.0.yaml'
+    function Set-Manifest([string]$Id, [string]$Sha, [string]$Zusatz = '') {
+        $text = "PackageIdentifier: $Id`nPackageVersion: 1.0`nInstallers:`n- Architecture: x64`n  InstallerType: exe`n  InstallerSha256: $Sha`n$Zusatz"
+        [IO.File]::WriteAllText($manifestPfad, $text)
+    }
+    $dateien = @(Get-Item -LiteralPath $setupDatei)
+
+    Set-Manifest 'Beispiel.Paket' $hash
+    Write-Check 'passendes Manifest angenommen' ($null -eq (Test-WzVaultManifest -Directory $vorrat -WingetId 'Beispiel.Paket' -Installers $dateien))
+    Set-Manifest 'Fremd.Paket' $hash
+    Write-Check 'fremde winget-ID abgewiesen' ($null -ne (Test-WzVaultManifest -Directory $vorrat -WingetId 'Beispiel.Paket' -Installers $dateien))
+    Set-Manifest 'Beispiel.Paket' ('0' * 64)
+    Write-Check 'falsche Prüfsumme abgewiesen' ($null -ne (Test-WzVaultManifest -Directory $vorrat -WingetId 'Beispiel.Paket' -Installers $dateien))
+    Set-Manifest 'Beispiel.Paket' $hash "  InstallerSwitches:`n    Custom: /evil"
+    Write-Check 'eigene Installer-Schalter abgewiesen' ($null -ne (Test-WzVaultManifest -Directory $vorrat -WingetId 'Beispiel.Paket' -Installers $dateien))
+    Set-Manifest 'Beispiel.Paket' $hash
+    [IO.File]::WriteAllText((Join-Path $vorrat 'zweites.yaml'), "PackageIdentifier: Beispiel.Paket")
+    Write-Check 'zweites Manifest abgewiesen' ($null -ne (Test-WzVaultManifest -Directory $vorrat -WingetId 'Beispiel.Paket' -Installers $dateien))
 } finally {
     Remove-Item -LiteralPath $spielwiese -Recurse -Force -ErrorAction SilentlyContinue
 }
