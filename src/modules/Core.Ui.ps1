@@ -179,6 +179,10 @@ function Show-WzPage {
                 $initializer = "Initialize-Wz$($Id)Page"
                 if (Get-Command $initializer -ErrorAction SilentlyContinue) { & $initializer }
             } catch {
+                # Die halb verdrahtete Seite nicht im Zwischenspeicher lassen:
+                # Jeder weitere Klick zeigte sonst eine Seite ohne Handler, und
+                # der Fehler stand nur einmal im Protokoll (Audit 2026-10, M29).
+                [void]$syncHash.Pages.Remove($Id)
                 Write-WzLog (Get-WzText 'core.pageLoadFailed' @{ seite = $Id; grund = $_.Exception.Message }) -Level Error
                 return
             }

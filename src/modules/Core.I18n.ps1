@@ -73,6 +73,9 @@ function Get-WzSystemLanguage {
             0x19 = 'ru'; 0x04 = 'zh'; 0x11 = 'ja'; 0x01 = 'ar'
         }
         if ($map.ContainsKey($primary)) { return $map[$primary] }
+        # Eine Sprache ohne Eintrag ist jedenfalls nicht Deutsch: Ein
+        # polnischer oder niederländischer Anwender versteht Englisch eher.
+        return 'en'
     } catch { }
     return 'de'
 }
@@ -416,8 +419,11 @@ function Update-WzLanguageUi {
     $current = $syncHash.CurrentPage
     $syncHash.Pages.Clear()
     # Die »Geladen«-Merker der Seiten mit zurücksetzen, sonst überspringt
-    # Update-Wz<X>Page die Neubefüllung.
-    foreach ($flag in @($syncHash.Keys | Where-Object { $_ -like '*Loaded' })) {
+    # Update-Wz<X>Page die Neubefüllung. Nicht nur *Loaded: Die Programme-Seite
+    # hängt an AppsChecked, und nach dem Neuaufbau blieb ihr Installieren-Knopf
+    # bis zum Neustart grau (Audit 2026-10, H11). Ebenso OffChecked,
+    # AiStatesChecked, OptStatesChecked und CleanScanned.
+    foreach ($flag in @($syncHash.Keys | Where-Object { $_ -like '*Loaded' -or $_ -like '*Checked' -or $_ -like '*Scanned' })) {
         $syncHash[$flag] = $false
     }
     if ($current) { Show-WzPage -Id $current }
@@ -511,8 +517,12 @@ function Initialize-WzLanguage {
     $code = if ($Preferred -and $syncHash.Lang.ContainsKey($Preferred)) { $Preferred }
         elseif ($saved -and $syncHash.Lang.ContainsKey($saved)) { $saved }
         else { Get-WzSystemLanguage }
-    # Ist die erkannte Sprache noch nicht übersetzt, bleibt es bei Deutsch
-    if (-not $syncHash.Lang.ContainsKey($code)) { $code = 'de' }
+    # Ist die erkannte Sprache noch nicht übersetzt, gilt Englisch — nicht
+    # Deutsch: Ein spanisches oder französisches Windows landete bisher auf
+    # Deutsch (Audit 2026-10, M31).
+    if (-not $syncHash.Lang.ContainsKey($code)) {
+        $code = if ($code -ne 'de' -and $syncHash.Lang.ContainsKey('en')) { 'en' } else { 'de' }
+    }
 
     $syncHash.Language = $null       # erzwingt das Setzen in Set-WzLanguage
     # Nicht speichern: Ein Selbsttest-Lauf auf Englisch soll die Wahl des

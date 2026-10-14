@@ -202,14 +202,19 @@ $syncHash.BtnMaximize.Add_Click({
         $syncHash.BtnMaximize.Content = [char]0xE923
     }
 })
-$syncHash.BtnClose.Add_Click({
-    if ($syncHash.Busy) {
+$syncHash.BtnClose.Add_Click({ $syncHash.Window.Close() })
+# Die Rückfrage hängt am Schließen selbst, nicht am Knopf: Alt+F4 und
+# »Fenster schließen« in der Taskleiste beendeten WinZii bisher mitten in
+# pnputil oder Office-Setup (Audit 2026-10, H12). Der Selbsttest schließt
+# ausdrücklich ohne Rückfrage, sonst hielte ein laufender Startscan die CI an.
+$window.Add_Closing({
+    param($sender, $eventArgs)
+    if ($syncHash.Busy -and -not $syncHash.CloseWithoutAsking) {
         $answer = Show-WzConfirm -Title (Get-WzText 'dialog.busyTitle') `
             -Message (Get-WzText 'dialog.busyMessage' @{ name = $syncHash.BusyName }) `
             -ConfirmText (Get-WzText 'dialog.busyConfirm') -Danger
-        if (-not $answer.Confirmed) { return }
+        if (-not $answer.Confirmed) { $eventArgs.Cancel = $true }
     }
-    $syncHash.Window.Close()
 })
 
 # --- Kartengitter mitwachsen lassen ---------------------------------------
@@ -370,6 +375,7 @@ if ($env:WZ_SELFTEST) {
             Write-Host "  Stelle: $($_.InvocationInfo.ScriptName):$($_.InvocationInfo.ScriptLineNumber)" -ForegroundColor DarkGray
             Write-Host "  Zeile:  $($_.InvocationInfo.Line.Trim())" -ForegroundColor DarkGray
         }
+        $syncHash.CloseWithoutAsking = $true
         $syncHash.Window.Close()
     }.GetNewClosure())
     $shotTimer.Start()

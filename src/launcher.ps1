@@ -34,10 +34,12 @@ try {
         $map = @{ 0x07 = 'de'; 0x09 = 'en'; 0x0A = 'es'; 0x0C = 'fr'; 0x16 = 'pt'
                   0x19 = 'ru'; 0x04 = 'zh'; 0x11 = 'ja'; 0x01 = 'ar' }
         $primary = [int](Get-UICulture).LCID -band 0x3FF
-        if ($map.ContainsKey($primary)) { $wanted = $map[$primary] }
+        # Unbekannte Sprache: Englisch, nicht Deutsch (Audit 2026-10, M31)
+        $wanted = if ($map.ContainsKey($primary)) { $map[$primary] } else { 'en' }
     }
     if (-not $wanted) { $wanted = 'de' }
     $langFile = Join-Path $root "data\lang\$wanted.json"
+    if (-not (Test-Path -LiteralPath $langFile) -and $wanted -ne 'de') { $langFile = Join-Path $root 'data\lang\en.json' }
     if (-not (Test-Path -LiteralPath $langFile)) { $langFile = Join-Path $root 'data\lang\de.json' }
     $table = Get-Content -LiteralPath $langFile -Raw -Encoding UTF8 | ConvertFrom-Json
     foreach ($property in $table.boot.PSObject.Properties) { $script:BootTexts[$property.Name] = $property.Value }
