@@ -25,6 +25,24 @@ Alle nennenswerten Änderungen an WinZii. Die Fassungen folgen
   jetzt unter `offline\katalogtreiber` (Audit H5).
 - **Testmodus-Schalter ist während eines Vorgangs gesperrt,** auch über
   Strg+K (Audit H1).
+- **Restesuche lässt geteilte Namen aus.** Nach dem Entfernen einer
+  Python-Version wurde »Python« samt aller anderen Versionen als Rest
+  angeboten. Funde in AppData sind als Benutzerdaten gekennzeichnet (H2).
+- **Kein Eingriff ohne beschreibbaren Datenträger.** Auf einem
+  schreibgeschützten Stick wurde alles angewendet, nur die Sicherung fehlte
+  (H3).
+- **Übergabeblatt nennt nur, was wirklich geschah.** Fehlgeschlagene
+  Einträge standen dort als erledigt; Einträge ohne Ziel auf dem Gerät
+  heißen jetzt »nicht zutreffend« statt »angewendet«. Lesefehler zählen als
+  Fehlschlag, nicht als »gibt es nicht« (M1, M2).
+- **Defender-Netzwerkschutz nicht mehr vorausgewählt**, alle
+  Defender-Einträge nennen die Sperre in der Windows-Sicherheit (M4).
+- **Autostart zeigt den Startordner des angemeldeten Anwenders,** auch wenn
+  er umgeleitet ist, samt versteckter Dateien (M5).
+- **Rücknahme genauer:** Aufgaben im Zustand »Queued«, beim Anwenden
+  angelegte Schlüssel, Registry-Reste aus der Restesuche (M6, N).
+- **Bereinigung überspringt den Zwischenspeicher eines laufenden Browsers**
+  und meldet einen nicht geleerten Papierkorb als Fehler (M7).
 
 ### Geändert
 
