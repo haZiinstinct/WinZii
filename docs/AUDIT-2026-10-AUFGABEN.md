@@ -52,7 +52,7 @@ Jeder Punkt: `- [ ] **Kennung** Datei:Zeile. Aufgabe. → Erledigt wenn …`
 - [x] **M15** `src/modules/Core.Runspace.ps1:152-157`. Bei leerem Ergebnis `@()` statt `$null` an `OnComplete` übergeben. Gegenprobe in `src/pages/Drivers.ps1:486` und `src/pages/Toolbox.ps1:242`. → Erledigt wenn eine Katalogsuche ohne Treffer »keine Treffer« meldet.
 - [x] **M16** `src/pages/Drivers.ps1:396-400`, `src/modules/Apps.ps1:400, 430`. Pseudo-App-Objekt mit `id` versehen oder `Get-WzOfflineInstallerPath` bei fehlender `id` `$null` liefern lassen.
 - [x] **M17** `src/pages/Office.ps1:275`. `New-WzRestorePoint` in den Remove-Task vor Stufe 1 verlagern.
-- [ ] **M18** `src/modules/Setup.ps1:667-676`, `src/modules/Migration.ps1:451-455, 530`, `src/pages/Setup.ps1:402`. DryRun-Ergebnis aus `Import-WzPrinters` durchreichen; `Add-WzAction` nur an einer Stelle.
+- [x] **M18** `src/modules/Setup.ps1:667-676`, `src/modules/Migration.ps1:451-455, 530`, `src/pages/Setup.ps1:402`. DryRun-Ergebnis aus `Import-WzPrinters` durchreichen; `Add-WzAction` nur an einer Stelle.
 - [x] **N** `src/modules/Core.Version.ps1:30`. `SecurityProtocol = SecurityProtocol -bor Tls12` wie in `Apps.ps1:236`.
 - [x] **N** `src/modules/WindowsUpdate.ps1:231-236`. Bei Einzel-HResult 0 auf `$Result.HResult` zurückfallen.
 - [x] **N** `src/modules/Office.ps1:601-614`. ExitCode von `setup.exe` nach Stufe 1 prüfen und bei ≠ 0 als Warnung protokollieren.

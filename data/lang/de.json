@@ -2279,6 +2279,7 @@
     "printerDialogMessage": "Der Drucker »{name}« wird unter der Adresse {adresse} angelegt.",
     "printerDialogItem": "Verwendeter Treiber: {treiber}",
     "printerAdded": "Drucker »{name}« unter {adresse} angelegt.",
+    "printerDryRun": "Testmodus: Drucker »{name}« unter {adresse} würde angelegt. Angelegt wurde nichts.",
     "printerNoDriver": "Der Treiber »{treiber}« ließ sich nicht bereitstellen.",
     "printerFailed": "Der Drucker »{name}« konnte nicht angelegt werden.",
     "taskPrinter": "Drucker anlegen",

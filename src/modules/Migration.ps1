@@ -429,9 +429,15 @@ function Import-WzPrinters {
         übersprungen und im Ergebnis benannt.
     #>
     [CmdletBinding()]
-    param([Parameter(Mandatory = $true)][AllowEmptyCollection()][array]$Printers)
+    param(
+        [Parameter(Mandatory = $true)][AllowEmptyCollection()][array]$Printers,
+        # Der Aufrufer schreibt das Übergabeblatt selbst (Einzeldrucker auf der
+        # Seite »Einrichtung«). Sonst stand derselbe Drucker zweimal darin.
+        [switch]$SkipAction
+    )
 
     $applied = @()
+    $tested = @()
     $failed = @()
     $missingDriver = @()
     $missingPort = @()
@@ -451,6 +457,7 @@ function Import-WzPrinters {
         if ($syncHash.DryRun) {
             $note = if ($driverMissing) { Get-WzText 'rest.noteDriverNeeded' } else { '' }
             Write-WzLog (Get-WzText 'rest.logPrinterTest' @{ name = $printer.name; anschluss = $printer.anschluss; zusatz = $note }) -Level Test
+            $tested += $printer.name
             continue
         }
 
@@ -527,11 +534,14 @@ function Import-WzPrinters {
 
     if ($applied.Count -gt 0) {
         Write-WzLog (Get-WzText 'rest.logPrintersDone' @{ anzahl = $applied.Count }) -Level Ok
+    }
+    if ($applied.Count -gt 0 -and -not $SkipAction) {
         Add-WzAction -Area 'Zurückspielen' -Summary (Get-WzText 'rest.actionPrinters' @{ anzahl = $applied.Count }) -Detail $applied
     }
 
     return [pscustomobject]@{
         Applied       = @($applied)
+        Tested        = @($tested)
         Failed        = @($failed)
         MissingDriver = @($missingDriver)
         MissingPort   = @($missingPort)
