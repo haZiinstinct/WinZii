@@ -37,6 +37,41 @@ function Get-WzUserDataOverview {
     }
 }
 
+function Get-WzProfileShellValue {
+    <#
+    .SYNOPSIS
+        Liest einen Pfad aus dem Registry-Zweig eines Profils (HKU\<SID>) und
+        löst ihn auf dieses Profil auf.
+    .NOTES
+        Unaufgelöst gelesen: Get-ItemProperty setzte für %USERPROFILE% das
+        Profil des laufenden Kontos ein. Übernommen wird nur ein lokaler
+        Laufwerkspfad — der Wert ist vom Anwender beschreibbar, und ein
+        UNC-Pfad ließe den elevierten Prozess sich an einem fremden Server
+        anmelden. Ein umgeleiteter Ordner auf einer Freigabe fällt damit auf
+        den Standardpfad zurück.
+    .OUTPUTS
+        Pfad oder $null.
+    #>
+    param(
+        [Parameter(Mandatory = $true)][string]$Sid,
+        [Parameter(Mandatory = $true)][string]$ProfilePath,
+        [Parameter(Mandatory = $true)][string]$Key,
+        [Parameter(Mandatory = $true)][string]$Name
+    )
+
+    try {
+        $item = Get-Item -LiteralPath "Registry::HKEY_USERS\$Sid\$Key" -ErrorAction Stop
+        $raw = $item.GetValue($Name, $null, [Microsoft.Win32.RegistryValueOptions]::DoNotExpandEnvironmentNames)
+        if (-not $raw) { return $null }
+        $value = ([string]$raw) -replace '(?i)%USERPROFILE%', $ProfilePath.Replace('$', '$$')
+        $value = [Environment]::ExpandEnvironmentVariables($value)
+        if ($value -notmatch '^[A-Za-z]:\\' -or $value -match '[\x00-\x1F]') { return $null }
+        return $value.TrimEnd('\')
+    } catch {
+        return $null
+    }
+}
+
 function Get-WzUserProfiles {
     <#
     .SYNOPSIS
@@ -48,13 +83,18 @@ function Get-WzUserProfiles {
     param([switch]$IncludeSizes)
 
     $profiles = @()
+    # Shell steht für den Wertnamen unter »User Shell Folders«. Mit aktiver
+    # OneDrive-Ordnersicherung (Known Folder Move, Standard unter Windows 11)
+    # liegen Desktop, Dokumente und Bilder nicht mehr im Profilordner. Der
+    # feste Pfad war dann fast leer, und der Umzug kopierte fast nichts
+    # (Audit 2026-10, H10).
     $known = @(
-        @{ Key = 'Desktop';   Name = 'Desktop' }
-        @{ Key = 'Documents'; Name = 'Dokumente' }
-        @{ Key = 'Pictures';  Name = 'Bilder' }
-        @{ Key = 'Videos';    Name = 'Videos' }
-        @{ Key = 'Music';     Name = 'Musik' }
-        @{ Key = 'Downloads'; Name = 'Downloads' }
+        @{ Key = 'Desktop';   Name = 'Desktop';   Shell = 'Desktop' }
+        @{ Key = 'Documents'; Name = 'Dokumente'; Shell = 'Personal' }
+        @{ Key = 'Pictures';  Name = 'Bilder';    Shell = 'My Pictures' }
+        @{ Key = 'Videos';    Name = 'Videos';    Shell = 'My Video' }
+        @{ Key = 'Music';     Name = 'Musik';     Shell = 'My Music' }
+        @{ Key = 'Downloads'; Name = 'Downloads'; Shell = '{374DE290-123F-4565-9164-39C4925E467B}' }
     )
 
     try {
@@ -92,17 +132,24 @@ function Get-WzUserProfiles {
             # Bei großen Profilen dauert das Vermessen — die Zeile zeigt, dass
             # es vorangeht und welches Konto gerade dran ist
             Write-WzLog (Get-WzText 'data.logMeasuringProfile' @{ konto = $account }) -Level Info
+            $oneDriveRoot = Get-WzProfileShellValue -Sid $entry.SID -ProfilePath $path -Key 'Environment' -Name 'OneDrive'
             foreach ($folder in $known) {
-                $folderPath = Join-Path $path $folder.Key
+                # Erst das tatsächliche Ziel, sonst der Standardpfad. Ist das
+                # Profil nicht geladen (anderes Konto, nicht angemeldet), gibt
+                # es keinen Registry-Zweig — dann bleibt nur der Standard.
+                $folderPath = Get-WzProfileShellValue -Sid $entry.SID -ProfilePath $path `
+                    -Key 'Software\Microsoft\Windows\CurrentVersion\Explorer\User Shell Folders' -Name $folder.Shell
+                if (-not $folderPath) { $folderPath = Join-Path $path $folder.Key }
                 if (-not (Test-Path -LiteralPath $folderPath -ErrorAction SilentlyContinue)) { continue }
                 $accessible = $true
                 $measure = Measure-WzPathSet -Paths @($folderPath)
                 if ($measure.Items -eq 0 -and $measure.Bytes -eq 0) { continue }
                 $folders += [pscustomobject]@{
-                    Name  = $folder.Name
-                    Path  = $folderPath
-                    Bytes = $measure.Bytes
-                    Items = $measure.Items
+                    Name      = $folder.Name
+                    Path      = $folderPath
+                    Bytes     = $measure.Bytes
+                    Items     = $measure.Items
+                    InOneDrive = [bool]($oneDriveRoot -and $folderPath.StartsWith($oneDriveRoot.TrimEnd('\') + '\', [StringComparison]::OrdinalIgnoreCase))
                 }
                 $total += $measure.Bytes
             }

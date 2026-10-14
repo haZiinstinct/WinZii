@@ -410,6 +410,13 @@ function Start-WzFileMigration {
     if ($target.IsWinZii) {
         $warnings += Get-WzText 'data.warnWinZiiTarget'
     }
+    # Ordner in OneDrive (Ordnersicherung): Dateien, die nur in der Cloud
+    # liegen, lädt robocopy beim Lesen herunter oder überspringt sie ohne
+    # Netz (Audit H10).
+    $inOneDrive = @($selected.Folders | Where-Object { $_.PSObject.Properties['InOneDrive'] -and $_.InOneDrive } | ForEach-Object { $_.Name })
+    if ($inOneDrive.Count -gt 0) {
+        $warnings += Get-WzText 'data.warnOneDriveFolders' @{ ordner = ($inOneDrive -join ', ') }
+    }
 
     $message = Get-WzText 'data.copyMessage' @{ ziel = "$($target.Letter)\WinZii-Daten\$env:COMPUTERNAME\" }
     if ($warnings.Count -gt 0) { $message += "`n`n" + ($warnings -join "`n") }
