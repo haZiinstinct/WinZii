@@ -119,14 +119,14 @@ Jeder Punkt: `- [ ] **Kennung** Datei:Zeile. Aufgabe. → Erledigt wenn …`
 - [x] **M33** `.github/workflows/pruefung.yml`. `timeout-minutes: 30` je Job, `permissions: contents: read`, `concurrency` mit `cancel-in-progress`.
 - [x] **M34** `.github/workflows/pruefung.yml:32, 44, 125`. Actions per SHA pinnen (Versionskommentar), `Install-Module PSScriptAnalyzer -RequiredVersion`, `.github/dependabot.yml` für `github-actions`.
 - [x] **M36** `tools/Test-Undo.ps1:244-347, 408-535`. Abschnitte 7 und 8 in `try/finally` mit garantierter Rückschaltung des Energieplans und Löschung der Testschlüssel. README Z. 220 und CONTRIBUTING Z. 45: Hinweis »ändert kurzzeitig den aktiven Energieplan, braucht Admin«.
-- [ ] **M37** BOM entfernen aus `data/apps.json`, `data/tweaks.json`, `data/updatecodes.json`, `data/lang/de.json`, `data/lang/en.json`, `data/lang/kataloge.en.json`, `README.md`, `README.en.md`, `CHANGELOG.md`, `docs/ABNAHME.md`. `Test-Smoke.ps1:86` um »JSON/MD/HTML ohne BOM« erweitern, `Repair-Encoding.ps1` entsprechend. → Erledigt wenn `python3 -c "import json; json.load(open('data/tweaks.json'))"` ohne `utf-8-sig` durchläuft.
+- [x] **M37** BOM entfernen aus `data/apps.json`, `data/tweaks.json`, `data/updatecodes.json`, `data/lang/de.json`, `data/lang/en.json`, `data/lang/kataloge.en.json`, `README.md`, `README.en.md`, `CHANGELOG.md`, `docs/ABNAHME.md`. `Test-Smoke.ps1:86` um »JSON/MD/HTML ohne BOM« erweitern, `Repair-Encoding.ps1` entsprechend. → Erledigt wenn `python3 -c "import json; json.load(open('data/tweaks.json'))"` ohne `utf-8-sig` durchläuft.
 - [ ] **M39** `tools/Test-Sandbox.wsb:21-23`, `tools/WinZii-Schreibend.wsb:23-25`, `tools/Test-Sandbox.ps1:172-191, 236, 368`. Nur einen Staging-Ordner (`New-Release.ps1 -KeepStaging`) einbinden; am Ende `offline\daten\<Sandbox-PC>\` entfernen; `.wsb`-Kommentar auf `backups\` hinweisen.
 - [x] **M40** `tools/Test-Smoke.ps1:28`. Auch `tools\` parsen; `Test-Layout` als CI-Schritt; `New-Release.ps1 -OutputDir $env:RUNNER_TEMP` als Trockenlauf.
 - [ ] **Neue Prüfwerkzeuge** für die neun Module ohne funktionale Aussage, in dieser Reihenfolge: Report (HTML-Escaping mit Injektions-Mustern, CSV), Setup (Validierung Rechnername/Konto/Schlüssel), WindowsUpdate (HResult-Kette, Get-WzUpdateResultCode), Toolbox, AiRemoval, Autostart, HealthCheck, Snapshot, Core.Version (Test-WzVersionNewer). → Erledigt wenn die Tabelle »Testabdeckung je Modul« im Audit keine Zeile »keines« mehr hat.
 - [x] **N** `tools/New-Release.ps1:98-105`. Zweite Zeile mit `WinZii.zip` in die `.sha256`.
-- [ ] **N** `.gitattributes:27-31`. `.github/ export-ignore`.
+- [x] **N** `.gitattributes:27-31`. `.github/ export-ignore`.
 - [x] **N** `.gitignore`. `/selftest.png`, `/abbilder/`.
-- [ ] **N** `.editorconfig:9`. `[*.{yml,yaml,txt,gitattributes,gitignore,editorconfig}] end_of_line = lf`.
+- [x] **N** `.editorconfig:9`. `[*.{yml,yaml,txt,gitattributes,gitignore,editorconfig}] end_of_line = lf`.
 - [x] **N** `tools/Test-Language.ps1:201-216`. `Core.I18n.ps1` dot-sourcen und `Get-WzSystemLanguage` mit umgebogener `Get-UICulture` aufrufen; Z. 259: Einzelwort-Literale in `-ConfirmText`, `-Title`, `-Area` prüfen.
 - [ ] **N** `tools/Test-Pages.ps1:51, 71`, `tools/Test-Layout.ps1:229`, `tools/Test-Sandbox.ps1:51, 63`. Zusätzlich `$LASTEXITCODE -ne 0` als Fehlschlag.
 - [ ] **N** `tools/Test-Process.ps1:88`. PID des gestarteten Kindprozesses prüfen statt aller `ping`-Prozesse.

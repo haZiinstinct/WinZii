@@ -26,3 +26,8 @@ charset = utf-8
 
 [*.md]
 trim_trailing_whitespace = false
+
+# Wie in .gitattributes: YAML, Textdateien und die Git-Steuerdateien mit LF.
+# Das [*]-crlf oben widersprach dem bisher (Audit 2026-10, N).
+[*.{yml,yaml,txt,gitattributes,gitignore,editorconfig}]
+end_of_line = lf

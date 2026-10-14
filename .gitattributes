@@ -1,4 +1,4 @@
-﻿* text=auto
+* text=auto
 
 # Windows-Skripte brauchen CRLF.
 #
@@ -29,3 +29,4 @@ tools/*.ps1     export-ignore
 .gitattributes  export-ignore
 .gitignore      export-ignore
 .editorconfig   export-ignore
+.github/        export-ignore

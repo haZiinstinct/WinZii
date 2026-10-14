@@ -2,7 +2,7 @@
 #   1. Syntax aller PowerShell-Dateien
 #   2. XAML-Dateien parsebar
 #   3. JSON-Kataloge gültig
-#   4. Encoding (UTF-8 mit BOM)
+#   4. Encoding (PowerShell und XAML mit BOM, JSON/Markdown/HTML ohne)
 #   5. Log-Level jedes Write-WzLog-Aufrufs gegen das ValidateSet
 # Aufruf:  powershell -NoProfile -ExecutionPolicy Bypass -STA -File tools\Test-Smoke.ps1
 [CmdletBinding()]
@@ -98,6 +98,26 @@ if ($noBom.Count -eq 0) {
 } else {
     $errors += 'Encoding'
     Write-Result "$($noBom.Count) Datei(en) ohne BOM" $false ($noBom -join ', ')
+    Write-Host '         Abhilfe: tools\Repair-Encoding.ps1' -ForegroundColor DarkGray
+}
+
+# Umgekehrt JSON, Markdown, HTML: ohne BOM. Sechs JSON- und vier Markdown-
+# Dateien trugen eine, entgegen CONTRIBUTING und .editorconfig; jq und
+# Pythons json.load scheiterten daran (Audit 2026-10, M37).
+$withBom = @()
+foreach ($file in Get-ChildItem $root -Recurse -Include '*.json', '*.md', '*.html' -File |
+    Where-Object { $_.FullName -notmatch '\\(offline|logs|backups|reports|dist|\.git)\\' }) {
+    $bytes = [IO.File]::ReadAllBytes($file.FullName)
+    if ($bytes.Length -ge 3 -and $bytes[0] -eq 0xEF -and $bytes[1] -eq 0xBB -and $bytes[2] -eq 0xBF) {
+        $withBom += $file.FullName.Substring($root.Length + 1)
+    }
+}
+$checked++
+if ($withBom.Count -eq 0) {
+    Write-Result 'JSON, Markdown, HTML ohne BOM' $true
+} else {
+    $errors += 'Encoding'
+    Write-Result "$($withBom.Count) Datei(en) mit BOM, die keine haben sollen" $false ($withBom -join ', ')
     Write-Host '         Abhilfe: tools\Repair-Encoding.ps1' -ForegroundColor DarkGray
 }
 
