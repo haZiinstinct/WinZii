@@ -158,6 +158,20 @@ function ConvertTo-WzHtmlText {
     return $Text.Replace('&', '&amp;').Replace('<', '&lt;').Replace('>', '&gt;').Replace('"', '&quot;')
 }
 
+function New-WzHtmlTag {
+    <#
+    .SYNOPSIS
+        Abzeichen für eine Tabellenzelle — der einzige Weg, auf dem fertiges
+        HTML in New-WzHtmlTable gelangt. Der Text wird maskiert, die Art
+        stammt aus einer festen Liste.
+    #>
+    param(
+        [Parameter(Mandatory = $true)][AllowEmptyString()][string]$Text,
+        [ValidateSet('ok', 'warn', 'err', 'info')][string]$Kind = 'info'
+    )
+    return [pscustomobject]@{ WzHtml = "<span class=`"tag tag-$Kind`">$(ConvertTo-WzHtmlText $Text)</span>" }
+}
+
 function New-WzHtmlCard {
     <#
     .SYNOPSIS
@@ -171,10 +185,19 @@ function New-WzHtmlCard {
     )
 
     $items = foreach ($row in $Rows) {
-        $parts = $row -split '\|'
+        # Bezeichnung ist der erste Teil, die Art höchstens der letzte und nur,
+        # wenn sie in der festen Liste steht; alles dazwischen ist der Wert.
+        # Bisher zerschnitt ein »|« im Wert die Zeile, und der Rest landete
+        # unmaskiert als CSS-Klasse — eine SSID wie »Gast|" onmouseover="x«
+        # reichte für eine Attribut-Injektion im Übergabeblatt (Audit M20).
+        $parts = @($row -split '\|')
+        $kind = ''
+        if ($parts.Count -gt 2 -and $parts[-1] -cin @('ok', 'warn', 'err', 'info')) {
+            $kind = $parts[-1]
+            $parts = $parts[0..($parts.Count - 2)]
+        }
         $label = ConvertTo-WzHtmlText $parts[0]
-        $value = if ($parts.Count -gt 1) { ConvertTo-WzHtmlText $parts[1] } else { '' }
-        $kind = if ($parts.Count -gt 2) { $parts[2] } else { '' }
+        $value = if ($parts.Count -gt 1) { ConvertTo-WzHtmlText ($parts[1..($parts.Count - 1)] -join '|') } else { '' }
         if ($kind) {
             "<dt>$label</dt><dd><span class=`"tag tag-$kind`">$value</span></dd>"
         } else {
@@ -224,9 +247,12 @@ function New-WzHtmlTable {
         $cells = foreach ($definition in $definitions) {
             $value = $row.$($definition.Property)
             $class = if ($definition.Class) { " class=`"$($definition.Class)`"" } else { '' }
-            # Bereits fertiges HTML (z. B. Abzeichen) wird nicht erneut maskiert
-            $text = if ($value -is [string] -and $value -match '^<(span|a|strong|em)\b') {
-                $value
+            # Fertiges HTML nur, wenn es ausdrücklich als solches gebaut wurde
+            # (New-WzHtmlTag). Bisher genügte ein Wert, der mit »<span« begann —
+            # und durch die Tabelle laufen Ereignistexte, Programmnamen und
+            # Autostart-Einträge von fremder Hand (Audit M21).
+            $text = if ($value -is [psobject] -and $value.PSObject.Properties['WzHtml']) {
+                [string]$value.WzHtml
             } else {
                 ConvertTo-WzHtmlText ([string]$value)
             }
@@ -365,10 +391,10 @@ function New-WzDiagReport {
         New-WzHtmlNote -Text (Get-WzText 'rep.diagNoEvents') -Kind 'ok'
     } else {
         $rows = foreach ($event in $events) {
-            $tagClass = switch ($event.Severity) {
-                'critical' { 'tag-err' }
-                'error'    { 'tag-warn' }
-                default    { 'tag-info' }
+            $tagKind = switch ($event.Severity) {
+                'critical' { 'err' }
+                'error'    { 'warn' }
+                default    { 'info' }
             }
             $label = switch ($event.Severity) {
                 'critical' { Get-WzText 'rep.sevCritical' }
@@ -376,7 +402,7 @@ function New-WzDiagReport {
                 default    { Get-WzText 'rep.sevNotice' }
             }
             [pscustomobject]@{
-                Stufe    = "<span class=`"tag $tagClass`">$label</span>"
+                Stufe    = New-WzHtmlTag -Text $label -Kind $tagKind
                 Titel    = $event.Title
                 Anzahl   = $event.Count
                 Zuletzt  = $event.Last.ToString('g', (Get-WzLanguageCulture))
@@ -486,7 +512,7 @@ function New-WzDiagReport {
         New-WzHtmlNote -Text (Get-WzText 'rep.diagNoDisks') -Kind 'info'
     } else {
         $rows = foreach ($disk in $disks) {
-            $tag = if ($disk.AssessmentOk) { 'tag-ok' } else { 'tag-warn' }
+            $tag = if ($disk.AssessmentOk) { 'ok' } else { 'warn' }
             [pscustomobject]@{
                 Modell      = $disk.Model
                 Art         = $disk.MediaType
@@ -494,7 +520,7 @@ function New-WzDiagReport {
                 Betrieb     = $disk.PowerOnHours
                 Temperatur  = $disk.Temperature
                 Abnutzung   = $disk.Wear
-                Zustand     = "<span class=`"tag $tag`">$($disk.Assessment)</span>"
+                Zustand     = New-WzHtmlTag -Text $disk.Assessment -Kind $tag
             }
         }
         New-WzHtmlTable -Data $rows -Columns @(
@@ -593,7 +619,7 @@ function New-WzHandoverReport {
             $change = if (-not $old) {
                 Get-WzText 'rep.noBaseline'
             } elseif ($gained -gt 0) {
-                "<span class=`"tag tag-ok`">+$(Format-WzBytes $gained)</span>"
+                New-WzHtmlTag -Text "+$(Format-WzBytes $gained)" -Kind 'ok'
             } elseif ($gained -lt 0) {
                 "-$(Format-WzBytes ([math]::Abs($gained)))"
             } else { Get-WzText 'rep.unchanged' }
@@ -838,7 +864,7 @@ function New-WzUserDataReport {
                 Pfad   = $folder.Path
                 Lokal  = Get-WzText 'rep.udOneDriveLocal' @{ groesse = (Format-WzBytes $folder.LocalBytes); anzahl = $folder.LocalFiles }
                 Cloud  = if ($folder.CloudOnly -gt 0) {
-                    "<span class=`"tag tag-warn`">$(Get-WzText 'rep.udCloudOnly' @{ anzahl = $folder.CloudOnly })</span>"
+                    New-WzHtmlTag -Text (Get-WzText 'rep.udCloudOnly' @{ anzahl = $folder.CloudOnly }) -Kind 'warn'
                 } else { Get-WzText 'rep.udNoPlaceholders' }
             }
         })
