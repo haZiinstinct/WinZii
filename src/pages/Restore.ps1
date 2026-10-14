@@ -251,6 +251,9 @@ function Start-WzWlanImport {
         -Items $names -ConfirmText (Get-WzText 'rest.btnSetUp')
     if (-not $answer.Confirmed) { return }
 
+    # Über $syncHash: Wenn der Abschluss läuft, ist diese Funktion längst
+    # zurück und $files nicht mehr erreichbar.
+    $syncHash.RstWlanFiles = $files
     Invoke-WzTask -Name (Get-WzText 'rest.taskWlan') -ArgumentList (, $files) -ScriptBlock {
         param($files)
         Import-WzWlanProfiles -Files $files
@@ -259,6 +262,24 @@ function Start-WzWlanImport {
         if (-not $result) { return }
         Show-WzRestoreResult -Title (Get-WzText 'rest.resultWlanTitle') -Result $result -Extras @(
             @{ Kind = 'WithoutKey'; Text = (Get-WzText 'rest.extraWithoutKey') })
+
+        # Die Schlüssel liegen im Klartext auf dem Stick und wanderten bisher
+        # zum nächsten Kunden mit. Sind sie eingespielt, werden sie dort nicht
+        # mehr gebraucht (Audit 2026-10, M26).
+        $mitSchluessel = @($syncHash.RstWlanFiles | Where-Object { (Test-Path -LiteralPath $_) -and (Test-WzWlanProfileHasKey -Path $_) })
+        if (-not $syncHash.DryRun -and @($result.Applied).Count -gt 0 -and $mitSchluessel.Count -gt 0) {
+            $loeschen = Show-WzConfirm -Title (Get-WzText 'rest.wipeKeysTitle') `
+                -Message (Get-WzText 'rest.wipeKeysMessage' @{ anzahl = $mitSchluessel.Count }) `
+                -ConfirmText (Get-WzText 'rest.btnWipeKeys')
+            if ($loeschen.Confirmed) {
+                $weg = 0
+                foreach ($datei in $mitSchluessel) {
+                    try { Remove-Item -LiteralPath $datei -Force -ErrorAction Stop; $weg++ } catch { }
+                }
+                Write-WzLog (Get-WzText 'rest.logKeysWiped' @{ anzahl = $weg }) -Level Ok
+            }
+        }
+        $syncHash.RstWlanFiles = $null
         Start-WzRestoreScan
     }
 }
