@@ -443,17 +443,17 @@
         "explanation": "A service crashed and was not started again.",
         "recommendation": "Check or reinstall the matching software."
       },
-      "DCOM/10016": {
+      "Microsoft-Windows-DistributedCOM/10016": {
         "title": "DCOM permission missing (usually harmless)",
         "explanation": "One component wanted to reach another and had no permission. Windows handles that internally.",
         "recommendation": "Can be ignored. Microsoft itself classes this message as harmless — it is the most common false alarm in Event Viewer."
       },
-      "DistributedCOM/10010": {
+      "Microsoft-Windows-DistributedCOM/10010": {
         "title": "COM server did not answer in time (usually harmless)",
         "explanation": "A component did not register quickly enough. Windows carries on normally afterwards.",
         "recommendation": "Can be ignored. It appears in large numbers on almost every Windows and is no sign of a defect."
       },
-      "DistributedCOM/10001": {
+      "Microsoft-Windows-DistributedCOM/10001": {
         "title": "Application could not be started",
         "explanation": "A COM application failed to start, usually for lack of permission.",
         "recommendation": "Only worth chasing if a program genuinely does not work."
@@ -483,7 +483,7 @@
         "explanation": "A device paired over Bluetooth or USB could not be disconnected cleanly.",
         "recommendation": "Of no significance as long as the devices work."
       },
-      "CertificateServicesClient-CertEnroll/87": {
+      "Microsoft-Windows-CertificateServicesClient-CertEnroll/87": {
         "title": "Certificate request failed",
         "explanation": "Windows wanted to request a certificate and received no answer.",
         "recommendation": "Of no significance on home networks. On company networks, check the certificate authority."

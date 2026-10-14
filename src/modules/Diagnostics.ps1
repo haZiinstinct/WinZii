@@ -39,11 +39,33 @@ function Get-WzEventSummary {
         }
     }
 
+    # Warnungen (Level 3) nur von den Anbietern, die der Katalog kennt — sonst
+    # gingen die Fehler in der Masse unter. Bisher wurden sie gar nicht
+    # abgefragt, und jeder Katalogeintrag mit »warning« (WHEA 17/47, disk 51,
+    # DNS 1014 …) blieb unauffindbar (Audit 2026-10, N).
+    $warnProviders = @($map.entries | Where-Object { $_.severity -eq 'warning' } |
+        ForEach-Object { $_.provider; $_.aliases } | Where-Object { $_ } | Sort-Object -Unique)
+    if ($warnProviders.Count -gt 0) {
+        foreach ($logName in $LogNames) {
+            try {
+                $events += @(Get-WinEvent -FilterHashtable @{
+                        LogName = $logName; Level = 3; StartTime = $startTime; ProviderName = $warnProviders
+                    } -MaxEvents $MaxEvents -ErrorAction Stop)
+            } catch { }
+        }
+    }
+
     $groups = $events | Group-Object -Property ProviderName, Id | ForEach-Object {
         $first = $_.Group[0]
+        # Exakter Vergleich plus Aliasliste. Der Teilstring traf mit »disk«
+        # auch »DiskDiagnostic…«, und »DCOM« traf den echten Anbieter
+        # »Microsoft-Windows-DistributedCOM« nie.
         $known = $map.entries | Where-Object {
-            $_.id -eq $first.Id -and $first.ProviderName -like "*$($_.provider)*"
+            $_.id -eq $first.Id -and ($first.ProviderName -eq $_.provider -or @($_.aliases) -contains $first.ProviderName)
         } | Select-Object -First 1
+        # Ein Warnungs-Ereignis zählt nur, wenn es kartiert ist; die Abfrage
+        # holt ganze Anbieter, nicht einzelne Kennungen.
+        if ($first.Level -eq 3 -and -not $known) { return }
 
         $times = $_.Group | Select-Object -ExpandProperty TimeCreated | Sort-Object
         $severity = if ($known) {
@@ -261,8 +283,17 @@ function Read-WzDumpBugcheckCode {
             $signature = [Text.Encoding]::ASCII.GetString($header, 0, 4)
             if ($signature -ne 'PAGE') { return $null }
 
-            # 64-Bit-Abbilder tragen den Stoppcode bei Offset 0x38
-            $code = [BitConverter]::ToUInt32($header, 0x38)
+            # Bytes 4-8 sagen, welcher Kopf folgt: »DU64« (DUMP_HEADER64) trägt
+            # den Stoppcode bei 0x38, »DUMP« (DUMP_HEADER32) bei 0x28. Bisher
+            # wurde immer 0x38 gelesen, und ein 32-Bit-Abbild ergab einen
+            # falschen Stoppcode (Audit 2026-10, N).
+            $valid = [Text.Encoding]::ASCII.GetString($header, 4, 4)
+            $offset = switch ($valid) {
+                'DU64' { 0x38 }
+                'DUMP' { 0x28 }
+                default { return $null }
+            }
+            $code = [BitConverter]::ToUInt32($header, $offset)
             if ($code -eq 0) { return $null }
             return ('0x{0:X8}' -f $code)
         } finally {
@@ -462,9 +493,23 @@ function Invoke-WzChkdsk {
         return [pscustomobject]@{ Success = $true; Summary = (Get-WzText 'core.dryRunSummary') }
     }
 
+    # /scan gibt es nur für NTFS. Auf FAT32 oder exFAT endete der Aufruf mit
+    # einem Fehler, der wie ein Befund aussah (Audit 2026-10, N).
+    try {
+        $format = (New-Object IO.DriveInfo ($Drive.TrimEnd('\') + '\')).DriveFormat
+    } catch { $format = '' }
+    if ($format -and $format -ne 'NTFS') {
+        $summary = Get-WzText 'diag.chkdskNotNtfs' @{ laufwerk = $Drive; format = $format }
+        Write-WzLog $summary -Level Info
+        return [pscustomobject]@{ Success = $true; Summary = $summary }
+    }
+
     Write-WzLog (Get-WzText 'diag.logChkdskRunning' @{ laufwerk = $Drive }) -Level Action
     $result = Invoke-WzProcess -FilePath 'chkdsk.exe' -Arguments "$Drive /scan /perf" -TimeoutSeconds 3600
 
+    # Rückgabewerte laut chkdsk-Dokumentation: 2 heißt Aufräumarbeiten
+    # erledigt (oder ohne /f nicht erledigt) — kein Fehler. 3 heißt Prüfung
+    # nicht möglich oder Fehler nicht behoben. Die Texte waren vertauscht.
     $summary = switch ($result.ExitCode) {
         0 { Get-WzText 'diag.chkdskClean' }
         1 { Get-WzText 'diag.chkdskFixed' }
@@ -473,8 +518,9 @@ function Invoke-WzChkdsk {
         default { Get-WzText 'diag.chkdskOther' @{ code = $result.ExitCode } }
     }
 
-    Write-WzLog $summary -Level $(if ($result.ExitCode -le 1) { 'Ok' } else { 'Warn' })
-    return [pscustomobject]@{ Success = ($result.ExitCode -le 1); Summary = $summary }
+    $ok = ($result.ExitCode -le 2)
+    Write-WzLog $summary -Level $(if ($ok) { 'Ok' } else { 'Warn' })
+    return [pscustomobject]@{ Success = $ok; Summary = $summary }
 }
 
 function New-WzBatteryReport {

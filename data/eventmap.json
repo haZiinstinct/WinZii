@@ -67,6 +67,7 @@
     },
     {
       "provider": "Ntfs",
+      "aliases": ["Microsoft-Windows-Ntfs"],
       "id": 55,
       "severity": "critical",
       "title": "Dateisystem beschädigt",
@@ -130,7 +131,7 @@
       "recommendation": "Zugehörige Software prüfen oder neu installieren."
     },
     {
-      "provider": "DCOM",
+      "provider": "Microsoft-Windows-DistributedCOM",
       "id": 10016,
       "severity": "warning",
       "title": "DCOM-Berechtigung fehlt (meist harmlos)",
@@ -138,7 +139,7 @@
       "recommendation": "Kann ignoriert werden. Microsoft stuft diese Meldung selbst als unkritisch ein — sie ist der häufigste Fehlalarm in der Ereignisanzeige."
     },
     {
-      "provider": "DistributedCOM",
+      "provider": "Microsoft-Windows-DistributedCOM",
       "id": 10010,
       "severity": "warning",
       "title": "COM-Server antwortete nicht rechtzeitig (meist harmlos)",
@@ -146,7 +147,7 @@
       "recommendation": "Kann ignoriert werden. Tritt auf fast jedem Windows in großer Zahl auf und ist kein Hinweis auf einen Defekt."
     },
     {
-      "provider": "DistributedCOM",
+      "provider": "Microsoft-Windows-DistributedCOM",
       "id": 10001,
       "severity": "warning",
       "title": "Anwendung konnte nicht gestartet werden",
@@ -194,7 +195,7 @@
       "recommendation": "Ohne Bedeutung, solange die Geräte funktionieren."
     },
     {
-      "provider": "CertificateServicesClient-CertEnroll",
+      "provider": "Microsoft-Windows-CertificateServicesClient-CertEnroll",
       "id": 87,
       "severity": "warning",
       "title": "Zertifikatanforderung fehlgeschlagen",
