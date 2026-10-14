@@ -153,7 +153,10 @@ function Test-WzFileSignature {
     #>
     param(
         [Parameter(Mandatory = $true)][string]$Path,
-        [switch]$RequireMicrosoft
+        [switch]$RequireMicrosoft,
+        # Zulässige Aussteller (CN des Zertifikats, exakt). »Gültig signiert«
+        # allein hieße: von irgendwem mit einem Codesignatur-Zertifikat.
+        [string[]]$ExpectedSigners
     )
 
     try {
@@ -165,6 +168,10 @@ function Test-WzFileSignature {
     if ($RequireMicrosoft) {
         $subject = [string]$signature.SignerCertificate.Subject
         if ($subject -notmatch '(^|,\s*)O=Microsoft Corporation(,|$)') { return $false }
+    }
+    if ($PSBoundParameters.ContainsKey('ExpectedSigners')) {
+        $cn = $signature.SignerCertificate.GetNameInfo([Security.Cryptography.X509Certificates.X509NameType]::SimpleName, $false)
+        if (@($ExpectedSigners | Where-Object { $_ -and $_ -ceq $cn }).Count -eq 0) { return $false }
     }
     return $true
 }

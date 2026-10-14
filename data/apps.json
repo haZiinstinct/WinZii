@@ -31,6 +31,7 @@
       "name": "Notepad++",
       "category": "basis",
       "wingetId": "Notepad++.Notepad++",
+      "signers": ["NOTEPAD++"],
       "description": "Texteditor mit Syntaxhervorhebung, ersetzt den Windows-Editor.",
       "defaultChecked": true
     },
@@ -71,6 +72,7 @@
       "name": "Mozilla Thunderbird",
       "category": "basis",
       "wingetId": "Mozilla.Thunderbird",
+      "signers": ["Mozilla Corporation"],
       "description": "Mailprogramm ohne Office-Lizenz. Kann Outlook-Konten übernehmen.",
       "defaultChecked": false
     },
@@ -79,6 +81,7 @@
       "name": "Mozilla Firefox",
       "category": "browser",
       "wingetId": "Mozilla.Firefox.de",
+      "signers": ["Mozilla Corporation"],
       "description": "Deutschsprachige Fassung.",
       "defaultChecked": false
     },
@@ -87,6 +90,7 @@
       "name": "Google Chrome",
       "category": "browser",
       "wingetId": "Google.Chrome",
+      "signers": ["Google LLC"],
       "description": "Weit verbreitet, viele Kunden erwarten ihn.",
       "defaultChecked": false
     },
@@ -95,6 +99,7 @@
       "name": "Brave",
       "category": "browser",
       "wingetId": "Brave.Brave",
+      "signers": ["Brave Software, Inc."],
       "description": "Chromium-Basis mit eingebautem Werbeblocker.",
       "defaultChecked": false
     },
@@ -119,6 +124,7 @@
       "name": "HWiNFO",
       "category": "technik",
       "wingetId": "REALiX.HWiNFO",
+      "signers": ["REALiX, s.r.o."],
       "description": "Liest alle Sensoren aus: Temperaturen, Spannungen, Taktraten.",
       "defaultChecked": false
     },
@@ -143,6 +149,7 @@
       "name": "BleachBit",
       "category": "technik",
       "wingetId": "BleachBit.BleachBit",
+      "signers": ["Open Source Developer, Andrew Ziem"],
       "description": "Zusätzliche Bereinigung für Programme, die WinZii nicht abdeckt.",
       "defaultChecked": false
     },
@@ -223,6 +230,7 @@
       "name": "Malwarebytes",
       "category": "sicherheit",
       "wingetId": "Malwarebytes.Malwarebytes",
+      "signers": ["Malwarebytes Inc"],
       "description": "Zweitmeinung neben dem Windows-Defender. Achtung: Die kostenlose Fassung startet als Testversion der Premium-Variante mit Echtzeitschutz — nach 14 Tagen fällt sie auf reines Scannen zurück. Bis dahin laufen zwei Wächter nebeneinander.",
       "defaultChecked": false
     },
@@ -287,6 +295,7 @@
       "name": "AnyDesk",
       "category": "fernwartung",
       "wingetId": "AnyDeskSoftwareGmbH.AnyDesk",
+      "signers": ["AnyDesk Software GmbH"],
       "description": "Fernwartung, im deutschsprachigen Raum weit verbreitet.",
       "defaultChecked": false
     },
@@ -407,6 +416,7 @@
       "name": "VLC media player",
       "category": "medien",
       "wingetId": "VideoLAN.VLC",
+      "signers": ["VideoLAN"],
       "description": "Spielt praktisch jedes Video- und Audioformat ab.",
       "defaultChecked": true
     },
@@ -447,6 +457,7 @@
       "name": "Visual C++ Laufzeit 2015-2022",
       "category": "laufzeit",
       "wingetId": "Microsoft.VCRedist.2015+.x64",
+      "signers": ["Microsoft Corporation"],
       "description": "Die mit Abstand häufigste fehlende Abhängigkeit. Fehlt sie, starten viele Programme und Spiele nicht.",
       "defaultChecked": true
     },
@@ -455,6 +466,7 @@
       "name": ".NET Desktop Runtime 8",
       "category": "laufzeit",
       "wingetId": "Microsoft.DotNet.DesktopRuntime.8",
+      "signers": [".NET", "Microsoft Corporation"],
       "description": "Nötig für neuere Windows-Programme, die auf .NET aufsetzen.",
       "defaultChecked": false
     },
@@ -463,6 +475,7 @@
       "name": "Edge WebView2",
       "category": "laufzeit",
       "wingetId": "Microsoft.EdgeWebView2Runtime",
+      "signers": ["Microsoft Corporation"],
       "description": "Zeigt Weboberflächen innerhalb anderer Programme an. Auf Windows 11 meist schon vorhanden.",
       "defaultChecked": false
     },
@@ -471,6 +484,7 @@
       "name": "Visual Studio Code",
       "category": "entwicklung",
       "wingetId": "Microsoft.VisualStudioCode",
+      "signers": ["Microsoft Corporation"],
       "description": "Editor mit Erweiterungen für nahezu jede Sprache.",
       "defaultChecked": false
     },
@@ -479,6 +493,7 @@
       "name": "Git",
       "category": "entwicklung",
       "wingetId": "Git.Git",
+      "signers": ["Johannes Schindelin"],
       "description": "Versionsverwaltung samt Git Bash.",
       "defaultChecked": false
     },

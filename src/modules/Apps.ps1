@@ -673,8 +673,19 @@ function Test-WzVaultManifest {
     if (-not $WingetId -or $ids.Count -ne 1 -or $ids[0] -ne $WingetId) {
         return Get-WzText 'apps.vaultManifestId' @{ erwartet = $WingetId; gefunden = ($ids -join ', ') }
     }
-    if (@($zeilen | Where-Object { $_ -match '^\s*(Custom|Commands)\s*:' }).Count -gt 0) {
+    # Jede Art von Schaltern wird abgewiesen, nicht nur »Custom«: Auch Silent,
+    # SilentWithProgress, Log, InstallLocation oder Upgrade landen als
+    # Argumente beim Installer. Dazu YAML-Kurzschreibweisen (»{ … }«), Anker
+    # und Typ-Etiketten, an denen ein zeilenweiser Blick vorbeisähe. Ein
+    # legitimes Paket, das hier hängen bleibt, wird einfach online geladen.
+    $verboten = '^\s*-?\s*(InstallerSwitches|Silent|SilentWithProgress|Interactive|InstallLocation|Log|Upgrade|Custom|Repair|Commands|ElevationRequirement)\s*:'
+    if (@($zeilen | Where-Object { $_ -match $verboten }).Count -gt 0) {
         return Get-WzText 'apps.vaultManifestSwitches'
+    }
+    # Block-Skalare (»Description: |-«) sind harmlos und häufig, sie bleiben
+    # erlaubt; ihr Inhalt läuft trotzdem durch den Schalter-Filter oben.
+    if (@($zeilen | Where-Object { $_ -match ':\s*[\{\[&\*!]' -or $_ -match '^\s*-?\s*[\{\[]' }).Count -gt 0) {
+        return Get-WzText 'apps.vaultManifestSyntax'
     }
 
     $hashes = @($zeilen | ForEach-Object { if ($_ -match '^\s*InstallerSha256:\s*([0-9A-Fa-f]{64})\s*$') { $Matches[1].ToUpperInvariant() } })
@@ -738,10 +749,18 @@ function Get-WzOfflineInstallerPath {
     if ($Verify) {
         # Der Stick ist auf jedem Kundenrechner beschreibbar; was hier liegt,
         # startet eleviert (Audit 2026-10, M8).
+        # Gültig signiert genügt nicht: Der Aussteller muss der im Katalog
+        # hinterlegte sein. Ohne Eintrag (»signers« in apps.json) gibt es
+        # nichts, woran sich die Datei messen ließe — dann online.
+        $signers = @($App.signers | Where-Object { $_ })
         foreach ($file in $installer) {
             $pruefbar = $file.Extension -in @('.exe', '.msi')
-            if ($file.Extension -eq '.zip' -or ($pruefbar -and -not (Test-WzFileSignature -Path $file.FullName))) {
-                Write-WzLog (Get-WzText 'apps.logVaultUnsigned' @{ datei = $file.Name }) -Level Warn
+            if ($pruefbar -and $signers.Count -eq 0) {
+                Write-WzLog (Get-WzText 'apps.logVaultNoSigner' @{ name = $App.name }) -Level Info
+                return $null
+            }
+            if ($file.Extension -eq '.zip' -or ($pruefbar -and -not (Test-WzFileSignature -Path $file.FullName -ExpectedSigners $signers))) {
+                Write-WzLog (Get-WzText 'apps.logVaultUnsigned' @{ datei = $file.Name; aussteller = ($signers -join ' / ') }) -Level Warn
                 return $null
             }
         }
