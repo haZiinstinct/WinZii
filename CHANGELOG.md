@@ -65,6 +65,27 @@ Alle nennenswerten Änderungen an WinZii. Die Fassungen folgen
   und »beschäftigt« bleibt nach einem Fehler nicht mehr hängen (M15, M28).
 - **Drucker anlegen:** im Testmodus kein »fehlgeschlagen« mehr, im
   Übergabeblatt nur einmal (M18).
+- **Dateiumzug lässt sich abbrechen,** ohne robocopy hart abzuschießen;
+  hängt es, greift nach 15 Sekunden der harte Halt (H9).
+- **Sicherung liest die Ordner des angemeldeten Anwenders,** nicht die des
+  Technikerkontos, mit dem WinZii eleviert läuft (H10).
+- **Bericht und Übergabeblatt:** Fremder Text — SSIDs, Druckernamen,
+  Programmnamen — bleibt Text und wird nie zu HTML oder CSS-Klasse (M20,
+  M21).
+- **Netzlaufwerke und Drucker** werden im Kontext des angemeldeten
+  Anwenders zurückgespielt, sonst sieht er sie nicht (M24). Die Suche nach
+  Benutzerdaten folgt keiner Junction (M25), WLAN-Schlüssel liegen nach dem
+  Einspielen nicht mehr im Klartext herum (M26), der Belastungstest hört auf
+  den Abbruch (M27).
+- **Diagnose:** Ereignisdeutung nach Quelle und Kennung exakt, Absturzabbilder
+  und chkdsk-Ergebnisse vollständig, alle Befunde sprachneutral.
+- **Oberfläche:** Häkchen und Suchergebnisse werden nach einem Vorgang
+  zurückgesetzt (H11), Schließen während eines Vorgangs fragt nach (H12),
+  unbekannte Systemsprache fällt auf Englisch zurück (M31), Protokoll und
+  Einstellungen schreiben atomar, Protokolle älter als 90 Tage werden
+  aufgeräumt, Farben kommen aus dem Theme, Bildschirmleser bekommen Namen.
+- **Autostart nennt den Herausgeber auch bei Pfaden mit Leerzeichen ohne
+  Anführungszeichen.**
 
 ### Geändert
 
@@ -75,6 +96,22 @@ Alle nennenswerten Änderungen an WinZii. Die Fassungen folgen
   Einschaltknopf schaltet in beiden Betriebsarten nur noch den Bildschirm aus.
   Auf Akku bleibt es bei 10 Minuten Bildschirm und 15 Minuten bis zum
   Energiesparmodus.
+
+### Entwicklung
+
+- **CI streng:** Analyzer-Warnungen und Parse-Fehler lassen die Prüfung
+  scheitern, Actions per Commit-Hash festgenagelt, Zeitlimits, nur
+  Leserechte; Dependabot hält die Actions aktuell (H13, M33, M34).
+- **Release über Tag** (`release.yml`): `New-Release.ps1 -Release` prüft
+  vorher Arbeitsbaum, Versionsstellen und CHANGELOG (M32, M40).
+- **Prüfwerkzeuge werten Rückgabewerte aus,** nicht nur Wortlaute;
+  Test-Pages sieht Protokollfehler, Test-Undo räumt immer auf (M30, M36).
+- **Neu: `Test-Modules.ps1` und `Test-Report.ps1`** — funktionale Prüfung für
+  die neun Module, die bisher nur »Seite lädt« kannten.
+- **Kodierung:** JSON, Markdown und HTML ohne BOM, Test-Smoke prüft beide
+  Richtungen (M37).
+- **Sandbox-Test bindet nur eine Kopie ein** (`tools\Start-SandboxTest.ps1`),
+  nicht den Arbeitsordner mit `backups\` (M39).
 
 ### Neu
 
