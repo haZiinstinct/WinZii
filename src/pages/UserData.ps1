@@ -360,7 +360,8 @@ function Start-WzOneDriveHydration {
             else { Get-WzText 'data.hydrateNotStarted' @{ pfad = $_.Path; grund = $_.Reason } }
         })
         $allDone = -not (@($results | Where-Object { -not $_.Complete }).Count -gt 0)
-        [void](Show-WzConfirm -Title 'OneDrive' -HideCancel -ConfirmText (Get-WzText 'dialog.understood') `
+        $titel = 'OneDrive'  # lang-ok: Produktname, in jeder Sprache gleich
+        [void](Show-WzConfirm -Title $titel -HideCancel -ConfirmText (Get-WzText 'dialog.understood') `
             -Message $(if ($allDone) {
                 Get-WzText 'data.hydrateDoneAll'
             } else {

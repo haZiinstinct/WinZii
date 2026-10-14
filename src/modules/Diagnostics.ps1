@@ -266,6 +266,19 @@ function Get-WzMinidumps {
     return @($dumps)
 }
 
+function Get-WzReliabilityTypeText {
+    <#
+    .SYNOPSIS
+        Anzeigetext zum Typ-Code eines Zuverlässigkeitseintrags.
+    #>
+    param([string]$Type)
+    switch ($Type) {
+        'crash'    { return Get-WzText 'diag.relTypeCrash' }
+        'appError' { return Get-WzText 'diag.relTypeAppError' }
+        default    { return Get-WzText 'diag.relTypeEvent' }
+    }
+}
+
 function Read-WzDumpBugcheckCode {
     <#
     .SYNOPSIS
@@ -322,10 +335,13 @@ function Get-WzReliabilityRecords {
             [pscustomobject]@{
                 Time    = $_.TimeGenerated
                 Source  = $_.SourceName
+                # Code, nicht Anzeige: übersetzt wird mit
+                # Get-WzReliabilityTypeText. Bisher stand »Absturz« auch im
+                # englischen Bericht (Audit 2026-10, N).
                 Type    = switch ($_.EventIdentifier) {
-                    1001 { 'Absturz' }
-                    1000 { 'Programmfehler' }
-                    default { 'Ereignis' }
+                    1001 { 'crash' }
+                    1000 { 'appError' }
+                    default { 'event' }
                 }
                 Message = ($_.Message -split "`r?`n" | Select-Object -First 1)
             }

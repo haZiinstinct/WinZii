@@ -598,7 +598,7 @@ function Save-WzBitLockerKeys {
         ''
     )
     foreach ($key in $Keys) {
-        $lines += "Laufwerk $($key.Drive)"
+        $lines += Get-WzText 'data.fileBitlockerDrive' @{ laufwerk = $key.Drive }
         $lines += "  $($key.Key)"
         $lines += ''
     }

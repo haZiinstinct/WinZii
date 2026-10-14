@@ -322,7 +322,7 @@ function Get-WzMonitorInfo {
             }
 
             $result += [pscustomobject]@{
-                Name   = if ($name) { $name } else { 'Bildschirm' }
+                Name   = if ($name) { $name } else { Get-WzText 'core.monitorUnnamed' }
                 Vendor = $vendor
                 Year   = $id.YearOfManufacture
                 Inches = $inches
