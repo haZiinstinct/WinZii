@@ -155,8 +155,18 @@ if ($apps) {
         if ($app.wingetId -and $app.wingetId -notmatch '^[\w+.-]+\.[\w+.-]+$') {
             Add-Problem 'apps' "$label : '$($app.wingetId)' sieht nicht wie eine winget-Kennung aus"
         }
+        # signers: Liste der zulässigen Zertifikats-CNs für den Stick-Vorrat.
+        # Ein leerer Eintrag oder ein bloßer String statt Liste würde die
+        # Prüfung still aushebeln oder verfälschen.
+        if ($app.PSObject.Properties['signers']) {
+            if ($app.signers -isnot [array] -or @($app.signers).Count -eq 0 -or
+                @($app.signers | Where-Object { -not ($_ -is [string]) -or -not $_.Trim() }).Count -gt 0) {
+                Add-Problem 'apps' "$label : 'signers' muss eine Liste nicht-leerer Namen sein"
+            }
+        }
     }
-    Write-Host "  apps        $($apps.apps.Count) Programme in $($categoryIds.Count) Kategorien" -ForegroundColor Gray
+    $mitAussteller = @($apps.apps | Where-Object { $_.PSObject.Properties['signers'] }).Count
+    Write-Host "  apps        $($apps.apps.Count) Programme in $($categoryIds.Count) Kategorien, $mitAussteller mit Aussteller für den Vorrat" -ForegroundColor Gray
 }
 
 # --- cleanup ---------------------------------------------------------------
