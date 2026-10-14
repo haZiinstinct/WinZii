@@ -185,6 +185,7 @@
     "logRemovedPackage": "  removed: {name}",
     "logRemoveFailed": "  could not be removed: {name} — {grund}",
     "logCapUnreadable": "  system features not queryable: {grund}",
+    "logProvUnreadable": "  provisioned packages not queryable: {grund}",
     "logNoMatchingCap": "  no matching system feature installed",
     "logRemoveCapTest": "  [Test] remove feature: {name}",
     "noteOptionalFeatures": "Can be reinstalled via Settings > Optional features",

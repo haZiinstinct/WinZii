@@ -97,9 +97,13 @@ function Test-WzTweakState {
                 # main.ps1 alle Module; wird zum Prüfen nur der Optimizer
                 # geladen, fehlt sie — dann ist der Zustand nicht messbar und
                 # darf auch nicht mitgezählt werden.
+                # Ist die Paketliste nicht lesbar, gilt dasselbe.
                 if (Get-Command Get-WzAppxMatches -ErrorAction SilentlyContinue) {
-                    $checkable++
-                    if (-not (Get-WzAppxMatches -Patterns $action.patterns)) { $matching++ }
+                    try {
+                        $treffer = @(Get-WzAppxMatches -Patterns $action.patterns)
+                        $checkable++
+                        if ($treffer.Count -eq 0) { $matching++ }
+                    } catch { }
                 }
             }
             'command' {
@@ -315,8 +319,12 @@ function Invoke-WzRegistryAction {
 function Invoke-WzServiceAction {
     param($Action, $Session, $Tweak)
 
-    $service = Get-Service -Name $Action.serviceName -ErrorAction SilentlyContinue
-    if (-not $service) {
+    # Nur »nicht gefunden« heißt »gibt es nicht«. Jeder andere Lesefehler ist
+    # ein Fehlschlag — sonst würde er als »nicht zutreffend« verbucht.
+    try {
+        $service = Get-Service -Name $Action.serviceName -ErrorAction Stop
+    } catch {
+        if ($_.CategoryInfo.Category -ne 'ObjectNotFound') { throw }
         Write-WzLog (Get-WzText 'opt.logNoService' @{ name = $Action.serviceName }) -Level Info
         if ($Session) { $Session.ActionMissing = $true }
         return
@@ -369,8 +377,10 @@ function Invoke-WzServiceAction {
 function Invoke-WzScheduledTaskAction {
     param($Action, $Session, $Tweak)
 
-    $task = Get-ScheduledTask -TaskPath $Action.taskPath -TaskName $Action.taskName -ErrorAction SilentlyContinue
-    if (-not $task) {
+    try {
+        $task = Get-ScheduledTask -TaskPath $Action.taskPath -TaskName $Action.taskName -ErrorAction Stop
+    } catch {
+        if ($_.CategoryInfo.Category -ne 'ObjectNotFound') { throw }
         Write-WzLog (Get-WzText 'opt.logNoTask' @{ name = $Action.taskName }) -Level Info
         if ($Session) { $Session.ActionMissing = $true }
         return
@@ -400,7 +410,16 @@ function Invoke-WzScheduledTaskAction {
 function Invoke-WzFeatureAction {
     param($Action, $Session, $Tweak)
 
-    $feature = Get-WindowsOptionalFeature -Online -FeatureName $Action.featureName -ErrorAction SilentlyContinue
+    # DISM meldet einen unbekannten Namen nicht als »ObjectNotFound«. Bei einem
+    # Fehler entscheidet deshalb die Gesamtliste: Lässt auch sie sich nicht
+    # lesen (etwa ohne Adminrechte), ist das ein Fehlschlag, kein »fehlt«.
+    $feature = $null
+    try {
+        $feature = Get-WindowsOptionalFeature -Online -FeatureName $Action.featureName -ErrorAction Stop
+    } catch {
+        $alle = @(Get-WindowsOptionalFeature -Online -ErrorAction Stop)
+        $feature = $alle | Where-Object { $_.FeatureName -eq $Action.featureName } | Select-Object -First 1
+    }
     if (-not $feature) {
         Write-WzLog (Get-WzText 'opt.logNoFeature' @{ name = $Action.featureName }) -Level Info
         if ($Session) { $Session.ActionMissing = $true }

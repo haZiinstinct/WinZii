@@ -662,6 +662,27 @@ Write-Check 'Namen je Ergebnis getrennt' (
     $fehltLauf.AppliedNames -contains $typTweak.name -and $fehltLauf.FailedNames -contains $kaputt.name -and
     $fehltLauf.AppliedNames -notcontains $kaputt.name) "angewendet=$($fehltLauf.AppliedNames -join ', ') fehlgeschlagen=$($fehltLauf.FailedNames -join ', ')"
 
+# Ein Lesefehler ist kein »gibt es nicht«: Sonst würde aus »Zugriff
+# verweigert« ein »nicht zutreffend« (Sicherheitsprüfung zu M2). Die
+# Abfragen werden durch Attrappen ersetzt, die nicht mit ObjectNotFound
+# scheitern.
+function Get-Service { throw [UnauthorizedAccessException]'Selbsttest: Zugriff verweigert' }
+function Get-WindowsOptionalFeature { throw [UnauthorizedAccessException]'Selbsttest: erfordert erhöhte Rechte' }
+try {
+    $lesefehlerTweak = [pscustomobject]@{
+        id = 'selbsttest-lesefehler'; name = 'Selbsttest — Lesefehler'; requiresReboot = $false
+        actions = @(
+            [pscustomobject]@{ type = 'service'; serviceName = 'WinZiiSelbsttest'; startupType = 'Disabled' }
+            [pscustomobject]@{ type = 'feature'; featureName = 'WinZiiSelbsttest'; state = 'Disabled' }
+        )
+    }
+    $lesefehlerLauf = Invoke-WzTweaks -Tweaks @($lesefehlerTweak) -Scope 'selbsttest-lesefehler'
+    Write-Check 'Lesefehler zählt als Fehlschlag, nicht als »nicht zutreffend«' `
+        ($lesefehlerLauf.Failed -eq 1 -and $lesefehlerLauf.NotApplicable -eq 0) "Failed=$($lesefehlerLauf.Failed) NotApplicable=$($lesefehlerLauf.NotApplicable)"
+} finally {
+    Remove-Item -LiteralPath Function:\Get-Service, Function:\Get-WindowsOptionalFeature -ErrorAction SilentlyContinue
+}
+
 # Aufgabenzustand »Queued« war aktiv und muss aktiv zurückkommen.
 $script:aufgabenAufrufe = @()
 function global:Enable-ScheduledTask { param($TaskPath, $TaskName) $script:aufgabenAufrufe += "Enable:$TaskName" }

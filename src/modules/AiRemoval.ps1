@@ -97,7 +97,13 @@ function Get-WzAllAppxPackages {
         # Ohne Administratorrechte geht nur das eigene Profil — das gehört
         # gesagt, sonst wirkt die Liste vollständig, obwohl sie es nicht ist.
         Write-WzLog (Get-WzText 'ai.logAppxOwnAccount') -Level Warn
-        try { $packages = @(Get-AppxPackage -ErrorAction Stop) } catch { }
+        try {
+            $packages = @(Get-AppxPackage -ErrorAction Stop)
+        } catch {
+            # Gar nichts lesbar: Das darf nicht wie »keine Pakete« aussehen.
+            # Nicht zwischenspeichern, der Aufrufer wertet die Ausnahme.
+            throw
+        }
     }
     $script:WzAppxCache = $packages
     return $packages
@@ -128,15 +134,26 @@ function Invoke-WzAppxAction {
     #>
     param($Action, $Session, $Tweak)
 
+    # Lesefehler sind kein »nichts gefunden«. Ohne diese Unterscheidung wurde
+    # aus einer unlesbaren Paketliste ein »nicht zutreffend«.
     $found = Get-WzAppxMatches -Patterns $Action.patterns
     $provisioned = @()
+    $provisionedUnreadable = $false
     if ($Action.removeProvisioned) {
         try {
             $provisioned = @(Get-AppxProvisionedPackage -Online -ErrorAction Stop | Where-Object {
                 $name = $_.DisplayName
                 @($Action.patterns | Where-Object { $name -like $_ }).Count -gt 0
             })
-        } catch { }
+        } catch {
+            $provisionedUnreadable = $true
+            Write-WzLog (Get-WzText 'ai.logProvUnreadable' @{ grund = $_.Exception.Message }) -Level Warn
+        }
+    }
+
+    if ($found.Count -eq 0 -and $provisioned.Count -eq 0 -and $provisionedUnreadable) {
+        if ($Session) { $Session.ActionFailed = $true }
+        return
     }
 
     if ($found.Count -eq 0 -and $provisioned.Count -eq 0) {
@@ -231,6 +248,8 @@ function Invoke-WzCapabilityAction {
         })
     } catch {
         Write-WzLog (Get-WzText 'ai.logCapUnreadable' @{ grund = $_.Exception.Message }) -Level Warn
+        # Unlesbar ist nicht »nichts installiert« und erst recht kein Erfolg.
+        if ($Session) { $Session.ActionFailed = $true }
         return
     }
 
