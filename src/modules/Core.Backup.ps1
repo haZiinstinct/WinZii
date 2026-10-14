@@ -427,6 +427,20 @@ function Restore-WzUndoSession {
                         [void](Invoke-WzProcess -FilePath 'powercfg.exe' -Arguments "/delete $eigeneKopie")
                     }
                 }
+                'leftoverCleanup' {
+                    # Registry-Reste wurden vor dem Löschen als .reg exportiert
+                    # und kommen jetzt zurück. Bisher lag die Sicherung nur
+                    # herum. Ordner sind endgültig weg — das sagt der Hinweis.
+                    $sitzungsOrdner = Split-Path -Parent $UndoFile
+                    foreach ($regDatei in @(Get-ChildItem -LiteralPath $sitzungsOrdner -Filter '*.reg' -File -ErrorAction SilentlyContinue)) {
+                        $import = Invoke-WzProcess -FilePath 'reg.exe' -Arguments "import `"$($regDatei.FullName)`""
+                        if ($import.ExitCode -eq 0) { $result.Restored++ } else { $result.Failed++ }
+                    }
+                    if ($action.undo -and $action.undo.hint) {
+                        $note = "$($entry.itemName): $($action.undo.hint)"
+                        if ($result.Notes -notcontains $note) { $result.Notes += $note }
+                    }
+                }
                 default {
                     # appx, capability: nicht automatisch zurückholbar
                     $result.Skipped++

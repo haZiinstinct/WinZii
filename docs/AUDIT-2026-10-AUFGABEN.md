@@ -20,9 +20,9 @@ Jeder Punkt: `- [ ] **Kennung** Datei:Zeile. Aufgabe. → Erledigt wenn …`
 
 ### Eingriffe und Rücknahme
 
-- [ ] **H2** `src/modules/Uninstall.ps1:286-308, 466-470, 502-508`. Namenskandidaten nur zulassen, wenn kein anderer installierter Eintrag (über `Get-WzInstalledPrograms`) denselben Basisnamen hat. `%APPDATA%`/`%LOCALAPPDATA%`-Treffer im Dialog als »Benutzerdaten, keine Sicherung« kennzeichnen oder vorher als ZIP in den Sitzungsordner packen. → Erledigt wenn bei zwei installierten Python-Versionen nach Deinstallation einer davon `HKLM:\SOFTWARE\Python` nicht als Rest angeboten wird.
+- [x] **H2** `src/modules/Uninstall.ps1:286-308, 466-470, 502-508`. Namenskandidaten nur zulassen, wenn kein anderer installierter Eintrag (über `Get-WzInstalledPrograms`) denselben Basisnamen hat. `%APPDATA%`/`%LOCALAPPDATA%`-Treffer im Dialog als »Benutzerdaten, keine Sicherung« kennzeichnen oder vorher als ZIP in den Sitzungsordner packen. → Erledigt wenn bei zwei installierten Python-Versionen nach Deinstallation einer davon `HKLM:\SOFTWARE\Python` nicht als Rest angeboten wird.
 - [x] **H3** `src/pages/TweakList.ps1:257-333`, `src/modules/Optimizer.ps1:229`, `src/modules/Core.Backup.ps1:86-87`. Vor dem Anwenden `Test-WzWritableRoot` prüfen und mit Hinweis abbrechen (oder Sicherung nach `%ProgramData%\WinZii` ausweichen). `Complete-WzUndoSession` in try/catch, Summary mit `UndoFile=$null` und Meldung trotzdem zurückgeben. → Erledigt wenn auf schreibgeschütztem Stick kein Tweak angewendet wird und ein Dialog den Grund nennt.
-- [ ] **M1** `src/pages/TweakList.ps1:326-328`, `src/pages/Uninstall.ps1:428-430`, `src/pages/Cleanup.ps1:300-302`. Module geben die tatsächlich angewendeten Namen zurück; `-Detail` daraus bauen, Fehlschläge mit Präfix. → Erledigt wenn ein absichtlich fehlschlagender Tweak im Übergabeblatt als fehlgeschlagen steht.
+- [x] **M1** `src/pages/TweakList.ps1:326-328`, `src/pages/Uninstall.ps1:428-430`, `src/pages/Cleanup.ps1:300-302`. Module geben die tatsächlich angewendeten Namen zurück; `-Detail` daraus bauen, Fehlschläge mit Präfix. → Erledigt wenn ein absichtlich fehlschlagender Tweak im Übergabeblatt als fehlgeschlagen steht.
 - [x] **M2** `src/modules/Optimizer.ps1:216-224, 279-282, 332-335, 362-365`, `src/modules/AiRemoval.ps1:142-145`. Handler liefern `Changed/Skipped`; Tweak ohne einzige Änderung zählt als »nicht zutreffend«. → Erledigt wenn `ai-tasks-off` auf einem Gerät ohne Recall-Aufgaben nicht als »angewendet« gezählt wird.
 - [ ] **M4** `data/tweaks.json:1037-1055` (`sec-defender-network`). `defaultChecked: false`, `risk: medium`, Beschreibung um Cloud-Voraussetzung ergänzen. Alle Defender-Policy-Einträge (Z. 923, 1010, 1037, 1112, 1139): Hinweis »sperrt die Einstellung in der Windows-Sicherheit«. → Erledigt wenn `Test-Catalogs` durchläuft und die Texte in `kataloge.en.json` nachgezogen sind.
 - [ ] **M5** `src/modules/Autostart.ps1:298-299, 312, 391-406`. Startordner über `Get-WzUserFolder -Kind RoamingAppData` bilden, `Resolve-WzRegistryPath` auch auf die StartupApproved-Pfade anwenden. → Erledigt wenn bei Elevierung mit Technikerkonto der Startordner des Kunden gezeigt wird.
@@ -31,12 +31,12 @@ Jeder Punkt: `- [ ] **Kennung** Datei:Zeile. Aufgabe. → Erledigt wenn …`
 - [x] **N** `src/modules/Core.Backup.ps1:322-323`, `src/modules/Optimizer.ps1:268-269`. `keyExisted` im Undo-Eintrag speichern; bei `false` den Schlüssel nach der Rücknahme löschen, wenn er leer ist.
 - [x] **N** `src/modules/Core.Backup.ps1:323`. `Remove-ItemProperty -ErrorAction Stop`, catch nur für »Wert fehlt«; `Restored++` nur bei Wirkung.
 - [x] **N** `src/modules/Cleanup.ps1:165, 302`. Festen Pfadteil mit `[WildcardPattern]::Escape()` schützen, nur den Katalog-Platzhalter roh anhängen.
-- [ ] **N** `src/modules/Uninstall.ps1:53-55, 166-195`. GUID per Regex aus `MsiExec /I{GUID}` ziehen und wie ProductCode behandeln (`/x … /qn`).
+- [x] **N** `src/modules/Uninstall.ps1:53-55, 166-195`. GUID per Regex aus `MsiExec /I{GUID}` ziehen und wie ProductCode behandeln (`/x … /qn`).
 - [x] **N** `src/modules/AiRemoval.ps1:174-181, 186-204`. `ActionFailed` bei Fehlschlag der Bereitstellungs-Entfernung setzen; EndOfLife-Schlüssel in `previous` festhalten und im Undo-Hinweis nennen.
 - [x] **N** `src/modules/Optimizer.ps1:70, 247`. »Schon gesetzt« zusätzlich gegen `$current.Type -eq $Action.valueType` prüfen.
 - [x] **N** `src/modules/Optimizer.ps1:182`. Sicherungsordner erst in `Complete-WzUndoSession` oder beim ersten Export anlegen, nicht im Testmodus.
 - [ ] **N** `data/tweaks.json:970-988` (`sec-llmnr-off`): NetBIOS aus dem Namen nehmen oder Schlüssel ergänzen. `:151-176` (`perf-animations-off`): `VisualFXSetting=2` begründen oder UserPreferencesMask setzen. `:1318-1357` (`ai-apps-policy`): Snipping Tool aus der Beschreibung oder Schlüssel ergänzen.
-- [ ] **N** `src/modules/Uninstall.ps1:530-616`, `src/modules/Core.Backup.ps1:392-398`. Aktionstyp `leftoverCleanup` im Restore behandeln, `.reg`-Dateien aus `exportedKeys` importieren.
+- [x] **N** `src/modules/Uninstall.ps1:530-616`, `src/modules/Core.Backup.ps1:392-398`. Aktionstyp `leftoverCleanup` im Restore behandeln, `.reg`-Dateien aus `exportedKeys` importieren.
 - [ ] **N** `src/modules/Autostart.ps1:366-414`. Hinweistext der Seite: Umschaltungen stehen nicht unter »Rücknahme«, nur im Übergabeblatt.
 
 ### Beschaffung und Ausführung

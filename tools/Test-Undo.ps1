@@ -418,6 +418,20 @@ foreach ($fall in $namensFaelle) {
     Write-Check "Name: $($fall.Was)" $ok ($kandidaten -join ', ')
 }
 
+# Geteilte Namen: Bleibt eine andere Python-Version installiert, ist
+# »Python« kein Rest, sondern ihr Zuhause (Audit 2026-10, H2).
+$python = [pscustomobject]@{ Name = 'Python 3.12.1 (64-bit)' }
+$geteiltFaelle = @(
+    @{ Fremd = @('Python 3.11.5 (64-bit)'); Erwartet = $false; Was = 'andere Version bleibt' }
+    @{ Fremd = @('Python Launcher');        Erwartet = $false; Was = 'Programm gleichen Stamms bleibt' }
+    @{ Fremd = @('Pythonista Viewer');      Erwartet = $true;  Was = 'nur Präfix ohne Leerzeichen zählt nicht' }
+    @{ Fremd = @();                         Erwartet = $true;  Was = 'ohne Nachbarn bleibt der Kandidat' }
+)
+foreach ($fall in $geteiltFaelle) {
+    $kandidaten = @(Get-WzLeftoverNameCandidates -Program $python -ForeignNames $fall.Fremd)
+    Write-Check "Geteilter Name: $($fall.Was)" (($kandidaten -contains 'Python') -eq $fall.Erwartet) ($kandidaten -join ', ')
+}
+
 # Ein Wegwerf-Programm: ein Ordner mit Inhalt und ein eigener Schlüssel.
 $restName = 'WinZii-Selbsttest-Restprogramm'
 $restKey = "HKCU:\Software\$restName"
@@ -562,6 +576,12 @@ if ($restLauf.UndoFile) {
     $restEintraege = @($restManifest.entries)
     Write-Check 'Sicherung nennt die entfernten Pfade' `
         ($restEintraege.Count -eq 1 -and @($restEintraege[0].previous.paths).Count -eq 2) ("{0} Pfad(e)" -f @($restEintraege[0].previous.paths).Count)
+
+    # Die Rücknahme spielt den gesicherten Schlüssel wieder ein; der Ordner
+    # bleibt weg und wird im Hinweis genannt.
+    $restRueck = Restore-WzUndoSession -UndoFile $restLauf.UndoFile
+    Write-Check 'Rücknahme holt den Schlüssel zurück' ((Test-Path -LiteralPath $restKey) -and $restRueck.Restored -eq 1) "Restored=$($restRueck.Restored) Failed=$($restRueck.Failed)"
+    Write-Check 'Rücknahme nennt den gelöschten Ordner' (@($restRueck.Notes).Count -ge 1)
 
     try { Remove-Item -LiteralPath $restSession -Recurse -Force -ErrorAction Stop } catch { }
 }
