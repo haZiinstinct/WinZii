@@ -2444,7 +2444,7 @@
     "copyNothing": "Nothing was copied.",
     "copyDoneTitle": "File move",
     "copyPartial": "Part of it did not work. The reasons are in the log. The source is unchanged.",
-    "copyCanceledAt": "Cancelled at \"{name}\": that folder and the ones after it are not or not fully copied, the ones before it are complete. A new run completes the rest; the source is unchanged.",
+    "copyCanceledAt": "Cancelled at \"{name}\": that folder and the ones after it are not or not fully copied. What happened to the folders before it is listed below. A new run completes the rest; the source is unchanged.",
     "copyDone": "{groesse} copied. Please spot-check the target before anything is deleted on the source PC.",
     "printerItem": "{name} on {anschluss}",
     "driveItem": "Drive {buchstabe} on {ziel}",

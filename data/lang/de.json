@@ -2444,7 +2444,7 @@
     "copyNothing": "Es wurde nichts kopiert.",
     "copyDoneTitle": "Dateiumzug",
     "copyPartial": "Ein Teil hat nicht geklappt. Die Gründe stehen im Protokoll. Die Quelle ist unverändert.",
-    "copyCanceledAt": "Abgebrochen bei »{name}«: Dieser und die folgenden Ordner sind nicht oder nicht vollständig kopiert, die davor vollständig. Ein neuer Lauf ergänzt den Rest; die Quelle ist unverändert.",
+    "copyCanceledAt": "Abgebrochen bei »{name}«: Dieser und die folgenden Ordner sind nicht oder nicht vollständig kopiert. Was mit den Ordnern davor geschah, steht unten. Ein neuer Lauf ergänzt den Rest; die Quelle ist unverändert.",
     "copyDone": "{groesse} kopiert. Bitte auf dem Ziel stichprobenartig nachsehen, bevor am Quell-PC etwas gelöscht wird.",
     "printerItem": "{name} an {anschluss}",
     "driveItem": "Laufwerk {buchstabe} auf {ziel}",
