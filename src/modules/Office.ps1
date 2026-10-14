@@ -246,11 +246,16 @@ function Test-WzOfficeCache {
     #>
     param(
         [Parameter(Mandatory = $true)][string]$VariantId,
-        [Parameter(Mandatory = $true)][string]$Language
+        [Parameter(Mandatory = $true)][string]$Language,
+        # Mit Angabe zählen nur die stream-Dateien dieser Architektur. Ohne
+        # Angabe (Anzeige) genügt jede. Bisher war der Vorrat bitness-blind:
+        # Bei 32-Bit-OEM-Office zeigte SourcePath auf einen 64-Bit-Vorrat, und
+        # ODT brach ohne CDN-Rückfall ab (Audit 2026-10, M12).
+        [ValidateSet('', '32', '64')][string]$Edition = ''
     )
 
     $path = Get-WzOfficeCachePath -VariantId $VariantId -Language $Language
-    $result = [pscustomobject]@{ Available = $false; Path = $path; Bytes = [int64]0; Detail = '' }
+    $result = [pscustomobject]@{ Available = $false; Path = $path; Bytes = [int64]0; Detail = ''; OtherBitness = $false }
     if (-not (Test-Path -LiteralPath $path)) {
         $result.Detail = Get-WzText 'off.cacheNotLoaded'
         return $result
@@ -286,6 +291,16 @@ function Test-WzOfficeCache {
     # Falsch abgelehnt heißt: noch einmal laden. Falsch angenommen heißt: beim
     # Kunden stehen.
     $streams = @(Get-ChildItem -LiteralPath $dataDir -Recurse -Filter 'stream.*.dat' -File -ErrorAction SilentlyContinue)
+    if ($Edition) {
+        $arch = if ($Edition -eq '32') { 'x86' } else { 'x64' }
+        $passend = @($streams | Where-Object { $_.Name -like "stream.$arch.*" })
+        if ($streams.Count -gt 0 -and $passend.Count -eq 0) {
+            $result.OtherBitness = $true
+            $result.Detail = Get-WzText 'off.cacheOtherBitness' @{ bit = $Edition }
+            return $result
+        }
+        $streams = $passend
+    }
     $neutral = @($streams | Where-Object { $_.Name -like '*x-none*' })
     $inSprache = @($streams | Where-Object { $_.Name -like "*$Language*" })
 
@@ -414,11 +429,13 @@ function Invoke-WzOfficeInstall {
         }
     } catch { }
 
-    $cache = Test-WzOfficeCache -VariantId $VariantId -Language $Language
+    $cache = Test-WzOfficeCache -VariantId $VariantId -Language $Language -Edition $Edition
     $sourcePath = if ($cache.Available) { $cache.Path } else { $null }
 
     if ($sourcePath) {
         Write-WzLog (Get-WzText 'off.logInstallFromDrive' @{ groesse = (Format-WzBytes $cache.Bytes) }) -Level Info
+    } elseif ($cache.OtherBitness) {
+        Write-WzLog (Get-WzText 'off.logCacheOtherBitness' @{ bit = $Edition }) -Level Warn
     } elseif ($cache.Bytes -gt 0) {
         Write-WzLog (Get-WzText 'off.logCacheIncomplete' @{ grund = $cache.Detail }) -Level Warn
     } else {

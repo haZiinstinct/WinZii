@@ -134,9 +134,9 @@ function Show-WzOfficeXml {
     # Bisher entstand hier eine Konfiguration ohne Quellpfad und ohne Bitness —
     # also genau die, die beim Installieren NICHT verwendet wird. Wer sie las,
     # sah etwas anderes, als später lief.
-    $cache = Test-WzOfficeCache -VariantId $choice.Variant.id -Language $choice.Language
     $installed = Get-WzInstalledOffice
     $edition = if ($installed.Installed -and $installed.Bitness) { $installed.Bitness } else { '64' }
+    $cache = Test-WzOfficeCache -VariantId $choice.Variant.id -Language $choice.Language -Edition $edition
 
     $file = New-WzOfficeConfigXml -VariantId $choice.Variant.id -Language $choice.Language `
         -IncludedApps $choice.Apps -SourcePath $(if ($cache.Available) { $cache.Path } else { $null }) `
@@ -159,12 +159,10 @@ function Start-WzOfficeInstall {
         return
     }
 
-    $cache = Test-WzOfficeCache -VariantId $choice.Variant.id -Language $choice.Language
     $languageName = $syncHash.OffLanguage.SelectedItem.Content
 
     $items = @((Get-WzText 'off.itemEdition' @{ name = $choice.Variant.name }), (Get-WzText 'off.itemLanguage' @{ name = $languageName }))
     $items += Get-WzText 'off.itemApps' @{ liste = ($choice.Apps -join ', ') }
-    $items += if ($cache.Available) { Get-WzText 'off.sourceDrive' } else { Get-WzText 'off.sourceMicrosoft' }
 
     # Die Installation läuft mit FORCEAPPSHUTDOWN: laufende Office-Programme
     # werden ohne eigene Nachfrage beendet. Das gehört in den Dialog — sonst
@@ -197,6 +195,17 @@ function Start-WzOfficeInstall {
         }
         $edition = $installed.Bitness
         $items += Get-WzText 'off.itemBitness' @{ bit = $edition }
+    }
+
+    # Die Quelle erst jetzt: Sie hängt an der Bitness. Ein 64-Bit-Vorrat hilft
+    # einer 32-Bit-Installation nicht, dann geht es online (Audit M12).
+    $cache = Test-WzOfficeCache -VariantId $choice.Variant.id -Language $choice.Language -Edition $edition
+    $items += if ($cache.Available) {
+        Get-WzText 'off.sourceDrive'
+    } elseif ($cache.OtherBitness) {
+        Get-WzText 'off.sourceMicrosoftBitness' @{ bit = $edition }
+    } else {
+        Get-WzText 'off.sourceMicrosoft'
     }
 
     if ($choice.Variant.productId -like '*Volume' -and -not $choice.Key) {

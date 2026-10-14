@@ -127,12 +127,19 @@ try {
 
     # 10. 32-Bit-Ablage wird genauso erkannt
     Write-Host ''
-    Write-Host '3. Bitness ist offen' -ForegroundColor White
+    Write-Host '3. Bitness: Anzeige offen, Installation genau' -ForegroundColor White
     Remove-Item -LiteralPath $fassung -Recurse -Force
     New-DuenneDatei -Pfad (Join-Path $fassung 'stream.x86.x-none.dat') -Groesse 1500MB
     New-DuenneDatei -Pfad (Join-Path $fassung "stream.x86.$sprache.dat") -Groesse 600MB
     $u = Get-Urteil
     Write-Check '32-Bit-Satz gilt auch' ($u.Available) $u.Detail
+
+    # Für eine bestimmte Installation zählt die Architektur (Audit M12): Ein
+    # 32-Bit-Vorrat taugt nicht für 64 Bit und umgekehrt.
+    $u = Test-WzOfficeCache -VariantId $variante -Language $sprache -Edition '64'
+    Write-Check '32-Bit-Satz taugt nicht für 64 Bit' (-not $u.Available -and $u.OtherBitness) $u.Detail
+    $u = Test-WzOfficeCache -VariantId $variante -Language $sprache -Edition '32'
+    Write-Check '32-Bit-Satz taugt für 32 Bit' ($u.Available) $u.Detail
 
     # 4. Eine unsignierte setup.exe im Vorrat läuft nicht eleviert los (M8).
     #    Im Testmodus, damit danach kein echter Download startet.
