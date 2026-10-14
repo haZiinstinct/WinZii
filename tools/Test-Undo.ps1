@@ -743,6 +743,42 @@ try {
     Set-Item -Path Function:\Test-WzWritableRoot -Value $echteSchreibprobe
 }
 
+# --- 12. App-Pakete: unvollständig gelesen ist nicht »erledigt« -------------
+# Ohne Adminrechte liest WinZii nur das eigene Konto; sind die
+# Bereitstellungen nicht lesbar, bleiben sie womöglich bestehen. Beides darf
+# weder »nicht zutreffend« noch »angewendet« ergeben. Alle Appx-Cmdlets sind
+# Attrappen, am System ändert sich nichts.
+Write-Host ''
+Write-Host '12. App-Pakete: unvollständig gelesen' -ForegroundColor White
+
+. (Join-Path $root 'src\modules\AiRemoval.ps1')
+$appxTweak = [pscustomobject]@{
+    id = 'selbsttest-appx'; name = 'Selbsttest — App-Paket'; requiresReboot = $false
+    actions = @([pscustomobject]@{ type = 'appx'; patterns = @('WinZiiSelbsttest*'); removeProvisioned = $true })
+}
+$script:appxEntfernt = @()
+function Get-AppxPackage { param([switch]$AllUsers) if ($AllUsers) { throw 'Selbsttest: Zugriff verweigert' }; @() }
+function Get-AppxProvisionedPackage { param([switch]$Online) @() }
+function Remove-AppxPackage { param($Package, [switch]$AllUsers) $script:appxEntfernt += $Package }
+try {
+    $script:WzAppxCache = $null
+    $nurEigenes = Invoke-WzTweaks -Tweaks @($appxTweak) -Scope 'selbsttest-appx'
+    Write-Check 'nur eigenes Konto gelesen: kein »nicht zutreffend«' `
+        ($nurEigenes.Failed -eq 1 -and $nurEigenes.NotApplicable -eq 0) "Failed=$($nurEigenes.Failed) NotApplicable=$($nurEigenes.NotApplicable)"
+
+    function Get-AppxPackage { param([switch]$AllUsers)
+        [pscustomobject]@{ Name = 'WinZiiSelbsttest.App'; PackageFullName = 'WinZiiSelbsttest.App_1.0_x64__test'; NonRemovable = $false } }
+    function Get-AppxProvisionedPackage { param([switch]$Online) throw 'Selbsttest: DISM nicht erreichbar' }
+    $script:WzAppxCache = $null
+    $ohneBereitstellung = Invoke-WzTweaks -Tweaks @($appxTweak) -Scope 'selbsttest-appx'
+    Write-Check 'Bereitstellung unlesbar: kein »angewendet«' `
+        ($ohneBereitstellung.Failed -eq 1 -and $ohneBereitstellung.Applied -eq 0) "Applied=$($ohneBereitstellung.Applied) Failed=$($ohneBereitstellung.Failed)"
+    Write-Check 'installiertes Paket trotzdem entfernt' ($script:appxEntfernt -contains 'WinZiiSelbsttest.App_1.0_x64__test')
+} finally {
+    Remove-Item -LiteralPath Function:\Get-AppxPackage, Function:\Get-AppxProvisionedPackage, Function:\Remove-AppxPackage -ErrorAction SilentlyContinue
+    $script:WzAppxCache = $null
+}
+
 # --- Aufräumen --------------------------------------------------------------
 if (Test-Path -LiteralPath $junctionBasis) {
     try { Remove-WzTree -LiteralPath $junctionBasis } catch { }
