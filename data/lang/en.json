@@ -1267,6 +1267,7 @@
     "removeTimeout": "Timed out while removing.",
     "logOdtCodesShort": "The Deployment Tool reports: {codes}",
     "logOdtDone": "The Deployment Tool ran through.",
+    "logOdtExitCode": "The Deployment Tool ended with code {code}. The follow-up check shows whether Office is gone.",
     "logAppRemoveFailed": "{name} could not be removed: {grund}",
     "logFolderRemoveFailed": "{pfad} could not be removed — usually still in use.",
     "logRemoved": "Office is removed.",

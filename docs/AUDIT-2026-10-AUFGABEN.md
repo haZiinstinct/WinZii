@@ -47,18 +47,18 @@ Jeder Punkt: `- [ ] **Kennung** Datei:Zeile. Aufgabe. → Erledigt wenn …`
 - [ ] **M9** `src/modules/Drivers.ps1:615-620`. Download-URL gegen `^https://[^/]*\.(windowsupdate|microsoft)\.com/` prüfen, sonst verwerfen.
 - [ ] **M10** `src/modules/Drivers.ps1:308`. pnputil: 0, 3010, 1641 als Erfolg (3010/1641 mit `RebootRequired`), 259 als »nichts eingespielt«. → Erledigt wenn `Test-Parsers` 3010 als Erfolg prüft.
 - [ ] **M12** `src/modules/Office.ps1:226, 229-299, 326, 404-405`. Edition in Cache-Pfad und `Test-WzOfficeCache` (stream.x86 vs stream.x64) einbeziehen; bei fehlender Bitness im Vorrat online installieren und das im Dialog sagen. → Erledigt wenn `Test-Office.ps1` Fall 10 zwischen x86 und x64 unterscheidet.
-- [ ] **M13** `src/pages/Office.ps1:214, 278, 362`. `-Cancelable` von Install, Remove und LibreOffice entfernen (oder `-KillOnCancel` mit Warnung).
+- [x] **M13** `src/pages/Office.ps1:214, 278, 362`. `-Cancelable` von Install, Remove und LibreOffice entfernen (oder `-KillOnCancel` mit Warnung).
 - [ ] **M14** `src/pages/Updates.ps1:212-213`. `Start-WzUpdateScan` im `OnComplete` von `Write-WzUpdateState` starten. → Erledigt wenn nach einer Installation die Liste ohne »beschäftigt«-Dialog neu geladen wird.
 - [x] **M15** `src/modules/Core.Runspace.ps1:152-157`. Bei leerem Ergebnis `@()` statt `$null` an `OnComplete` übergeben. Gegenprobe in `src/pages/Drivers.ps1:486` und `src/pages/Toolbox.ps1:242`. → Erledigt wenn eine Katalogsuche ohne Treffer »keine Treffer« meldet.
 - [ ] **M16** `src/pages/Drivers.ps1:396-400`, `src/modules/Apps.ps1:400, 430`. Pseudo-App-Objekt mit `id` versehen oder `Get-WzOfflineInstallerPath` bei fehlender `id` `$null` liefern lassen.
-- [ ] **M17** `src/pages/Office.ps1:275`. `New-WzRestorePoint` in den Remove-Task vor Stufe 1 verlagern.
+- [x] **M17** `src/pages/Office.ps1:275`. `New-WzRestorePoint` in den Remove-Task vor Stufe 1 verlagern.
 - [ ] **M18** `src/modules/Setup.ps1:667-676`, `src/modules/Migration.ps1:451-455, 530`, `src/pages/Setup.ps1:402`. DryRun-Ergebnis aus `Import-WzPrinters` durchreichen; `Add-WzAction` nur an einer Stelle.
 - [ ] **N** `src/modules/Core.Version.ps1:30`. `SecurityProtocol = SecurityProtocol -bor Tls12` wie in `Apps.ps1:236`.
 - [ ] **N** `src/modules/WindowsUpdate.ps1:231-236`. Bei Einzel-HResult 0 auf `$Result.HResult` zurückfallen.
-- [ ] **N** `src/modules/Office.ps1:601-614`. ExitCode von `setup.exe` nach Stufe 1 prüfen und bei ≠ 0 als Warnung protokollieren.
-- [ ] **N** `src/modules/Office.ps1:527`. `${env:ProgramFiles(x86)}` vor `Join-Path` auf `$null` prüfen.
+- [x] **N** `src/modules/Office.ps1:601-614`. ExitCode von `setup.exe` nach Stufe 1 prüfen und bei ≠ 0 als Warnung protokollieren.
+- [x] **N** `src/modules/Office.ps1:527`. `${env:ProgramFiles(x86)}` vor `Join-Path` auf `$null` prüfen.
 - [ ] **N** `src/modules/Drivers.ps1:238-242`, `src/pages/Drivers.ps1:219-229`. Eigener Testmodus-Text statt »0 Pakete, 0 B gesichert«.
-- [ ] **N** `src/pages/Office.ps1:325`, `src/pages/Apps.ps1:192`. Office-Download und Vorabladen `-Cancelable` machen (Module haben `-KillOnCancel` vorbereitet).
+- [x] **N** `src/pages/Office.ps1:325`, `src/pages/Apps.ps1:192`. Office-Download und Vorabladen `-Cancelable` machen (Module haben `-KillOnCancel` vorbereitet).
 - [ ] **N** `src/modules/Drivers.ps1:555-556, 612-613`. `Invoke-WebRequest` mit `-UseDefaultCredentials` oder Proxy-Credentials wie in `Get-WzDownload`.
 - [ ] **N** `src/pages/Toolbox.ps1:90`. `-ConfirmText 'Starten'` über `Get-WzText`.
 

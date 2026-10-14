@@ -521,12 +521,16 @@ function Get-WzOfficeRemnants {
             Where-Object { $_.Name -like 'Microsoft.Office.Desktop*' -or $_.Name -eq 'Microsoft.MicrosoftOfficeHub' })
     } catch { }
 
-    foreach ($folder in @(
-        (Join-Path $env:ProgramFiles 'Microsoft Office'),
-        (Join-Path $env:ProgramFiles 'Microsoft Office 15'),
-        (Join-Path ${env:ProgramFiles(x86)} 'Microsoft Office'),
-        (Join-Path $env:ProgramData 'Microsoft\ClickToRun')
-    )) {
+    # Auf 32-Bit-Windows gibt es kein ProgramFiles(x86), und Join-Path warf mit
+    # $null außerhalb jedes try. Deshalb erst die Wurzeln prüfen, dann die Pfade.
+    $officeFolders = @()
+    if ($env:ProgramFiles) {
+        $officeFolders += Join-Path $env:ProgramFiles 'Microsoft Office'
+        $officeFolders += Join-Path $env:ProgramFiles 'Microsoft Office 15'
+    }
+    if (${env:ProgramFiles(x86)}) { $officeFolders += Join-Path ${env:ProgramFiles(x86)} 'Microsoft Office' }
+    if ($env:ProgramData) { $officeFolders += Join-Path $env:ProgramData 'Microsoft\ClickToRun' }
+    foreach ($folder in $officeFolders) {
         if ($folder -and (Test-Path -LiteralPath $folder)) { $result.Folders += $folder }
     }
 
@@ -611,7 +615,13 @@ function Remove-WzOffice {
             Write-WzLog (Get-WzText 'off.logOdtCodesShort' @{ codes = ($log.Codes -join ', ') }) -Level Warn
         }
         $summary.Steps += Get-WzText 'off.actionRemoved' @{ name = $before.Name }
-        Write-WzLog (Get-WzText 'off.logOdtDone') -Level Ok
+        # Der Exit-Code wurde bisher nicht angesehen, »durchgelaufen« kam
+        # immer als Ok. Ob Office wirklich weg ist, misst der Aufrufer danach.
+        if ($result.ExitCode -ne 0) {
+            Write-WzLog (Get-WzText 'off.logOdtExitCode' @{ code = $result.ExitCode }) -Level Warn
+        } else {
+            Write-WzLog (Get-WzText 'off.logOdtDone') -Level Ok
+        }
     }
 
     # --- Stufe 2: die Reste ------------------------------------------------
