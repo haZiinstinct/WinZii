@@ -457,6 +457,23 @@ function Resolve-WzOemToolPath {
     return ''
 }
 
+function Get-WzOemOutcome {
+    <#
+    .SYNOPSIS
+        Wertung eines Rückgabewerts nach »exitCodes« im Katalog:
+        ok, reboot, skip, retry oder fail.
+    #>
+    param([Parameter(Mandatory = $true)]$Tool, [AllowNull()]$ExitCode)
+
+    if ($null -eq $ExitCode) { return 'fail' }
+    $wertung = $null
+    if ($Tool.exitCodes) { $wertung = $Tool.exitCodes.([string][int]$ExitCode) }
+    if ($wertung -in @('ok', 'reboot', 'skip', 'retry')) { return $wertung }
+    # Ohne Tabelle im Katalog bleibt es bei der alten Regel
+    if (-not $Tool.exitCodes -and [int]$ExitCode -eq 0) { return 'ok' }
+    return 'fail'
+}
+
 function Invoke-WzOemDriverUpdate {
     <#
     .SYNOPSIS
@@ -503,21 +520,24 @@ function Invoke-WzOemDriverUpdate {
         -TimeoutSeconds 3600 -LogOutput -KillOnCancel
     $result.ExitCode = $process.ExitCode
 
-    # Die Rückgabewerte sind je Hersteller andere, und keiner davon ist
-    # dokumentiert genug, um daraus mehr zu lesen als »lief durch« oder
-    # »lief nicht durch«. Das steht so im Protokoll, statt eine Genauigkeit
-    # vorzutäuschen, die es nicht gibt.
-    $result.Success = ($process.ExitCode -eq 0)
-    $result.Summary = if ($result.Success) {
-        if ($ApplyUpdates) {
-            Get-WzText 'drv.oemApplied' @{ name = $tool.name }
-        } else {
-            Get-WzText 'drv.oemScanned' @{ name = $tool.name }
+    # Die Rückgabewerte sind je Hersteller andere; der Katalog ordnet sie nach
+    # Herstellerdoku zu. Bisher galt nur 0 als Erfolg — Dells »1 = Neustart
+    # nötig« und »500 = nichts zu tun« erschienen als Fehlschlag (Audit
+    # 2026-10, M11). Was nicht im Katalog steht, bleibt ein Fehlschlag mit Code.
+    $outcome = Get-WzOemOutcome -Tool $tool -ExitCode $process.ExitCode
+    $result.Success = $outcome -in @('ok', 'reboot', 'skip')
+    $result.Summary = switch ($outcome) {
+        'ok' {
+            if ($ApplyUpdates) { Get-WzText 'drv.oemApplied' @{ name = $tool.name } } else { Get-WzText 'drv.oemScanned' @{ name = $tool.name } }
         }
-    } else {
-        Get-WzText 'drv.oemFailed' @{ name = $tool.name; code = $process.ExitCode }
+        'reboot' { Get-WzText 'drv.oemReboot' @{ name = $tool.name } }
+        'skip'   { Get-WzText 'drv.oemNothing' @{ name = $tool.name } }
+        'retry'  { Get-WzText 'drv.oemRetry' @{ name = $tool.name; code = $process.ExitCode } }
+        default  { Get-WzText 'drv.oemFailed' @{ name = $tool.name; code = $process.ExitCode } }
     }
-    $result.RebootRequired = $ApplyUpdates
+    # »ok« beim Einspielen heißt bei keinem der Werkzeuge »ohne Neustart
+    # fertig« — die Treiber greifen meist erst danach.
+    $result.RebootRequired = $ApplyUpdates -and $outcome -in @('ok', 'reboot')
 
     Write-WzLog $result.Summary -Level $(if ($result.Success) { 'Ok' } else { 'Warn' })
     return $result

@@ -586,10 +586,15 @@ function Install-WzProductKey {
 
     $install = Invoke-WzProcess -FilePath 'cscript.exe' `
         -Arguments "//nologo `"$slmgr`" /ipk $formatted" -TimeoutSeconds 180
+    # slmgr beendet sich bei einem Fehler mit dem HRESULT als Rückgabewert
+    # (QuitIfError → WScript.Quit, nachgelesen in slmgr.vbs auf 26200). Als
+    # Hexzahl ist er nachschlagbar: 0xC004F069 statt -1073418135 (Audit
+    # 2026-10, N).
     $result.Installed = ($install.ExitCode -eq 0)
 
     if (-not $result.Installed) {
-        $result.Summary = Get-WzText 'setup.keyInstallFailed' @{ code = $install.ExitCode }
+        $code = if ($null -ne $install.ExitCode) { '0x{0:X8}' -f [int]$install.ExitCode } else { '?' }
+        $result.Summary = Get-WzText 'setup.keyInstallFailed' @{ code = $code }
         Write-WzLog $result.Summary -Level Error
         return $result
     }

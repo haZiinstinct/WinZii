@@ -349,6 +349,13 @@ if ($oemtools) {
                 if (-not $tool.$field) { Add-Problem 'oemtools' "$($tool.id) : Feld '$field' fehlt" }
             }
             if (@($tool.paths).Count -eq 0) { Add-Problem 'oemtools' "$($tool.id) : keine Pfade" }
+            if (-not $tool.exitCodes) { Add-Problem 'oemtools' "$($tool.id) : keine exitCodes" }
+            foreach ($eintrag in @($tool.exitCodes.PSObject.Properties)) {
+                if ($eintrag.Name -notmatch '^-?\d+$') { Add-Problem 'oemtools' "$($tool.id) : exitCode '$($eintrag.Name)' ist keine Zahl" }
+                if ($eintrag.Value -notin @('ok', 'reboot', 'skip', 'retry')) {
+                    Add-Problem 'oemtools' "$($tool.id) : exitCode $($eintrag.Name) mit unbekannter Wertung '$($eintrag.Value)'"
+                }
+            }
         }
         foreach ($path in @($tool.paths)) {
             if ($path -notmatch '\.exe$') { Add-Problem 'oemtools' "$($tool.id) : Pfad '$path' ist keine .exe" }

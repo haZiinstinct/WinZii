@@ -1228,9 +1228,18 @@ function Convert-WzReportToPdf {
     # --headless=new ist die Fassung, die seit Edge 112 gedruckt wird; die alte
     # liefert auf manchen Geräten eine leere Seite. Kopf- und Fußzeile bleiben
     # weg: Der Bericht hat eine eigene.
+    # Ein eigenes, frisches Profil: Läuft Edge schon mit dem Standardprofil,
+    # gibt die Headless-Instanz das Profil ab und beendet sich ohne PDF —
+    # meist mit Rückgabewert 0 (Chromium, chrome_process_singleton.cc;
+    # Audit 2026-10, M22). Neuere Fassungen legen selbst eines an, ältere nicht.
+    $profil = Join-Path $env:TEMP ('winzii-edge-' + [guid]::NewGuid().ToString('N'))
     $arguments = "--headless=new --disable-gpu --no-first-run --no-pdf-header-footer " +
-                 "--print-to-pdf=`"$pdfPath`" `"$uri`""
-    $process = Invoke-WzProcess -FilePath $edge -Arguments $arguments -TimeoutSeconds 120
+                 "--user-data-dir=`"$profil`" --print-to-pdf=`"$pdfPath`" `"$uri`""
+    try {
+        $process = Invoke-WzProcess -FilePath $edge -Arguments $arguments -TimeoutSeconds 120
+    } finally {
+        Remove-Item -LiteralPath $profil -Recurse -Force -ErrorAction SilentlyContinue
+    }
 
     if ((Test-Path -LiteralPath $pdfPath) -and (Get-Item -LiteralPath $pdfPath).Length -gt 1024) {
         Write-WzLog (Get-WzText 'rep.logPdfSaved' @{ datei = $pdfPath }) -Level Ok
