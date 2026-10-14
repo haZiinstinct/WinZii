@@ -397,7 +397,14 @@ function Install-WzApps {
     # nichtssagenden Meldung. Einmal vorher fragen ist ehrlicher — aber nur,
     # wenn überhaupt etwas aus dem Netz geholt werden muss. Liegt alles im
     # Vorrat auf dem Stick, ist der Netzzugang gleichgültig.
-    $needsNet = @($Apps | Where-Object { -not (Get-WzOfflineInstallerPath -App $_ -Verify) }).Count -gt 0
+    $vaultApps = @($Apps | Where-Object { Get-WzOfflineInstallerPath -App $_ -Verify })
+    # Ohne LocalManifestFiles bricht »install --manifest« ab. Lässt sich die
+    # Einstellung nicht setzen, geht alles online.
+    $vaultAllowed = $false
+    if ($vaultApps.Count -gt 0 -and $wingetPath) {
+        $vaultAllowed = Enable-WzWingetLocalManifests -WingetPath $wingetPath
+    }
+    $needsNet = (-not $vaultAllowed -and $vaultApps.Count -gt 0) -or ($vaultApps.Count -lt @($Apps).Count)
     if (-not $syncHash.DryRun -and $needsNet) {
         $net = Test-WzInternetAccess
         if ($net.Kind -ne 'ok') {
@@ -427,21 +434,31 @@ function Install-WzApps {
         # das versprach die Oberfläche bisher, ohne dass ein Codepfad es je tat.
         # »winget install --manifest« braucht das Manifest, das »winget download«
         # neben die Installationsdatei legt.
-        $vault = Get-WzOfflineInstallerPath -App $app -Verify
+        $vault = if ($vaultAllowed) { Get-WzOfflineInstallerPath -App $app -Verify } else { $null }
+        # --source winget pinnt die Quelle: Ohne den Pin durchsucht winget auch
+        # den Store, dessen Quelle unter einem frisch elevierten Konto nicht
+        # eingerichtet ist und eine Rückfrage bräuchte — die --disable-interactivity
+        # gerade verbietet.
+        $onlineBase = "install --id $($app.wingetId) --exact --silent --source winget " +
+                      '--accept-source-agreements --accept-package-agreements --disable-interactivity'
         if ($vault) {
             Write-WzLog (Get-WzText 'apps.logFromVault') -Level Info
             $base = "install --manifest `"$vault`" --silent " +
                     '--accept-package-agreements --disable-interactivity'
         } else {
-            # --source winget pinnt die Quelle: Ohne den Pin durchsucht winget auch
-            # den Store, dessen Quelle unter einem frisch elevierten Konto nicht
-            # eingerichtet ist und eine Rückfrage bräuchte — die --disable-interactivity
-            # gerade verbietet.
-            $base = "install --id $($app.wingetId) --exact --silent --source winget " +
-                    '--accept-source-agreements --accept-package-agreements --disable-interactivity'
+            $base = $onlineBase
         }
         $result = Invoke-WzProcess -FilePath $wingetPath -Arguments "$base --scope machine" -TimeoutSeconds 1800
         $outcome = Get-WzWingetOutcome -ExitCode $result.ExitCode
+
+        # Scheitert der Vorrat, aber das Netz ist da, noch einmal online —
+        # sonst bliebe ein Programm liegen, das sich ganz normal laden ließe.
+        if ($vault -and $outcome.Outcome -eq 'fail' -and (Test-WzInternetAccess).Kind -eq 'ok') {
+            Write-WzLog (Get-WzText 'apps.logVaultFallback' @{ grund = $outcome.Text }) -Level Warn
+            $base = $onlineBase
+            $result = Invoke-WzProcess -FilePath $wingetPath -Arguments "$base --scope machine" -TimeoutSeconds 1800
+            $outcome = Get-WzWingetOutcome -ExitCode $result.ExitCode
+        }
 
         # Nicht jedes Programm lässt sich systemweit einrichten. Früher hing
         # dieser Rückfall an der Textausgabe ('scope|Bereich') — winget schreibt
@@ -577,6 +594,44 @@ function Test-WzWingetDownloadSupport {
     } catch {
         return $false
     }
+}
+
+function Enable-WzWingetLocalManifests {
+    <#
+    .SYNOPSIS
+        Erlaubt winget die Installation aus lokalen Manifesten — Voraussetzung
+        für »winget install --manifest«, also für den Stick-Vorrat.
+    .NOTES
+        Die Einstellung war nirgends gesetzt, und genau beim Kunden ohne Netz,
+        für den der Vorrat gebaut wurde, brach winget ab (Audit 2026-10, H6).
+        Sie gilt geräteweit und verlangt Adminrechte. Gesetzt wird sie nur,
+        wenn sie aus ist, und dann im Übergabeblatt genannt.
+    .OUTPUTS
+        $true, wenn die Einstellung danach an ist.
+    #>
+    param([Parameter(Mandatory = $true)][string]$WingetPath)
+
+    $export = Invoke-WzProcess -FilePath $WingetPath -Arguments 'settings export' -TimeoutSeconds 60
+    if ($export.ExitCode -eq 0) {
+        try {
+            $settings = $export.StdOut | ConvertFrom-Json -ErrorAction Stop
+            if ($settings.adminSettings.LocalManifestFiles -eq $true) { return $true }
+        } catch { }
+    }
+
+    if ($syncHash.DryRun) {
+        Write-WzLog (Get-WzText 'apps.logLocalManifestsTest') -Level Test
+        return $true
+    }
+
+    $enable = Invoke-WzProcess -FilePath $WingetPath -Arguments 'settings --enable LocalManifestFiles' -TimeoutSeconds 60
+    if ($enable.ExitCode -eq 0) {
+        Write-WzLog (Get-WzText 'apps.logLocalManifestsOn') -Level Ok
+        Add-WzAction -Area 'Programme' -Summary (Get-WzText 'apps.actionLocalManifests')
+        return $true
+    }
+    Write-WzLog (Get-WzText 'apps.logLocalManifestsFailed' @{ code = $enable.ExitCode }) -Level Warn
+    return $false
 }
 
 function Get-WzOfflineInstallerPath {
