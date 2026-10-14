@@ -216,6 +216,7 @@ function Invoke-Lauf {
     if ($Groesse) { $env:WZ_SELFTEST_SIZE = $Groesse } else { Remove-Item Env:WZ_SELFTEST_SIZE -ErrorAction SilentlyContinue }
 
     $ausgabe = & powershell.exe -NoProfile -ExecutionPolicy Bypass -STA -File (Join-Path $root 'src\main.ps1') 2>&1
+    $exitCode = $LASTEXITCODE
     if (-not (Test-Path -LiteralPath $env:WZ_PROBE_OUT)) {
         return @{ Ok = $false; Befunde = @('Sonde lieferte nichts — Seite gar nicht aufgebaut?'); Werte = @{} }
     }
@@ -227,6 +228,9 @@ function Invoke-Lauf {
         if ($teile[0] -eq 'WERT') { $werte[$teile[1]] = $teile[2] } elseif ($teile[0] -eq 'BEFUND') { $befunde += $teile[1] }
     }
     if ($ausgabe -join "`n" -match 'fehlgeschlagen|Exception') { $befunde += 'Ausnahme beim Seitenaufbau' }
+    # Der Selbsttest endet bei einem Fehler mit 3 — auch wenn die Ausgabe
+    # keines der Stichwörter trägt (Audit 2026-10, N)
+    if ($exitCode -ne 0) { $befunde += "main.ps1 endete mit $exitCode" }
     return @{ Ok = ($befunde.Count -eq 0); Befunde = $befunde; Werte = $werte }
 }
 

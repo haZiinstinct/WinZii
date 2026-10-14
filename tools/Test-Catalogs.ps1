@@ -311,6 +311,58 @@ if ($winget) {
     Write-Host "  wingetcodes $(@($winget.codes).Count) Codes, hex gegen code gerechnet" -ForegroundColor Gray
 }
 
+# --- updatecodes, oemtools ---------------------------------------------------
+# Beide wurden bisher nur auf gültiges JSON geprüft. Ein Code ohne führende
+# Nullen fand Get-WzUpdateText nie, denn verglichen wird als Zeichenkette
+# (Audit 2026-10, N).
+$updatecodes = Read-Catalog 'updatecodes'
+if ($updatecodes) {
+    $seenUpdate = @{}
+    foreach ($entry in $updatecodes.codes) {
+        $checked++
+        foreach ($field in @('code', 'outcome', 'text')) {
+            if (-not $entry.$field) { Add-Problem 'updatecodes' "$($entry.code) : Feld '$field' fehlt" }
+        }
+        if ($entry.code -cnotmatch '^0x[0-9A-F]{8}$') {
+            Add-Problem 'updatecodes' "'$($entry.code)' ist keine achtstellige Hexzahl in Großbuchstaben"
+        }
+        if ($entry.outcome -notin @('ok', 'skip', 'reboot', 'fail')) {
+            Add-Problem 'updatecodes' "$($entry.code) : unbekanntes outcome '$($entry.outcome)'"
+        }
+        if ($seenUpdate.ContainsKey([string]$entry.code)) { Add-Problem 'updatecodes' "$($entry.code) doppelt" }
+        $seenUpdate[[string]$entry.code] = $true
+    }
+    Write-Host "  updatecodes $(@($updatecodes.codes).Count) Codes" -ForegroundColor Gray
+}
+
+$oemtools = Read-Catalog 'oemtools'
+if ($oemtools) {
+    foreach ($tool in $oemtools.tools) {
+        $checked++
+        foreach ($field in @('id', 'name', 'vendor', 'wingetId', 'description')) {
+            if (-not $tool.$field) { Add-Problem 'oemtools' "$($tool.id) : Feld '$field' fehlt" }
+        }
+        # Ohne Kommandozeile (Intel) wird das Werkzeug nur von Hand bedient —
+        # dann gibt es nichts aufzurufen und nichts zu suchen.
+        if ($tool.silent) {
+            foreach ($field in @('match', 'scanArgs', 'applyArgs')) {
+                if (-not $tool.$field) { Add-Problem 'oemtools' "$($tool.id) : Feld '$field' fehlt" }
+            }
+            if (@($tool.paths).Count -eq 0) { Add-Problem 'oemtools' "$($tool.id) : keine Pfade" }
+        }
+        foreach ($path in @($tool.paths)) {
+            if ($path -notmatch '\.exe$') { Add-Problem 'oemtools' "$($tool.id) : Pfad '$path' ist keine .exe" }
+        }
+        try { [void][regex]::new([string]$tool.match) } catch {
+            Add-Problem 'oemtools' "$($tool.id) : match ist kein gültiger regulärer Ausdruck"
+        }
+        if ($tool.wingetId -and $tool.wingetId -notmatch '^[A-Za-z0-9][\w\-]*(\.[\w\-]+)+$') {
+            Add-Problem 'oemtools' "$($tool.id) : wingetId '$($tool.wingetId)' hat kein gültiges Format"
+        }
+    }
+    Write-Host "  oemtools    $(@($oemtools.tools).Count) Werkzeuge" -ForegroundColor Gray
+}
+
 # --- Uebersetzung der Kataloge ---------------------------------------------
 # Die Katalogdateien sind deutsch; data\lang\kataloge.<code>.json legt die
 # uebersetzten Anzeigefelder darueber. Fehlt dort ein Eintrag, faellt WinZii
