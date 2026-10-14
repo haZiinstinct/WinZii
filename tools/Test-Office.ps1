@@ -141,6 +141,13 @@ try {
     $u = Test-WzOfficeCache -VariantId $variante -Language $sprache -Edition '32'
     Write-Check '32-Bit-Satz taugt für 32 Bit' ($u.Available) $u.Detail
 
+    # Angefangener 64-Bit-Satz neben dem vollen 32-Bit-Satz: Die Größe der
+    # fremden Architektur darf die 2-GB-Schranke nicht füllen.
+    New-DuenneDatei -Pfad (Join-Path $fassung 'stream.x64.x-none.dat') -Groesse 1100MB
+    New-DuenneDatei -Pfad (Join-Path $fassung "stream.x64.$sprache.dat") -Groesse 60MB
+    $u = Test-WzOfficeCache -VariantId $variante -Language $sprache -Edition '64'
+    Write-Check 'fremde Architektur zählt nicht zur Größe' (-not $u.Available) $u.Detail
+
     # 4. Eine unsignierte setup.exe im Vorrat läuft nicht eleviert los (M8).
     #    Im Testmodus, damit danach kein echter Download startet.
     Write-Host ''
