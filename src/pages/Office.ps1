@@ -211,7 +211,9 @@ function Start-WzOfficeInstall {
         -ConfirmText $(if ($syncHash.DryRun) { Get-WzText 'off.btnDryRun' } else { Get-WzText 'off.btnInstallGo' }) -Danger
     if (-not $answer.Confirmed) { return }
 
-    Invoke-WzTask -Name (Get-WzText 'off.taskInstall') -Cancelable `
+    # Nicht abbrechbar: »Abbrechen« stoppte nur die Pipeline, setup.exe lief
+    # weiter, und WinZii gab sich frei für einen zweiten ODT-Lauf (Audit M13).
+    Invoke-WzTask -Name (Get-WzText 'off.taskInstall') `
         -ArgumentList @($choice.Variant.id, $choice.Language, $choice.Apps, $choice.Key, $edition) -ScriptBlock {
         param($variantId, $language, $apps, $key, $edition)
         Invoke-WzOfficeInstall -VariantId $variantId -Language $language -IncludedApps $apps `
@@ -272,11 +274,15 @@ function Start-WzOfficeRemove {
             -Message (Get-WzText 'off.thoroughMessage') `
             -Items @($remnants.Items) -ConfirmText (Get-WzText 'off.btnThoroughAnyway') -Danger
         if (-not $sure.Confirmed) { return }
-        [void](New-WzRestorePoint -Description (Get-WzText 'off.restorePointThorough'))
     }
 
-    Invoke-WzTask -Name (Get-WzText 'off.taskRemove') -Cancelable -ArgumentList @($thorough) -ScriptBlock {
+    Invoke-WzTask -Name (Get-WzText 'off.taskRemove') -ArgumentList @($thorough) -ScriptBlock {
         param($thorough)
+        # Der Wiederherstellungspunkt dauert 10 bis 60 Sekunden. Im UI-Faden
+        # fror er das Fenster ein; hier läuft er vor Stufe 1 (Audit M17).
+        if ($thorough -and -not $syncHash.DryRun) {
+            [void](New-WzRestorePoint -Description (Get-WzText 'off.restorePointThorough'))
+        }
         Remove-WzOffice -Thorough:$thorough
     } -OnComplete {
         param($summary)
@@ -322,7 +328,8 @@ function Start-WzOfficeDownload {
         -ConfirmText (Get-WzText 'off.btnDownloadGo')
     if (-not $answer.Confirmed) { return }
 
-    Invoke-WzTask -Name (Get-WzText 'off.taskDownload') -ArgumentList @($choice.Variant.id, $choice.Language, $choice.Apps) -ScriptBlock {
+    # Abbrechbar: ein reiner Download, das Modul beendet ODT dann mit.
+    Invoke-WzTask -Name (Get-WzText 'off.taskDownload') -Cancelable -ArgumentList @($choice.Variant.id, $choice.Language, $choice.Apps) -ScriptBlock {
         param($variantId, $language, $apps)
         Invoke-WzOfficeDownload -VariantId $variantId -Language $language -IncludedApps $apps
     } -OnComplete {
@@ -359,7 +366,7 @@ function Start-WzLibreOfficeInstall {
         -ConfirmText (Get-WzText 'off.btnInstallGo')
     if (-not $answer.Confirmed) { return }
 
-    Invoke-WzTask -Name (Get-WzText 'off.taskLibre') -Cancelable -ScriptBlock {
+    Invoke-WzTask -Name (Get-WzText 'off.taskLibre') -ScriptBlock {
         Install-WzLibreOffice
     } -OnComplete {
         param($summary)

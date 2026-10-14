@@ -189,7 +189,8 @@ function Start-WzAppDownload {
         -Items @($selected | ForEach-Object { $_.name }) -ConfirmText (Get-WzText 'apps.btnDownload2')
     if (-not $answer.Confirmed) { return }
 
-    Invoke-WzTask -Name (Get-WzText 'apps.taskDownload') -ArgumentList (, $selected) -ScriptBlock {
+    # Abbrechbar: ein reiner Download, das Modul beendet winget dann mit.
+    Invoke-WzTask -Name (Get-WzText 'apps.taskDownload') -Cancelable -ArgumentList (, $selected) -ScriptBlock {
         param($apps)
         Save-WzOfflineInstallers -Apps $apps
     } -OnComplete {

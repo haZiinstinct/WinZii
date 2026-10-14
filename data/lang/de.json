@@ -1267,6 +1267,7 @@
     "removeTimeout": "Zeitüberschreitung beim Entfernen.",
     "logOdtCodesShort": "Das Bereitstellungswerkzeug meldet: {codes}",
     "logOdtDone": "Das Bereitstellungswerkzeug ist durchgelaufen.",
+    "logOdtExitCode": "Das Bereitstellungswerkzeug endete mit Code {code}. Ob Office entfernt ist, zeigt die Nachprüfung.",
     "logAppRemoveFailed": "{name} ließ sich nicht entfernen: {grund}",
     "logFolderRemoveFailed": "{pfad} ließ sich nicht entfernen — meist noch in Benutzung.",
     "logRemoved": "Office ist entfernt.",
