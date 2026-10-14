@@ -39,6 +39,9 @@ foreach ($module in 'Core.Paths', 'Core.Logging', 'Core.Json', 'Core.I18n', 'Cor
 # Aufruf mitten in einer Funktion.
 $syncHash.Language = 'de'
 [void](Import-WzLanguage)
+# Wie main.ps1: Ohne den Sitzungszustand kennen Hintergrund-Runspaces die
+# Wz-Funktionen nicht.
+[void](Initialize-WzRunspacePool)
 
 $xamlDir = Join-Path $root 'src\xaml'
 $themeReader = New-Object Xml.XmlNodeReader ([xml][IO.File]::ReadAllText((Join-Path $xamlDir 'Theme.xaml'), [Text.Encoding]::UTF8))
@@ -355,6 +358,38 @@ $window.Add_ContentRendered({
     })
     if (-not $uebergabeOk) { $script:failed++ }
 
+    # Kooperativer Abbruch (Audit H9): »Abbrechen« beendet den Kindprozess,
+    # und der Vorgang liefert trotzdem ein Ergebnis. Bei einem Pipeline-Stopp
+    # lief der Prozess weiter und das Ergebnis fehlte.
+    $abbruch = @{}
+    $uhr = [Diagnostics.Stopwatch]::StartNew()
+    Invoke-WzTask -Name 'Selbsttest Abbruch' -Silent -CooperativeCancel -ScriptBlock {
+        Invoke-WzProcess -FilePath 'cmd.exe' -Arguments '/c ping -n 30 127.0.0.1 >nul' -TimeoutSeconds 120 -KillOnCancel
+    } -OnComplete {
+        param($ergebnis)
+        $abbruch['fertig'] = $true
+        $abbruch['ergebnis'] = $ergebnis
+    }.GetNewClosure()
+    $grenze = (Get-Date).AddSeconds(1)
+    while ((Get-Date) -lt $grenze) { Invoke-WzDoEvents; Start-Sleep -Milliseconds 50 }
+    Stop-WzTask
+    $grenze = (Get-Date).AddSeconds(20)
+    while (-not $abbruch['fertig'] -and (Get-Date) -lt $grenze) { Invoke-WzDoEvents; Start-Sleep -Milliseconds 50 }
+    $sekunden = $uhr.Elapsed.TotalSeconds
+    $mitErgebnis = [bool]($abbruch['ergebnis'] -and $abbruch['ergebnis'].Canceled)
+    $schnell = ($abbruch['fertig'] -and $sekunden -lt 10)
+    $freiNachAbbruch = (-not $syncHash.Busy)
+    $abbruchOk = ($mitErgebnis -and $schnell -and $freiNachAbbruch)
+    [void]$script:results.Add([pscustomobject]@{
+        Name = 'abbruch'
+        Weg  = 'Kooperativ'
+        Bild = $mitErgebnis
+        Zu   = $schnell
+        Abbr = $freiNachAbbruch
+        Ok   = $abbruchOk
+    })
+    if (-not $abbruchOk) { $script:failed++ }
+
     $window.Close()
 })
 
@@ -366,6 +401,11 @@ foreach ($entry in $script:results) {
     $color = if ($entry.Ok) { 'Green' } else { 'Red' }
     if ($entry.Weg -eq 'Dispatcher') {
         Write-Host ("  {0} {1,-11} Fehler im UI-Faden   Fenster lebt={2,-5} Dialog zu={3,-5} protokolliert={4}" -f `
+            $symbol, $entry.Name, $entry.Bild, $entry.Zu, $entry.Abbr) -ForegroundColor $color
+        continue
+    }
+    if ($entry.Weg -eq 'Kooperativ') {
+        Write-Host ("  {0} {1,-11} Abbruch mit Prozess   Ergebnis kommt={2,-5} unter 10 s={3,-5} danach frei={4}" -f `
             $symbol, $entry.Name, $entry.Bild, $entry.Zu, $entry.Abbr) -ForegroundColor $color
         continue
     }

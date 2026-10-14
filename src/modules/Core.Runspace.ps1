@@ -54,8 +54,15 @@ function Invoke-WzTask {
         [switch]$Silent,
         # Nur für reine Lese-Aufgaben gedacht: Eingriffe dürfen nicht mitten in
         # der Arbeit angehalten werden, eine Bestandsaufnahme schon.
-        [switch]$Cancelable
+        [switch]$Cancelable,
+        # Abbrechen setzt nur das Flag und stoppt die Pipeline nicht. Für
+        # Arbeit, die selbst sauber aussteigt (etwa robocopy mit -KillOnCancel)
+        # und danach noch ein Ergebnis zu melden hat. Ein Pipeline-Stopp warf
+        # dort beim nächsten Befehl, bevor der Kindprozess beendet war.
+        [switch]$CooperativeCancel
     )
+
+    if ($CooperativeCancel) { $Cancelable = [switch]$true }
 
     if ($syncHash.Busy) {
         # Früher nur eine Protokollzeile: Wer während des Startscans auf
@@ -90,6 +97,7 @@ function Invoke-WzTask {
         OnComplete = $OnComplete
         Silent     = $Silent.IsPresent
         Cancelable = $Cancelable.IsPresent
+        Cooperative = $CooperativeCancel.IsPresent
         Canceled   = $false
         Started    = Get-Date
     }
@@ -252,6 +260,7 @@ function Stop-WzTask {
 
     $state.Canceled = $true
     Write-WzLog (Get-WzText 'core.taskCancelling' @{ name = $state.Name }) -Level Warn
+    if ($state.Cooperative) { return }
     try {
         [void]$state.PowerShell.BeginStop($null, $null)
     } catch { }
