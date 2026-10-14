@@ -25,7 +25,7 @@ Jeder Punkt: `- [ ] **Kennung** Datei:Zeile. Aufgabe. → Erledigt wenn …`
 - [x] **M1** `src/pages/TweakList.ps1:326-328`, `src/pages/Uninstall.ps1:428-430`, `src/pages/Cleanup.ps1:300-302`. Module geben die tatsächlich angewendeten Namen zurück; `-Detail` daraus bauen, Fehlschläge mit Präfix. → Erledigt wenn ein absichtlich fehlschlagender Tweak im Übergabeblatt als fehlgeschlagen steht.
 - [x] **M2** `src/modules/Optimizer.ps1:216-224, 279-282, 332-335, 362-365`, `src/modules/AiRemoval.ps1:142-145`. Handler liefern `Changed/Skipped`; Tweak ohne einzige Änderung zählt als »nicht zutreffend«. → Erledigt wenn `ai-tasks-off` auf einem Gerät ohne Recall-Aufgaben nicht als »angewendet« gezählt wird.
 - [x] **M4** `data/tweaks.json:1037-1055` (`sec-defender-network`). `defaultChecked: false`, `risk: medium`, Beschreibung um Cloud-Voraussetzung ergänzen. Alle Defender-Policy-Einträge (Z. 923, 1010, 1037, 1112, 1139): Hinweis »sperrt die Einstellung in der Windows-Sicherheit«. → Erledigt wenn `Test-Catalogs` durchläuft und die Texte in `kataloge.en.json` nachgezogen sind.
-- [ ] **M5** `src/modules/Autostart.ps1:298-299, 312, 391-406`. Startordner über `Get-WzUserFolder -Kind RoamingAppData` bilden, `Resolve-WzRegistryPath` auch auf die StartupApproved-Pfade anwenden. → Erledigt wenn bei Elevierung mit Technikerkonto der Startordner des Kunden gezeigt wird.
+- [x] **M5** `src/modules/Autostart.ps1:298-299, 312, 391-406`. Startordner über `Get-WzUserFolder -Kind RoamingAppData` bilden, `Resolve-WzRegistryPath` auch auf die StartupApproved-Pfade anwenden. → Erledigt wenn bei Elevierung mit Technikerkonto der Startordner des Kunden gezeigt wird.
 - [x] **M6** `src/modules/Core.Backup.ps1:337-341`. `if ($previous.state -ne 'Disabled') { Enable } else { Disable }`. → Erledigt wenn Testfall mit Zustand `Queued` in `Test-Undo.ps1`.
 - [x] **M7** `src/modules/Cleanup.ps1:126-133, 225-276, 319-331`. Bei `Blocked` die Kategorie überspringen und melden; im Papierkorb-Catch `Failed=1` statt `0`; `data/cleanup.json:34` korrigieren (nur eigener Papierkorb). → Erledigt wenn ein laufender Edge die Cache-Kategorie als übersprungen meldet.
 - [x] **N** `src/modules/Core.Backup.ps1:322-323`, `src/modules/Optimizer.ps1:268-269`. `keyExisted` im Undo-Eintrag speichern; bei `false` den Schlüssel nach der Rücknahme löschen, wenn er leer ist.
@@ -37,7 +37,7 @@ Jeder Punkt: `- [ ] **Kennung** Datei:Zeile. Aufgabe. → Erledigt wenn …`
 - [x] **N** `src/modules/Optimizer.ps1:182`. Sicherungsordner erst in `Complete-WzUndoSession` oder beim ersten Export anlegen, nicht im Testmodus.
 - [x] **N** `data/tweaks.json:970-988` (`sec-llmnr-off`): NetBIOS aus dem Namen nehmen oder Schlüssel ergänzen. `:151-176` (`perf-animations-off`): `VisualFXSetting=2` begründen oder UserPreferencesMask setzen. `:1318-1357` (`ai-apps-policy`): Snipping Tool aus der Beschreibung oder Schlüssel ergänzen.
 - [x] **N** `src/modules/Uninstall.ps1:530-616`, `src/modules/Core.Backup.ps1:392-398`. Aktionstyp `leftoverCleanup` im Restore behandeln, `.reg`-Dateien aus `exportedKeys` importieren.
-- [ ] **N** `src/modules/Autostart.ps1:366-414`. Hinweistext der Seite: Umschaltungen stehen nicht unter »Rücknahme«, nur im Übergabeblatt.
+- [x] **N** `src/modules/Autostart.ps1:366-414`. Hinweistext der Seite: Umschaltungen stehen nicht unter »Rücknahme«, nur im Übergabeblatt.
 
 ### Beschaffung und Ausführung
 

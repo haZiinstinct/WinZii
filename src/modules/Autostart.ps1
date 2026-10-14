@@ -45,9 +45,14 @@ function Get-WzAutostartItems {
         }
     }
 
-    # Startordner
+    # Startordner. Der eigene wird wie die Run-Schlüssel auf den angemeldeten
+    # Anwender aufgelöst: Bei Elevierung mit einem Technikerkonto zeigte
+    # GetFolderPath('Startup') sonst dessen Ordner, und das Umschalten schrieb
+    # in dessen HKCU (Audit 2026-10, M5).
+    $roaming = Get-WzUserFolder -Kind 'RoamingAppData'
+    $userStartup = if ($roaming) { Join-Path $roaming 'Microsoft\Windows\Start Menu\Programs\Startup' } else { $null }
     $folders = @(
-        @{ Path = [Environment]::GetFolderPath('Startup'); Scope = (Get-WzText 'auto.scopeThisUser'); Approved = 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer\StartupApproved\StartupFolder' }
+        @{ Path = $userStartup; Scope = (Get-WzText 'auto.scopeThisUser'); Approved = (Resolve-WzRegistryPath 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer\StartupApproved\StartupFolder') }
         @{ Path = [Environment]::GetFolderPath('CommonStartup'); Scope = (Get-WzText 'auto.scopeAllUsers'); Approved = 'HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\StartupApproved\StartupFolder' }
     )
 
