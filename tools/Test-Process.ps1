@@ -83,12 +83,16 @@ Assert-Wz 'ohne Schalter laeuft es zu Ende' ($r.ExitCode -eq 0 -and -not $r.Canc
 
 # Mit -KillOnCancel muss derselbe Aufruf sofort abbrechen.
 $syncHash.CurrentTask.Canceled = $true
+# Nur die eigenen ping-Prozesse zählen: Ein ping, den jemand anderes auf dem
+# Rechner laufen hat, ließ die Prüfung sonst fehlschlagen (Audit 2026-10, N).
+$pingVorher = @(Get-Process ping -ErrorAction SilentlyContinue | ForEach-Object { $_.Id })
 $start = Get-Date
 $r = Invoke-WzProcess -FilePath 'cmd.exe' -Arguments '/c ping -n 30 127.0.0.1 >nul' -TimeoutSeconds 300 -KillOnCancel
 $dauer = (Get-Date) - $start
 Assert-Wz 'mit Schalter bricht es ab' ($r.Canceled -and $dauer.TotalSeconds -lt 10) `
     "$([math]::Round($dauer.TotalSeconds,1)) s, Canceled=$($r.Canceled)"
-Assert-Wz 'kein ping mehr uebrig' (@(Get-Process ping -ErrorAction SilentlyContinue).Count -eq 0) `
+$pingNeu = @(Get-Process ping -ErrorAction SilentlyContinue | Where-Object { $pingVorher -notcontains $_.Id })
+Assert-Wz 'kein ping mehr uebrig' ($pingNeu.Count -eq 0) `
     'Prozessbaum mitbeendet'
 
 # Ohne Abbruchwunsch aendert der Schalter nichts.

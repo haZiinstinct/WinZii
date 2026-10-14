@@ -128,9 +128,9 @@ Jeder Punkt: `- [ ] **Kennung** Datei:Zeile. Aufgabe. → Erledigt wenn …`
 - [x] **N** `.gitignore`. `/selftest.png`, `/abbilder/`.
 - [x] **N** `.editorconfig:9`. `[*.{yml,yaml,txt,gitattributes,gitignore,editorconfig}] end_of_line = lf`.
 - [x] **N** `tools/Test-Language.ps1:201-216`. `Core.I18n.ps1` dot-sourcen und `Get-WzSystemLanguage` mit umgebogener `Get-UICulture` aufrufen; Z. 259: Einzelwort-Literale in `-ConfirmText`, `-Title`, `-Area` prüfen.
-- [ ] **N** `tools/Test-Pages.ps1:51, 71`, `tools/Test-Layout.ps1:229`, `tools/Test-Sandbox.ps1:51, 63`. Zusätzlich `$LASTEXITCODE -ne 0` als Fehlschlag.
-- [ ] **N** `tools/Test-Process.ps1:88`. PID des gestarteten Kindprozesses prüfen statt aller `ping`-Prozesse.
-- [ ] **N** `tools/Test-Catalogs.ps1:272, 278-279`. Strukturprüfung für `oemtools.json`, `updatecodes.json`, `wingetcodes.json` (Pflichtfelder, Hex ↔ Dezimal).
+- [x] **N** `tools/Test-Pages.ps1:51, 71`, `tools/Test-Layout.ps1:229`, `tools/Test-Sandbox.ps1:51, 63`. Zusätzlich `$LASTEXITCODE -ne 0` als Fehlschlag.
+- [x] **N** `tools/Test-Process.ps1:88`. PID des gestarteten Kindprozesses prüfen statt aller `ping`-Prozesse.
+- [x] **N** `tools/Test-Catalogs.ps1:272, 278-279`. Strukturprüfung für `oemtools.json`, `updatecodes.json`, `wingetcodes.json` (Pflichtfelder, Hex ↔ Dezimal).
 
 ## Stufe 4: Dokumentation
 
