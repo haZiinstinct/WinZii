@@ -1238,7 +1238,8 @@ function Convert-WzReportToPdf {
     try {
         $process = Invoke-WzProcess -FilePath $edge -Arguments $arguments -TimeoutSeconds 120
     } finally {
-        Remove-Item -LiteralPath $profil -Recurse -Force -ErrorAction SilentlyContinue
+        # Remove-WzTree folgt keiner Junction — WinZii läuft eleviert
+        try { if (Test-Path -LiteralPath $profil) { Remove-WzTree -LiteralPath $profil } } catch { }
     }
 
     if ((Test-Path -LiteralPath $pdfPath) -and (Get-Item -LiteralPath $pdfPath).Length -gt 1024) {
