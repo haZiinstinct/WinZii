@@ -540,6 +540,7 @@
     "tipCommand": "{befehl}\n\nSource: {pfad}\nApplies to: {bereich}",
     "logToggleTest": "[Test] {name} would be {aktion}",
     "logToggleFailed": "{name} could not be {aktion}: {grund}",
+    "errApprovedPath": "unexpected switch key, nothing changed: {pfad}",
     "activeCount": "{anzahl} active",
     "taskLoad": "Reading startup entries",
     "actionEnabled": "enabled",
