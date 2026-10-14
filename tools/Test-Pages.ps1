@@ -46,11 +46,15 @@ foreach ($page in $pages) {
     $env:WZ_SELFTEST_OUT = if ($Screenshots) { Join-Path $shotDir "$page.png" } else { Join-Path $env:TEMP 'winzii-page-test.png' }
 
     $output = & powershell.exe -NoProfile -ExecutionPolicy Bypass -STA -File (Join-Path $root 'src\main.ps1') 2>&1
+    $exitCode = $LASTEXITCODE
     $text = $output -join "`n"
 
-    if ($text -match 'fehlgeschlagen|Exception|konnte nicht geladen') {
-        Write-Host "  [FEHL] $page" -ForegroundColor Red
-        foreach ($line in ($output | Where-Object { $_ -match 'fehlgeschlagen|Stelle:|Zeile:' })) {
+    # Zusätzlich der Exit-Code: main.ps1 meldet im Selbsttest protokollierte
+    # Fehler mit 3 (Audit 2026-10, M30), und das Textmuster allein übersah
+    # alles, was anders formuliert war.
+    if ($exitCode -ne 0 -or $text -match 'fehlgeschlagen|Exception|konnte nicht geladen|WZTEST-FEHLER') {
+        Write-Host "  [FEHL] $page (exit=$exitCode)" -ForegroundColor Red
+        foreach ($line in ($output | Where-Object { $_ -match 'fehlgeschlagen|Stelle:|Zeile:|WZTEST-FEHLER' })) {
             Write-Host "         $line" -ForegroundColor DarkGray
         }
         $failed++
@@ -66,9 +70,10 @@ $env:WZ_SELFTEST = '1500'
 $env:WZ_SELFTEST_PAGE = 'Dashboard'
 $env:WZ_SELFTEST_OUT = Join-Path $env:TEMP 'winzii-launcher-test.png'
 $launcherOutput = & powershell.exe -NoProfile -ExecutionPolicy Bypass -File (Join-Path $root 'src\launcher.ps1') -NoElevate 2>&1
+$launcherExit = $LASTEXITCODE
 $launcherText = $launcherOutput -join "`n"
 
-if ($launcherText -match 'wurde nicht als Name|fehlgeschlagen|Exception') {
+if ($launcherExit -ne 0 -or $launcherText -match 'wurde nicht als Name|fehlgeschlagen|Exception|WZTEST-FEHLER') {
     Write-Host '  [FEHL] Launcher-Startweg' -ForegroundColor Red
     foreach ($line in ($launcherOutput | Where-Object { $_ -match 'wurde nicht als Name|fehlgeschlagen|Stelle:' })) {
         Write-Host "         $line" -ForegroundColor DarkGray
