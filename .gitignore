@@ -15,6 +15,7 @@
 
 # Ergebnisse der Sandbox-Selbsttests (tools\Test-Sandbox.wsb)
 /sandbox-ergebnis/
+/sandbox-staging/
 
 # Windows
 Thumbs.db

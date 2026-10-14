@@ -10,6 +10,12 @@
     Wer nur die Oberfläche ansehen will, nimmt WinZii.wsb; das bindet
     denselben Ordner schreibgeschützt ein.
 
+    ACHTUNG: Eingebunden wird der GANZE Ordner, mit Netz — auch backups\
+    mit WLAN- und BitLocker-Schlüsseln im Klartext, logs\ und reports\.
+    Was in der Sandbox läuft, kann das lesen und verändern. Vorher backups\
+    wegräumen oder nur eine Kopie ohne diese Ordner einbinden
+    (Audit 2026-10, M39).
+
     HostFolder steht relativ zu dieser Datei — ".." ist der WinZii-Ordner.
     Sollte Windows das ablehnen, hier den vollständigen Pfad eintragen.
 

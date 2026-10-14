@@ -225,8 +225,8 @@ powershell -NoProfile -ExecutionPolicy Bypass -File tools\Test-Catalogs.ps1
 | `tools\Repair-Encoding.ps1` | UTF-8 mit BOM erzwingen (Pflicht bei PowerShell 5.1 und Umlauten) |
 | `tools\New-Release.ps1` | Release-ZIP bauen und SHA256-Prüfsumme ausgeben |
 | `tools\WinZii.wsb` | Windows Sandbox zum gefahrlosen Ausprobieren (schreibgeschützt) |
-| `tools\WinZii-Schreibend.wsb` | Dasselbe mit Schreibrecht — für Treibersicherung und Berichte |
-| `tools\Test-Sandbox.wsb` | Selbsttest in der Sandbox: läuft automatisch los und legt Bericht und Abbild unter `sandbox-ergebnis\` ab |
+| `tools\WinZii-Schreibend.wsb` | Dasselbe mit Schreibrecht — für Treibersicherung und Berichte. Bindet den ganzen Ordner ein, auch `backups\` mit Schlüsseln im Klartext |
+| `tools\Start-SandboxTest.ps1` | Selbsttest in der Sandbox: legt eine Kopie ohne `backups\`, `logs\` und `offline\` unter `sandbox-staging\` an und öffnet `Test-Sandbox.wsb`; Bericht und Abbild landen unter `sandbox-staging\sandbox-ergebnis\` |
 
 Die Sandbox muss einmalig freigeschaltet werden, danach ist ein Neustart nötig:
 

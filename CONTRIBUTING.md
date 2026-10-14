@@ -52,6 +52,7 @@ Die weiteren Prüfwerkzeuge lohnen sich, wenn du in dem jeweiligen Bereich gearb
 | `tools\Test-Dialogs.ps1` | an `Show-WzConfirm` gearbeitet |
 | `tools\Test-Process.ps1` | an `Invoke-WzProcess` gearbeitet |
 | `tools\Invoke-Analyzer.ps1` | allgemeine Codeprüfung, Ziel ist PowerShell 5.1 |
+| `tools\Start-SandboxTest.ps1` | echte Eingriffe, winget-Nachinstallation, Zurückspielen — in der Windows Sandbox, mit einer Kopie ohne `backups\` |
 
 Was keines der Werkzeuge kann, steht in [docs/ABNAHME.md](docs/ABNAHME.md): die Prüfung auf
 fremder Hardware, Punkt für Punkt, mit dem Stand, was davon schon gelaufen ist.

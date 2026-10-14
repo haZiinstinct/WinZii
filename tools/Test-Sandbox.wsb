@@ -5,20 +5,27 @@
     unter sandbox-ergebnis\<Zeit>\ im eingebundenen Ordner ab — sie überleben
     also das Schließen der Sandbox.
 
+    Eingebunden wird NICHT der Arbeitsordner, sondern die Kopie
+    sandbox-staging\, die tools\Start-SandboxTest.ps1 anlegt und danach diese
+    Datei öffnet. Der Arbeitsordner enthält backups\ mit WLAN- und
+    BitLocker-Schlüsseln im Klartext, dazu logs\ und .git; der Test lädt
+    Software aus dem Netz und schreibt in den eingebundenen Ordner
+    (Audit 2026-10, M39). Fehlt sandbox-staging\, startet die Sandbox nicht.
+
     Der Ordner ist absichtlich BESCHREIBBAR, denn der Test wendet echte
     Eingriffe an und nimmt sie zurück. Alles davon passiert in der Sandbox;
-    auf den echten Ordner werden nur die Ergebnisdateien geschrieben.
+    in die Kopie werden nur Ergebnisdateien geschrieben.
 
-    HostFolder steht relativ zu dieser Datei — ".." ist der WinZii-Ordner.
+    HostFolder steht relativ zu dieser Datei.
 
-    Aufruf: Doppelklick (Windows Pro oder Enterprise, Feature
-    Containers-DisposableClientVM aktiv).
+    Aufruf: powershell -NoProfile -ExecutionPolicy Bypass -File tools\Start-SandboxTest.ps1
+    (Windows Pro oder Enterprise, Feature Containers-DisposableClientVM aktiv).
   -->
   <VGpu>Disable</VGpu>
   <Networking>Enable</Networking>
   <MappedFolders>
     <MappedFolder>
-      <HostFolder>..</HostFolder>
+      <HostFolder>..\sandbox-staging</HostFolder>
       <SandboxFolder>C:\WinZii</SandboxFolder>
       <ReadOnly>false</ReadOnly>
     </MappedFolder>
