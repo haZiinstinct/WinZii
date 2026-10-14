@@ -201,8 +201,10 @@ function Invoke-WzAppxAction {
     }
 
     # Ließen sich die Bereitstellungen nicht lesen, bleiben sie womöglich
-    # bestehen — die App käme mit jedem neuen Konto zurück. Kein Erfolg.
-    if ($provisionedUnreadable -and $Session) { $Session.ActionFailed = $true }
+    # bestehen — die App käme mit jedem neuen Konto zurück. Wurde nur das
+    # eigene Konto gelesen, können andere Konten das Paket noch haben.
+    # Beides ist kein Erfolg, auch wenn hier etwas entfernt wurde.
+    if (($provisionedUnreadable -or $script:WzAppxPartial) -and $Session) { $Session.ActionFailed = $true }
 
     foreach ($package in $provisioned) {
         try {
