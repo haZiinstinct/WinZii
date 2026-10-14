@@ -231,7 +231,9 @@ function Get-WzUpdateResultCode {
     try {
         $einzeln = $Result.GetUpdateResult(0)
         if ($einzeln -and [int]$einzeln.HResult -ne 0) { return Format-WzUpdateCode $einzeln.HResult }
-        if ($einzeln) { return Format-WzUpdateCode $einzeln.HResult }
+        # Einzelergebnis 0, Sammelcode nicht: Dann zählt der Sammelcode. Bisher
+        # kam hier 0x0 zurück, obwohl der Vorgang als Ganzes gescheitert war.
+        if ($einzeln -and [int]$Result.HResult -eq 0) { return Format-WzUpdateCode $einzeln.HResult }
     } catch { }
     return Format-WzUpdateCode $Result.HResult
 }

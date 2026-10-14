@@ -216,6 +216,13 @@ function Start-WzDriverExport {
     } -OnComplete {
         param($result)
         if (-not $result) { return }
+        # Testmodus: Bisher stand »0 Pakete, 0 B gesichert« im Dialog und im
+        # Übergabeblatt, als wäre die Sicherung leer gewesen.
+        if ($result.DryRun) {
+            Add-WzAction -Area 'Treiber' -Summary (Get-WzText 'drv.exportDryRun' @{ ziel = $result.Path })
+            Show-WzInfo -Title (Get-WzText 'drv.exportDoneTitle') -Message (Get-WzText 'drv.exportDryRun' @{ ziel = $result.Path })
+            return
+        }
         $message = if ($result.Success) {
             Get-WzText 'drv.exportOk' @{ anzahl = $result.Packages; groesse = (Format-WzBytes $result.Bytes) }
         } else {
