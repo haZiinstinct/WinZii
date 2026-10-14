@@ -531,7 +531,7 @@
     "btnRefresh": "Neu einlesen",
     "listEyebrow": "// EINTRÄGE",
     "listHint": "Klicken schaltet ein oder aus",
-    "noticeDisable": "Im Zweifel abschalten statt löschen: Der Eintrag bleibt bestehen und lässt sich mit einem Klick zurückholen. Programme wie Virenschutz oder Cloud-Speicher sollten anbleiben.",
+    "noticeDisable": "Im Zweifel abschalten statt löschen: Der Eintrag bleibt bestehen und lässt sich mit einem Klick zurückholen. Programme wie Virenschutz oder Cloud-Speicher sollten anbleiben. Umschaltungen hier stehen nicht unter »Rücknahme«, sondern nur im Übergabeblatt — zurück geht es über denselben Schalter.",
     "loading": "wird geladen...",
     "ofTotal": "von {anzahl} Einträgen insgesamt",
     "lblResult": "Ergebnis",

@@ -531,7 +531,7 @@
     "btnRefresh": "Reload",
     "listEyebrow": "// ENTRIES",
     "listHint": "Click to switch on or off",
-    "noticeDisable": "When in doubt disable rather than delete: the entry stays and can be brought back with one click. Programs like antivirus or cloud storage should stay on.",
+    "noticeDisable": "When in doubt disable rather than delete: the entry stays and can be brought back with one click. Programs like antivirus or cloud storage should stay on. Toggles made here are not listed under “Undo”, only in the handover sheet — the same switch takes them back.",
     "loading": "loading...",
     "ofTotal": "of {anzahl} entries in total",
     "lblResult": "Result",
