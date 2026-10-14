@@ -664,7 +664,17 @@ function Add-WzIpPrinter {
         netzwerk  = $false
     }
 
-    $import = Import-WzPrinters -Printers @($printer)
+    # Das Übergabeblatt schreibt die Seite; Import-WzPrinters schrieb es bisher
+    # zusätzlich unter »Zurückspielen« (Audit 2026-10, M18).
+    $import = Import-WzPrinters -Printers @($printer) -SkipAction
+
+    # Im Testmodus landet der Drucker in Tested, nicht in Applied. Bisher hieß
+    # das »fehlgeschlagen«.
+    if (@($import.Tested).Count -gt 0) {
+        $result.Success = $true
+        $result.Summary = Get-WzText 'setup.printerDryRun' @{ name = $Name; adresse = $Address }
+        return $result
+    }
 
     $result.Success = (@($import.Applied).Count -gt 0)
     $result.Summary = if ($result.Success) {

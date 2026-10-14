@@ -2279,6 +2279,7 @@
     "printerDialogMessage": "The printer \"{name}\" will be added at address {adresse}.",
     "printerDialogItem": "Driver used: {treiber}",
     "printerAdded": "Printer \"{name}\" added at {adresse}.",
+    "printerDryRun": "Dry run: printer \"{name}\" at {adresse} would be added. Nothing was added.",
     "printerNoDriver": "The driver \"{treiber}\" could not be provided.",
     "printerFailed": "The printer \"{name}\" could not be added.",
     "taskPrinter": "Adding printer",
