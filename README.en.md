@@ -12,7 +12,6 @@ Run it from a USB stick: clean up, optimize, set up — no installation, no acco
 <sub>**Fully bilingual, German and English** — interface, dialogs, log, reports and handover sheet. The language button sits at the bottom of the sidebar and takes effect immediately, including for values that were already measured.</sub>
 
 ![Version](https://img.shields.io/badge/Version-0.7.0-00d4ff?labelColor=0a0a0f&style=flat-square)
-[![Prüfung](https://github.com/haZiinstinct/WinZii/actions/workflows/pruefung.yml/badge.svg)](https://github.com/haZiinstinct/WinZii/actions/workflows/pruefung.yml)
 ![Windows](https://img.shields.io/badge/Windows-10%20%7C%2011-00d4ff?labelColor=0a0a0f&style=flat-square)
 ![PowerShell](https://img.shields.io/badge/PowerShell-5.1-00d4ff?labelColor=0a0a0f&style=flat-square)
 ![Install](https://img.shields.io/badge/Install-none-00d4ff?labelColor=0a0a0f&style=flat-square)

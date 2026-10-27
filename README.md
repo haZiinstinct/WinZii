@@ -12,7 +12,6 @@ Vom USB-Stick starten, aufräumen, optimieren, einrichten — ohne Installation,
 <sub>A Windows maintenance toolkit for IT technicians. Fully bilingual German/English — interface, dialogs, log, reports and handover sheet.</sub>
 
 ![Version](https://img.shields.io/badge/Version-0.7.0-00d4ff?labelColor=0a0a0f&style=flat-square)
-[![Prüfung](https://github.com/haZiinstinct/WinZii/actions/workflows/pruefung.yml/badge.svg)](https://github.com/haZiinstinct/WinZii/actions/workflows/pruefung.yml)
 ![Windows](https://img.shields.io/badge/Windows-10%20%7C%2011-00d4ff?labelColor=0a0a0f&style=flat-square)
 ![PowerShell](https://img.shields.io/badge/PowerShell-5.1-00d4ff?labelColor=0a0a0f&style=flat-square)
 ![Installation](https://img.shields.io/badge/Installation-keine-00d4ff?labelColor=0a0a0f&style=flat-square)
