@@ -68,13 +68,14 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
+          $ErrorActionPreference = 'Continue'
           . .\src\version.ps1
           $dateien = "dist\WinZii-$WzVersion.zip", 'dist\WinZii.zip', "dist\WinZii-$WzVersion.zip.sha256"
-          gh release view $env:GITHUB_REF_NAME 2>$null | Out-Null
+          $null = & gh release view $env:GITHUB_REF_NAME 2>&1
           if ($LASTEXITCODE -eq 0) {
             # Von Hand angelegt: nur die Dateien nachreichen.
-            gh release upload $env:GITHUB_REF_NAME @dateien --clobber
+            & gh release upload $env:GITHUB_REF_NAME @dateien --clobber
           } else {
-            gh release create $env:GITHUB_REF_NAME @dateien --title "WinZii $WzVersion" --notes-file dist\release-notes.md
+            & gh release create $env:GITHUB_REF_NAME @dateien --title "WinZii $WzVersion" --notes-file dist\release-notes.md
           }
           if ($LASTEXITCODE -ne 0) { exit 1 }
