@@ -323,8 +323,10 @@ function Start-WzBookmarkExport {
     } -OnComplete {
         param($result)
         if (-not $result) { return }
-        Add-WzAction -Area 'Datensicherung' `
-            -Summary (Get-WzText 'data.actionBookmarks' @{ anzahl = $result.Count }) -Detail @($result.Path)
+        if ($result.Count -gt 0) {
+            Add-WzAction -Area 'Datensicherung' `
+                -Summary (Get-WzText 'data.actionBookmarks' @{ anzahl = $result.Count }) -Detail @($result.Path)
+        }
         Show-WzInfo -Title (Get-WzText 'data.bookmarkDoneTitle') `
             -Message (Get-WzText 'data.nFilesSaved' @{ anzahl = $result.Count }) -Items @($result.Path)
     }
@@ -348,7 +350,7 @@ function Start-WzOneDriveHydration {
         -ConfirmText (Get-WzText 'data.btnDownload') -Danger
     if (-not $answer.Confirmed) { return }
 
-    Invoke-WzTask -Name (Get-WzText 'data.taskHydrate') -Cancelable -ArgumentList (, @($folders | ForEach-Object { $_.Path })) -ScriptBlock {
+    Invoke-WzTask -Name (Get-WzText 'data.taskHydrate') -CooperativeCancel -ArgumentList (, @($folders | ForEach-Object { $_.Path })) -ScriptBlock {
         param($paths)
         @($paths | ForEach-Object { Invoke-WzOneDriveHydration -Path $_ })
     } -OnComplete {
@@ -467,8 +469,10 @@ function Start-WzDeviceExport {
     } -OnComplete {
         param($result)
         if (-not $result) { return }
-        Add-WzAction -Area 'Datensicherung' `
-            -Summary (Get-WzText 'data.actionDevices' @{ anzahl = $result.Count }) -Detail @($result.Path)
+        if ($result.Count -gt 0) {
+            Add-WzAction -Area 'Datensicherung' `
+                -Summary (Get-WzText 'data.actionDevices' @{ anzahl = $result.Count }) -Detail @($result.Path)
+        }
         Show-WzInfo -Title (Get-WzText 'data.deviceDoneTitle') `
             -Message (Get-WzText 'data.deviceDoneMessage' @{ anzahl = $result.Count }) -Items @($result.Path)
     }
@@ -497,8 +501,10 @@ function Start-WzWlanExport {
     } -OnComplete {
         param($result)
         if (-not $result) { return }
-        Add-WzAction -Area 'Datensicherung' `
-            -Summary (Get-WzText 'data.actionWlan' @{ anzahl = $result.Count; hinweis = $result.Note }) -Detail @($result.Path)
+        if ($result.Count -gt 0) {
+            Add-WzAction -Area 'Datensicherung' `
+                -Summary (Get-WzText 'data.actionWlan' @{ anzahl = $result.Count; hinweis = $result.Note }) -Detail @($result.Path)
+        }
         Show-WzInfo -Title (Get-WzText 'data.wlanDoneTitle') `
             -Message (Get-WzText 'data.wlanDoneMessage' @{ anzahl = $result.Count; hinweis = $result.Note }) -Items @($result.Path)
     }

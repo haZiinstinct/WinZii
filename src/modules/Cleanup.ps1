@@ -99,9 +99,14 @@ function Measure-WzCleanupCategory {
                     foreach ($eintrag in @(Get-ChildItem -LiteralPath $ordner -Force -Filter '$R*' -ErrorAction SilentlyContinue)) {
                         $result.Items++
                         if ($eintrag.PSIsContainer) {
-                            $summe = (Get-ChildItem -LiteralPath $eintrag.FullName -Recurse -File -Force -ErrorAction SilentlyContinue |
-                                Measure-Object -Property Length -Sum).Sum
-                            if ($summe) { $result.Bytes += [int64]$summe }
+                            $tree = Get-WzDirectoryTree -Path $eintrag.FullName
+                            foreach ($dir in $tree.Directories) {
+                                try {
+                                    foreach ($f in $dir.EnumerateFiles()) {
+                                        $result.Bytes += $f.Length
+                                    }
+                                } catch { }
+                            }
                         } else {
                             $result.Bytes += [int64]$eintrag.Length
                         }

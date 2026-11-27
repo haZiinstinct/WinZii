@@ -268,7 +268,7 @@ function Start-WzDriverImport {
         param($result)
         if (-not $result) { return }
         if ($result.Success) {
-            Add-WzAction -Area 'Treiber' -RebootRequired -Summary (Get-WzText 'drv.actionImport' @{ ergebnis = $result.Summary })
+            Add-WzAction -Area 'Treiber' -RebootRequired:([bool]$result.RebootRequired) -Summary (Get-WzText 'drv.actionImport' @{ ergebnis = $result.Summary })
         }
         Show-WzInfo -Title (Get-WzText 'drv.importDoneTitle') -Message $result.Summary
     }
@@ -474,7 +474,8 @@ function Start-WzOemRun {
             param($result)
             if (-not $result) { return }
             if ($result.Success -and $Apply) {
-                Add-WzAction -Area 'Treiber' -RebootRequired `
+                $needsReboot = [bool]($result.PSObject.Properties['RebootRequired'] -and $result.RebootRequired)
+                Add-WzAction -Area 'Treiber' -RebootRequired:$needsReboot `
                     -Summary (Get-WzText 'drv.actionOemApplied' @{ name = $primary.Tool.name })
             }
             Show-WzInfo -Title (Get-WzText 'drv.oemDoneTitle') -Message $result.Summary

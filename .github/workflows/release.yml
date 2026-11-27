@@ -41,7 +41,7 @@ jobs:
         shell: powershell
         run: |
           $fehler = 0
-          foreach ($werkzeug in 'Test-Smoke', 'Test-Language', 'Test-Catalogs', 'Test-Report', 'Test-Parsers', 'Invoke-Analyzer') {
+          foreach ($werkzeug in 'Test-Smoke', 'Test-Language', 'Test-Catalogs', 'Test-Report', 'Test-Parsers', 'Test-Modules', 'Test-Office', 'Test-Contrast', 'Invoke-Analyzer') {
             Write-Host "::group::$werkzeug"
             & ".\tools\$werkzeug.ps1"
             if ($LASTEXITCODE -ne 0) { Write-Host "::error::$werkzeug ist fehlgeschlagen"; $fehler++ }

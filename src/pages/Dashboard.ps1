@@ -105,18 +105,6 @@ function Write-WzDashboardCards {
     }
     [void]$rows.Children.Add((New-WzInfoRow (Get-WzText 'dash.lblChassis') `
         $(if ($Info.IsLaptop) { Get-WzText 'dash.chassisNotebook' } else { Get-WzText 'dash.chassisDesktop' })))
-    if ($Info.Battery.Present) {
-        $batteryKind = if ($null -eq $Info.Battery.WearPercent) { 'normal' }
-                       elseif ($Info.Battery.WearPercent -ge 40) { 'warn' }
-                       else { 'ok' }
-        [void]$rows.Children.Add((New-WzInfoRow (Get-WzText 'dash.lblBattery') $Info.Battery.Verdict -Kind $batteryKind))
-        # Derselbe Balken wie bei Arbeitsspeicher und Platte: »37 %« als Zahl
-        # sagt wenig, als Balken neben den anderen sieht man den Verschleiß.
-        if ($null -ne $Info.Battery.WearPercent) {
-            [void]$rows.Children.Add((New-WzMeter -Percent ([int]$Info.Battery.WearPercent) `
-                -Caption (Get-WzText 'dash.batteryLost' @{ prozent = [int]$Info.Battery.WearPercent })))
-        }
-    }
 
     Write-WzDashboardDevices -Info $Info
 
@@ -298,17 +286,18 @@ function Write-WzDashboardNotices {
         [void]$notices.Items.Add((New-WzNotice -Kind 'info' `
             -Text (Get-WzText 'dash.noticeDryRun')))
     }
+    if ($syncHash.UpdateAvailable) {
+        $upd = $syncHash.UpdateAvailable
+        $updNotice = New-WzNotice -Kind 'info' -Text (Get-WzText 'dash.noticeUpdate' @{ version = $upd.Version; adresse = $upd.Url })
+        $updNotice.Cursor = [Windows.Input.Cursors]::Hand
+        $updUrl = $upd.Url
+        $updNotice.Add_MouseLeftButtonUp({ Start-Process $updUrl }.GetNewClosure())
+        [void]$notices.Items.Add($updNotice)
+    }
 
-    # Die Befunde, die bisher nur im gedruckten Übergabeblatt landeten, gehören
-    # auch hierher: Platte fast voll, Virenschutz veraltet, nicht aktiviert,
-    # Datenträger meldet Fehler, Akku verschlissen. Die Daten liegen zu diesem
-    # Zeitpunkt längst im Speicher — es kostet keine einzige neue Abfrage.
     if ($syncHash.SecurityInfo) {
-        foreach ($recommendation in (Get-WzHandoverRecommendations -Info $Info `
+        foreach ($recommendation in (Get-WzSystemRecommendations -Info $Info `
                 -Security $syncHash.SecurityInfo -Actions (Get-WzActions))) {
-            # Zum Neustart steht oben schon eine Zeile — die nennt sogar den Grund
-            # Über die Kennung, nicht den Text: Der Textvergleich griff im
-            # englischen Programm nie (Audit 2026-10, N).
             if ($recommendation.Id -eq 'reboot') { continue }
             $kind = if ($recommendation.Kind -eq 'err') { 'error' } else { $recommendation.Kind }
             [void]$notices.Items.Add((New-WzNotice -Kind $kind -Text $recommendation.Text))
@@ -401,14 +390,25 @@ function Write-WzSnapshotDiff {
         Get-WzText 'snap.haveUndated'
     }
 
-    # Die zurückgedrehten Optimierungen zuerst: Sie sind der Grund, warum es
-    # diese Karte gibt. Ein Funktionsupdate stellt Telemetrie und Datenschutz
-    # still wieder her, und ohne Vergleich merkt das niemand.
+    # Die zurückgedrehten Optimierungen zuerst — mit lesbaren Namen statt roher
+    # Katalog-Kennungen und direktem Sprungknopf in den Optimierer.
     $lost = @($Diff.LostTweaks)
     if ($lost.Count -gt 0) {
+        $nameById = @{}
+        foreach ($tw in @(Get-WzTweaks)) { $nameById[$tw.id] = $tw.name }
+        $lostLabels = @($lost | ForEach-Object { if ($nameById.ContainsKey($_)) { $nameById[$_] } else { $_ } })
         [void]$container.Children.Add((New-WzInfoRow (Get-WzText 'snap.rowLostTweaks') `
-            (Get-WzText 'snap.lostTweaksValue' @{ anzahl = $lost.Count; liste = ($lost -join ', ') }) `
+            (Get-WzText 'snap.lostTweaksValue' @{ anzahl = $lost.Count; liste = ($lostLabels -join ', ') }) `
             -Kind 'warn' -LabelWidth 190))
+
+        $jumpBtn = New-Object Windows.Controls.Button
+        $jumpBtn.Style = $syncHash.Window.FindResource('WzBtnChip')
+        $jumpBtn.Content = Get-WzText 'snap.btnMarkLost'
+        $jumpBtn.HorizontalAlignment = 'Left'
+        $jumpBtn.Margin = New-Object Windows.Thickness(0, 4, 0, 8)
+        $lostIds = @($lost)
+        $jumpBtn.Add_Click({ Select-WzOptimizerTweaks -Ids $lostIds }.GetNewClosure())
+        [void]$container.Children.Add($jumpBtn)
     } else {
         [void]$container.Children.Add((New-WzInfoRow (Get-WzText 'snap.rowLostTweaks') `
             (Get-WzText 'snap.lostTweaksNone') -Kind 'ok' -LabelWidth 190))

@@ -35,13 +35,6 @@
                 <TextBlock Text="{DynamicResource L.off.languageLabel}" Style="{DynamicResource WzLabel}" Margin="0,14,0,4" />
                 <ComboBox Name="OffLanguage" Style="{DynamicResource WzComboBox}" />
 
-                <StackPanel Name="OffKeyPanel" Visibility="Collapsed" Margin="0,14,0,0">
-                    <TextBlock Text="{DynamicResource L.off.keyLabel}" Style="{DynamicResource WzLabel}" Margin="0,0,0,4" />
-                    <TextBox Name="OffKey" Style="{DynamicResource WzTextBox}" />
-                    <TextBlock Style="{DynamicResource WzHint}" Margin="0,4,0,0" TextWrapping="Wrap"
-                               Text="{DynamicResource L.off.keyHint}" />
-                </StackPanel>
-
                 <TextBlock Name="OffCacheHint" Style="{DynamicResource WzHint}" Margin="0,14,0,0" />
             </StackPanel>
         </Border>

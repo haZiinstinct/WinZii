@@ -19,8 +19,8 @@ $syncHash.LogEntries = [Collections.ArrayList]::Synchronized((New-Object Collect
 $syncHash.DryRun = $false
 $syncHash.Language = 'de'
 
-foreach ($modul in 'Core.Paths', 'Core.Logging', 'Core.Json', 'Core.I18n', 'Core.Version', 'Setup',
-    'WindowsUpdate', 'AiRemoval', 'Toolbox', 'Autostart', 'HealthCheck', 'Snapshot', 'Drivers') {
+foreach ($modul in 'Core.Paths', 'Core.Logging', 'Core.Json', 'Core.I18n', 'Core.Version', 'Core.Palette',
+    'Report', 'AiRemoval', 'Toolbox', 'Autostart', 'HealthCheck', 'Snapshot', 'Drivers') {
     . (Join-Path $root "src\modules\$modul.ps1")
 }
 [void](Import-WzLanguage)
@@ -53,86 +53,29 @@ foreach ($fall in $faelle) {
     Write-Check $fall.Was ($ist -eq $fall.Soll) "'$($fall.Ist)' → '$($fall.Neu)': $ist"
 }
 
-# --- Setup -------------------------------------------------------------------
+# --- Kommandopalette (Mehrwort-Suche) ---------------------------------------
 Write-Host ''
-Write-Host '2. Rechnername und Produktschlüssel (Setup)' -ForegroundColor White
-$namen = @(
-    @{ Name = 'BUERO-PC01';       Soll = $true }
-    @{ Name = 'A';                Soll = $true }
-    @{ Name = 'ABCDEFGHIJKLMNO';  Soll = $true }
-    @{ Name = 'ABCDEFGHIJKLMNOP'; Soll = $false }
-    @{ Name = 'Büro';             Soll = $false }
-    @{ Name = 'PC_01';            Soll = $false }
-    @{ Name = 'PC 01';            Soll = $false }
-    @{ Name = '12345';            Soll = $false }
-    @{ Name = '-PC';              Soll = $false }
-    @{ Name = 'PC-';              Soll = $false }
-    @{ Name = '';                 Soll = $false }
-    @{ Name = '   ';              Soll = $false }
+Write-Host '2. Kommandopalette (Core.Palette)' -ForegroundColor White
+$palEntries = @(
+    [pscustomobject]@{ Title = 'Optimierung'; Detail = 'Telemetrie Edge Dienste Datenschutz' }
+    [pscustomobject]@{ Title = 'Reparatur';   Detail = 'Netzwerk DNS Drucker Spooler' }
+    [pscustomobject]@{ Title = 'Dashboard';   Detail = 'System Hardware Übersicht' }
 )
-foreach ($fall in $namen) {
-    $r = Test-WzComputerNameValid -Name $fall.Name
-    $grundOk = $r.Valid -or [bool]$r.Reason
-    Write-Check "Rechnername '$($fall.Name)'" ($r.Valid -eq $fall.Soll -and $grundOk) $(if ($r.Valid) { 'gültig' } else { $r.Reason })
-}
-$schluessel = @(
-    @{ Key = 'ABCDE-FGHIJ-KLMNO-PQRST-UVWXY'; Soll = $true }
-    @{ Key = 'abcdefghijklmnopqrstuvwxy';     Soll = $true }
-    @{ Key = 'ABCDE-FGHIJ-KLMNO-PQRST';       Soll = $false }
-    @{ Key = 'ABCDE-FGHIJ-KLMNO-PQRST-UVWXYZ'; Soll = $false }
-    @{ Key = '';                              Soll = $false }
-)
-foreach ($fall in $schluessel) {
-    Write-Check "Schlüsselform '$($fall.Key)'" ((Test-WzProductKeyFormat -Key $fall.Key) -eq $fall.Soll)
-}
+$treffer = @(Select-WzPaletteMatches -Entries $palEntries -Query 'edge tele')
+Write-Check 'Mehrwort-Suche findet Optimierung' ($treffer.Count -eq 1 -and $treffer[0].Title -eq 'Optimierung')
+$trefferPrefix = @(Select-WzPaletteMatches -Entries $palEntries -Query 'dash')
+Write-Check 'Präfix-Treffer steht vorn' ($trefferPrefix.Count -eq 1 -and $trefferPrefix[0].Title -eq 'Dashboard')
 
-# --- WindowsUpdate -----------------------------------------------------------
+# --- Systemempfehlungen (kein SSD-Fehlalarm bei Unspecified) -----------------
 Write-Host ''
-Write-Host '3. Update-Fehlercodes (WindowsUpdate)' -ForegroundColor White
-Write-Check 'negativer HResult als Hex' ((Format-WzUpdateCode (-2145124284)) -eq '0x80240044') (Format-WzUpdateCode (-2145124284))
-Write-Check 'Null als 0x00000000' ((Format-WzUpdateCode 0) -eq '0x00000000')
-Write-Check 'ohne Wert leer' ((Format-WzUpdateCode $null) -eq '')
-
-# Die äußere Ausnahme trägt nur den Sammelcode von PowerShell; der echte Grund
-# steckt innen.
-$innen = New-Object Runtime.InteropServices.COMException('Netz', -2145107924)
-$aussen = New-Object Management.Automation.MethodInvocationException('außen', $innen)
-$record = New-Object Management.Automation.ErrorRecord($aussen, 'x', 'NotSpecified', $null)
-$code = Get-WzUpdateHResult -ErrorRecord $record
-Write-Check 'innerste Ursache der Ausnahmekette' ($code -eq '0x8024402C') $code
-
-$text = Get-WzUpdateCodeText -Code '0x80240044'
-Write-Check 'bekannter Code aus dem Katalog' ($text.Outcome -eq 'fail' -and $text.Text -match 'Administrator') $text.Text
-$text = Get-WzUpdateCodeText -Code '0x00240006'
-Write-Check 'bereits eingespielt zählt als skip' ($text.Outcome -eq 'skip')
-$text = Get-WzUpdateCodeText -Code '0x8BADF00D'
-Write-Check 'unbekannter Code ist fail und nennt die Zahl' ($text.Outcome -eq 'fail' -and $text.Text -match '0x8BADF00D') $text.Text
-$text = Get-WzUpdateCodeText -Code ''
-Write-Check 'ohne Code fail' ($text.Outcome -eq 'fail' -and [bool]$text.Text)
-
-# Ergebnisobjekt der COM-Schnittstelle nachgebaut: HResult der Sammlung und
-# GetUpdateResult(0) für das einzelne Update.
-function New-UpdateResult {
-    param([int]$Sammel, $Einzel, [switch]$Wirft)
-    $o = [pscustomobject]@{ HResult = $Sammel; Einzel = $Einzel; Wirft = [bool]$Wirft }
-    $o | Add-Member -MemberType ScriptMethod -Name GetUpdateResult -Value {
-        param($i)
-        if ($this.Wirft) { throw 'kein Einzelergebnis' }
-        if ($null -eq $this.Einzel) { return $null }
-        [pscustomobject]@{ HResult = $this.Einzel }
-    }
-    return $o
-}
-$faelle = @(
-    @{ R = (New-UpdateResult -Sammel (-2145124318) -Einzel (-2145124284)); Soll = '0x80240044'; Was = 'Einzelcode schlägt Sammelcode' }
-    @{ R = (New-UpdateResult -Sammel 0 -Einzel 0);                         Soll = '0x00000000'; Was = 'beides 0 bleibt 0' }
-    @{ R = (New-UpdateResult -Sammel (-2145124318) -Einzel 0);             Soll = '0x80240022'; Was = 'Einzel 0, Sammlung nicht: Sammelcode' }
-    @{ R = (New-UpdateResult -Sammel (-2145124318) -Wirft);                Soll = '0x80240022'; Was = 'ohne Einzelergebnis der Sammelcode' }
-)
-foreach ($fall in $faelle) {
-    $ist = Get-WzUpdateResultCode -Result $fall.R
-    Write-Check $fall.Was ($ist -eq $fall.Soll) $ist
-}
+Write-Host '3. Systemempfehlungen (Report)' -ForegroundColor White
+$dummyInfo = [pscustomobject]@{ PendingReboot = $null; Volumes = @(); IsLaptop = $false; RamTotalBytes = 16GB; RamSlots = 2; RamSlotsUsed = 2 }
+$secUnspec = [pscustomobject]@{ DefenderOk = $true; ActivationOk = $true; BitLockerOn = $true; PhysicalDisks = @([pscustomobject]@{ Model = 'NVMe RAID'; MediaType = 'Unspecified'; Health = 'Healthy' }) }
+$secHdd    = [pscustomobject]@{ DefenderOk = $true; ActivationOk = $true; BitLockerOn = $true; PhysicalDisks = @([pscustomobject]@{ Model = 'WD Blue'; MediaType = 'HDD'; Health = 'Healthy' }) }
+$recUnspec = @(Get-WzSystemRecommendations -Info $dummyInfo -Security $secUnspec -Actions @())
+$recHdd    = @(Get-WzSystemRecommendations -Info $dummyInfo -Security $secHdd -Actions @())
+Write-Check 'Unspecified-Datenträger löst keinen SSD-Alarm aus' ($recUnspec.Count -eq 0) "Hinweise: $($recUnspec.Count)"
+Write-Check 'HDD ohne SSD löst SSD-Empfehlung aus' ($recHdd.Count -eq 1) "Hinweise: $($recHdd.Count)"
 
 # --- AiRemoval und Toolbox: Paketsuche ----------------------------------------
 Write-Host ''

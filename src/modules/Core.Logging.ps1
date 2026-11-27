@@ -178,16 +178,24 @@ function Add-WzConsoleLine {
 
     if (-not $syncHash -or -not $syncHash.LogConsole) { return }
 
-    # Rot heller als die Statusfarbe WzRed — auf dem dunklen Konsolengrund
-    # käme #EF4444 nur auf 5,4:1.
-    $color = switch ($Level) {
-        'Ok'     { '#22C55E' }
-        'Warn'   { '#F59E0B' }
-        'Error'  { '#FCA5A5' }
-        'Action' { '#00D4FF' }
-        'Test'   { '#7DD3FC' }
-        default  { '#94A3B8' }
+    # Eingefrorene Pinsel einmal erzeugen statt für jede Protokollzeile neu.
+    if (-not $script:WzConsoleBrushes) {
+        $script:WzConsoleBrushes = @{}
+        foreach ($pair in @{
+            Ok     = '#22C55E'
+            Warn   = '#F59E0B'
+            Error  = '#FCA5A5'
+            Action = '#00D4FF'
+            Test   = '#7DD3FC'
+            Info   = '#94A3B8'
+        }.GetEnumerator()) {
+            $b = New-Object Windows.Media.SolidColorBrush(
+                [Windows.Media.ColorConverter]::ConvertFromString($pair.Value))
+            $b.Freeze()
+            $script:WzConsoleBrushes[$pair.Key] = $b
+        }
     }
+    $brush = if ($script:WzConsoleBrushes.ContainsKey($Level)) { $script:WzConsoleBrushes[$Level] } else { $script:WzConsoleBrushes['Info'] }
 
     try {
         $console = $syncHash.LogConsole
@@ -195,8 +203,7 @@ function Add-WzConsoleLine {
         $paragraph.Margin = New-Object Windows.Thickness(0)
         $paragraph.LineHeight = 17
         $run = New-Object Windows.Documents.Run($Line)
-        $run.Foreground = New-Object Windows.Media.SolidColorBrush(
-            [Windows.Media.ColorConverter]::ConvertFromString($color))
+        $run.Foreground = $brush
         [void]$paragraph.Inlines.Add($run)
         [void]$console.Document.Blocks.Add($paragraph)
 
@@ -257,4 +264,20 @@ function Clear-WzConsole {
     if ($syncHash -and $syncHash.LogConsole) {
         [void]$syncHash.Window.Dispatcher.Invoke([Action]{ $syncHash.LogConsole.Document.Blocks.Clear() })
     }
+}
+
+function Copy-WzConsoleToClipboard {
+    <#
+    .SYNOPSIS
+        Kopiert die aktuellen Protokollzeilen in die Zwischenablage.
+    #>
+    try {
+        $entries = Get-WzLogEntries
+        if ($entries.Count -eq 0) { return }
+        $lines = foreach ($e in $entries) { "$($e.Time) [$($e.Level)] $($e.Message)" }
+        [Windows.Clipboard]::SetText(($lines -join [Environment]::NewLine))
+        if ($syncHash.StatusText) {
+            $syncHash.StatusText.Text = Get-WzText 'shell.consoleCopied'
+        }
+    } catch { }
 }

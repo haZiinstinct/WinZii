@@ -51,22 +51,10 @@
                                 <TextBlock Text="{DynamicResource L.nav.dashboard}" VerticalAlignment="Center" />
                             </StackPanel>
                         </Button>
-                        <Button Name="NavSetup" Tag="Setup" Style="{DynamicResource WzNavButton}">
-                            <StackPanel Orientation="Horizontal">
-                                <TextBlock Text="&#xE713;" FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets" FontSize="14" Width="24" VerticalAlignment="Center" />
-                                <TextBlock Text="{DynamicResource L.nav.setup}" VerticalAlignment="Center" />
-                            </StackPanel>
-                        </Button>
                         <Button Name="NavDiagnostics" Tag="Diagnostics" Style="{DynamicResource WzNavButton}">
                             <StackPanel Orientation="Horizontal">
                                 <TextBlock Text="&#xE9D9;" FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets" FontSize="14" Width="24" VerticalAlignment="Center" />
                                 <TextBlock Text="{DynamicResource L.nav.diagnostics}" VerticalAlignment="Center" />
-                            </StackPanel>
-                        </Button>
-                        <Button Name="NavUpdates" Tag="Updates" Style="{DynamicResource WzNavButton}">
-                            <StackPanel Orientation="Horizontal">
-                                <TextBlock Text="&#xE895;" FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets" FontSize="14" Width="24" VerticalAlignment="Center" />
-                                <TextBlock Text="{DynamicResource L.nav.updates}" VerticalAlignment="Center" />
                             </StackPanel>
                         </Button>
 
@@ -181,9 +169,9 @@
         <Grid Grid.Column="1">
             <Grid.RowDefinitions>
                 <RowDefinition Height="52" />
-                <RowDefinition Height="*" />
+                <RowDefinition Height="*" MinHeight="180" />
                 <RowDefinition Height="Auto" />
-                <RowDefinition Height="Auto" />
+                <RowDefinition Name="LogPaneRow" Height="184" MinHeight="34" />
                 <RowDefinition Height="30" />
             </Grid.RowDefinitions>
 
@@ -217,9 +205,20 @@
                     </Border>
                 </StackPanel>
 
-                <!-- Fenstersteuerung -->
+                <!-- Schnellsuche und Fenstersteuerung -->
                 <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Stretch"
                             WindowChrome.IsHitTestVisibleInChrome="True">
+                    <Button Name="BtnHeaderSearch" Style="{DynamicResource WzBtnChip}"
+                            VerticalAlignment="Center" Margin="0,0,12,0" Padding="11,4,11,4"
+                            FontFamily="{DynamicResource WzFontMono}" FontSize="10.5"
+                            ToolTip="{DynamicResource L.shell.searchTip}"
+                            AutomationProperties.Name="{DynamicResource L.shell.a11ySearch}">
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Text="&#xE721;" FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets"
+                                       FontSize="10.5" VerticalAlignment="Center" Margin="0,0,7,0" />
+                            <TextBlock Text="{DynamicResource L.shell.searchBtn}" VerticalAlignment="Center" />
+                        </StackPanel>
+                    </Button>
                     <Button Name="BtnMinimize" Style="{DynamicResource WzBtnChrome}" Width="44" Padding="0" AutomationProperties.Name="{DynamicResource L.shell.a11yMinimize}"
                             Content="&#xE921;" FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets" FontSize="10" />
                     <Button Name="BtnMaximize" Style="{DynamicResource WzBtnChrome}" Width="44" Padding="0" AutomationProperties.Name="{DynamicResource L.shell.a11yMaximize}"
@@ -235,27 +234,41 @@
                 <ContentControl Name="PageHost" />
             </ScrollViewer>
 
-            <!-- Log-Konsole -->
-            <Border Grid.Row="2" Name="LogHeader" Background="{DynamicResource WzBgDarker}" BorderBrush="{DynamicResource WzBorder}" BorderThickness="0,1,0,0"
-                Focusable="True" KeyboardNavigation.IsTabStop="True" AutomationProperties.Name="{DynamicResource L.shell.a11yConsole}">
-                <Grid Height="34">
-                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Margin="26,0,0,0">
-                        <TextBlock Text="{DynamicResource L.shell.consoleEyebrow}" FontFamily="{DynamicResource WzFontMono}"
-                                   FontSize="10.5" Foreground="{DynamicResource WzCyan}" VerticalAlignment="Center" />
-                        <TextBlock Name="LogHint" Text="{DynamicResource L.shell.consoleHint}" Margin="12,0,0,0"
-                                   FontFamily="{DynamicResource WzFontMono}" FontSize="10.5"
-                                   Foreground="{DynamicResource WzTextFaint}" VerticalAlignment="Center" />
-                    </StackPanel>
-                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,0,20,0" VerticalAlignment="Center">
-                        <Button Name="BtnClearLog" Style="{DynamicResource WzBtnChip}" Content="{DynamicResource L.shell.consoleClear}" />
-                        <TextBlock Name="LogChevron" Text="&#xE70D;" FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets"
-                                   FontSize="10.5" Foreground="{DynamicResource WzTextFaint}" VerticalAlignment="Center" Margin="10,0,0,0" />
-                    </StackPanel>
-                </Grid>
-            </Border>
+            <!-- Ziehgriff für die Konsolenhöhe -->
+            <GridSplitter Grid.Row="2" Name="LogSplitter" Height="5" HorizontalAlignment="Stretch"
+                          VerticalAlignment="Center" ResizeDirection="Rows" ResizeBehavior="PreviousAndNext"
+                          Background="Transparent" Cursor="SizeNS" />
 
-            <RichTextBox Grid.Row="3" Name="LogConsole" Height="150"
-                         Style="{DynamicResource WzLogConsole}" />
+            <!-- Log-Konsole -->
+            <Grid Grid.Row="3">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="*" />
+                </Grid.RowDefinitions>
+
+                <Border Grid.Row="0" Name="LogHeader" Background="{DynamicResource WzBgDarker}" BorderBrush="{DynamicResource WzBorder}" BorderThickness="0,1,0,0"
+                    Focusable="True" KeyboardNavigation.IsTabStop="True" AutomationProperties.Name="{DynamicResource L.shell.a11yConsole}">
+                    <Grid Height="34">
+                        <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Margin="26,0,0,0">
+                            <TextBlock Text="{DynamicResource L.shell.consoleEyebrow}" FontFamily="{DynamicResource WzFontMono}"
+                                       FontSize="10.5" Foreground="{DynamicResource WzCyan}" VerticalAlignment="Center" />
+                            <TextBlock Name="LogHint" Text="{DynamicResource L.shell.consoleHint}" Margin="12,0,0,0"
+                                       FontFamily="{DynamicResource WzFontMono}" FontSize="10.5"
+                                       Foreground="{DynamicResource WzTextFaint}" VerticalAlignment="Center" />
+                        </StackPanel>
+                        <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,0,20,0" VerticalAlignment="Center">
+                            <Button Name="BtnCopyLog" Style="{DynamicResource WzBtnChip}" Margin="0,0,6,0"
+                                    Content="{DynamicResource L.shell.consoleCopy}" />
+                            <Button Name="BtnClearLog" Style="{DynamicResource WzBtnChip}" Content="{DynamicResource L.shell.consoleClear}" />
+                            <TextBlock Name="LogChevron" Text="&#xE70D;" FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets"
+                                       FontSize="10.5" Foreground="{DynamicResource WzTextFaint}" VerticalAlignment="Center" Margin="10,0,0,0" />
+                        </StackPanel>
+                    </Grid>
+                </Border>
+
+                <RichTextBox Grid.Row="1" Name="LogConsole"
+                             Style="{DynamicResource WzLogConsole}" />
+            </Grid>
 
             <!-- Statusleiste -->
             <Grid Grid.Row="4" Background="{DynamicResource WzBgDarker}">

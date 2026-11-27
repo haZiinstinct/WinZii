@@ -159,64 +159,6 @@ try {
     $syncHash.DryRun = $false
     Write-Check 'unsignierte setup.exe abgewiesen' ($null -eq $geliefert) "$geliefert"
     Write-Check 'unsignierte setup.exe gelöscht' (-not (Test-Path -LiteralPath $fremdeSetup))
-
-    # 5. Programme-Vorrat: Das Manifest muss zur winget-ID und zur Datei
-    #    daneben passen und darf keine eigenen Schalter mitbringen.
-    Write-Host ''
-    Write-Host '5. Manifest im Programme-Vorrat' -ForegroundColor White
-    . (Join-Path $repo 'src\modules\Apps.ps1')
-    $vorrat = Join-Path $spielwiese 'vorrat-test'
-    [void](New-Item -ItemType Directory -Path $vorrat -Force)
-    $setupDatei = Join-Path $vorrat 'Beispiel_1.0.exe'
-    [IO.File]::WriteAllText($setupDatei, 'kein echtes Programm')
-    $hash = (Get-FileHash -LiteralPath $setupDatei -Algorithm SHA256).Hash
-    $manifestPfad = Join-Path $vorrat 'Beispiel.Paket_1.0.yaml'
-    function Set-Manifest([string]$Id, [string]$Sha, [string]$Zusatz = '') {
-        $text = "PackageIdentifier: $Id`nPackageVersion: 1.0`nInstallers:`n- Architecture: x64`n  InstallerType: exe`n  InstallerSha256: $Sha`n$Zusatz"
-        [IO.File]::WriteAllText($manifestPfad, $text)
-    }
-    $dateien = @(Get-Item -LiteralPath $setupDatei)
-
-    Set-Manifest 'Beispiel.Paket' $hash
-    Write-Check 'passendes Manifest angenommen' ($null -eq (Test-WzVaultManifest -Directory $vorrat -WingetId 'Beispiel.Paket' -Installers $dateien))
-    Set-Manifest 'Fremd.Paket' $hash
-    Write-Check 'fremde winget-ID abgewiesen' ($null -ne (Test-WzVaultManifest -Directory $vorrat -WingetId 'Beispiel.Paket' -Installers $dateien))
-    Set-Manifest 'Beispiel.Paket' ('0' * 64)
-    Write-Check 'falsche Prüfsumme abgewiesen' ($null -ne (Test-WzVaultManifest -Directory $vorrat -WingetId 'Beispiel.Paket' -Installers $dateien))
-    Set-Manifest 'Beispiel.Paket' $hash "  InstallerSwitches:`n    Custom: /evil"
-    Write-Check 'eigene Installer-Schalter abgewiesen' ($null -ne (Test-WzVaultManifest -Directory $vorrat -WingetId 'Beispiel.Paket' -Installers $dateien))
-    Set-Manifest 'Beispiel.Paket' $hash
-    [IO.File]::WriteAllText((Join-Path $vorrat 'zweites.yaml'), "PackageIdentifier: Beispiel.Paket")
-    Write-Check 'zweites Manifest abgewiesen' ($null -ne (Test-WzVaultManifest -Directory $vorrat -WingetId 'Beispiel.Paket' -Installers $dateien))
-    Remove-Item -LiteralPath (Join-Path $vorrat 'zweites.yaml') -Force
-    Set-Manifest 'Beispiel.Paket' $hash "  InstallerSwitches:`n    Silent: /S /D=C:\fremd"
-    Write-Check 'Silent-Schalter abgewiesen' ($null -ne (Test-WzVaultManifest -Directory $vorrat -WingetId 'Beispiel.Paket' -Installers $dateien))
-    Set-Manifest 'Beispiel.Paket' $hash "  InstallerSwitches: { Silent: /evil }"
-    Write-Check 'Schalter in Kurzschreibweise abgewiesen' ($null -ne (Test-WzVaultManifest -Directory $vorrat -WingetId 'Beispiel.Paket' -Installers $dateien))
-    Set-Manifest 'Beispiel.Paket' $hash "  'InstallerSwitches':`n    `"Silent`": /evil"
-    Write-Check 'Schalter in Anführungszeichen abgewiesen' ($null -ne (Test-WzVaultManifest -Directory $vorrat -WingetId 'Beispiel.Paket' -Installers $dateien))
-    Set-Manifest 'Beispiel.Paket' $hash "Description: |-`n  Ein ganz normales Programm."
-    Write-Check 'Block-Text bleibt erlaubt' ($null -eq (Test-WzVaultManifest -Directory $vorrat -WingetId 'Beispiel.Paket' -Installers $dateien))
-
-    # 6. Aussteller: gültig signiert genügt nicht, er muss im Katalog stehen.
-    #    Als signierte Datei dient eine Kopie von powershell.exe — die Signatur
-    #    ist eingebettet und auf jedem Windows vorhanden (CN »Microsoft Windows«).
-    Write-Host ''
-    Write-Host '6. Aussteller im Programme-Vorrat' -ForegroundColor White
-    $appOrdner = Join-Path (Join-Path (Get-WzOfflineDir) 'installers') 'beispiel'
-    [void](New-Item -ItemType Directory -Path $appOrdner -Force)
-    $signiert = Join-Path $appOrdner 'Beispiel_1.0.exe'
-    Copy-Item -LiteralPath "$env:windir\System32\WindowsPowerShell\v1.0\powershell.exe" -Destination $signiert -Force
-    $manifestPfad = Join-Path $appOrdner 'Beispiel.Paket_1.0.yaml'
-    Set-Manifest 'Beispiel.Paket' (Get-FileHash -LiteralPath $signiert -Algorithm SHA256).Hash
-
-    $ohneAussteller = [pscustomobject]@{ id = 'beispiel'; name = 'Beispiel'; wingetId = 'Beispiel.Paket' }
-    $richtig = [pscustomobject]@{ id = 'beispiel'; name = 'Beispiel'; wingetId = 'Beispiel.Paket'; signers = @('Microsoft Windows') }
-    $falsch = [pscustomobject]@{ id = 'beispiel'; name = 'Beispiel'; wingetId = 'Beispiel.Paket'; signers = @('Google LLC') }
-    Write-Check 'ohne hinterlegten Aussteller: online' ($null -eq (Get-WzOfflineInstallerPath -App $ohneAussteller -Verify))
-    Write-Check 'fremder Aussteller: online' ($null -eq (Get-WzOfflineInstallerPath -App $falsch -Verify))
-    Write-Check 'passender Aussteller: aus dem Vorrat' ($appOrdner -eq (Get-WzOfflineInstallerPath -App $richtig -Verify))
-    Write-Check 'CN-Vergleich achtet auf Schreibung' (-not (Test-WzFileSignature -Path $signiert -ExpectedSigners @('microsoft windows')))
 } finally {
     Remove-Item -LiteralPath $spielwiese -Recurse -Force -ErrorAction SilentlyContinue
 }

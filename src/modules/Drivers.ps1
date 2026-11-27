@@ -152,7 +152,8 @@ function Get-WzDriverInventory {
         Write-WzLog (Get-WzText 'drv.logDriversUnreadable' @{ grund = $_.Exception.Message.Split([char]10)[0] }) -Level Warn
     }
 
-    return @($drivers | Sort-Object -Property @{ Expression = { $_.Date }; Ascending = $true })
+    # Treiber ohne Datum ans Ende sortieren, nicht vor die tatsächlich ältesten.
+    return @($drivers | Sort-Object -Property @{ Expression = { if ($null -eq $_.Date) { [datetime]::MaxValue } else { $_.Date } }; Ascending = $true })
 }
 
 function Get-WzDriverStoreSize {
@@ -759,10 +760,14 @@ function Install-WzCatalogDriver {
     if (-not $fileName) { $fileName = "$($Entry.UpdateId).cab" }
     $file = Join-Path $target $fileName
 
-    Write-WzLog (Get-WzText 'drv.logCatalogDownloading' @{ titel = $Entry.Title }) -Level Action
-    if (-not (Get-WzDownload -Url $url -TargetPath $file)) {
-        $result.Summary = Get-WzText 'drv.catalogDownloadFailed'
-        return $result
+    if ((Test-Path -LiteralPath $file) -and (Get-Item -LiteralPath $file).Length -gt 0) {
+        Write-WzLog (Get-WzText 'drv.logCatalogCached' @{ titel = $Entry.Title }) -Level Info
+    } else {
+        Write-WzLog (Get-WzText 'drv.logCatalogDownloading' @{ titel = $Entry.Title }) -Level Action
+        if (-not (Get-WzDownload -Url $url -TargetPath $file)) {
+            $result.Summary = Get-WzText 'drv.catalogDownloadFailed'
+            return $result
+        }
     }
 
     $unpacked = New-WzDirectory (Join-Path $target 'inhalt')

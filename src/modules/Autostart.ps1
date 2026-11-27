@@ -83,10 +83,19 @@ function Get-WzAutostartItems {
         # naheliegende Weg, sich vor genau dieser Liste zu verbergen.
         foreach ($file in (Get-ChildItem -LiteralPath $folder.Path -File -Force -ErrorAction SilentlyContinue)) {
             if ($file.Name -eq 'desktop.ini') { continue }
+            $resolvedTarget = $file.FullName
+            if ($file.Extension -eq '.lnk') {
+                try {
+                    $wsh = New-Object -ComObject WScript.Shell
+                    $shortcut = $wsh.CreateShortcut($file.FullName)
+                    if ($shortcut.TargetPath) { $resolvedTarget = $shortcut.TargetPath }
+                    [void][Runtime.InteropServices.Marshal]::ReleaseComObject($wsh)
+                } catch { }
+            }
             [void]$items.Add([pscustomobject]@{
                 Name       = $file.BaseName
                 Command    = $file.FullName
-                Publisher  = ''
+                Publisher  = Get-WzFilePublisher $resolvedTarget
                 Source     = 'Startordner'
                 Scope      = $folder.Scope
                 Enabled    = Test-WzStartupApproved -ApprovedPath $folder.Approved -Name $file.Name
@@ -228,7 +237,11 @@ function Get-WzFilePublisher {
         } else {
             $Command
         }
-        $path = [Environment]::ExpandEnvironmentVariables($path)
+        $path = if (Get-Command Expand-WzUserPath -ErrorAction SilentlyContinue) {
+            Expand-WzUserPath $path
+        } else {
+            [Environment]::ExpandEnvironmentVariables($path)
+        }
         if (-not (Test-Path -LiteralPath $path -PathType Leaf)) { return '' }
 
         $info = (Get-Item -LiteralPath $path -ErrorAction Stop).VersionInfo

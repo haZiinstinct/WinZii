@@ -60,6 +60,16 @@ function New-WzAutostartRow {
         [void]$grid.ColumnDefinitions.Add($column)
     }
 
+    $nameBlock = New-Object Windows.Controls.TextBlock
+    $nameBlock.Text = $Item.Name
+    $nameBlock.FontFamily = $syncHash.Window.FindResource('WzFontSans')
+    $nameBlock.FontSize = 13.5
+    $nameBlock.Foreground = if ($Item.Enabled) {
+        $syncHash.Window.FindResource('WzTextBright')
+    } else {
+        $syncHash.Window.FindResource('WzTextFaint')
+    }
+
     $toggle = New-Object Windows.Controls.CheckBox
     $toggle.IsChecked = $Item.Enabled
     $toggle.Style = $syncHash.Window.FindResource('WzToggle')
@@ -69,8 +79,11 @@ function New-WzAutostartRow {
     $toggle.Add_Click({
         $target = [bool]$this.IsChecked
         if (Set-WzAutostartItem -Item $this.Tag -Enabled $target) {
-            # Beide Zweige ausgeschrieben: Test-Language findet nur wortwoertliche
-            # Schluessel, ein berechneter waere fuer die Pruefung unsichtbar.
+            $nameBlock.Foreground = if ($target) {
+                $syncHash.Window.FindResource('WzTextBright')
+            } else {
+                $syncHash.Window.FindResource('WzTextFaint')
+            }
             $summary = if ($target) {
                 Get-WzText 'auto.actionOn' @{ name = $this.Tag.Name }
             } else {
@@ -81,7 +94,7 @@ function New-WzAutostartRow {
             $this.IsChecked = -not $target
         }
         Update-WzAutostartCounts
-    })
+    }.GetNewClosure())
     [Windows.Controls.Grid]::SetColumn($toggle, 0)
     [void]$grid.Children.Add($toggle)
 
@@ -90,22 +103,17 @@ function New-WzAutostartRow {
 
     $headerRow = New-Object Windows.Controls.StackPanel
     $headerRow.Orientation = 'Horizontal'
-
-    $nameBlock = New-Object Windows.Controls.TextBlock
-    $nameBlock.Text = $Item.Name
-    $nameBlock.FontFamily = $syncHash.Window.FindResource('WzFontSans')
-    $nameBlock.FontSize = 13.5
-    $nameBlock.Foreground = if ($Item.Enabled) {
-        $syncHash.Window.FindResource('WzTextBright')
-    } else {
-        $syncHash.Window.FindResource('WzTextFaint')
-    }
     [void]$headerRow.Children.Add($nameBlock)
 
     if ($Item.Publisher) {
         [void]$headerRow.Children.Add((New-WzBadge -Text $Item.Publisher -Kind 'info'))
     }
-    [void]$headerRow.Children.Add((New-WzBadge -Text $Item.Source.ToUpper() -Kind 'low'))
+    $sourceLabel = switch ($Item.Source) {
+        'Startordner'     { Get-WzText 'auto.sourceFolder' }
+        'Aufgabenplanung' { Get-WzText 'auto.sourceTask' }
+        default           { Get-WzText 'auto.sourceRegistry' }
+    }
+    [void]$headerRow.Children.Add((New-WzBadge -Text $sourceLabel.ToUpper() -Kind 'low'))
     [void]$stack.Children.Add($headerRow)
 
     $commandBlock = New-Object Windows.Controls.TextBlock

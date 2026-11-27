@@ -5,6 +5,94 @@ Alle nennenswerten Änderungen an WinZii. Die Fassungen folgen
 
 ## [Unveröffentlicht]
 
+## [0.8.0] — 2026-11-27
+
+Schlank, schnell, telemetriefrei — und jeder Handgriff sitzt. WinZii 0.8.0
+baut die Optimierungs- und Datenschutz-Eingriffe stark aus, entfernt unnötigen
+Ballast sowie alle manuellen Eingabemasken, rüstet Live-Ausgabe, Filter,
+Sortierung und 1-Klick-Voreinstellungen nach und bündelt sämtliche Korrekturen
+aus dem Full-Stack-Audit (`docs/AUDIT-2026-10.md`).
+
+### Neu
+
+- **Elf neue, auf Windows 10 und 11 zuverlässige Optimierungen** (jetzt 48 in
+  »Optimierung«, 58 gesamt inkl. KI-Entfernung): Hintergrund-Apps sperren
+  (`perf-bg-apps-off`), unnötige Telemetrie-/Diagnosedienste schlank stellen
+  (`perf-services-lean`), Explorer von Werbe-/Empfehlungselementen befreien
+  (`perf-explorer-clean`), klassisches Windows-11-Kontextmenü
+  (`perf-win11-contextmenu`), Task-Beenden in der Taskleiste
+  (`perf-win11-endtask`), Ruhezustand abschalten (`perf-hibernation-off`),
+  Delivery-Optimization-Upload sperren (`tele-delivery-opt`),
+  Edge-Hintergrundprozesse & Bloat bremsen (`tele-edge-bloat`),
+  Office-Telemetrie abschalten (`tele-office-off`), Cloud-Zwischenablage aus
+  (`priv-clipboard-cloud`), globale Standortdienste aus (`priv-location-off`).
+- **Optimierung mit 1-Klick-Voreinstellungen, Live-Suche und Explorer-Neustart:**
+  Chips für **Empfohlen**, **Maximal schlank** und **Nur Telemetrie**,
+  Sofortfilter nach Name/Beschreibung, Schalter **Nur offene** sowie direkter
+  Knopf zum Neustart des Windows-Explorers, damit UI-Änderungen sofort greifen.
+- **Sofort wirksame Systembenachrichtigung:** Nach Optimierungen und nach der
+  Rücknahme sendet WinZii `WM_SETTINGCHANGE` und `SHChangeNotify`, sodass
+  Shell-, Explorer- und Anzeigeänderungen unmittelbar ankommen.
+- **Echte Live-Konsole:** `Invoke-WzProcess` streamt Ausgaben mit `-LogOutput`
+  zeilenweise live in die Konsole (genutzt u. a. von DISM und chkdsk). Dazu
+  ein **Kopieren**-Knopf in der Konsolenleiste und ein ziehbarer
+  `GridSplitter` zum Anpassen der Konsolenhöhe.
+- **Befehlspalette (`Strg+K`) direkt in der Kopfzeile:** Klickbare Suchpille
+  im Header, neues dunkles Karten-Design mit Titel/Detail, Mehrwortsuche,
+  Tastaturnavigation mit automatischem Mitscrollen und Start per Einzelklick.
+- **Deinstallieren mit Sortierung, Sofortsuche und »Alle anzeigen«:**
+  Sortierbar nach Name, Größe oder Datum, blitzschnelles Filtern auf der
+  gepufferten Liste und aufhebbare 40-Einträge-Grenze.
+- **Programme mit Live-Suche** über alle 60 Katalogeinträge.
+- **Reparatur mit 1-Klick-Automatik:** Nach der Netzwerk-Diagnose erscheint
+  direkt der passende Beheben-Knopf (IP erneuern, DNS leeren, Netzwerk
+  zurücksetzen oder Zeitabgleich). Zusätzlich wurden **Automatischer
+  Zeitabgleich** und **Windows-Aktivierung aus der UEFI-Firmware** als
+  1-Klick-Aktionen (ohne Tippen) in die Reparatur übernommen.
+- **Erweiterte Kataloge:** Brave-Browser-Cache in `cleanup.json`, Microsoft
+  Teams (`MSTeams*`) und die aktuelle Xbox-App (`Microsoft.GamingApp*`) in
+  `bloatware.json`.
+- **Dashboard-Komfort:** Klickbares Update-Hinweisbanner bei neuer GitHub-Version
+  (samt Amber-Kennung in der Seitenleiste) sowie Momentaufnahme-Diff mit echten
+  Tweak-Namen und 1-Klick-Knopf **»Im Optimierer markieren«**.
+
+### Geändert
+
+- **Acht bestehende Optimierungen deutlich gehärtet**, damit wirklich alle
+  Windows-10-/11-Pfade greifen: GameDVR (`AppCaptureEnabled`), Animationen
+  (`TaskbarAnimations`, `ListviewAlphaSelect`), CEIP-Aufgaben (7 Aufgaben),
+  Fehlerberichterstattung (`WerSvc`, `QueueReporting`), Tipps/Werbung/stille
+  App-Installationen (`priv-tailored-experiences` um 12 Schlüssel erweitert,
+  inkl. `ScoobeSystemSettingEnabled` und `ShowSyncProviderNotifications`),
+  Websuche (`IsDynamicSearchBoxEnabled`), KI-Apps (`DisableGenerativeErase`)
+  und Edge-Copilot (`DiscoverPageContextEnabled`, `CopilotCDPPageContext`).
+- **Protokoll-Seite vollautomatisch verschlankt:** Kein manuelles Ausfüllen
+  von Techniker-, Kunden- oder Auftragsfeldern mehr — Fokus auf
+  Sitzungskennzahlen, Verlauf sowie HTML- und Text-Export mit sauberem
+  Druck-CSS (`@page`, Hellmodus-Kontrast).
+- **Schnellerer Dateiumzug:** `robocopy` kopiert mehrfädig (`/MT:8`),
+  OneDrive-Hydrierung nutzt kooperativen Abbruch.
+- **Offline-Vorrat auf Office fokussiert:** `offline\` dient ausschließlich dem
+  vollständig offline nutzbaren Office-Paket und Katalogtreibern.
+- **Release-Workflow (`release.yml`)** prüft zusätzlich `Test-Modules`,
+  `Test-Office` und `Test-Contrast`.
+
+### Entfernt
+
+- **Akku-Verschleiß und Akkubericht** aus Dashboard und Diagnose entfernt.
+- **Seite »Updates«** (`Updates.xaml`, `Updates.ps1`, `WindowsUpdate.ps1`,
+  `data\updatecodes.json`) entfernt.
+- **Seite »Einrichten« und alle manuellen Eingabefelder** (`Setup.xaml`,
+  `Setup.ps1`, `Setup.ps1`-Modul, manuelles Produktschlüsselfeld auf der
+  Office-Seite) entfernt; vollautomatische Funktionen (Zeitabgleich,
+  UEFI-Aktivierung) leben in der Reparatur weiter.
+- **Apps-Offline-Vorrat** (inkl. `tools\Get-VaultSigners.ps1`) entfernt, da
+  winget ohnehin Internet verlangt.
+- **Übergabeblatt, Briefkopf/Logo, Inventar-CSV/JSON, PDF-Umwandlung und
+  Berichtsarchiv** aus Protokoll und `Report.ps1` entfernt.
+- **Unzuverlässige Tweaks entfernt:** `perf-power-profile` (herstellerabhängig
+  versteckte Powercfg-Richtlinien) und `perf-update-manual`.
+
 ### Geprüft
 
 - **Full-Stack-Audit** über den gesamten Baum: `docs/AUDIT-2026-10.md`
@@ -16,9 +104,35 @@ Alle nennenswerten Änderungen an WinZii. Die Fassungen folgen
 
 - **Rücknahme im Testmodus** setzte Registry, Dienste und Energieplan real
   zurück. Jetzt wird nur protokolliert, was zurückginge (Audit K1).
-- **Löschen folgt keiner Junction mehr.** Bereinigung, Programmreste und
-  Office-Restordner entfernen Junctions und Links nur als Verweis, egal auf
-  welchem Build von Windows PowerShell 5.1 (Audit K2).
+- **Löschen und Größenmessung folgen keiner Junction mehr.** Bereinigung
+  (inkl. Papierkorb), Programmreste und Office-Restordner entfernen Junctions
+  und Links nur als Verweis, egal auf welchem Build von PowerShell 5.1 (Audit K2).
+- **Systemerkennung repariert:** `Get-WzGraphicsInfo` verarbeitet jetzt
+  `REG_BINARY`-VRAM-Werte korrekt ohne Absturz und schützt vor 0-Hz-Anzeigen;
+  `ConvertFrom-WzAvProductState` wertet abgelaufene Scanner (`0x3000`) nicht
+  mehr als aktiv; BitLocker fragt WMI nur noch einmal ab; `Unspecified`-SSD-Medien
+  lösen keine falsche HDD-Empfehlung mehr aus.
+- **Optimierung & Rücknahme noch genauer:** Unterstützt `(Default)`-Werte,
+  räumt beim Anwenden neu angelegte leere Elternschlüssel wieder auf, bietet
+  Registry-Fallback für geschützte Dienste, weist bei `RunAsPPL=1` auf die
+  UEFI-Sperre hin und meldet fehlgeschlagene bzw. nicht zutreffende Einträge
+  sauber getrennt (Audit M1, M2, M6).
+- **KI-Entfernung aktualisiert ihren Status** nach einem Eingriff jetzt
+  sofort neu statt veraltete Scan-Werte anzuzeigen.
+- **winget-Upgrades mit Umlauten:** `Invoke-WzProcess` unterstützt jetzt
+  `-OutputEncoding` (`UTF-8` für `winget upgrade`).
+- **Oberfläche & Fensterverhalten:** Maximieren-Knopf wechselt zuverlässig
+  zwischen Maximieren/Wiederherstellen samt 7-px-Randausgleich im
+  rahmenlosen Fenster; gefährliche Bestätigungsdialoge legen »OK« nicht mehr
+  auf die Eingabetaste; Testmodus-Schalter aktualisiert Dashboard-Hinweise
+  sofort; Office-Prüfungen blockieren den UI-Thread nicht mehr; Autostart
+  dimmt deaktivierte Einträge sofort und löst `.lnk`-Ziele samt Herausgeber
+  auf; Treiber sortieren fehlende Daten nicht mehr vor alte Treiber und nutzen
+  zwischengespeicherte `.cab`-Pakete wieder; aktive Aufgaben werden beim
+  Fensterschließen sauber abgebrochen.
+- **Firefox-Lesezeichen & Netzlaufwerke:** `.jsonlz4`-Export benennt Profile
+  eindeutig und spielt in `bookmarkbackups` zurück; `Get-WzMappedDrives` liest
+  auch `HKCU:\Network` des angemeldeten Anwenders.
 - **Dateiumzug brach bei einem robocopy-Fehler ab,** statt ihn zu melden;
   Test-Smoke prüft jetzt alle Log-Level (Audit H8).
 - **Katalogtreiber erschienen als Treibersicherung »katalog«.** Sie liegen
@@ -29,77 +143,63 @@ Alle nennenswerten Änderungen an WinZii. Die Fassungen folgen
   Python-Version wurde »Python« samt aller anderen Versionen als Rest
   angeboten. Funde in AppData sind als Benutzerdaten gekennzeichnet (H2).
 - **Kein Eingriff ohne beschreibbaren Datenträger.** Auf einem
-  schreibgeschützten Stick wurde alles angewendet, nur die Sicherung fehlte
-  (H3).
-- **Übergabeblatt nennt nur, was wirklich geschah.** Fehlgeschlagene
-  Einträge standen dort als erledigt; Einträge ohne Ziel auf dem Gerät
-  heißen jetzt »nicht zutreffend« statt »angewendet«. Lesefehler zählen als
-  Fehlschlag, nicht als »gibt es nicht« (M1, M2).
+  schreibgeschützten Stick wurde alles angewendet, nur die Sicherung fehlte (H3).
 - **Defender-Netzwerkschutz nicht mehr vorausgewählt**, alle
   Defender-Einträge nennen die Sperre in der Windows-Sicherheit (M4).
 - **Autostart zeigt den Startordner des angemeldeten Anwenders,** auch wenn
   er umgeleitet ist, samt versteckter Dateien (M5).
-- **Rücknahme genauer:** Aufgaben im Zustand »Queued«, beim Anwenden
-  angelegte Schlüssel, Registry-Reste aus der Restesuche (M6, N).
 - **Bereinigung überspringt den Zwischenspeicher eines laufenden Browsers**
   und meldet einen nicht geleerten Papierkorb als Fehler (M7).
 - **winget-Rückgabewerte aus der Quelle neu abgeleitet.** Eine fehlende
   Abhängigkeit zählte als »installiert, Neustart nötig«, der normale
   MSI-Neustartfall als Fehlschlag. Jeder Code trägt jetzt Hex-Wert und
   Symbol aus winget-cli (H4).
-- **Installation aus dem Stick-Vorrat setzt die nötige winget-Einstellung**
-  und fällt bei einem Fehlschlag online zurück (H6, Abnahme ohne Netz
-  steht noch aus).
 - **Signaturprüfung:** Das Office-Bereitstellungswerkzeug braucht eine
-  gültige Microsoft-Signatur, EXE und MSI im Vorrat eine gültige Signatur
-  (M8).
+  gültige Microsoft-Signatur (M8).
 - **Treiber:** Download-Adressen aus dem Katalog nur über HTTPS von
   Microsoft (M9), pnputil-Rückgabe 3010 zählt als Erfolg mit Neustart
   (M10), OEM-Werkzeuge gelten nach der Installation nicht mehr als
   fehlgeschlagen (M16).
 - **Office:** Der Vorrat kennt seine Bitness (M12), Installieren und
   Entfernen sind nicht mehr scheinbar abbrechbar, Downloads wirklich (M13),
-  der Wiederherstellungspunkt friert das Fenster nicht mehr ein (M17).
-- **Updates suchen nach dem Einspielen wirklich neu** (M14).
+  der Wiederherstellungspunkt friert das Fenster nicht mehr ein (M17),
+  Fehlerdialoge zeigen Fehlschläge beim Vorabladen klar an, und
+  `O365HomePremRetail` sowie `Home2024` werden erkannt.
 - **Leere Ergebnislisten bleiben leer** (Katalogsuche zeigte »1 Treffer«),
   und »beschäftigt« bleibt nach einem Fehler nicht mehr hängen (M15, M28).
-- **Drucker anlegen:** im Testmodus kein »fehlgeschlagen« mehr, im
-  Übergabeblatt nur einmal (M18).
 - **Dateiumzug lässt sich abbrechen,** ohne robocopy hart abzuschießen;
   hängt es, greift nach 15 Sekunden der harte Halt (H9).
 - **Sicherung liest die Ordner des angemeldeten Anwenders,** nicht die des
   Technikerkontos, mit dem WinZii eleviert läuft (H10).
-- **Bericht und Übergabeblatt:** Fremder Text — SSIDs, Druckernamen,
-  Programmnamen — bleibt Text und wird nie zu HTML oder CSS-Klasse (M20,
-  M21).
+- **HTML-Bericht:** Fremder Text — SSIDs, Druckernamen, Programmnamen —
+  bleibt Text und wird nie zu HTML oder CSS-Klasse (M20, M21).
 - **Netzlaufwerke und Drucker** werden im Kontext des angemeldeten
-  Anwenders zurückgespielt, sonst sieht er sie nicht (M24). Die Suche nach
+  Anwenders zurückgespielt, sonst sieht er sie nicht (M24); geplante
+  Hilfsaufgaben werden bei Timeout sauber beendet. Die Suche nach
   Benutzerdaten folgt keiner Junction (M25), WLAN-Schlüssel liegen nach dem
   Einspielen nicht mehr im Klartext herum (M26), der Belastungstest hört auf
   den Abbruch (M27).
 - **Diagnose:** Ereignisdeutung nach Quelle und Kennung exakt, Absturzabbilder
-  und chkdsk-Ergebnisse vollständig, alle Befunde sprachneutral.
-- **Oberfläche:** Häkchen und Suchergebnisse werden nach einem Vorgang
-  zurückgesetzt (H11), Schließen während eines Vorgangs fragt nach (H12),
-  unbekannte Systemsprache fällt auf Englisch zurück (M31), Protokoll und
-  Einstellungen schreiben atomar, Protokolle älter als 90 Tage werden
-  aufgeräumt, Farben kommen aus dem Theme, Bildschirmleser bekommen Namen.
-- **Autostart nennt den Herausgeber auch bei Pfaden mit Leerzeichen ohne
-  Anführungszeichen.**
+  und chkdsk-Ergebnisse vollständig, sfc/DISM/chkdsk werden im Sitzungsprotokoll
+  erfasst, alle Befunde sprachneutral.
+- **Oberfläche & Zweisprachigkeit:** Häkchen und Suchergebnisse werden nach
+  einem Vorgang zurückgesetzt (H11), Schließen während eines Vorgangs fragt
+  nach (H12), unbekannte Systemsprache fällt auf Englisch zurück (M31),
+  Protokoll und Einstellungen schreiben atomar, Protokolle älter als 90 Tage
+  werden aufgeräumt, Farben kommen aus dem Theme, Bildschirmleser bekommen
+  Namen, und verbleibende hartcodierte deutsche Sprach-Lecks in Modulen und
+  Seiten wurden vollständig lokalisiert.
 - **Herstellerwerkzeuge:** Lenovo Thin Installer nimmt keine Pakete mehr, die
   den PC selbst neu starten (H7). Rückgabewerte werden nach Herstellerdoku
-  gedeutet — Dells »Neustart nötig« und »nichts zu tun« galten als
-  Fehlschlag (M11).
+  gedeutet (M11).
 - **winget-Nachinstallation auf LTSC** gibt der Bereitstellung für alle
   Konten die Abhängigkeiten mit (M19).
-- **Übergabeblatt als PDF** auch bei laufendem Edge (M22).
 - **Belastungstest misst den Ist-Takt.** Der bisherige Wert stand fest in
   der Firmware; eine Drosselung war daran nie zu sehen.
 - **Papierkorb:** Unter einem Technikerkonto wird der des Kunden gemessen und
   geleert, nicht der eigene.
-- **Programme-Vorrat verspricht keine Installation ohne Internet mehr** —
-  winget lädt auch dann von der Herstelleradresse (H6, siehe
-  `docs/AUDIT-2026-10-FRAGEN.md`, F3).
+- **0-Einträge-Aktionen** müllen das Sitzungsprotokoll bei Bereinigung,
+  Bloatware und Datenexport nicht mehr mit leeren Einträgen zu.
 
 ### Sicherheit
 
@@ -107,38 +207,19 @@ Alle nennenswerten Änderungen an WinZii. Die Fassungen folgen
   Windows 11 22H2). Die bisherige ließ sich auf Geräten mit Secure Boot über
   die Rücknahme nicht aufheben (M3).
 
-### Geändert
-
-- **Energieplan »Leistung am Netz, Ausdauer auf Akku«** arbeitet am Netzteil
-  jetzt durch: kein Energiesparmodus, kein Ruhezustand (bisher griff der von
-  »Ausbalanciert« geerbte Ruhezustand nach 180 Minuten auch am Netz), Deckel
-  zu ändert nichts. Nur der Bildschirm geht nach 30 Minuten aus. Der
-  Einschaltknopf schaltet in beiden Betriebsarten nur noch den Bildschirm aus.
-  Auf Akku bleibt es bei 10 Minuten Bildschirm und 15 Minuten bis zum
-  Energiesparmodus.
-
 ### Entwicklung
 
-- **CI streng:** Analyzer-Warnungen und Parse-Fehler lassen die Prüfung
-  scheitern, Actions per Commit-Hash festgenagelt, Zeitlimits, nur
-  Leserechte; Dependabot hält die Actions aktuell (H13, M33, M34).
 - **Release über Tag** (`release.yml`): `New-Release.ps1 -Release` prüft
-  vorher Arbeitsbaum, Versionsstellen und CHANGELOG (M32, M40).
+  vorher Arbeitsbaum, Versionsstellen und CHANGELOG; Actions per Commit-Hash
+  festgenagelt, Analyzer-Warnungen brechen den Lauf ab (H13, M32, M33, M34, M40).
 - **Prüfwerkzeuge werten Rückgabewerte aus,** nicht nur Wortlaute;
   Test-Pages sieht Protokollfehler, Test-Undo räumt immer auf (M30, M36).
-- **Neu: `Test-Modules.ps1` und `Test-Report.ps1`** — funktionale Prüfung für
-  die neun Module, die bisher nur »Seite lädt« kannten.
+- **Neu: `Test-Modules.ps1` und `Test-Report.ps1`** — funktionale Prüfung
+  für Kernmodule und HTML-Maskierung.
 - **Kodierung:** JSON, Markdown und HTML ohne BOM, Test-Smoke prüft beide
   Richtungen (M37).
 - **Sandbox-Test bindet nur eine Kopie ein** (`tools\Start-SandboxTest.ps1`),
   nicht den Arbeitsordner mit `backups\` (M39).
-
-### Neu
-
-- **»Windows Update nur von Hand installieren und neu starten«**
-  (`perf-update-manual`, nicht vorausgewählt): Updates werden geladen, aber
-  erst auf Anstoß installiert; kein erzwungener Neustart, solange jemand
-  angemeldet ist.
 
 ## [0.7.0] — 2026-09-20
 

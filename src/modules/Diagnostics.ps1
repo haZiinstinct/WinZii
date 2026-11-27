@@ -83,7 +83,7 @@ function Get-WzEventSummary {
             First          = $times[0]
             Last           = $times[-1]
             Severity       = $severity
-            Title          = if ($known) { $known.title } else { "$($first.ProviderName) — Kennung $($first.Id)" }
+            Title          = if ($known) { $known.title } else { Get-WzText 'diag.unknownEventTitle' @{ anbieter = $first.ProviderName; id = $first.Id } }
             Explanation    = if ($known) { $known.explanation } else { '' }
             Recommendation = if ($known) { $known.recommendation } else { '' }
             Known          = [bool]$known
@@ -395,7 +395,10 @@ function Get-WzSmartStatus {
                     $entry.Temperature = "$($counter.Temperature) °C"
                 }
                 if ($null -ne $counter.PowerOnHours) {
-                    $entry.PowerOnHours = "$($counter.PowerOnHours) h (rund $(Format-WzNumber ($counter.PowerOnHours / 8760) 'Jahre'))"
+                    $entry.PowerOnHours = Get-WzText 'diag.powerOnValue' @{
+                        stunden = $counter.PowerOnHours
+                        jahre   = (Format-WzNumber ($counter.PowerOnHours / 8760) (Get-WzText 'diag.unitYears'))
+                    }
                 }
                 if ($null -ne $counter.Wear) {
                     $entry.Wear = "$($counter.Wear) %"
@@ -485,7 +488,7 @@ function Invoke-WzDismRepair {
     }
 
     Write-WzLog (Get-WzText 'diag.logDismRunning' @{ aktion = $Action }) -Level Action
-    $result = Invoke-WzProcess -FilePath 'dism.exe' -Arguments "/Online /Cleanup-Image /$Action /NoRestart" -TimeoutSeconds 3600
+    $result = Invoke-WzProcess -FilePath 'dism.exe' -Arguments "/Online /Cleanup-Image /$Action /NoRestart" -TimeoutSeconds 3600 -LogOutput
 
     $summary = switch ($result.ExitCode) {
         0     { Get-WzText 'diag.dismOk' }
@@ -521,7 +524,7 @@ function Invoke-WzChkdsk {
     }
 
     Write-WzLog (Get-WzText 'diag.logChkdskRunning' @{ laufwerk = $Drive }) -Level Action
-    $result = Invoke-WzProcess -FilePath 'chkdsk.exe' -Arguments "$Drive /scan /perf" -TimeoutSeconds 3600
+    $result = Invoke-WzProcess -FilePath 'chkdsk.exe' -Arguments "$Drive /scan /perf" -TimeoutSeconds 3600 -LogOutput
 
     # Rückgabewerte laut chkdsk-Dokumentation: 2 heißt Aufräumarbeiten
     # erledigt (oder ohne /f nicht erledigt) — kein Fehler. 3 heißt Prüfung
@@ -536,21 +539,5 @@ function Invoke-WzChkdsk {
 
     $ok = ($result.ExitCode -le 2)
     Write-WzLog $summary -Level $(if ($ok) { 'Ok' } else { 'Warn' })
-    return [pscustomobject]@{ Success = $ok; Summary = $summary }
-}
-
-function New-WzBatteryReport {
-    <#
-    .SYNOPSIS
-        Akkubericht von Windows. Auf Desktop-PCs ohne Akku entfällt er.
-    #>
-    $outFile = Join-Path (Get-WzReportDir) "akku-$(Get-Date -Format 'yyyy-MM-dd_HHmm').html"
-    $result = Invoke-WzProcess -FilePath 'powercfg.exe' -Arguments "/batteryreport /output `"$outFile`"" -TimeoutSeconds 120
-
-    if ($result.ExitCode -eq 0 -and (Test-Path -LiteralPath $outFile)) {
-        Write-WzLog (Get-WzText 'diag.logBatteryReport' @{ datei = $outFile }) -Level Ok
-        return $outFile
-    }
-    Write-WzLog (Get-WzText 'diag.logNoBattery') -Level Info
-    return $null
+    return [pscustomobject]@{ Success = $ok; RebootRequired = ($result.ExitCode -eq 2); Summary = $summary }
 }

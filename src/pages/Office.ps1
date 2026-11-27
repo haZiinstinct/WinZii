@@ -81,7 +81,6 @@ function Get-WzOfficeChoice {
         Variant  = $variant
         Language = $language
         Apps     = $apps
-        Key      = $syncHash.OffKey.Text.Trim()
     }
 }
 
@@ -105,13 +104,6 @@ function Update-WzOfficeSelection {
             $checkBox.IsChecked = [bool]$app.defaultIncluded
             $checkBox.Content = $app.name
         }
-    }
-
-    # Der Schlüssel wird nur bei den Volumenvarianten gebraucht
-    $syncHash.OffKeyPanel.Visibility = if ($choice.Variant.productId -like '*Volume') {
-        [Windows.Visibility]::Visible
-    } else {
-        [Windows.Visibility]::Collapsed
     }
 
     $cache = Test-WzOfficeCache -VariantId $choice.Variant.id -Language $choice.Language
@@ -143,12 +135,8 @@ function Show-WzOfficeXml {
         -Edition $edition
     $content = [IO.File]::ReadAllText($file, [Text.Encoding]::UTF8)
 
-    # Der Lizenzschlüssel steht bewusst nicht darin: Er wird erst unmittelbar
-    # vor dem Start eingesetzt und danach wieder entfernt.
-    $hint = if ($choice.Key) { Get-WzText 'off.xmlKeyHint' } else { '' }
-
     Show-WzInfo -Title (Get-WzText 'off.xmlTitle') `
-        -Message (Get-WzText 'off.xmlMessage' @{ pfad = $file; hinweis = $hint }) `
+        -Message (Get-WzText 'off.xmlMessage' @{ pfad = $file; hinweis = '' }) `
         -Items @($content -split "`r?`n")
 }
 
@@ -208,10 +196,6 @@ function Start-WzOfficeInstall {
         Get-WzText 'off.sourceMicrosoft'
     }
 
-    if ($choice.Variant.productId -like '*Volume' -and -not $choice.Key) {
-        $items += Get-WzText 'off.itemNoVolumeKey'
-    }
-
     $message = Get-WzText 'off.installMessage'
     if ($running.Count -gt 0) { $message += Get-WzText 'off.installSaveFirst' }
     if ($choice.Variant.note) { $message += " $($choice.Variant.note)" }
@@ -220,13 +204,10 @@ function Start-WzOfficeInstall {
         -ConfirmText $(if ($syncHash.DryRun) { Get-WzText 'off.btnDryRun' } else { Get-WzText 'off.btnInstallGo' }) -Danger
     if (-not $answer.Confirmed) { return }
 
-    # Nicht abbrechbar: »Abbrechen« stoppte nur die Pipeline, setup.exe lief
-    # weiter, und WinZii gab sich frei für einen zweiten ODT-Lauf (Audit M13).
     Invoke-WzTask -Name (Get-WzText 'off.taskInstall') `
-        -ArgumentList @($choice.Variant.id, $choice.Language, $choice.Apps, $choice.Key, $edition) -ScriptBlock {
-        param($variantId, $language, $apps, $key, $edition)
-        Invoke-WzOfficeInstall -VariantId $variantId -Language $language -IncludedApps $apps `
-            -ProductKey $key -Edition $edition
+        -ArgumentList @($choice.Variant.id, $choice.Language, $choice.Apps, $edition) -ScriptBlock {
+        param($variantId, $language, $apps, $edition)
+        Invoke-WzOfficeInstall -VariantId $variantId -Language $language -IncludedApps $apps -Edition $edition
     } -OnComplete {
         param($ok)
         $syncHash.OffChecked = $false
@@ -253,76 +234,85 @@ function Start-WzOfficeRemove {
     <#
     .SYNOPSIS
         Office entfernen — gestuft, mit Wiederherstellungspunkt bei der
-        gründlichen Variante.
+        gründlichen Variante. Bestandsaufnahme läuft im Hintergrund, damit die
+        Oberfläche nicht einfriert.
     #>
-    $installed = Get-WzInstalledOffice
-    $remnants = Get-WzOfficeRemnants
-
-    if (-not $installed.Installed -and $remnants.Items.Count -eq 0) {
-        Show-WzInfo -Title (Get-WzText 'off.noOfficeTitle') `
-            -Message (Get-WzText 'off.noOfficeMessage')
-        return
-    }
-
-    $items = @()
-    if ($installed.Installed) { $items += Get-WzText 'off.itemInstalledDetail' @{ name = $installed.Name; details = $installed.Details } }
-    $items += $remnants.Items
-
-    $answer = Show-WzConfirm -Title (Get-WzText 'off.removeTitle') `
-        -Message ((Get-WzText 'off.removeMessage') + [Environment]::NewLine + [Environment]::NewLine +
-            (Get-WzText 'off.removeMessage2')) `
-        -Items $items `
-        -Choices @((Get-WzText 'off.choiceClean'), (Get-WzText 'off.choiceThorough')) `
-        -ChoiceLabel (Get-WzText 'off.lblScope') `
-        -ConfirmText $(if ($syncHash.DryRun) { Get-WzText 'off.btnDryRun' } else { Get-WzText 'off.btnRemoveGo' }) -Danger
-    if (-not $answer.Confirmed) { return }
-
-    $thorough = ($answer.SelectedIndex -eq 1)
-    if ($thorough -and -not $syncHash.DryRun) {
-        $sure = Show-WzConfirm -Title (Get-WzText 'off.thoroughTitle') `
-            -Message (Get-WzText 'off.thoroughMessage') `
-            -Items @($remnants.Items) -ConfirmText (Get-WzText 'off.btnThoroughAnyway') -Danger
-        if (-not $sure.Confirmed) { return }
-    }
-
-    Invoke-WzTask -Name (Get-WzText 'off.taskRemove') -ArgumentList @($thorough) -ScriptBlock {
-        param($thorough)
-        # Der Wiederherstellungspunkt dauert 10 bis 60 Sekunden. Im UI-Faden
-        # fror er das Fenster ein; hier läuft er vor Stufe 1 (Audit M17).
-        if ($thorough -and -not $syncHash.DryRun) {
-            [void](New-WzRestorePoint -Description (Get-WzText 'off.restorePointThorough'))
+    Invoke-WzTask -Name (Get-WzText 'off.taskCheck') -Silent -ScriptBlock {
+        [pscustomobject]@{
+            Installed = Get-WzInstalledOffice
+            Remnants  = Get-WzOfficeRemnants
         }
-        Remove-WzOffice -Thorough:$thorough
     } -OnComplete {
-        param($summary)
-        if (-not $summary) { return }
-        $syncHash.OffChecked = $false
-        Update-WzOfficePage
+        param($scan)
+        if (-not $scan) { return }
+        $installed = $scan.Installed
+        $remnants = $scan.Remnants
 
-        if ($syncHash.DryRun) {
-            Show-WzInfo -Title (Get-WzText 'off.dryRunTitle') `
-                -Message (Get-WzText 'off.dryRunRemove') `
-                -Items @($summary.Details)
+        if (-not $installed.Installed -and $remnants.Items.Count -eq 0) {
+            Show-WzInfo -Title (Get-WzText 'off.noOfficeTitle') `
+                -Message (Get-WzText 'off.noOfficeMessage')
             return
         }
 
-        $lines = @($summary.Steps) + @($summary.Details)
-        if ($lines.Count -eq 0) { $lines = @(Get-WzText 'off.nothingToDo') }
-        Show-WzInfo -Title $(if ($summary.Ok) { Get-WzText 'off.removeOkTitle' } else { Get-WzText 'off.removePartialTitle' }) `
-            -Message $(if ($summary.Ok) {
-                Get-WzText 'off.removeOkMessage'
-            } else {
-                Get-WzText 'off.removePartialMessage'
-            }) -Items $lines
+        $items = @()
+        if ($installed.Installed) { $items += Get-WzText 'off.itemInstalledDetail' @{ name = $installed.Name; details = $installed.Details } }
+        $items += $remnants.Items
+
+        $answer = Show-WzConfirm -Title (Get-WzText 'off.removeTitle') `
+            -Message ((Get-WzText 'off.removeMessage') + [Environment]::NewLine + [Environment]::NewLine +
+                (Get-WzText 'off.removeMessage2')) `
+            -Items $items `
+            -Choices @((Get-WzText 'off.choiceClean'), (Get-WzText 'off.choiceThorough')) `
+            -ChoiceLabel (Get-WzText 'off.lblScope') `
+            -ConfirmText $(if ($syncHash.DryRun) { Get-WzText 'off.btnDryRun' } else { Get-WzText 'off.btnRemoveGo' }) -Danger
+        if (-not $answer.Confirmed) { return }
+
+        $thorough = ($answer.SelectedIndex -eq 1)
+        if ($thorough -and -not $syncHash.DryRun) {
+            $sure = Show-WzConfirm -Title (Get-WzText 'off.thoroughTitle') `
+                -Message (Get-WzText 'off.thoroughMessage') `
+                -Items @($remnants.Items) -ConfirmText (Get-WzText 'off.btnThoroughAnyway') -Danger
+            if (-not $sure.Confirmed) { return }
+        }
+
+        Invoke-WzTask -Name (Get-WzText 'off.taskRemove') -ArgumentList @($thorough) -ScriptBlock {
+            param($thorough)
+            if ($thorough -and -not $syncHash.DryRun) {
+                [void](New-WzRestorePoint -Description (Get-WzText 'off.restorePointThorough'))
+            }
+            Remove-WzOffice -Thorough:$thorough
+        } -OnComplete {
+            param($summary)
+            if (-not $summary) { return }
+            $syncHash.OffChecked = $false
+            Update-WzOfficePage
+
+            if ($syncHash.DryRun) {
+                Show-WzInfo -Title (Get-WzText 'off.dryRunTitle') `
+                    -Message (Get-WzText 'off.dryRunRemove') `
+                    -Items @($summary.Details)
+                return
+            }
+
+            $lines = @($summary.Steps) + @($summary.Details)
+            if ($lines.Count -eq 0) { $lines = @(Get-WzText 'off.nothingToDo') }
+            Show-WzInfo -Title $(if ($summary.Ok) { Get-WzText 'off.removeOkTitle' } else { Get-WzText 'off.removePartialTitle' }) `
+                -Message $(if ($summary.Ok) {
+                    Get-WzText 'off.removeOkMessage'
+                } else {
+                    Get-WzText 'off.removePartialMessage'
+                }) -Items $lines
+        }
     }
 }
 
 function Start-WzOfficeDownload {
     $choice = Get-WzOfficeChoice
-    if ($choice.Apps.Count -eq 0) { return }
+    if ($choice.Apps.Count -eq 0) {
+        Show-WzInfo -Title (Get-WzText 'off.noAppTitle') -Message (Get-WzText 'off.noAppMessage')
+        return
+    }
 
-    # Derselbe Satz wie im Modul — die Prüfung hier erspart nur den vergeblichen
-    # Start eines Vorgangs, der stundenlang laufen könnte.
     $target = Test-WzOfficeTarget
     if (-not $target.Ok) {
         Show-WzInfo -Title (Get-WzText 'off.badFsTitle') -Message $target.Message
@@ -337,7 +327,6 @@ function Start-WzOfficeDownload {
         -ConfirmText (Get-WzText 'off.btnDownloadGo')
     if (-not $answer.Confirmed) { return }
 
-    # Abbrechbar: ein reiner Download, das Modul beendet ODT dann mit.
     Invoke-WzTask -Name (Get-WzText 'off.taskDownload') -Cancelable -ArgumentList @($choice.Variant.id, $choice.Language, $choice.Apps) -ScriptBlock {
         param($variantId, $language, $apps)
         Invoke-WzOfficeDownload -VariantId $variantId -Language $language -IncludedApps $apps
@@ -345,7 +334,6 @@ function Start-WzOfficeDownload {
         param($ok)
         Update-WzOfficeSelection
         if ($syncHash.DryRun) {
-            # Der Testmodus meldete bisher »Fertig«, als läge Office nun da.
             Show-WzInfo -Title (Get-WzText 'off.dryRunTitle') `
                 -Message (Get-WzText 'off.dryRunDownload')
             return
@@ -354,51 +342,54 @@ function Start-WzOfficeDownload {
             Add-WzAction -Area 'Office' `
                 -Summary (Get-WzText 'off.actionDownloaded' @{ name = $choice.Variant.name; sprache = $choice.Language })
             Show-WzInfo -Title (Get-WzText 'off.downloadOkTitle') -Message (Get-WzText 'off.downloadOkMessage')
+        } else {
+            Show-WzInfo -Title (Get-WzText 'off.notFinishedTitle') -Message (Get-WzText 'off.downloadFailMessage')
         }
     }.GetNewClosure()
 }
 
 function Start-WzLibreOfficeInstall {
-    # Der Dialog versprach winget, ohne je zu prüfen, ob es da ist. Fehlte es,
-    # brach die Installation mit 0/0/0 ab und meldete »lief nicht durch«, ohne
-    # einen Weg vorwärts zu nennen.
-    $winget = Test-WzWinget
-    if (-not $winget.Available -and -not $syncHash.DryRun) {
-        Show-WzInfo -Title (Get-WzText 'off.wingetMissingTitle') `
-            -Message (Get-WzText 'off.wingetMissingMessage') `
-            -Items @($(if ($winget.Path) { Get-WzText 'off.wingetFoundNotRunnable' @{ pfad = $winget.Path } } else { Get-WzText 'off.wingetNotFound' }))
-        return
-    }
-
-    $answer = Show-WzConfirm -Title (Get-WzText 'off.libreDialogTitle') `
-        -Message (Get-WzText 'off.libreMessage') `
-        -ConfirmText (Get-WzText 'off.btnInstallGo')
-    if (-not $answer.Confirmed) { return }
-
-    Invoke-WzTask -Name (Get-WzText 'off.taskLibre') -ScriptBlock {
-        Install-WzLibreOffice
+    Invoke-WzTask -Name (Get-WzText 'apps.taskCheckWinget') -Silent -ScriptBlock {
+        Test-WzWinget
     } -OnComplete {
-        param($summary)
-        if (-not $summary) { return }
-        if ($syncHash.DryRun) {
-            Show-WzInfo -Title (Get-WzText 'off.dryRunTitle') -Message (Get-WzText 'off.dryRunLibre')
+        param($winget)
+        if (-not $winget) { return }
+        if (-not $winget.Available -and -not $syncHash.DryRun) {
+            Show-WzInfo -Title (Get-WzText 'off.wingetMissingTitle') `
+                -Message (Get-WzText 'off.wingetMissingMessage') `
+                -Items @($(if ($winget.Path) { Get-WzText 'off.wingetFoundNotRunnable' @{ pfad = $winget.Path } } else { Get-WzText 'off.wingetNotFound' }))
             return
         }
-        if ($summary.Installed -gt 0) {
-            Add-WzAction -Area 'Office' -Summary (Get-WzText 'off.actionLibre') `
-                -RebootRequired:$summary.RebootRequired
-            Show-WzInfo -Title (Get-WzText 'off.libreOkTitle') `
-                -Message $(if ($summary.RebootRequired) {
-                    Get-WzText 'off.libreOkReboot'
-                } else {
-                    Get-WzText 'off.libreOkMessage'
-                })
-        } elseif ($summary.Skipped -gt 0) {
-            Show-WzInfo -Title (Get-WzText 'off.librePresentTitle') -Message (Get-WzText 'off.librePresentMessage')
-        } else {
-            # Der Grund stand bisher nur als nackte Zahl im Protokoll
-            Show-WzInfo -Title (Get-WzText 'off.notFinishedTitle') `
-                -Message (Get-WzText 'off.libreFailMessage') -Items @($summary.Details)
+
+        $answer = Show-WzConfirm -Title (Get-WzText 'off.libreDialogTitle') `
+            -Message (Get-WzText 'off.libreMessage') `
+            -ConfirmText (Get-WzText 'off.btnInstallGo')
+        if (-not $answer.Confirmed) { return }
+
+        Invoke-WzTask -Name (Get-WzText 'off.taskLibre') -ScriptBlock {
+            Install-WzLibreOffice
+        } -OnComplete {
+            param($summary)
+            if (-not $summary) { return }
+            if ($syncHash.DryRun) {
+                Show-WzInfo -Title (Get-WzText 'off.dryRunTitle') -Message (Get-WzText 'off.dryRunLibre')
+                return
+            }
+            if ($summary.Installed -gt 0) {
+                Add-WzAction -Area 'Office' -Summary (Get-WzText 'off.actionLibre') `
+                    -RebootRequired:$summary.RebootRequired
+                Show-WzInfo -Title (Get-WzText 'off.libreOkTitle') `
+                    -Message $(if ($summary.RebootRequired) {
+                        Get-WzText 'off.libreOkReboot'
+                    } else {
+                        Get-WzText 'off.libreOkMessage'
+                    })
+            } elseif ($summary.Skipped -gt 0) {
+                Show-WzInfo -Title (Get-WzText 'off.librePresentTitle') -Message (Get-WzText 'off.librePresentMessage')
+            } else {
+                Show-WzInfo -Title (Get-WzText 'off.notFinishedTitle') `
+                    -Message (Get-WzText 'off.libreFailMessage') -Items @($summary.Details)
+            }
         }
     }
 }

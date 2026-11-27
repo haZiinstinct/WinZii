@@ -93,7 +93,8 @@ function New-WzCleanupRow {
     [void]$headerRow.Children.Add($nameBlock)
 
     if ($Category.risk -ne 'low') {
-        [void]$headerRow.Children.Add((New-WzBadge -Text $Category.risk.ToUpper() -Kind $Category.risk))
+        $risiko = if ($Category.risk -eq 'high') { Get-WzText 'core.riskHigh' } else { Get-WzText 'core.riskMedium' }
+        [void]$headerRow.Children.Add((New-WzBadge -Text $risiko -Kind $Category.risk))
     }
     if ($Category.method -eq 'reportOnly') {
         [void]$headerRow.Children.Add((New-WzBadge -Text (Get-WzText 'clean.badgeReportOnly') -Kind 'info'))
@@ -297,13 +298,14 @@ function Start-WzCleanupRun {
             $lines += Get-WzText 'clean.lineLocked' @{ anzahl = $summary.Failed }
         }
 
-        # Ins Übergabeblatt nur, was wirklich bereinigt wurde (Audit M1).
         $detail = @($summary.DoneNames) +
             @($summary.FailedNames | ForEach-Object { Get-WzText 'clean.detailFailed' @{ name = $_ } }) +
             @($summary.SkippedNames | ForEach-Object { Get-WzText 'clean.detailSkipped' @{ name = $_ } })
-        Add-WzAction -Area 'Speicherplatz' `
-            -Summary (Get-WzText 'clean.actionFreed' @{ groesse = (Format-WzBytes $summary.FreedBytes); anzahl = $summary.Removed }) `
-            -Detail $detail
+        if ($summary.FreedBytes -gt 0 -or $summary.Removed -gt 0) {
+            Add-WzAction -Area 'Speicherplatz' `
+                -Summary (Get-WzText 'clean.actionFreed' @{ groesse = (Format-WzBytes $summary.FreedBytes); anzahl = $summary.Removed }) `
+                -Detail $detail
+        }
 
         Show-WzInfo -Title (Get-WzText 'clean.doneTitle') -Message ($lines -join ' ') -Items @($summary.Messages)
         Start-WzCleanupScan

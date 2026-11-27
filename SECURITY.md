@@ -47,8 +47,7 @@ Damit man es nicht selbst nachlesen muss:
   - Office-Download über das Bereitstellungswerkzeug von Microsoft,
   - Treibersuche und -download im Microsoft Update-Katalog
     (`catalog.update.microsoft.com`, Downloads nur über HTTPS von Microsoft),
-  - Windows Update über die Windows-Update-Schnittstelle (COM) — die Verbindung baut
-    Windows selbst auf,
+  - Treibersuche über Windows Update (COM) — die Verbindung baut Windows selbst auf,
   - die Erreichbarkeitsprüfungen der Netzwerk-Diagnose.
 - **Eine Ausnahme mit Zustimmung:** Die Versionsprüfung fragt beim ersten Start einmal,
   ob sie bei GitHub (`api.github.com`) nach einer neueren Fassung sehen darf. Nur nach

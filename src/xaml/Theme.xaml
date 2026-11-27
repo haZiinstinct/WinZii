@@ -887,6 +887,41 @@
         </Setter>
     </Style>
 
+    <!-- Kommandopalette: dunkle Auswahlzeile mit sauberem Kontrast auch ohne Fokus -->
+    <Style x:Key="WzPaletteItem" TargetType="ListBoxItem">
+        <Setter Property="Foreground" Value="{DynamicResource WzText}" />
+        <Setter Property="Background" Value="Transparent" />
+        <Setter Property="BorderBrush" Value="Transparent" />
+        <Setter Property="BorderThickness" Value="1" />
+        <Setter Property="Padding" Value="10,7,10,7" />
+        <Setter Property="Margin" Value="0,1,0,1" />
+        <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+        <Setter Property="Cursor" Value="Hand" />
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="ListBoxItem">
+                    <Border Name="ItemBorder"
+                            Background="{TemplateBinding Background}"
+                            BorderBrush="{TemplateBinding BorderBrush}"
+                            BorderThickness="{TemplateBinding BorderThickness}"
+                            CornerRadius="8"
+                            Padding="{TemplateBinding Padding}">
+                        <ContentPresenter />
+                    </Border>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsMouseOver" Value="True">
+                            <Setter TargetName="ItemBorder" Property="Background" Value="{DynamicResource WzBgCardHover}" />
+                        </Trigger>
+                        <Trigger Property="IsSelected" Value="True">
+                            <Setter TargetName="ItemBorder" Property="Background" Value="{DynamicResource WzCyanSubtle}" />
+                            <Setter TargetName="ItemBorder" Property="BorderBrush" Value="{DynamicResource WzCyanBorder}" />
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
     <!-- Pulsierender Punkt (haZii-Signatur) -->
     <Style x:Key="WzPulseDot" TargetType="Ellipse">
         <Setter Property="Width" Value="7" />

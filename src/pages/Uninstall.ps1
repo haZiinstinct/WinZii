@@ -1,45 +1,86 @@
-﻿# Seite "Deinstallieren" — installierte Programme auflisten, entfernen und
-# die Reste wegräumen. Bis 0.5.0 hing das als zweiter Bereich unter den
-# installierbaren Programmen; dort musste man erst an hundert Katalogzeilen
-# vorbeiscrollen.
+﻿# Seite "Deinstallieren" — installierte Programme auflisten, filtern,
+# sortieren, entfernen und die Reste wegräumen.
 
 function Initialize-WzUninstallPage {
+    $syncHash.UninstallAllPrograms = @()
+    $syncHash.UninstallShowAll = $false
+
+    foreach ($mode in @(
+        @{ Id = 'name'; Label = (Get-WzText 'unin.sortName') }
+        @{ Id = 'size'; Label = (Get-WzText 'unin.sortSize') }
+        @{ Id = 'date'; Label = (Get-WzText 'unin.sortDate') }
+    )) {
+        $item = New-Object Windows.Controls.ComboBoxItem
+        $item.Content = $mode.Label
+        $item.Tag = $mode.Id
+        [void]$syncHash.UninstallSort.Items.Add($item)
+    }
+    $syncHash.UninstallSort.SelectedIndex = 0
+
     $syncHash.UninstallBtnScan.Add_Click({ Start-WzUninstallScan })
     $syncHash.UninstallBtnRemove.Add_Click({ Start-WzUninstallSelected })
-    # Enter im Suchfeld sucht, statt nur den Fokus zu halten
-    $syncHash.UninstallSearch.Add_KeyDown({
-        param($sender, $eventArgs)
-        if ($eventArgs.Key -eq [Windows.Input.Key]::Return) { Start-WzUninstallScan }
+    $syncHash.UninstallSearch.Add_TextChanged({
+        $syncHash.UninstallShowAll = $false
+        Update-WzUninstallView
     })
+    $syncHash.UninstallSort.Add_SelectionChanged({ Update-WzUninstallView })
 }
 
 function Update-WzUninstallPage {
-    # Nach jedem Seitenaufbau (auch nach einem Sprachwechsel) ist die Liste
-    # leer — dann neu lesen. Sonst bleibt der letzte Stand stehen.
     if ($syncHash.UninstallList.Children.Count -gt 0) { return }
     Start-WzUninstallScan
 }
 
 function Start-WzUninstallScan {
-    $filter = $syncHash.UninstallSearch.Text
     $syncHash.UninstallTitle.Text = Get-WzText 'unin.reading'
     $syncHash.UninstallList.Children.Clear()
+    $syncHash.UninstallShowAll = $false
 
-    Invoke-WzTask -Name (Get-WzText 'unin.taskScan') -Cancelable -Silent -ArgumentList @($filter) -ScriptBlock {
-        param($needle)
-        Get-WzInstalledPrograms -Filter $needle
+    Invoke-WzTask -Name (Get-WzText 'unin.taskScan') -Cancelable -Silent -ScriptBlock {
+        Get-WzInstalledPrograms
     } -OnComplete {
         param($programs)
-        # Ohne Fund kommt $null herein, und @($null) lehnt der Binder ab
         if (-not $programs) { $programs = @() }
-        Write-WzUninstallList -Programs @($programs)
+        $syncHash.UninstallAllPrograms = @($programs)
+        Update-WzUninstallView
     }
+}
+
+function Update-WzUninstallView {
+    $all = @($syncHash.UninstallAllPrograms)
+    $filter = if ($syncHash.UninstallSearch) { $syncHash.UninstallSearch.Text.Trim() } else { '' }
+
+    $filtered = if ($filter) {
+        $tokens = @($filter.ToLowerInvariant() -split '\s+' | Where-Object { $_ })
+        @($all | Where-Object {
+            $hay = "$($_.Name) $($_.Publisher) $($_.Version)".ToLowerInvariant()
+            $ok = $true
+            foreach ($t in $tokens) {
+                if ($hay.IndexOf($t, [StringComparison]::Ordinal) -lt 0) { $ok = $false; break }
+            }
+            $ok
+        })
+    } else {
+        $all
+    }
+
+    $sortMode = if ($syncHash.UninstallSort -and $syncHash.UninstallSort.SelectedItem) {
+        [string]$syncHash.UninstallSort.SelectedItem.Tag
+    } else { 'name' }
+
+    $sorted = switch ($sortMode) {
+        'size' { @($filtered | Sort-Object @{ Expression = 'SizeBytes'; Descending = $true }, Name) }
+        'date' { @($filtered | Sort-Object @{ Expression = { if ($null -eq $_.Installed) { [datetime]::MinValue } else { $_.Installed } }; Descending = $true }, Name) }
+        default { @($filtered | Sort-Object Name) }
+    }
+
+    Write-WzUninstallList -Programs $sorted
 }
 
 function Write-WzUninstallList {
     param([Parameter(Mandatory = $true)][AllowEmptyCollection()][array]$Programs)
 
-    $filter = $syncHash.UninstallSearch.Text
+    $filter = $syncHash.UninstallSearch.Text.Trim()
     $syncHash.UninstallTitle.Text = if ($Programs.Count -eq 0 -and $filter) {
         Get-WzText 'unin.noMatch' @{ filter = $filter }
     } elseif ($Programs.Count -eq 0) {
@@ -54,13 +95,14 @@ function Write-WzUninstallList {
     $container.Children.Clear()
     $syncHash.UninstallBoxes = @()
 
-    # Bei einer vollen Liste sind über hundert Zeilen zu viel für den Bildschirm
-    $shown = @($Programs | Select-Object -First 40)
+    $limit = if ($syncHash.UninstallShowAll -or $filter) { $Programs.Count } else { 50 }
+    $shown = @($Programs | Select-Object -First $limit)
     foreach ($program in $shown) {
         $parts = @()
         if ($program.Version) { $parts += $program.Version }
         if ($program.Publisher) { $parts += $program.Publisher }
         if ($program.SizeBytes -gt 0) { $parts += Format-WzBytes $program.SizeBytes }
+        if ($program.Installed) { $parts += $program.Installed.ToString('d', (Get-WzLanguageCulture)) }
         if (-not $program.CanSilent) { $parts += Get-WzText 'unin.asksOnRemoval' }
 
         $item = [pscustomobject]@{
@@ -75,8 +117,17 @@ function Write-WzUninstallList {
     }
 
     if ($Programs.Count -gt $shown.Count) {
-        [void]$container.Children.Add((New-WzInfoRow (Get-WzText 'unin.more') `
-            (Get-WzText 'unin.hidden' @{ anzahl = ($Programs.Count - $shown.Count) }) -LabelWidth 200))
+        $remaining = $Programs.Count - $shown.Count
+        $showAllBtn = New-Object Windows.Controls.Button
+        $showAllBtn.Style = $syncHash.Window.FindResource('WzBtnSecondary')
+        $showAllBtn.Content = Get-WzText 'unin.btnShowAll' @{ anzahl = $remaining }
+        $showAllBtn.HorizontalAlignment = 'Left'
+        $showAllBtn.Margin = New-Object Windows.Thickness(0, 10, 0, 0)
+        $showAllBtn.Add_Click({
+            $syncHash.UninstallShowAll = $true
+            Update-WzUninstallView
+        })
+        [void]$container.Children.Add($showAllBtn)
     }
 
     Update-WzUninstallSelection
@@ -105,8 +156,6 @@ function Start-WzUninstallSelected {
     Invoke-WzTask -Name (Get-WzText 'unin.taskRemove') -ArgumentList (, $selected) -ScriptBlock {
         param($programs)
         $summary = Uninstall-WzPrograms -Programs $programs
-        # Gleich nachsehen, was die Deinstallierer liegen gelassen haben —
-        # aber nur bei den Programmen, die wirklich weg sind.
         $leftovers = @()
         if (@($summary.RemovedPrograms).Count -gt 0) {
             $leftovers = @(Find-WzUninstallLeftovers -Programs $summary.RemovedPrograms)
@@ -118,9 +167,6 @@ function Start-WzUninstallSelected {
         $summary = $result.Summary
         $leftovers = @($result.Leftovers | Where-Object { $_ })
 
-        # Ins Übergabeblatt nur, was wirklich weg ist; was blieb, mit Präfix
-        # (Audit 2026-10, M1). Im Testmodus ist nichts entfernt, dort steht
-        # die Auswahl — der Eintrag ist ohnehin als Test markiert.
         $detail = if ($syncHash.DryRun) {
             @($selected | ForEach-Object { $_.Name })
         } else {
@@ -128,9 +174,11 @@ function Start-WzUninstallSelected {
             $weg + @($selected | Where-Object { $weg -notcontains $_.Name } |
                 ForEach-Object { Get-WzText 'unin.detailFailed' @{ name = $_.Name } })
         }
-        Add-WzAction -Area 'Programme' `
-            -Summary ((Get-WzText 'unin.actionRemoved' @{ anzahl = $summary.Removed }) + $(if ($summary.Failed -gt 0) { Get-WzText 'unin.actionFailedSuffix' @{ anzahl = $summary.Failed } })) `
-            -Detail @($detail)
+        if ($summary.Removed -gt 0 -or $summary.Failed -gt 0) {
+            Add-WzAction -Area 'Programme' `
+                -Summary ((Get-WzText 'unin.actionRemoved' @{ anzahl = $summary.Removed }) + $(if ($summary.Failed -gt 0) { Get-WzText 'unin.actionFailedSuffix' @{ anzahl = $summary.Failed } })) `
+                -Detail @($detail)
+        }
 
         if ($leftovers.Count -eq 0) {
             Show-WzInfo -Title (Get-WzText 'unin.doneTitle') `
@@ -140,7 +188,6 @@ function Start-WzUninstallSelected {
             return
         }
 
-        # Reste gefunden: Ergebnis und Nachfrage in einem Dialog
         $bytes = [int64]0
         $measure = ($leftovers | Measure-Object -Property SizeBytes -Sum).Sum
         if ($measure) { $bytes = [int64]$measure }
@@ -150,8 +197,6 @@ function Start-WzUninstallSelected {
                 entfernt = $summary.Removed; fehlgeschlagen = $summary.Failed
                 groesse  = (Format-WzBytes $bytes) }) `
             -Items @($leftovers | ForEach-Object {
-                # Kind steuert auch den Loeschweg und bleibt deshalb deutsch —
-                # uebersetzt wird nur die Anzeige.
                 $art = if ($_.Kind -eq 'Registry') { Get-WzText 'unin.kindRegistry' } else { Get-WzText 'unin.kindFolder' }
                 $zusatz = if ($_.PSObject.Properties['UserData'] -and $_.UserData) { Get-WzText 'unin.userDataSuffix' } else { '' }
                 "$($art): $($_.Path)$(if ($_.SizeBytes -gt 0) { " — $(Format-WzBytes $_.SizeBytes)" })$zusatz"

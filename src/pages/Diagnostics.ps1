@@ -14,7 +14,6 @@ function Initialize-WzDiagnosticsPage {
     $syncHash.DiagBtnSfc.Add_Click({ Start-WzRepairTool -Kind 'sfc' })
     $syncHash.DiagBtnDism.Add_Click({ Start-WzRepairTool -Kind 'dism' })
     $syncHash.DiagBtnChkdsk.Add_Click({ Start-WzRepairTool -Kind 'chkdsk' })
-    $syncHash.DiagBtnBattery.Add_Click({ Start-WzBatteryReport })
     $syncHash.DiagBtnHealth.Add_Click({ Start-WzHealthCheck })
     $syncHash.DiagBtnMemDiag.Add_Click({ Start-WzMemoryDiagnostic })
 
@@ -330,21 +329,12 @@ function Start-WzRepairTool {
     Invoke-WzTask -Name $config.Title -ScriptBlock $config.Block -OnComplete {
         param($result)
         if (-not $result) { return }
+        if ($result.Success -and -not $syncHash.DryRun) {
+            $needsReboot = [bool]($result.PSObject.Properties['RebootRequired'] -and $result.RebootRequired)
+            Add-WzAction -Area 'Reparatur' -Summary "$($config.Title): $($result.Summary)" -RebootRequired:$needsReboot
+        }
         Show-WzInfo -Title $config.Title -Message $result.Summary
     }.GetNewClosure()
-}
-
-function Start-WzBatteryReport {
-    Invoke-WzTask -Name (Get-WzText 'diag.taskBattery') -ScriptBlock {
-        New-WzBatteryReport
-    } -OnComplete {
-        param($file)
-        if ($file) {
-            Start-Process $file
-        } else {
-            Show-WzInfo -Title (Get-WzText 'diag.noBatteryTitle') -Message (Get-WzText 'diag.noBatteryMessage')
-        }
-    }
 }
 
 # --- Belastungstest --------------------------------------------------------

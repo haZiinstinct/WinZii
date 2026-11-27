@@ -15,6 +15,7 @@
     { "pattern": "Microsoft.Todos*", "name": "Microsoft To Do", "description": "Aufgabenlisten-App." },
     { "pattern": "Clipchamp.Clipchamp*", "name": "Clipchamp", "description": "Videobearbeitung mit Abo-Modell." },
     { "pattern": "MicrosoftTeams*", "name": "Teams (privat)", "description": "Die private Teams-Variante, nicht die geschäftliche." },
+    { "pattern": "MSTeams*", "name": "Microsoft Teams (neu)", "description": "Vorinstallierte neue Teams-App." },
     { "pattern": "Microsoft.MicrosoftStickyNotes*", "name": "Kurznotizen", "description": "Notizzettel-App." },
     { "pattern": "Microsoft.WindowsMaps*", "name": "Karten", "description": "Karten-App von Microsoft." },
     { "pattern": "Microsoft.YourPhone*", "name": "Smartphone-Link", "description": "Kopplung mit dem Mobiltelefon." },
@@ -24,7 +25,8 @@
     { "pattern": "MicrosoftCorporationII.QuickAssist*", "name": "Schnellhilfe", "description": "Fernwartung von Microsoft." }
   ],
   "extended": [
-    { "pattern": "Microsoft.XboxApp*", "name": "Xbox", "description": "Xbox-App. Für Spiele über den Store nicht nötig." },
+    { "pattern": "Microsoft.XboxApp*", "name": "Xbox (alt)", "description": "Ältere Xbox-App. Für Spiele über den Store nicht nötig." },
+    { "pattern": "Microsoft.GamingApp*", "name": "Xbox-App", "description": "Die aktuelle Xbox-App unter Windows 11." },
     { "pattern": "Microsoft.XboxGamingOverlay*", "name": "Xbox Game Bar", "description": "Overlay beim Spielen, kostet etwas Leistung." },
     { "pattern": "Microsoft.XboxGameOverlay*", "name": "Xbox Game Overlay", "description": "Zusatzkomponente der Game Bar." },
     { "pattern": "Microsoft.XboxSpeechToTextOverlay*", "name": "Xbox Sprachausgabe", "description": "Untertitel-Overlay für Xbox-Spiele." },

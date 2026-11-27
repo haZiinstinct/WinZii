@@ -95,7 +95,7 @@ function Start-WzVersionCheck {
     $timer = New-Object Windows.Threading.DispatcherTimer
     $timer.Interval = [TimeSpan]::FromSeconds(3)
     $timer.Add_Tick({
-        if ($syncHash.Busy) { return }
+        if ($syncHash.Busy -or $syncHash.ActiveDialog) { return }
         $timer.Stop()
 
         $erlaubt = Get-WzSetting -Name 'versionshinweis'
@@ -120,9 +120,21 @@ function Start-WzVersionCheck {
             param($neueste)
             if (-not $neueste -or -not $neueste.Ok) { return }
             if (Test-WzVersionNewer -Current $syncHash.Version -Candidate $neueste.Version) {
+                $safeUrl = if ($neueste.Url -match '^https://github\.com/haZiinstinct/WinZii/') { $neueste.Url } else { 'https://github.com/haZiinstinct/WinZii/releases/latest' }
+                $syncHash.UpdateAvailable = [pscustomobject]@{
+                    Version = $neueste.Version
+                    Url     = $safeUrl
+                }
+                if ($syncHash.SidebarVersion) {
+                    $syncHash.SidebarVersion.Text = "v$($syncHash.Version)  ↑ v$($neueste.Version)"
+                    $syncHash.SidebarVersion.Foreground = $syncHash.Window.FindResource('WzAmber')
+                }
+                if ($syncHash.CurrentPage -eq 'Dashboard' -and $syncHash.SystemInfo) {
+                    Write-WzDashboardNotices -Info $syncHash.SystemInfo
+                }
                 Write-WzLog (Get-WzText 'start.checkNewer' @{
                     version = $neueste.Version; hier = $syncHash.Version }) -Level Warn
-                Write-WzLog (Get-WzText 'start.checkWhere' @{ adresse = $neueste.Url }) -Level Info
+                Write-WzLog (Get-WzText 'start.checkWhere' @{ adresse = $safeUrl }) -Level Info
             } else {
                 Write-WzLog (Get-WzText 'start.checkCurrent') -Level Ok
             }

@@ -260,6 +260,27 @@ function Set-WzConsoleCollapsed {
     } else {
         [Windows.Visibility]::Visible
     }
+    if ($syncHash.LogSplitter) {
+        $syncHash.LogSplitter.Visibility = if ($Collapsed) {
+            [Windows.Visibility]::Collapsed
+        } else {
+            [Windows.Visibility]::Visible
+        }
+    }
+    if ($syncHash.LogPaneRow) {
+        if ($Collapsed) {
+            if ($syncHash.LogPaneRow.ActualHeight -gt 60) {
+                $syncHash.LastLogPaneHeight = New-Object Windows.GridLength($syncHash.LogPaneRow.ActualHeight)
+            }
+            $syncHash.LogPaneRow.Height = [Windows.GridLength]::Auto
+        } else {
+            $syncHash.LogPaneRow.Height = if ($syncHash.LastLogPaneHeight) {
+                $syncHash.LastLogPaneHeight
+            } else {
+                New-Object Windows.GridLength(184)
+            }
+        }
+    }
     if ($syncHash.LogChevron) {
         $syncHash.LogChevron.Text = if ($Collapsed) { [char]0xE70E } else { [char]0xE70D }
     }
@@ -631,7 +652,9 @@ function Show-WzConfirm {
 
     $okButton = New-Object Windows.Controls.Button
     $okButton.Content = if ($ConfirmText) { $ConfirmText } else { Get-WzText 'core.btnExecute' }
-    $okButton.IsDefault = $true
+    # Gefahrendialoge bekommen bewusst kein IsDefault — sonst löst Enter doch
+    # noch die Löschung aus, sobald der Fokus vom Abbrechen-Knopf wandert.
+    $okButton.IsDefault = (-not $Danger)
     $okButton.Style = if ($Danger) {
         $syncHash.Window.FindResource('WzBtnDanger')
     } else {
@@ -947,7 +970,7 @@ function New-WzInfoRow {
     [void]$grid.Children.Add($labelBlock)
 
     $valueBlock = New-Object Windows.Controls.TextBlock
-    $valueBlock.Text = if ($Value) { $Value } else { 'n/v' }
+    $valueBlock.Text = if ($Value) { $Value } else { Get-WzText 'core.na' }
     $valueBlock.FontFamily = $syncHash.Window.FindResource('WzFontMono')
     $valueBlock.FontSize = 12
     $valueBlock.TextWrapping = 'Wrap'

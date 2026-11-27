@@ -527,9 +527,20 @@ function Find-WzUninstallLeftovers {
 
             $bytes = [int64]0
             try {
-                $sum = (Get-ChildItem -LiteralPath $folder -Recurse -Force -File -ErrorAction SilentlyContinue |
-                    Measure-Object -Property Length -Sum).Sum
-                if ($sum) { $bytes = [int64]$sum }
+                if (Get-Command Get-WzDirectoryTree -ErrorAction SilentlyContinue) {
+                    $tree = Get-WzDirectoryTree -Path $folder
+                    foreach ($dir in $tree.Directories) {
+                        try {
+                            foreach ($f in $dir.EnumerateFiles()) {
+                                $bytes += $f.Length
+                            }
+                        } catch { }
+                    }
+                } else {
+                    $sum = (Get-ChildItem -LiteralPath $folder -Recurse -Force -File -ErrorAction SilentlyContinue |
+                        Measure-Object -Property Length -Sum).Sum
+                    if ($sum) { $bytes = [int64]$sum }
+                }
             } catch { }
 
             $leftovers += [pscustomobject]@{

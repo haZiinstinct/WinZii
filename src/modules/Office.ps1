@@ -37,7 +37,7 @@ function New-WzOfficeConfigXml {
 
     $catalog = Get-WzOfficeCatalog
     $variant = $catalog.variants | Where-Object { $_.id -eq $VariantId } | Select-Object -First 1
-    if (-not $variant) { throw "Unbekannte Office-Variante: $VariantId" }
+    if (-not $variant) { throw (Get-WzText 'off.errUnknownVariant' @{ id = $VariantId }) }
 
     $excluded = @($catalog.apps | Where-Object { $_.id -notin $IncludedApps } | ForEach-Object { $_.id })
 
@@ -682,7 +682,7 @@ function Remove-WzOffice {
                 $summary.Steps += Get-WzText 'off.logFolderRemoved' @{ ordner = $folder }
                 Write-WzLog (Get-WzText 'off.logFolderRemoved' @{ ordner = $folder }) -Level Ok
             } catch {
-                $summary.Details += "$folder blieb liegen: $($_.Exception.Message.Split([char]10)[0])"
+                $summary.Details += Get-WzText 'off.detailFolderLeft' @{ ordner = $folder; grund = $_.Exception.Message.Split([char]10)[0] }
                 Write-WzLog (Get-WzText 'off.logFolderRemoveFailed' @{ pfad = $folder }) -Level Warn
             }
         }
@@ -731,10 +731,12 @@ function Get-WzInstalledOffice {
         $result.Version = $config.VersionToReport
         $productIds = $config.ProductReleaseIds
         $result.Name = switch -Wildcard ($productIds) {
+            '*O365HomePrem*'    { 'Microsoft 365 Single / Family'; break }
             '*O365ProPlus*'     { 'Microsoft 365 Apps for Enterprise'; break }
             '*O365Business*'    { 'Microsoft 365 Apps for Business'; break }
             '*ProPlus2024*'     { 'Office LTSC Professional Plus 2024'; break }
             '*Standard2024*'    { 'Office LTSC Standard 2024'; break }
+            '*Home2024*'        { 'Office Home 2024'; break }
             '*ProPlus2021*'     { 'Office LTSC Professional Plus 2021'; break }
             '*Standard2021*'    { 'Office LTSC Standard 2021'; break }
             '*ProPlus2019*'     { 'Office Professional Plus 2019'; break }

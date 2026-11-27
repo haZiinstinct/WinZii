@@ -8,7 +8,7 @@
 
     <ItemsControl Name="OptNotices" Margin="0,0,0,14" />
 
-    <!-- Aktionsleiste -->
+    <!-- Aktionsleiste mit 1-Klick-Profilen und Filter -->
     <Border Style="{DynamicResource WzCardStatic}" Margin="0,0,0,16">
         <StackPanel>
             <Grid>
@@ -18,22 +18,40 @@
                     <TextBlock Name="OptStatusHint" Text="{DynamicResource L.opt.stateHint}" Style="{DynamicResource WzLabel}"
                                VerticalAlignment="Center" Margin="14,0,0,0" />
                 </StackPanel>
-                <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
-                    <Button Name="OptBtnRecommended" Style="{DynamicResource WzBtnChip}" Content="{DynamicResource L.opt.btnRecommended}" Margin="0,0,4,0" />
-                    <Button Name="OptBtnAll" Style="{DynamicResource WzBtnChip}" Content="{DynamicResource L.opt.btnAll}" Margin="0,0,4,0" />
-                    <Button Name="OptBtnNone" Style="{DynamicResource WzBtnChip}" Content="{DynamicResource L.opt.btnNone}" Margin="0,0,4,0" />
-                    <Button Name="OptBtnRemember" Style="{DynamicResource WzBtnChip}" Content="{DynamicResource L.opt.btnRemember}"
+                <WrapPanel HorizontalAlignment="Right">
+                    <Button Name="OptBtnRecommended" Style="{DynamicResource WzBtnChip}" Content="{DynamicResource L.opt.btnRecommended}" Margin="0,0,4,4" />
+                    <Button Name="OptBtnMaxLean" Style="{DynamicResource WzBtnChip}" Content="{DynamicResource L.opt.btnMaxLean}" Margin="0,0,4,4" />
+                    <Button Name="OptBtnTelemetry" Style="{DynamicResource WzBtnChip}" Content="{DynamicResource L.opt.btnTelemetryOnly}" Margin="0,0,4,4" />
+                    <Button Name="OptBtnAll" Style="{DynamicResource WzBtnChip}" Content="{DynamicResource L.opt.btnAll}" Margin="0,0,4,4" />
+                    <Button Name="OptBtnNone" Style="{DynamicResource WzBtnChip}" Content="{DynamicResource L.opt.btnNone}" Margin="0,0,4,4" />
+                    <Button Name="OptBtnRemember" Style="{DynamicResource WzBtnChip}" Content="{DynamicResource L.opt.btnRemember}" Margin="0,0,0,4"
                             ToolTip="{DynamicResource L.opt.tipRemember}" />
+                </WrapPanel>
+            </Grid>
+            <WrapPanel Margin="0,12,0,0">
+                <Button Name="OptBtnApply" Style="{DynamicResource WzBtnPrimary}" Margin="0,0,10,8"
+                        Content="{DynamicResource L.opt.btnApply}" />
+                <Button Name="OptBtnUndo" Style="{DynamicResource WzBtnSecondary}" Margin="0,0,10,8"
+                        Content="{DynamicResource L.opt.btnUndo}" />
+                <Button Name="OptBtnRefresh" Style="{DynamicResource WzBtnSecondary}" Margin="0,0,10,8"
+                        Content="{DynamicResource L.opt.btnRefresh}" />
+                <Button Name="OptBtnRestartExplorer" Style="{DynamicResource WzBtnSecondary}" Margin="0,0,10,8"
+                        Content="{DynamicResource L.opt.btnRestartExplorer}"
+                        ToolTip="{DynamicResource L.opt.tipRestartExplorer}" />
+            </WrapPanel>
+            <Grid Margin="0,6,0,0">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+                <TextBox Name="OptSearch" Grid.Column="0" Style="{DynamicResource WzTextBox}"
+                         ToolTip="{DynamicResource L.opt.searchTip}"
+                         AutomationProperties.Name="{DynamicResource L.opt.searchTip}" />
+                <StackPanel Grid.Column="1" Orientation="Horizontal" Margin="10,0,0,0" VerticalAlignment="Center">
+                    <Button Name="OptBtnFilterOpen" Style="{DynamicResource WzBtnChip}"
+                            Content="{DynamicResource L.opt.btnFilterOpen}" />
                 </StackPanel>
             </Grid>
-            <WrapPanel Margin="0,16,0,0">
-                <Button Name="OptBtnApply" Style="{DynamicResource WzBtnPrimary}" Margin="0,0,10,0"
-                        Content="{DynamicResource L.opt.btnApply}" />
-                <Button Name="OptBtnUndo" Style="{DynamicResource WzBtnSecondary}" Margin="0,0,10,0"
-                        Content="{DynamicResource L.opt.btnUndo}" />
-                <Button Name="OptBtnRefresh" Style="{DynamicResource WzBtnSecondary}"
-                        Content="{DynamicResource L.opt.btnRefresh}" />
-            </WrapPanel>
         </StackPanel>
     </Border>
 

@@ -188,6 +188,8 @@ $zustaende = @(
     @{ Wert = 0x061100; An = $true;  Alt = $false; Was = 'Defender an, aktuell (Abnahmelaptop)' }
     @{ Wert = 0x061000; An = $true;  Alt = $false; Was = 'Malwarebytes an, aktuell (Abnahmelaptop)' }
     @{ Wert = 0x040000; An = $false; Alt = $false; Was = 'Scanner abgeschaltet' }
+    @{ Wert = 0x042000; An = $false; Alt = $false; Was = 'Scanner pausiert (0x2000)' }
+    @{ Wert = 0x043000; An = $false; Alt = $false; Was = 'Scanner abgelaufen (0x3000)' }
     @{ Wert = 0x041010; An = $true;  Alt = $true;  Was = 'an, aber Signaturen veraltet' }
 )
 foreach ($z in $zustaende) {

@@ -56,11 +56,14 @@ function New-WzTweakList {
             [void]$stack.Children.Add($row.Row)
 
             $entry = [pscustomobject]@{
-                Tweak     = $tweak
-                CheckBox  = $row.CheckBox
-                Row       = $row.Row
-                HeaderRow = $row.HeaderRow
-                Badge     = $null
+                Tweak      = $tweak
+                CheckBox   = $row.CheckBox
+                Row        = $row.Row
+                HeaderRow  = $row.HeaderRow
+                Card       = $card.Card
+                Badge      = $null
+                State      = 'Unknown'
+                SearchText = "$($tweak.name) $($tweak.description) $($tweak.id) $title".ToLowerInvariant()
             }
             [void]$rows.Add($entry)
             [void]$categoryRows.Add($entry)
@@ -118,6 +121,7 @@ function Update-WzTweakStates {
         foreach ($entry in $Rows) {
             if (-not $states.ContainsKey($entry.Tweak.id)) { continue }
             $state = $states[$entry.Tweak.id]
+            $entry.State = $state
 
             $badgeText, $badgeKind = switch ($state) {
                 'Applied'    { (Get-WzText 'opt.badgeActive'), 'ok' }
@@ -185,7 +189,11 @@ function Invoke-WzTweakSelection {
     # war dafür gebaut und wurde nie aufgerufen — der Anwender bestätigte bisher
     # eine Liste von Überschriften.
     $items = foreach ($tweak in $selected) {
-        $suffix = if ($tweak.risk -ne 'low') { " [$($tweak.risk)]" } else { '' }
+        $suffix = switch ($tweak.risk) {
+            'medium' { " [$(Get-WzText 'opt.riskMedium')]" }
+            'high'   { " [$(Get-WzText 'opt.riskHigh')]" }
+            default  { '' }
+        }
         $what = Get-WzTweakActionSummary -Tweak $tweak
         if ($what) { Get-WzText 'opt.itemWithWhat' @{ name = $tweak.name; risiko = $suffix; was = $what } } else { "$($tweak.name)$suffix" }
     }
@@ -234,14 +242,14 @@ function Invoke-WzTweakSelection {
         if ($summary.RebootRequired) { $lines += Get-WzText 'opt.lineReboot' }
         if ($summary.UndoFile) { $lines += Get-WzText 'opt.lineBackup' @{ pfad = (Split-Path -Parent $summary.UndoFile) } }
 
-        # Ins Übergabeblatt nur, was wirklich angewendet wurde; Fehlschläge
-        # gekennzeichnet. Bisher standen alle ausgewählten Einträge dort,
-        # auch die fehlgeschlagenen (Audit 2026-10, M1).
+        $area = if ($Scope -eq 'ki-entfernung') { 'KI-Entfernung' } else { 'Optimierung' }
         $detail = @($summary.AppliedNames) +
             @($summary.FailedNames | ForEach-Object { Get-WzText 'opt.detailFailed' @{ name = $_ } })
-        Add-WzAction -Area $Title -RebootRequired:([bool]$summary.RebootRequired) `
-            -Summary ((Get-WzText 'opt.actionApplied' @{ anzahl = $summary.Applied }) + $(if ($summary.Failed -gt 0) { Get-WzText 'opt.actionFailedSuffix' @{ anzahl = $summary.Failed } })) `
-            -Detail $detail
+        if ($summary.Applied -gt 0 -or $summary.Failed -gt 0) {
+            Add-WzAction -Area $area -RebootRequired:([bool]$summary.RebootRequired) `
+                -Summary ((Get-WzText 'opt.actionApplied' @{ anzahl = $summary.Applied }) + $(if ($summary.Failed -gt 0) { Get-WzText 'opt.actionFailedSuffix' @{ anzahl = $summary.Failed } })) `
+                -Detail $detail
+        }
 
         Show-WzInfo -Title (Get-WzText 'opt.doneTitle') -Message ($lines -join ' ') -Items @($summary.Messages)
         if ($OnDone) { & $OnDone }

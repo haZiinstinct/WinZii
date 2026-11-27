@@ -170,15 +170,36 @@
     justify-content: space-between;
   }
   footer a { text-decoration: none; }
-  .wordmark { font-weight: 700; letter-spacing: -.02em; }
+  .wordmark { font-weight: 700; letter-spacing: -.02em; color: var(--cyan); }
+  .wordmark-z { color: var(--text-bright); }
+  .wordmark-tld { color: var(--cyan-dim); }
+  .wordmark-prefix { color: var(--text-faint); }
 
+  @page { margin: 16mm 14mm; }
   @media print {
-    body { background: #fff; color: #111; }
-    .card, th { background: #fff; }
-    header { background: #fff; }
-    h1, .card h3, h2 { color: #000; }
-    dd, td, .lead, dt { color: #222; }
-    .log .lvl-info, .log div { color: #333; }
+    body { background: #fff; color: #0f172a; padding-bottom: 0; font-size: 13px; }
+    header { background: #fff; border-bottom: 1px solid #cbd5e1; padding: 0 0 18px; margin-bottom: 24px; }
+    .eyebrow, th, .tag-info, .log .lvl-action { color: #0369a1; }
+    h1, h2, .card h3 { color: #0f172a; }
+    h2 { break-after: avoid; }
+    dd, td, .lead, dt, .explain { color: #334155; }
+    .pill { background: #f1f5f9; border-color: #cbd5e1; color: #334155; }
+    .pill strong { color: #0f172a; }
+    .card { background: #fff; border: 1px solid #cbd5e1; break-inside: avoid; }
+    th { background: #f8fafc; border-bottom: 1px solid #cbd5e1; }
+    td { border-bottom: 1px solid #e2e8f0; }
+    tr { break-inside: avoid; }
+    .tag-ok, .log .lvl-ok { color: #15803d; }
+    .tag-warn, .log .lvl-warn { color: #b45309; }
+    .tag-err, .log .lvl-error { color: #b91c1c; }
+    .note-ok { color: #15803d; background: #f0fdf4; border-color: #86efac; }
+    .note-warn { color: #92400e; background: #fffbeb; border-color: #fcd34d; }
+    .note-err { color: #991b1b; background: #fef2f2; border-color: #fca5a5; }
+    .note-info { color: #075985; background: #f0f9ff; border-color: #7dd3fc; }
+    .log .lvl-info, .log .lvl-test, .log div { color: #334155; }
+    footer { border-top: 1px solid #cbd5e1; color: #475569; margin-top: 32px; }
+    .wordmark, .wordmark-tld { color: #0369a1; }
+    .wordmark-z { color: #0f172a; }
   }
 </style>
 </head>
@@ -189,7 +210,6 @@
     <h1>{{TITLE}}</h1>
     <p class="lead">{{SUBTITLE}}</p>
     <div class="meta">{{META}}</div>
-    {{SENDER}}
   </div>
 </header>
 
@@ -197,17 +217,9 @@
 {{CONTENT}}
 </main>
 
-<style>
-.sender { display:flex; align-items:center; gap:14px; margin-top:22px; padding-top:18px; border-top:1px solid var(--line, #1e293b); }
-.sender-logo { max-height:46px; max-width:180px; }
-.sender-text { display:flex; flex-direction:column; gap:2px; font-size:.9rem; line-height:1.45; }
-.sender-text strong { font-size:1rem; }
-.sender-text span { opacity:.7; }
-@media print { .sender { break-inside:avoid; } }
-</style>
 <footer class="wrap">
   <span>WinZii {{VERSION}} · {{CREATED}}</span>
-  <a href="https://hazii.org" target="_blank" rel="noopener noreferrer" aria-label="{{CODELABEL}}"><span style="opacity:.65;color:#64748b">// code:</span> <span class="wordmark" style="color:#00d4ff">ha<span style="color:#f8fafc">Z</span>ii<span style="color:#00a8cc">.org</span></span></a>
+  <a href="https://hazii.org" target="_blank" rel="noopener noreferrer" aria-label="{{CODELABEL}}"><span class="wordmark-prefix">// code:</span> <span class="wordmark">ha<span class="wordmark-z">Z</span>ii<span class="wordmark-tld">.org</span></span></a>
 </footer>
 </body>
 </html>

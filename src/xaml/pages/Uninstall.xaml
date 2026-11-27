@@ -14,10 +14,13 @@
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="*" />
                     <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="Auto" />
                 </Grid.ColumnDefinitions>
                 <TextBox Name="UninstallSearch" Grid.Column="0" Style="{DynamicResource WzTextBox}"
                          ToolTip="{DynamicResource L.unin.tipFilter}" />
-                <StackPanel Grid.Column="1" Orientation="Horizontal" Margin="10,0,0,0">
+                <ComboBox Name="UninstallSort" Grid.Column="1" Style="{DynamicResource WzComboBox}"
+                          Width="170" Margin="10,0,0,0" />
+                <StackPanel Grid.Column="2" Orientation="Horizontal" Margin="10,0,0,0">
                     <Button Name="UninstallBtnScan" Style="{DynamicResource WzBtnSecondary}" Margin="0,0,8,0"
                             Content="{DynamicResource L.unin.btnList}" />
                     <Button Name="UninstallBtnRemove" Style="{DynamicResource WzBtnDanger}"

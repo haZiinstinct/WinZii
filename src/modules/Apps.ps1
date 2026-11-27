@@ -402,411 +402,85 @@ function Install-WzApps {
 
     # Ohne Internet scheitert jede einzelne Installation mit einer anderen,
     # nichtssagenden Meldung. Einmal vorher fragen ist ehrlicher.
-    $vaultApps = @($Apps | Where-Object { Get-WzOfflineInstallerPath -App $_ -Verify })
-    # Ohne LocalManifestFiles bricht »install --manifest« ab. Lässt sich die
-    # Einstellung nicht setzen, geht alles online.
-    $vaultAllowed = $false
-    $lokaleManifeste = $null
-    if ($vaultApps.Count -gt 0 -and $wingetPath) {
-        $lokaleManifeste = Enable-WzWingetLocalManifests -WingetPath $wingetPath
-        $vaultAllowed = [bool]$lokaleManifeste.Ok
-    }
-    try {
-        # Auch der Vorrat braucht Netz: »winget install --manifest« lädt den
-        # Installer von der InstallerUrl und nimmt die Datei daneben nicht
-        # (winget-cli #4358, #4361). Bisher wurde die Prüfung übersprungen,
-        # wenn alles im Vorrat lag (Audit 2026-10, H6).
-        if (-not $syncHash.DryRun) {
-            $net = Test-WzInternetAccess
-            if ($net.Kind -ne 'ok') {
-                $reason = switch ($net.Kind) {
-                    'portal'      { Get-WzText 'apps.netPortal' }
-                    'certificate' { Get-WzText 'apps.netCertificate' }
-                    default       { Get-WzText 'apps.netNone' }
-                }
-                Write-WzLog "$reason ($($net.Detail))" -Level Error
-                $summary.Details += $reason
-                return $summary
+    if (-not $syncHash.DryRun) {
+        $net = Test-WzInternetAccess
+        if ($net.Kind -ne 'ok') {
+            $reason = switch ($net.Kind) {
+                'portal'      { Get-WzText 'apps.netPortal' }
+                'certificate' { Get-WzText 'apps.netCertificate' }
+                default       { Get-WzText 'apps.netNone' }
             }
+            Write-WzLog "$reason ($($net.Detail))" -Level Error
+            $summary.Details += $reason
+            return $summary
         }
-
-        $index = 0
-        foreach ($app in $Apps) {
-            $index++
-            Write-WzLog (Get-WzText 'apps.logStep' @{ nummer = $index; gesamt = @($Apps).Count; name = $app.name }) -Level Action
-
-            if ($syncHash.DryRun) {
-                Write-WzLog (Get-WzText 'apps.logTestInstall' @{ id = $app.wingetId }) -Level Test
-                $summary.Skipped++
-                continue
-            }
-
-            # Liegt das Programm im Stick-Vorrat, wird von dort installiert — genau
-            # das versprach die Oberfläche bisher, ohne dass ein Codepfad es je tat.
-            # »winget install --manifest« braucht das Manifest, das »winget download«
-            # neben die Installationsdatei legt.
-            $vault = if ($vaultAllowed) { Get-WzOfflineInstallerPath -App $app -Verify } else { $null }
-            # --source winget pinnt die Quelle: Ohne den Pin durchsucht winget auch
-            # den Store, dessen Quelle unter einem frisch elevierten Konto nicht
-            # eingerichtet ist und eine Rückfrage bräuchte — die --disable-interactivity
-            # gerade verbietet.
-            $onlineBase = "install --id $($app.wingetId) --exact --silent --source winget " +
-                          '--accept-source-agreements --accept-package-agreements --disable-interactivity'
-            if ($vault) {
-                Write-WzLog (Get-WzText 'apps.logFromVault') -Level Info
-                $base = "install --manifest `"$vault`" --silent " +
-                        '--accept-package-agreements --disable-interactivity'
-            } else {
-                $base = $onlineBase
-            }
-            $result = Invoke-WzProcess -FilePath $wingetPath -Arguments "$base --scope machine" -TimeoutSeconds 1800
-            $outcome = Get-WzWingetOutcome -ExitCode $result.ExitCode
-
-            # Scheitert der Vorrat, aber das Netz ist da, noch einmal online —
-            # sonst bliebe ein Programm liegen, das sich ganz normal laden ließe.
-            if ($vault -and $outcome.Outcome -eq 'fail' -and (Test-WzInternetAccess).Kind -eq 'ok') {
-                Write-WzLog (Get-WzText 'apps.logVaultFallback' @{ grund = $outcome.Text }) -Level Warn
-                $base = $onlineBase
-                $result = Invoke-WzProcess -FilePath $wingetPath -Arguments "$base --scope machine" -TimeoutSeconds 1800
-                $outcome = Get-WzWingetOutcome -ExitCode $result.ExitCode
-            }
-
-            # Nicht jedes Programm lässt sich systemweit einrichten. Früher hing
-            # dieser Rückfall an der Textausgabe ('scope|Bereich') — winget schreibt
-            # dort aber »kein anwendbares Installationsprogramm«, der Rückfall griff
-            # also nie. Jetzt entscheidet der Rückgabewert.
-            if ($outcome.Outcome -eq 'retry') {
-                Write-WzLog (Get-WzText 'apps.logUserScope') -Level Info
-                $result = Invoke-WzProcess -FilePath $wingetPath -Arguments $base -TimeoutSeconds 1800
-                $outcome = Get-WzWingetOutcome -ExitCode $result.ExitCode
-            }
-
-            switch ($outcome.Outcome) {
-                'ok' {
-                    # Dem Rückgabewert allein wird nicht mehr geglaubt
-                    if (Test-WzAppInstalled -WingetPath $wingetPath -Id $app.wingetId) {
-                        $summary.Installed++
-                        $summary.InstalledNames += $app.name
-                        Write-WzLog (Get-WzText 'apps.logInstalledShort') -Level Ok
-                    } else {
-                        $summary.Failed++
-                        $summary.Details += "$($app.name): $(Get-WzText 'apps.detailSuccessButMissing')"
-                        Write-WzLog (Get-WzText 'apps.logSuccessButMissing') -Level Warn
-                    }
-                }
-                'reboot' {
-                    # Auch hier nachmessen: Bis 0.7.0 stand 0x8A150104 (fehlende
-                    # Abhängigkeit) auf »reboot«, und ein Fehlschlag kam als
-                    # installiert ins Übergabeblatt (Audit 2026-10, H4).
-                    if (Test-WzAppInstalled -WingetPath $wingetPath -Id $app.wingetId) {
-                        $summary.Installed++
-                        $summary.InstalledNames += $app.name
-                        $summary.RebootRequired = $true
-                        Write-WzLog "  $($outcome.Text)" -Level Ok
-                    } else {
-                        $summary.Failed++
-                        $summary.Details += "$($app.name): $(Get-WzText 'apps.detailSuccessButMissing')"
-                        Write-WzLog (Get-WzText 'apps.logSuccessButMissing') -Level Warn
-                    }
-                }
-                'skip' {
-                    $summary.Skipped++
-                    Write-WzLog "  $($outcome.Text)" -Level Info
-                }
-                default {
-                    $summary.Failed++
-                    $summary.Details += "$($app.name): $($outcome.Text)"
-                    Write-WzLog "  $($outcome.Text)" -Level Warn
-                }
-            }
-        }
-    } finally {
-        # Die Freigabe gilt geräteweit für beliebige lokale Manifeste. Hat
-        # WinZii sie eingeschaltet, bleibt sie nicht stehen.
-        if ($lokaleManifeste -and $lokaleManifeste.Changed) { Disable-WzWingetLocalManifests -WingetPath $wingetPath }
     }
 
-    return $summary
-}
-
-function Save-WzOfflineInstallers {
-    <#
-    .SYNOPSIS
-        Lädt die Installationsdateien auf den Datenträger, damit sie später
-        ohne Internet zur Verfügung stehen.
-    #>
-    param([Parameter(Mandatory = $true)]$Apps)
-
-    $summary = [pscustomobject]@{ Saved = 0; Failed = 0; Bytes = [int64]0; Details = @() }
-
-    $wingetPath = Resolve-WzWingetPath
-    if (-not $wingetPath) {
-        Write-WzLog (Get-WzText 'apps.logNoPreload') -Level Error
-        $summary.Details += Get-WzText 'apps.detailWingetMissing'
-        return $summary
-    }
-
-    if (-not $syncHash.DryRun -and -not (Test-WzWingetDownloadSupport -WingetPath $wingetPath)) {
-        Write-WzLog (Get-WzText 'apps.logWingetTooOld') -Level Error
-        $summary.Details += Get-WzText 'apps.detailWingetTooOld'
-        return $summary
-    }
-
-    $targetRoot = New-WzDirectory (Join-Path (Get-WzOfflineDir) 'installers')
-
+    $index = 0
     foreach ($app in $Apps) {
+        $index++
+        Write-WzLog (Get-WzText 'apps.logStep' @{ nummer = $index; gesamt = @($Apps).Count; name = $app.name }) -Level Action
+
         if ($syncHash.DryRun) {
-            Write-WzLog (Get-WzText 'apps.logWouldDownload' @{ name = $app.name }) -Level Test
+            Write-WzLog (Get-WzText 'apps.logTestInstall' @{ id = $app.wingetId }) -Level Test
+            $summary.Skipped++
             continue
         }
 
-        $appDir = New-WzDirectory (Join-Path $targetRoot $app.id)
-        Write-WzLog (Get-WzText 'apps.logDownloading' @{ name = $app.name }) -Level Action
+        # --source winget pinnt die Quelle: Ohne den Pin durchsucht winget auch
+        # den Store, dessen Quelle unter einem frisch elevierten Konto nicht
+        # eingerichtet ist und eine Rückfrage bräuchte — die --disable-interactivity
+        # gerade verbietet.
+        $base = "install --id $($app.wingetId) --exact --silent --source winget " +
+                '--accept-source-agreements --accept-package-agreements --disable-interactivity'
+        $result = Invoke-WzProcess -FilePath $wingetPath -Arguments "$base --scope machine" -TimeoutSeconds 1800
+        $outcome = Get-WzWingetOutcome -ExitCode $result.ExitCode
 
-        $arguments = "download --id $($app.wingetId) --exact --source winget --accept-source-agreements " +
-                     "--accept-package-agreements --disable-interactivity --download-directory `"$appDir`""
-        # -KillOnCancel: Vorabladen ist ein reiner Download. Die Größenprüfung
-        # unten erkennt ein abgebrochenes Paket als unvollständig.
-        $result = Invoke-WzProcess -FilePath $wingetPath -Arguments $arguments -TimeoutSeconds 1800 -KillOnCancel
-
-        # Der Rückgabewert allein genügt nicht: Bei einem leeren Ordner meldete
-        # WinZii früher »gespeichert (0 B)«.
-        $size = [int64](Get-ChildItem -LiteralPath $appDir -Recurse -File -ErrorAction SilentlyContinue |
-            Measure-Object -Property Length -Sum).Sum
-
-        if ($result.ExitCode -eq 0 -and $size -gt 0) {
-            $summary.Saved++
-            $summary.Bytes += $size
-            Write-WzLog (Get-WzText 'apps.logSaved' @{ groesse = (Format-WzBytes $size) }) -Level Ok
-        } else {
-            $summary.Failed++
+        # Nicht jedes Programm lässt sich systemweit einrichten — dann im Benutzerkontext.
+        if ($outcome.Outcome -eq 'retry') {
+            Write-WzLog (Get-WzText 'apps.logUserScope') -Level Info
+            $result = Invoke-WzProcess -FilePath $wingetPath -Arguments $base -TimeoutSeconds 1800
             $outcome = Get-WzWingetOutcome -ExitCode $result.ExitCode
-            $reason = if ($result.ExitCode -eq 0) {
-                Get-WzText 'apps.detailNoFileArrived'
-            } else {
-                $outcome.Text
+        }
+
+        switch ($outcome.Outcome) {
+            'ok' {
+                # Dem Rückgabewert allein wird nicht mehr geglaubt
+                if (Test-WzAppInstalled -WingetPath $wingetPath -Id $app.wingetId) {
+                    $summary.Installed++
+                    $summary.InstalledNames += $app.name
+                    Write-WzLog (Get-WzText 'apps.logInstalledShort') -Level Ok
+                } else {
+                    $summary.Failed++
+                    $summary.Details += "$($app.name): $(Get-WzText 'apps.detailSuccessButMissing')"
+                    Write-WzLog (Get-WzText 'apps.logSuccessButMissing') -Level Warn
+                }
             }
-            $summary.Details += "$($app.name): $reason"
-            Write-WzLog "  $reason" -Level Warn
+            'reboot' {
+                if (Test-WzAppInstalled -WingetPath $wingetPath -Id $app.wingetId) {
+                    $summary.Installed++
+                    $summary.InstalledNames += $app.name
+                    $summary.RebootRequired = $true
+                    Write-WzLog "  $($outcome.Text)" -Level Ok
+                } else {
+                    $summary.Failed++
+                    $summary.Details += "$($app.name): $(Get-WzText 'apps.detailSuccessButMissing')"
+                    Write-WzLog (Get-WzText 'apps.logSuccessButMissing') -Level Warn
+                }
+            }
+            'skip' {
+                $summary.Skipped++
+                Write-WzLog "  $($outcome.Text)" -Level Info
+            }
+            default {
+                $summary.Failed++
+                $summary.Details += "$($app.name): $($outcome.Text)"
+                Write-WzLog "  $($outcome.Text)" -Level Warn
+            }
         }
     }
 
     return $summary
-}
-
-function Test-WzWingetDownloadSupport {
-    <#
-    .SYNOPSIS
-        Beherrscht das vorhandene winget den Befehl »download«?
-    .NOTES
-        Es gibt ihn erst ab winget 1.6. Ältere Fassungen antworten mit einem
-        Argumentfehler, den der Anwender bisher als nackte Zahl sah.
-    #>
-    param([Parameter(Mandatory = $true)][string]$WingetPath)
-
-    try {
-        $check = Invoke-WzProcess -FilePath $WingetPath -Arguments 'download --help' -TimeoutSeconds 60
-        return ($check.ExitCode -eq 0)
-    } catch {
-        return $false
-    }
-}
-
-function Enable-WzWingetLocalManifests {
-    <#
-    .SYNOPSIS
-        Erlaubt winget die Installation aus lokalen Manifesten — Voraussetzung
-        für »winget install --manifest«, also für den Stick-Vorrat.
-    .NOTES
-        Die Einstellung war nirgends gesetzt, und genau beim Kunden ohne Netz,
-        für den der Vorrat gebaut wurde, brach winget ab (Audit 2026-10, H6).
-        Sie gilt geräteweit und verlangt Adminrechte. Gesetzt wird sie nur,
-        wenn sie aus ist, und dann im Übergabeblatt genannt.
-    .OUTPUTS
-        Ok (Einstellung ist danach an) und Changed (WinZii hat sie eingeschaltet
-        und schaltet sie nach dem Lauf wieder aus).
-    #>
-    param([Parameter(Mandatory = $true)][string]$WingetPath)
-
-    $export = Invoke-WzProcess -FilePath $WingetPath -Arguments 'settings export' -TimeoutSeconds 60
-    if ($export.ExitCode -eq 0) {
-        try {
-            $settings = $export.StdOut | ConvertFrom-Json -ErrorAction Stop
-            if ($settings.adminSettings.LocalManifestFiles -eq $true) { return [pscustomobject]@{ Ok = $true; Changed = $false } }
-        } catch { }
-    }
-
-    if ($syncHash.DryRun) {
-        Write-WzLog (Get-WzText 'apps.logLocalManifestsTest') -Level Test
-        return [pscustomobject]@{ Ok = $true; Changed = $false }
-    }
-
-    $enable = Invoke-WzProcess -FilePath $WingetPath -Arguments 'settings --enable LocalManifestFiles' -TimeoutSeconds 60
-    if ($enable.ExitCode -eq 0) {
-        Write-WzLog (Get-WzText 'apps.logLocalManifestsOn') -Level Ok
-        Add-WzAction -Area 'Programme' -Summary (Get-WzText 'apps.actionLocalManifests')
-        return [pscustomobject]@{ Ok = $true; Changed = $true }
-    }
-    Write-WzLog (Get-WzText 'apps.logLocalManifestsFailed' @{ code = $enable.ExitCode }) -Level Warn
-    return [pscustomobject]@{ Ok = $false; Changed = $false }
-}
-
-function Test-WzVaultManifest {
-    <#
-    .SYNOPSIS
-        Passt das Manifest im Vorrat zum Programm und zur Datei daneben?
-    .DESCRIPTION
-        »winget download« legt ein zusammengeführtes Manifest ab. Geprüft
-        wird zeilenweise und streng — was sich nicht eindeutig lesen lässt,
-        wird abgewiesen, dann geht es online:
-          - genau ein Manifest, PackageIdentifier gleich der winget-ID
-          - jeder InstallerSha256 gehört zu einer Datei im Ordner, und jede
-            Installationsdatei hat ihren Hash im Manifest
-          - keine »Custom«-Schalter und keine »Commands«: Damit ließe sich
-            ein signiertes Programm mit fremden Argumenten starten
-    .OUTPUTS
-        $null, wenn alles passt; sonst der Grund als Text.
-    #>
-    param(
-        [Parameter(Mandatory = $true)][string]$Directory,
-        [string]$WingetId,
-        [Parameter(Mandatory = $true)]$Installers
-    )
-
-    $manifeste = @(Get-ChildItem -LiteralPath $Directory -Filter '*.yaml' -File -ErrorAction SilentlyContinue)
-    if ($manifeste.Count -ne 1) { return Get-WzText 'apps.vaultManifestCount' @{ anzahl = $manifeste.Count } }
-    $zeilen = [IO.File]::ReadAllLines($manifeste[0].FullName, [Text.Encoding]::UTF8)
-
-    $ids = @($zeilen | ForEach-Object { if ($_ -match '^\s*PackageIdentifier:\s*(\S+)\s*$') { $Matches[1].Trim('"', "'") } } | Sort-Object -Unique)
-    if (-not $WingetId -or $ids.Count -ne 1 -or $ids[0] -ne $WingetId) {
-        return Get-WzText 'apps.vaultManifestId' @{ erwartet = $WingetId; gefunden = ($ids -join ', ') }
-    }
-    # Jede Art von Schaltern wird abgewiesen, nicht nur »Custom«: Auch Silent,
-    # SilentWithProgress, Log, InstallLocation oder Upgrade landen als
-    # Argumente beim Installer. Dazu YAML-Kurzschreibweisen (»{ … }«), Anker
-    # und Typ-Etiketten, an denen ein zeilenweiser Blick vorbeisähe. Ein
-    # legitimes Paket, das hier hängen bleibt, wird einfach online geladen.
-    # Auch in Anführungszeichen: YAML erlaubt »"Silent": …«.
-    $verboten = '^\s*-?\s*["'']?(InstallerSwitches|Silent|SilentWithProgress|Interactive|InstallLocation|Log|Upgrade|Custom|Repair|Commands|ElevationRequirement)["'']?\s*:'
-    if (@($zeilen | Where-Object { $_ -match $verboten }).Count -gt 0) {
-        return Get-WzText 'apps.vaultManifestSwitches'
-    }
-    # Block-Skalare (»Description: |-«) sind harmlos und häufig, sie bleiben
-    # erlaubt; ihr Inhalt läuft trotzdem durch den Schalter-Filter oben.
-    if (@($zeilen | Where-Object { $_ -match ':\s*[\{\[&\*!]' -or $_ -match '^\s*-?\s*[\{\[]' }).Count -gt 0) {
-        return Get-WzText 'apps.vaultManifestSyntax'
-    }
-
-    $hashes = @($zeilen | ForEach-Object { if ($_ -match '^\s*InstallerSha256:\s*([0-9A-Fa-f]{64})\s*$') { $Matches[1].ToUpperInvariant() } })
-    if ($hashes.Count -eq 0) { return Get-WzText 'apps.vaultManifestNoHash' }
-    $dateiHashes = @()
-    foreach ($datei in $Installers) {
-        $h = (Get-FileHash -LiteralPath $datei.FullName -Algorithm SHA256).Hash.ToUpperInvariant()
-        if ($hashes -notcontains $h) { return Get-WzText 'apps.vaultManifestHash' @{ datei = $datei.Name } }
-        $dateiHashes += $h
-    }
-    foreach ($h in $hashes) {
-        if ($dateiHashes -notcontains $h) { return Get-WzText 'apps.vaultManifestHash' @{ datei = $manifeste[0].Name } }
-    }
-    return $null
-}
-
-function Disable-WzWingetLocalManifests {
-    <#
-    .SYNOPSIS
-        Schaltet LocalManifestFiles wieder aus — nur, wenn WinZii es selbst
-        eingeschaltet hat. Die Einstellung erlaubt geräteweit Installationen
-        aus beliebigen lokalen Manifesten und soll nicht stehen bleiben.
-    #>
-    param([Parameter(Mandatory = $true)][string]$WingetPath)
-
-    $off = Invoke-WzProcess -FilePath $WingetPath -Arguments 'settings --disable LocalManifestFiles' -TimeoutSeconds 60
-    if ($off.ExitCode -eq 0) {
-        Write-WzLog (Get-WzText 'apps.logLocalManifestsOff') -Level Info
-    } else {
-        Write-WzLog (Get-WzText 'apps.logLocalManifestsOffFailed' @{ code = $off.ExitCode }) -Level Warn
-    }
-}
-
-function Get-WzOfflineInstallerPath {
-    <#
-    .SYNOPSIS
-        Ordner im Stick-Vorrat für ein Programm — oder $null.
-    .DESCRIPTION
-        »winget download« legt neben der Installationsdatei auch das Manifest
-        ab. Genau das braucht »winget install --manifest«, um ohne Internet zu
-        installieren. Ohne Manifest ist der Ordner unbrauchbar.
-    #>
-    param(
-        [Parameter(Mandatory = $true)]$App,
-        # Vor der Installation: EXE und MSI brauchen eine gültige Signatur,
-        # ZIP lässt sich nicht prüfen. Sonst wird online installiert.
-        # Appx/MSIX prüft Windows beim Einspielen selbst.
-        [switch]$Verify
-    )
-
-    # Ohne id gibt es keinen Vorratsordner. Join-Path warf hier mit $null.
-    if (-not $App.id) { return $null }
-    $dir = Join-Path (Join-Path (Get-WzOfflineDir) 'installers') $App.id
-    if (-not (Test-Path -LiteralPath $dir)) { return $null }
-
-    $manifest = @(Get-ChildItem -LiteralPath $dir -Filter '*.yaml' -File -ErrorAction SilentlyContinue)
-    $installer = @(Get-ChildItem -LiteralPath $dir -File -ErrorAction SilentlyContinue |
-        Where-Object { $_.Extension -in @('.exe', '.msi', '.msix', '.msixbundle', '.appx', '.appxbundle', '.zip') })
-    if ($manifest.Count -eq 0 -or $installer.Count -eq 0) { return $null }
-
-    if ($Verify) {
-        # Der Stick ist auf jedem Kundenrechner beschreibbar; was hier liegt,
-        # startet eleviert (Audit 2026-10, M8).
-        # Gültig signiert genügt nicht: Der Aussteller muss der im Katalog
-        # hinterlegte sein. Ohne Eintrag (»signers« in apps.json) gibt es
-        # nichts, woran sich die Datei messen ließe — dann online.
-        $signers = @($App.signers | Where-Object { $_ })
-        foreach ($file in $installer) {
-            $pruefbar = $file.Extension -in @('.exe', '.msi')
-            if ($pruefbar -and $signers.Count -eq 0) {
-                Write-WzLog (Get-WzText 'apps.logVaultNoSigner' @{ name = $App.name }) -Level Info
-                return $null
-            }
-            if ($file.Extension -eq '.zip' -or ($pruefbar -and -not (Test-WzFileSignature -Path $file.FullName -ExpectedSigners $signers))) {
-                Write-WzLog (Get-WzText 'apps.logVaultUnsigned' @{ datei = $file.Name; aussteller = ($signers -join ' / ') }) -Level Warn
-                return $null
-            }
-        }
-        # Das Manifest ist genauso beschreibbar wie die Datei. Eine gültige
-        # Signatur allein genügt deshalb nicht: Mit eigenen Schaltern ließe
-        # sich auch ein ordentlich signiertes Programm zweckentfremden.
-        $grund = Test-WzVaultManifest -Directory $dir -WingetId $App.wingetId -Installers $installer
-        if ($grund) {
-            Write-WzLog (Get-WzText 'apps.logVaultManifest' @{ grund = $grund }) -Level Warn
-            return $null
-        }
-    }
-
-    return $dir
-}
-
-function Get-WzOfflineInstallerInfo {
-    <#
-    .SYNOPSIS
-        Was liegt bereits als Installationsdatei auf dem Datenträger?
-    #>
-    $root = Join-Path (Get-WzOfflineDir) 'installers'
-    if (-not (Test-Path -LiteralPath $root)) {
-        return [pscustomobject]@{ Count = 0; Bytes = [int64]0; Ids = @() }
-    }
-
-    $ids = @(Get-ChildItem -LiteralPath $root -Directory -ErrorAction SilentlyContinue |
-        Where-Object { @(Get-ChildItem -LiteralPath $_.FullName -File -ErrorAction SilentlyContinue).Count -gt 0 } |
-        Select-Object -ExpandProperty Name)
-    $bytes = (Get-ChildItem -LiteralPath $root -Recurse -File -ErrorAction SilentlyContinue |
-        Measure-Object -Property Length -Sum).Sum
-
-    return [pscustomobject]@{
-        Count = $ids.Count
-        Bytes = [int64]$bytes
-        Ids   = $ids
-    }
 }
 
 function ConvertFrom-WzWingetUpgradeList {
@@ -907,7 +581,7 @@ function Get-WzUpgradableApps {
     Write-WzLog (Get-WzText 'apps.logUpgradeScan') -Level Action
     $process = Invoke-WzProcess -FilePath $wingetPath `
         -Arguments 'upgrade --accept-source-agreements --disable-interactivity' `
-        -TimeoutSeconds 300
+        -TimeoutSeconds 300 -OutputEncoding ([Text.Encoding]::UTF8)
 
     # Ein Rückgabewert ungleich null ohne jede Ausgabe heißt: Der Aufruf kam
     # nicht durch. Findet winget dagegen nichts zu aktualisieren, schreibt es

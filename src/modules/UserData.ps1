@@ -89,12 +89,12 @@ function Get-WzUserProfiles {
     # feste Pfad war dann fast leer, und der Umzug kopierte fast nichts
     # (Audit 2026-10, H10).
     $known = @(
-        @{ Key = 'Desktop';   Name = 'Desktop';   Shell = 'Desktop' }
-        @{ Key = 'Documents'; Name = 'Dokumente'; Shell = 'Personal' }
-        @{ Key = 'Pictures';  Name = 'Bilder';    Shell = 'My Pictures' }
-        @{ Key = 'Videos';    Name = 'Videos';    Shell = 'My Video' }
-        @{ Key = 'Music';     Name = 'Musik';     Shell = 'My Music' }
-        @{ Key = 'Downloads'; Name = 'Downloads'; Shell = '{374DE290-123F-4565-9164-39C4925E467B}' }
+        @{ Key = 'Desktop';   Name = (Get-WzText 'data.folderDesktop');   Shell = 'Desktop' }
+        @{ Key = 'Documents'; Name = (Get-WzText 'data.folderDocuments'); Shell = 'Personal' }
+        @{ Key = 'Pictures';  Name = (Get-WzText 'data.folderPictures');  Shell = 'My Pictures' }
+        @{ Key = 'Videos';    Name = (Get-WzText 'data.folderVideos');    Shell = 'My Video' }
+        @{ Key = 'Music';     Name = (Get-WzText 'data.folderMusic');     Shell = 'My Music' }
+        @{ Key = 'Downloads'; Name = (Get-WzText 'data.folderDownloads'); Shell = '{374DE290-123F-4565-9164-39C4925E467B}' }
     )
 
     try {
@@ -630,14 +630,36 @@ function Get-WzPrinters {
 function Get-WzMappedDrives {
     <#
     .SYNOPSIS
-        Verbundene Netzlaufwerke.
+        Verbundene Netzlaufwerke — aus WMI und aus HKCU:\Network des
+        angemeldeten Benutzers, damit auch unter erhöhtem Token nichts fehlt.
     #>
+    $byLetter = [ordered]@{}
     try {
-        return @(Get-CimInstance -Query 'SELECT Name,ProviderName FROM Win32_LogicalDisk WHERE DriveType=4' -ErrorAction Stop |
-            ForEach-Object {
-                [pscustomobject]@{ Letter = $_.Name; Target = $_.ProviderName }
-            })
-    } catch { return @() }
+        foreach ($disk in @(Get-CimInstance -Query 'SELECT Name,ProviderName FROM Win32_LogicalDisk WHERE DriveType=4' -ErrorAction Stop)) {
+            if ($disk.Name -and $disk.ProviderName) {
+                $byLetter[$disk.Name.ToUpperInvariant()] = $disk.ProviderName
+            }
+        }
+    } catch { }
+
+    # Unter UAC-Split-Token oder separatem Technikerkonto liefert WMI oft nichts;
+    # dauerhafte Kunden-Laufwerke stehen jedoch zuverlässig unter HKCU:\Network.
+    try {
+        $netKey = Resolve-WzRegistryPath 'HKCU:\Network'
+        if (Test-Path -LiteralPath $netKey) {
+            foreach ($sub in @(Get-ChildItem -LiteralPath $netKey -ErrorAction SilentlyContinue)) {
+                $letter = "$($sub.PSChildName):".ToUpperInvariant()
+                $remote = (Get-ItemProperty -LiteralPath $sub.PSPath -Name 'RemotePath' -ErrorAction SilentlyContinue).RemotePath
+                if ($remote -and -not $byLetter.Contains($letter)) {
+                    $byLetter[$letter] = [string]$remote
+                }
+            }
+        }
+    } catch { }
+
+    return @($byLetter.GetEnumerator() | ForEach-Object {
+        [pscustomobject]@{ Letter = $_.Key; Target = $_.Value }
+    })
 }
 
 function Get-WzUserDataDir {
@@ -720,7 +742,15 @@ function Export-WzBrowserBookmarks {
                 continue
             }
             try {
-                $profileName = Split-Path -Leaf (Split-Path -Parent $file)
+                $parentDir = Split-Path -Parent $file
+                $parentLeaf = Split-Path -Leaf $parentDir
+                # Firefox legt .jsonlz4 unter <Profil>\bookmarkbackups\ ab —
+                # ohne diesen Schritt hießen alle Profile »bookmarkbackups«.
+                $profileName = if ($parentLeaf -eq 'bookmarkbackups') {
+                    Split-Path -Leaf (Split-Path -Parent $parentDir)
+                } else {
+                    $parentLeaf
+                }
                 $safeName = ($browser.Name -replace '[^\w]', '-') + "-$profileName-" + (Split-Path -Leaf $file)
                 Copy-Item -LiteralPath $file -Destination (Join-Path $target $safeName) -Force -ErrorAction Stop
                 $count++

@@ -286,6 +286,10 @@
       "downloads-old": {
         "name": "Show old downloads",
         "description": "Only shows how much sits in the Downloads folder and what is older than 90 days. WinZii deletes nothing here on its own."
+      },
+      "brave-cache": {
+        "name": "Brave Browser",
+        "description": "Brave browser cache. Sign-ins, bookmarks, and passwords remain intact."
       }
     }
   },
@@ -625,12 +629,16 @@
       "MicrosoftCorporationII.QuickAssist*": {
         "name": "Quick Assist",
         "description": "Remote assistance from Microsoft."
+      },
+      "MSTeams*": {
+        "name": "Microsoft Teams (new)",
+        "description": "Preinstalled new Teams app."
       }
     },
     "extended": {
       "Microsoft.XboxApp*": {
-        "name": "Xbox",
-        "description": "Xbox app. Not needed for games from the Store."
+        "name": "Xbox (legacy)",
+        "description": "Legacy Xbox app. Not required for Store games."
       },
       "Microsoft.XboxGamingOverlay*": {
         "name": "Xbox Game Bar",
@@ -687,6 +695,10 @@
       "Microsoft.SkypeApp*": {
         "name": "Skype",
         "description": "The preinstalled Skype edition."
+      },
+      "Microsoft.GamingApp*": {
+        "name": "Xbox app",
+        "description": "Current Xbox app on Windows 11."
       }
     }
   },
@@ -974,14 +986,6 @@
         "name": "Switch window animations off",
         "description": "Switches off the minimise and maximise animation and sets visual effects to “Custom” so Windows honours that single setting. Noticeable on weak hardware, but looks plainer for it."
       },
-      "perf-power-profile": {
-        "name": "Performance on mains, endurance on battery",
-        "description": "Creates its own power plan that tells mains and battery apart. On the mains the fan may spin up instead of lowering the clock, and turbo kicks in without holding back. On battery, turbo is only used where it pays off, and cooling would rather lower the clock than get loud. The peak clock on mains does not rise as a result — that is not capped anyway; what changes is responsiveness and behaviour under sustained load. The gain is mainly on the battery side. On the mains the device also keeps working: no sleep, no hibernation, not even with the lid closed — only the screen turns off after 30 minutes. On battery: screen after 10, sleep after 15 minutes. The power button only ever turns the screen off; the device shuts down fully via Start → Shut down or a long press. The existing power plan is left untouched and is active again the moment this is undone."
-      },
-      "perf-update-manual": {
-        "name": "Install and restart Windows Update by hand only",
-        "description": "Windows still downloads updates but only installs them once you start it yourself in Settings. Windows no longer forces a restart while someone is signed in — running work stays open overnight. In return, security updates wait until someone takes care of them: if you set this, check Settings → Windows Update regularly. In managed environments (Intune, WSUS) company policy may take precedence."
-      },
       "perf-sysmain-off": {
         "name": "Switch SysMain (Superfetch) off",
         "description": "SysMain preloads frequently used programs into memory. On SSDs that gains next to nothing and causes constant background load. On hard disks better left on."
@@ -1145,52 +1149,50 @@
       "ai-appx-force": {
         "name": "Force removal of blocked AI packages",
         "description": "Some AI packages are marked as non-removable. This entry lifts that block and deletes them anyway. Only use it when the previous entry achieved nothing — the only way back is a feature update."
-      }
-    }
-  },
-  "updatecodes": {
-    "codes": {
-      "0x00000000": {
-        "text": "installed"
       },
-      "0x00240006": {
-        "text": "was already installed"
+      "perf-bg-apps-off": {
+        "name": "Disable background Store apps",
+        "description": "Stops preinstalled Store apps such as Weather, Maps, Photos, or ads from silently consuming RAM and CPU in the background. Regular desktop programs like browsers or Office are unaffected."
       },
-      "0x80240044": {
-        "text": "Administrator rights are missing. WinZii has to run elevated for Windows to install updates."
+      "perf-services-lean": {
+        "name": "Disable unnecessary Windows bloat services",
+        "description": "Stops and disables services rarely needed on regular PCs: Fax, Offline Maps (MapsBroker), Retail Demo, Windows Media Player Network Sharing, and Remote Registry. Printing, Wi-Fi, audio, Store, and Updates remain completely untouched."
       },
-      "0x80070422": {
-        "text": "The Windows Update service is switched off. A cleanup tool or a policy has disabled it — it has to be set back to “Manual” first."
+      "perf-explorer-clean": {
+        "name": "Open Explorer to »This PC« and declutter taskbar",
+        "description": "Opens File Explorer straight to »This PC« instead of the sluggish Home view with cloud recents, and hides the Task View and Chat taskbar buttons."
       },
-      "0x8024001E": {
-        "text": "The operation was cancelled because the service is shutting down. Try again after a restart."
+      "perf-win11-contextmenu": {
+        "name": "Classic right-click menu on Windows 11",
+        "description": "Shows the full right-click menu immediately on files and folders without clicking »Show more options«. Takes effect right after restarting Explorer or rebooting."
       },
-      "0x8024402C": {
-        "text": "The update service cannot be reached — usually a proxy or a name resolution getting in the way. Check the connection on the “Repair” page first."
+      "perf-win11-endtask": {
+        "name": "Enable »End task« in taskbar right-click menu",
+        "description": "Adds an »End task« command directly to taskbar icon context menus so frozen apps can be closed without opening Task Manager."
       },
-      "0x80244022": {
-        "text": "The server refused the request because it is busy. Try again in a few minutes."
+      "perf-hibernation-off": {
+        "name": "Disable hibernation and reclaim SSD space",
+        "description": "Removes hiberfil.sys and immediately frees 6 to 13 GB of SSD space depending on RAM size while reducing SSD wear. Ideal for desktop PCs — only pick on laptops if hibernation is not needed (Sleep still works)."
       },
-      "0x80072EE2": {
-        "text": "The server timed out. Normal on slow connections — try again."
+      "tele-delivery-opt": {
+        "name": "Disable P2P upload for Windows Updates",
+        "description": "Prevents Windows from using your internet bandwidth and SSD to upload update packages to other PCs on the internet. Your own Windows Updates still download normally."
       },
-      "0x800705B4": {
-        "text": "Timed out. The update has usually arrived anyway and will show up on the next run."
+      "tele-edge-bloat": {
+        "name": "Microsoft Edge: disable Startup Boost, telemetry, and shopping",
+        "description": "Stops the hidden Edge background process at startup and after closing the browser — immediately freeing 150 to 400 MB of RAM even if you use Firefox or Chrome. Also disables Edge telemetry, shopping popups, and recommendations."
       },
-      "0x80240017": {
-        "text": "does not apply to this PC"
+      "tele-office-off": {
+        "name": "Disable Microsoft Office telemetry",
+        "description": "Stops diagnostic data, usage logging, and feedback prompts in Microsoft Office and Microsoft 365."
       },
-      "0x80246007": {
-        "text": "The update was not downloaded in full. The update cache is probably damaged — it can be emptied on the “Repair” page."
+      "priv-clipboard-cloud": {
+        "name": "Disable clipboard cloud sync and cross-device sharing",
+        "description": "Prevents copied text or passwords from syncing to the Microsoft cloud. Local clipboard history (Win+V) keeps working."
       },
-      "0x8024500C": {
-        "text": "A group policy controls Windows Update on this device. What gets installed is decided by the management, not by the PC."
-      },
-      "0x80248007": {
-        "text": "The licence terms for the update are missing, or the update store is damaged. Empty the cache first, then search again."
-      },
-      "0x80240022": {
-        "text": "The operation failed for all updates. The actual reason is reported for the individual update — usually missing rights or an interrupted download."
+      "priv-location-off": {
+        "name": "Disable Windows location tracking system-wide",
+        "description": "Blocks the Windows location service for the system and apps. Automatic time zone and local weather detection will require manual selection afterwards."
       }
     }
   }

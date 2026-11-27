@@ -9,8 +9,7 @@ function Initialize-WzAiRemovalPage {
     $syncHash.AiBtnApply.Add_Click({
         Invoke-WzTweakSelection -Rows $syncHash.AiRows -Scope 'ki-entfernung' `
             -Title (Get-WzText 'ai.applyTitle') -OnDone {
-                Update-WzAiStates
-                Update-WzAiScan
+                Update-WzAiScan -Force
             }
     })
 

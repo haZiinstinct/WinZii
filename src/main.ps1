@@ -43,8 +43,8 @@ $moduleOrder = @(
     'Core.System', 'Core.Backup',
     'Optimizer', 'AiRemoval', 'Cleanup', 'Apps', 'Office',
     'Diagnostics', 'NetworkDiag', 'Report', 'Autostart', 'Toolbox',
-    'UserData', 'Migration', 'Drivers', 'Uninstall', 'WindowsUpdate',
-    'Setup', 'HealthCheck', 'Snapshot'
+    'UserData', 'Migration', 'Drivers', 'Uninstall',
+    'HealthCheck', 'Snapshot'
 )
 foreach ($moduleName in $moduleOrder) {
     $modulePath = Join-Path $PSScriptRoot "modules\$moduleName.ps1"
@@ -194,14 +194,25 @@ $volume = Get-WzVolumeInfo
 $syncHash.StatusPath.Text = "$($volume.DisplayName) $($volume.FileSystem)"
 
 # --- Fenstersteuerung -----------------------------------------------------
+$syncHash.BtnHeaderSearch.Add_Click({ Show-WzPalette })
 $syncHash.BtnMinimize.Add_Click({ $syncHash.Window.WindowState = 'Minimized' })
 $syncHash.BtnMaximize.Add_Click({
     if ($syncHash.Window.WindowState -eq 'Maximized') {
         $syncHash.Window.WindowState = 'Normal'
-        $syncHash.BtnMaximize.Content = [char]0xE922
     } else {
         $syncHash.Window.WindowState = 'Maximized'
+    }
+})
+$window.Add_StateChanged({
+    # Synchronisiert Symbol und Rand auch bei Doppelklick auf die Titelleiste
+    # oder Aero Snap: Mit randlosem WindowChrome (GlassFrameThickness=0) ragt
+    # das maximierte Fenster sonst rund 7 px über den Bildschirmrand.
+    if ($syncHash.Window.WindowState -eq 'Maximized') {
         $syncHash.BtnMaximize.Content = [char]0xE923
+        $syncHash.Window.BorderThickness = New-Object Windows.Thickness(7)
+    } else {
+        $syncHash.BtnMaximize.Content = [char]0xE922
+        $syncHash.Window.BorderThickness = New-Object Windows.Thickness(0)
     }
 })
 $syncHash.BtnClose.Add_Click({ $syncHash.Window.Close() })
@@ -246,6 +257,7 @@ $syncHash.LogHeader.Add_KeyDown({
 if ($window.Height -lt 700) {
     Set-WzConsoleCollapsed -Collapsed $true
 }
+$syncHash.BtnCopyLog.Add_Click({ Copy-WzConsoleToClipboard })
 $syncHash.BtnClearLog.Add_Click({ Clear-WzConsole })
 
 # --- Testmodus ------------------------------------------------------------
@@ -271,6 +283,9 @@ $syncHash.DryRunToggle.Add_Click({
         Write-WzLog (Get-WzText 'start.dryRunOn') -Level Test
     } else {
         Write-WzLog (Get-WzText 'start.dryRunOff') -Level Warn
+    }
+    if ($syncHash.CurrentPage -eq 'Dashboard' -and $syncHash.SystemInfo) {
+        Write-WzDashboardNotices -Info $syncHash.SystemInfo
     }
 })
 
@@ -337,6 +352,9 @@ $window.Add_ContentRendered({
 })
 
 $window.Add_Closed({
+    if ($syncHash.CurrentTask) {
+        try { Stop-WzTask } catch { }
+    }
     Write-WzLog (Get-WzText 'start.closed') -Level Info
 })
 

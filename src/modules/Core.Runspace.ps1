@@ -361,7 +361,8 @@ function Invoke-WzProcess {
         [switch]$LogOutput,
         [int]$TimeoutSeconds = 0,
         [string]$WorkingDirectory,
-        [switch]$KillOnCancel
+        [switch]$KillOnCancel,
+        [Text.Encoding]$OutputEncoding
     )
 
     $result = [pscustomobject]@{
@@ -384,9 +385,11 @@ function Invoke-WzProcess {
 
         # Ohne feste Codierung dekodiert .NET die Ausgabe mit der Codepage der
         # Konsole — die es in einem Hintergrund-Runspace nicht zwingend gibt.
-        # Aus »Hinzugefügte Treiberpakete« wird dann Buchstabensalat, und die
-        # Muster in Drivers.ps1 und Diagnostics.ps1 greifen nicht mehr.
-        $consoleEncoding = try { [Console]::OutputEncoding } catch { $null }
+        # Werkzeuge wie winget schreiben dagegen UTF-8 und geben -OutputEncoding mit.
+        $consoleEncoding = $OutputEncoding
+        if (-not $consoleEncoding) {
+            $consoleEncoding = try { [Console]::OutputEncoding } catch { $null }
+        }
         if (-not $consoleEncoding) {
             $consoleEncoding = [Text.Encoding]::GetEncoding(
                 [Globalization.CultureInfo]::CurrentCulture.TextInfo.OEMCodePage)
@@ -400,56 +403,84 @@ function Invoke-WzProcess {
         $process.StartInfo = $startInfo
         [void]$process.Start()
 
-        # Beide Ausgabekanäle gleichzeitig leerlesen. Läse man erst den einen
-        # ganz und dann den anderen, könnte ein Programm mit viel Ausgabe auf
-        # dem vollen Puffer des zweiten Kanals stehen bleiben.
-        # Bewusst über .NET-Aufgaben statt Register-ObjectEvent: Letzteres
-        # bräuchte die Ereignisschleife von PowerShell, die es in den
-        # Hintergrund-Runspaces nicht gibt.
-        $outTask = $process.StandardOutput.ReadToEndAsync()
         $errTask = $process.StandardError.ReadToEndAsync()
-
-        # Nicht in einem Zug warten, sondern in kurzen Schritten: Nur so lässt
-        # sich zwischendurch nachsehen, ob der Anwender abgebrochen hat.
         $frist = if ($TimeoutSeconds -gt 0) { [int64]$TimeoutSeconds * 1000 } else { [int64]0 }
         $uhr = [Diagnostics.Stopwatch]::StartNew()
 
-        while (-not $process.WaitForExit(200)) {
-            if ($frist -gt 0 -and $uhr.ElapsedMilliseconds -ge $frist) {
-                $result.TimedOut = $true
-                Stop-WzProcessTree -ProcessId $process.Id
-        Write-WzLog (Get-WzText 'core.logProcessTimeout' @{ datei = [IO.Path]::GetFileName($FilePath); sekunden = $TimeoutSeconds }) -Level Warn
-                [void]$process.WaitForExit(5000)
-                break
+        if ($LogOutput) {
+            # Zeilenweises Live-Streaming in die Konsole, ohne bei langen Läufen
+            # (DISM, chkdsk, robocopy) minutenlang stillzustehen.
+            $outBuf = New-Object Text.StringBuilder
+            $lineTask = $process.StandardOutput.ReadLineAsync()
+
+            while ($true) {
+                while ($null -ne $lineTask -and $lineTask.IsCompleted) {
+                    $line = $null
+                    try { $line = $lineTask.Result } catch { $line = $null }
+                    if ($null -eq $line) {
+                        $lineTask = $null
+                        break
+                    }
+                    [void]$outBuf.AppendLine($line)
+                    $trimmed = $line.Trim()
+                    if ($trimmed) { Write-WzLog "  $trimmed" -Level Info }
+                    $lineTask = $process.StandardOutput.ReadLineAsync()
+                }
+
+                if ($frist -gt 0 -and $uhr.ElapsedMilliseconds -ge $frist) {
+                    $result.TimedOut = $true
+                    Stop-WzProcessTree -ProcessId $process.Id
+                    Write-WzLog (Get-WzText 'core.logProcessTimeout' @{ datei = [IO.Path]::GetFileName($FilePath); sekunden = $TimeoutSeconds }) -Level Warn
+                    [void]$process.WaitForExit(5000)
+                    break
+                }
+
+                if ($KillOnCancel -and $syncHash -and $syncHash.CurrentTask -and $syncHash.CurrentTask.Canceled) {
+                    $result.Canceled = $true
+                    Stop-WzProcessTree -ProcessId $process.Id
+                    Write-WzLog (Get-WzText 'core.procCancelled' @{ datei = [IO.Path]::GetFileName($FilePath) }) -Level Warn
+                    [void]$process.WaitForExit(5000)
+                    break
+                }
+
+                if ($process.HasExited -and $null -eq $lineTask) { break }
+
+                if ($null -ne $lineTask) {
+                    try { [void]$lineTask.Wait(100) } catch { $lineTask = $null }
+                } else {
+                    [void]$process.WaitForExit(100)
+                }
             }
 
-            # »Abbrechen« beendete bisher nur die PowerShell-Pipeline. Das
-            # gestartete Programm lief weiter — ein abgebrochener Download hing
-            # unsichtbar an der Leitung, und der Runspace blieb in »Stopping«,
-            # weil dieser Thread noch im Warten stand. Beendet wird nur, wo der
-            # Aufrufer es ausdrücklich erlaubt: Einen laufenden Deinstallierer
-            # mitten im Wort abzuschneiden wäre schlimmer als das Warten.
-            if ($KillOnCancel -and $syncHash -and $syncHash.CurrentTask -and $syncHash.CurrentTask.Canceled) {
-                $result.Canceled = $true
-                Stop-WzProcessTree -ProcessId $process.Id
-                Write-WzLog (Get-WzText 'core.procCancelled' @{ datei = [IO.Path]::GetFileName($FilePath) }) -Level Warn
-                [void]$process.WaitForExit(5000)
-                break
+            if (-not $process.HasExited) { [void]$process.WaitForExit(5000) }
+            $result.ExitCode = if ($process.HasExited) { $process.ExitCode } else { -1 }
+            $result.StdOut = $outBuf.ToString()
+            try { if ($errTask.Wait(2000)) { $result.StdErr = $errTask.Result } } catch { }
+        } else {
+            # Beide Ausgabekanäle gleichzeitig leerlesen, damit kein Puffer blockiert.
+            $outTask = $process.StandardOutput.ReadToEndAsync()
+
+            while (-not $process.WaitForExit(200)) {
+                if ($frist -gt 0 -and $uhr.ElapsedMilliseconds -ge $frist) {
+                    $result.TimedOut = $true
+                    Stop-WzProcessTree -ProcessId $process.Id
+                    Write-WzLog (Get-WzText 'core.logProcessTimeout' @{ datei = [IO.Path]::GetFileName($FilePath); sekunden = $TimeoutSeconds }) -Level Warn
+                    [void]$process.WaitForExit(5000)
+                    break
+                }
+
+                if ($KillOnCancel -and $syncHash -and $syncHash.CurrentTask -and $syncHash.CurrentTask.Canceled) {
+                    $result.Canceled = $true
+                    Stop-WzProcessTree -ProcessId $process.Id
+                    Write-WzLog (Get-WzText 'core.procCancelled' @{ datei = [IO.Path]::GetFileName($FilePath) }) -Level Warn
+                    [void]$process.WaitForExit(5000)
+                    break
+                }
             }
-        }
 
-        $result.ExitCode = $process.ExitCode
-
-        # Das Lesen ebenfalls begrenzen: Hält nach einem Abbruch noch ein
-        # Unterprogramm die Leitung offen, würde .Result sonst weiter warten.
-        try { if ($outTask.Wait(5000)) { $result.StdOut = $outTask.Result } } catch { }
-        try { if ($errTask.Wait(2000)) { $result.StdErr = $errTask.Result } } catch { }
-
-        if ($LogOutput -and $result.StdOut) {
-            foreach ($line in ($result.StdOut -split "`r?`n")) {
-                $trimmed = $line.Trim()
-                if ($trimmed) { Write-WzLog "  $trimmed" -Level Info }
-            }
+            $result.ExitCode = $process.ExitCode
+            try { if ($outTask.Wait(5000)) { $result.StdOut = $outTask.Result } } catch { }
+            try { if ($errTask.Wait(2000)) { $result.StdErr = $errTask.Result } } catch { }
         }
     } catch {
         $result.StdErr = $_.Exception.Message

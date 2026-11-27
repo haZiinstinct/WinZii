@@ -334,6 +334,7 @@ function Restore-WzUndoSession {
         try {
             switch ($action.type) {
                 'registry' {
+                    $isDefaultVal = ($action.name -eq '(Default)')
                     if ($previous.existed) {
                         if (-not (Test-Path -LiteralPath $action.path)) {
                             [void](New-Item -Path $action.path -Force -ErrorAction Stop)
@@ -341,6 +342,14 @@ function Restore-WzUndoSession {
                         Set-ItemProperty -Path $action.path -Name $action.name `
                             -Value $previous.value -Type $previous.valueType -ErrorAction Stop
                         $result.Restored++
+                    } elseif ($isDefaultVal) {
+                        if (Test-Path -LiteralPath $action.path) {
+                            $key = Get-Item -LiteralPath $action.path -ErrorAction SilentlyContinue
+                            if ($key -and $null -ne $key.GetValue('', $null, 'DoNotExpandEnvironmentNames')) {
+                                Remove-ItemProperty -LiteralPath $action.path -Name '(Default)' -ErrorAction Stop
+                                $result.Restored++
+                            }
+                        }
                     } elseif ($null -ne (Get-ItemProperty -LiteralPath $action.path -Name $action.name -ErrorAction SilentlyContinue)) {
                         # Nur zählen, was wirklich zurückging. Bisher zählte
                         # auch ein Wert, den es schon nicht mehr gab; ein
@@ -349,20 +358,42 @@ function Restore-WzUndoSession {
                         $result.Restored++
                     }
 
-                    # Hat erst das Anwenden den Schlüssel angelegt, geht er
-                    # wieder weg — aber nur, wenn er leer ist. Ältere
-                    # Sicherungen kennen keyExisted und lassen ihn stehen.
-                    if ($previous.PSObject.Properties['keyExisted'] -and $previous.keyExisted -eq $false -and
-                        (Test-Path -LiteralPath $action.path)) {
-                        $key = Get-Item -LiteralPath $action.path -ErrorAction SilentlyContinue
-                        if ($key -and $key.SubKeyCount -eq 0 -and $key.ValueCount -eq 0) {
-                            Remove-Item -LiteralPath $action.path -ErrorAction SilentlyContinue
+                    # Audit F4: Bei RunAsPPL=1 hat Windows eine UEFI-Sperre gesetzt;
+                    # der Registry-Rückbau allein hebt den Schutz dort nicht auf.
+                    if ($action.name -eq 'RunAsPPL' -and $previous.existed -and "$($previous.value)" -eq '1') {
+                        $result.Notes += Get-WzText 'core.noteRunAsPplUefi'
+                    }
+
+                    # Hat erst das Anwenden den Schlüssel (samt Eltern) angelegt,
+                    # räumt die Rücknahme leere neu entstandene Schlüssel weg.
+                    if ($previous.PSObject.Properties['keyExisted'] -and $previous.keyExisted -eq $false) {
+                        $stopAt = if ($previous.PSObject.Properties['createdParent']) { [string]$previous.createdParent } else { $action.path }
+                        $curPath = $action.path
+                        while ($curPath -and (Test-Path -LiteralPath $curPath)) {
+                            $key = Get-Item -LiteralPath $curPath -ErrorAction SilentlyContinue
+                            if (-not $key -or $key.SubKeyCount -gt 0 -or $key.ValueCount -gt 0) { break }
+                            Remove-Item -LiteralPath $curPath -ErrorAction SilentlyContinue
+                            if ($curPath -eq $stopAt) { break }
+                            $curPath = Split-Path -Parent $curPath
                         }
                     }
                 }
                 'service' {
                     if ($previous.startupType) {
-                        Set-Service -Name $action.serviceName -StartupType $previous.startupType -ErrorAction Stop
+                        try {
+                            Set-Service -Name $action.serviceName -StartupType $previous.startupType -ErrorAction Stop
+                        } catch {
+                            # Geschützte Dienste sperren Set-Service — gleicher
+                            # Registry-Ausweichweg wie beim Anwenden.
+                            $startValue = switch ($previous.startupType) {
+                                'Disabled'  { 4 }
+                                'Manual'    { 3 }
+                                'Automatic' { 2 }
+                                default     { 3 }
+                            }
+                            Set-ItemProperty -Path "HKLM:\SYSTEM\CurrentControlSet\Services\$($action.serviceName)" `
+                                -Name 'Start' -Value $startValue -Type DWord -ErrorAction Stop
+                        }
                     }
                     if ($previous.status -eq 'Running') {
                         Start-Service -Name $action.serviceName -ErrorAction SilentlyContinue
@@ -416,7 +447,7 @@ function Restore-WzUndoSession {
                         if ($zurueck.ExitCode -eq 0) { $result.Restored++ } else { $result.Failed++ }
                     } else {
                         $result.Skipped++
-                        $result.Notes += "$($entry.itemName): kein vorheriger Energieplan vermerkt"
+                        $result.Notes += Get-WzText 'core.noteNoPreviousPlan' @{ name = $entry.itemName }
                     }
 
                     # Entfernt wird nur, was WinZii in diesem Lauf selbst angelegt
@@ -459,6 +490,10 @@ function Restore-WzUndoSession {
             $result.Failed++
             Write-WzLog (Get-WzText 'core.undoFailed' @{ name = $entry.itemName; grund = $_.Exception.Message }) -Level Warn
         }
+    }
+
+    if ($result.Restored -gt 0 -and (Get-Command Publish-WzSettingChange -ErrorAction SilentlyContinue)) {
+        Publish-WzSettingChange
     }
 
     # Erledigt vermerken. Ohne diese Markierung bliebe die Sicherung für immer

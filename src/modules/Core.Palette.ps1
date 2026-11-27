@@ -1,12 +1,5 @@
 ﻿# Core.Palette — die Suche über alles, was WinZii kann.
-#
-# Sechzehn Seiten sind zu viele, um jede Funktion aus dem Gedächtnis zu
-# finden. Wer weiß, dass es »irgendwo« einen Knopf für die Druckerwarteschlange
-# gibt, sucht sonst drei Seiten ab. Strg+K fragt danach.
-#
-# Bewusst nur Sprungziele und Handgriffe ohne eigene Rückfrage: Ein Eingriff,
-# der aus einem Suchfeld heraus losläuft, ist genau die Art Überraschung, die
-# dieses Werkzeug sonst vermeidet.
+# Strg+K oder der Suchknopf in der Kopfleiste öffnen das Schnellmenü.
 
 function Get-WzPaletteEntries {
     <#
@@ -20,15 +13,9 @@ function Get-WzPaletteEntries {
 
     $entries = @()
 
-    # Stichwörter je Seite. Ohne sie fände die Suche nur den Seitennamen — wer
-    # »drucker« tippt, weiß aber nicht, dass die Warteschlange unter
-    # »Reparatur« liegt. Ausgeschrieben statt zusammengesetzt, damit
-    # Test-Language die Schlüssel als benutzt erkennt.
     $keywords = @{
         Dashboard   = (Get-WzText 'palette.keysDashboard')
-        Setup       = (Get-WzText 'palette.keysSetup')
         Diagnostics = (Get-WzText 'palette.keysDiagnostics')
-        Updates     = (Get-WzText 'palette.keysUpdates')
         Optimizer   = (Get-WzText 'palette.keysOptimizer')
         AiRemoval   = (Get-WzText 'palette.keysAiRemoval')
         Cleanup     = (Get-WzText 'palette.keysCleanup')
@@ -46,8 +33,6 @@ function Get-WzPaletteEntries {
     foreach ($button in @($syncHash.NavButtons)) {
         $id = [string]$button.Tag
         if (-not $id) { continue }
-        # Die Beschriftung steht im zweiten Textblock des Knopfes — der erste
-        # trägt das Symbol.
         $label = $id
         try {
             $blocks = @($button.Content.Children | Where-Object { $_ -is [Windows.Controls.TextBlock] })
@@ -67,14 +52,11 @@ function Get-WzPaletteEntries {
         Detail = Get-WzText 'palette.detailToggle'
         Kind   = 'command'
         Action = {
-            # Während eines Vorgangs ist der Schalter gesperrt (Set-WzBusy).
-            # Die Palette darf daran nicht vorbei.
             if ($syncHash.Busy) {
                 Write-WzLog (Get-WzText 'core.busyLog' @{ name = $syncHash.BusyName }) -Level Warn
                 return
             }
             $syncHash.DryRunToggle.IsChecked = (-not $syncHash.DryRunToggle.IsChecked)
-            # Den Klick nachbilden, damit Abzeichen und Protokollzeile mitgehen
             $syncHash.DryRunToggle.RaiseEvent(
                 (New-Object Windows.RoutedEventArgs([Windows.Controls.Primitives.ButtonBase]::ClickEvent)))
         }
@@ -100,7 +82,11 @@ function Get-WzPaletteEntries {
         Title  = Get-WzText 'palette.cmdReportFolder'
         Detail = Get-WzText 'palette.detailOpens'
         Kind   = 'command'
-        Action = { Start-Process (Get-WzReportDir) }
+        Action = {
+            $folder = Get-WzReportDir
+            if (Test-Path -LiteralPath $folder) { Start-Process $folder }
+            else { Show-WzInfo -Title (Get-WzText 'palette.title') -Message (Get-WzText 'palette.noReports') }
+        }
     }
 
     $entries += [pscustomobject]@{
@@ -120,12 +106,7 @@ function Get-WzPaletteEntries {
 function Select-WzPaletteMatches {
     <#
     .SYNOPSIS
-        Filtert die Einträge nach der Eingabe.
-    .DESCRIPTION
-        Gesucht wird in Titel und Erläuterung, Groß- und Kleinschreibung egal.
-        Wer »drucker« tippt, soll die Reparaturseite finden, ohne zu wissen,
-        dass sie so heißt — deshalb steht in der Erläuterung der Seiten
-        mehr als nur das Wort »Seite«.
+        Filtert die Einträge nach einem oder mehreren Suchwörtern.
     #>
     param(
         [Parameter(Mandatory = $true)][AllowEmptyCollection()][array]$Entries,
@@ -135,13 +116,17 @@ function Select-WzPaletteMatches {
     if ([string]::IsNullOrWhiteSpace($Query)) { return @($Entries) }
 
     $needle = $Query.Trim()
-    # Erst die Einträge, die vorn passen, dann die übrigen Treffer: Wer »dash«
-    # tippt, will das Dashboard oben sehen und nicht an dritter Stelle.
-    # Vergleich ohne Platzhalter: Ein »[« in der Eingabe warf bei -like eine
-    # Ausnahme (Audit 2026-10, N).
+    $tokens = @($needle -split '\s+' | Where-Object { $_ })
+
     $starts = @($Entries | Where-Object { "$($_.Title)".StartsWith($needle, [StringComparison]::OrdinalIgnoreCase) })
     $contains = @($Entries | Where-Object {
-        $_ -notin $starts -and "$($_.Title) $($_.Detail)".IndexOf($needle, [StringComparison]::OrdinalIgnoreCase) -ge 0 })
+        if ($_ -in $starts) { return $false }
+        $hay = "$($_.Title) $($_.Detail)"
+        foreach ($token in $tokens) {
+            if ($hay.IndexOf($token, [StringComparison]::OrdinalIgnoreCase) -lt 0) { return $false }
+        }
+        return $true
+    })
 
     return @($starts + $contains)
 }
@@ -150,17 +135,11 @@ function Show-WzPalette {
     <#
     .SYNOPSIS
         Öffnet die Suche über alle Seiten und Handgriffe.
-    .NOTES
-        Aufbau und Verhalten wie der Bestätigungsdialog: abgedunkelter Grund,
-        Escape schließt, ein Klick daneben auch. Das ist der Weg, den alle
-        anderen Fenster in WinZii nehmen, und der in Test-Dialogs abgedeckt ist.
     #>
     [CmdletBinding()]
     param()
 
     if (-not $syncHash.Window) { return }
-    # Während eines Eingriffs hilft ein Sprung auf eine andere Seite niemandem
-    # und würde nur den laufenden Vorgang verdecken.
     if ($syncHash.Busy) { return }
 
     $entries = Get-WzPaletteEntries
@@ -184,8 +163,8 @@ function Show-WzPalette {
         $window.Height = $bounds.Height
     } else {
         $window.WindowStartupLocation = 'CenterScreen'
-        $window.Width = 560
-        $window.Height = 420
+        $window.Width = 580
+        $window.Height = 460
     }
 
     $backdrop = New-Object Windows.Controls.Grid
@@ -195,19 +174,18 @@ function Show-WzPalette {
 
     $card = New-Object Windows.Controls.Border
     $card.Background = $syncHash.Window.FindResource('WzBgCard')
-    $card.BorderBrush = $syncHash.Window.FindResource('WzBorder')
+    $card.BorderBrush = $syncHash.Window.FindResource('WzCyanBorder')
     $card.BorderThickness = New-Object Windows.Thickness(1)
-    $card.Width = 560
-    $card.MaxHeight = 420
+    $card.CornerRadius = New-Object Windows.CornerRadius(16)
+    $card.Width = 580
+    $card.MaxHeight = 460
     $card.VerticalAlignment = 'Top'
     $card.HorizontalAlignment = 'Center'
-    $card.Margin = New-Object Windows.Thickness(0, 90, 0, 0)
-    # Ein Klick auf die Karte darf nicht bis zur Abdunklung durchfallen und
-    # das Fenster schließen.
+    $card.Margin = New-Object Windows.Thickness(0, 76, 0, 0)
     $card.Add_MouseLeftButtonDown({ param($sender, $eventArgs) $eventArgs.Handled = $true })
 
     $stack = New-Object Windows.Controls.StackPanel
-    $stack.Margin = New-Object Windows.Thickness(18)
+    $stack.Margin = New-Object Windows.Thickness(20)
 
     $eyebrow = New-Object Windows.Controls.TextBlock
     $eyebrow.Text = Get-WzText 'palette.eyebrow'
@@ -216,15 +194,17 @@ function Show-WzPalette {
 
     $box = New-Object Windows.Controls.TextBox
     $box.Style = $syncHash.Window.FindResource('WzTextBox')
-    $box.Margin = New-Object Windows.Thickness(0, 6, 0, 10)
+    $box.Margin = New-Object Windows.Thickness(0, 6, 0, 12)
     [void]$stack.Children.Add($box)
 
     $list = New-Object Windows.Controls.ListBox
     $list.Background = [Windows.Media.Brushes]::Transparent
     $list.BorderThickness = New-Object Windows.Thickness(0)
-    $list.MaxHeight = 280
+    $list.MaxHeight = 300
     $list.Foreground = $syncHash.Window.FindResource('WzText')
     $list.FontFamily = $syncHash.Window.FindResource('WzFontSans')
+    $list.ItemContainerStyle = $syncHash.Window.FindResource('WzPaletteItem')
+    [Windows.Controls.ScrollViewer]::SetHorizontalScrollBarVisibility($list, 'Disabled')
     [void]$stack.Children.Add($list)
 
     $hint = New-Object Windows.Controls.TextBlock
@@ -237,60 +217,82 @@ function Show-WzPalette {
     [void]$backdrop.Children.Add($card)
     $window.Content = $backdrop
 
+    $run = {
+        param($chosenItem)
+        $chosen = if ($chosenItem) { $chosenItem } else { $list.SelectedItem }
+        if (-not $chosen) { return }
+        $entry = $chosen.Tag
+        $window.Close()
+        [void]$syncHash.Window.Dispatcher.BeginInvoke(
+            [Windows.Threading.DispatcherPriority]::Background,
+            [action]{ & $entry.Action }.GetNewClosure())
+    }.GetNewClosure()
+
     $fill = {
         param($query)
         $found = Select-WzPaletteMatches -Entries $entries -Query $query
         $list.Items.Clear()
         foreach ($entry in $found) {
             $item = New-Object Windows.Controls.ListBoxItem
-            $item.Content = "$($entry.Title)   —   $($entry.Detail)"
             $item.Tag = $entry
-            $item.Padding = New-Object Windows.Thickness(8, 6, 8, 6)
+
+            $rowPanel = New-Object Windows.Controls.StackPanel
+            $titleBlock = New-Object Windows.Controls.TextBlock
+            $titleBlock.Text = $entry.Title
+            $titleBlock.FontFamily = $syncHash.Window.FindResource('WzFontSans')
+            $titleBlock.FontSize = 13
+            $titleBlock.FontWeight = 'SemiBold'
+            $titleBlock.Foreground = $syncHash.Window.FindResource('WzTextBright')
+            [void]$rowPanel.Children.Add($titleBlock)
+
+            if ($entry.Detail) {
+                $detailBlock = New-Object Windows.Controls.TextBlock
+                $detailBlock.Text = $entry.Detail
+                $detailBlock.FontFamily = $syncHash.Window.FindResource('WzFontSans')
+                $detailBlock.FontSize = 11
+                $detailBlock.Foreground = $syncHash.Window.FindResource('WzTextDim')
+                $detailBlock.TextTrimming = 'CharacterEllipsis'
+                [void]$rowPanel.Children.Add($detailBlock)
+            }
+
+            $item.Content = $rowPanel
+            $capturedItem = $item
+            $item.Add_MouseLeftButtonUp({ & $run $capturedItem }.GetNewClosure())
             [void]$list.Items.Add($item)
         }
-        if ($list.Items.Count -gt 0) { $list.SelectedIndex = 0 }
-    }.GetNewClosure()
-
-    $run = {
-        $chosen = $list.SelectedItem
-        if (-not $chosen) { return }
-        $entry = $chosen.Tag
-        $window.Close()
-        # Erst schließen, dann handeln: Sonst legt sich ein Dialog des
-        # aufgerufenen Handgriffs unter die Palette.
-        [void]$syncHash.Window.Dispatcher.BeginInvoke(
-            [Windows.Threading.DispatcherPriority]::Background,
-            [action]{ & $entry.Action }.GetNewClosure())
+        if ($list.Items.Count -gt 0) {
+            $list.SelectedIndex = 0
+            $list.ScrollIntoView($list.SelectedItem)
+        }
     }.GetNewClosure()
 
     $box.Add_TextChanged({ & $fill $box.Text }.GetNewClosure())
 
-    # Die Tasten hängen am FENSTER, nicht am Suchfeld. Am Feld griffen sie nur,
-    # solange der Fokus dort steht — wer einmal in die Liste geklickt hat,
-    # bekäme das Fenster mit Escape nicht mehr zu. Ein Suchfenster, das
-    # hängen bleibt, sperrt die ganze Oberfläche.
     $window.Add_PreviewKeyDown({
         param($sender, $eventArgs)
         switch ($eventArgs.Key) {
             'Down' {
-                if ($list.SelectedIndex -lt $list.Items.Count - 1) { $list.SelectedIndex++ }
+                if ($list.SelectedIndex -lt $list.Items.Count - 1) {
+                    $list.SelectedIndex++
+                    $list.ScrollIntoView($list.SelectedItem)
+                }
                 $eventArgs.Handled = $true
             }
             'Up' {
-                if ($list.SelectedIndex -gt 0) { $list.SelectedIndex-- }
+                if ($list.SelectedIndex -gt 0) {
+                    $list.SelectedIndex--
+                    $list.ScrollIntoView($list.SelectedItem)
+                }
                 $eventArgs.Handled = $true
             }
-            'Enter' { & $run; $eventArgs.Handled = $true }
+            'Enter' { & $run $null; $eventArgs.Handled = $true }
             'Escape' { $window.Close(); $eventArgs.Handled = $true }
         }
     }.GetNewClosure())
-    $list.Add_MouseDoubleClick({ & $run }.GetNewClosure())
 
     & $fill ''
     $window.Add_Loaded({ [void]$box.Focus() }.GetNewClosure())
 
-    # Dieselbe Buchführung wie beim Bestätigungsdialog: Test-Dialogs prüft
-    # daran, ob ein Fenster wirklich zugegangen ist.
     $syncHash.ActiveDialog = $window
     try {
         [void]$window.ShowDialog()

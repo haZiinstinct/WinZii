@@ -11,11 +11,14 @@ function Get-WzSnapshotPath {
     <#
     .SYNOPSIS
         Wo die Momentaufnahme dieses Rechners liegt.
-    .NOTES
-        Auf dem Datenträger neben den Sicherungen, nicht im Profil des
-        Kunden: Sie soll mit dem Stick reisen, nicht mit dem Gerät.
+    .PARAMETER EnsureDir
+        Legt den Zielordner nur beim Schreiben an, nicht schon bei Leseprüfungen.
     #>
-    return (Join-Path (New-WzDirectory (Get-WzPath 'offline' 'zustand')) "$env:COMPUTERNAME.json")
+    param([switch]$EnsureDir)
+
+    $dir = Get-WzPath 'offline' 'zustand'
+    if ($EnsureDir) { $dir = New-WzDirectory $dir }
+    return (Join-Path $dir "$env:COMPUTERNAME.json")
 }
 
 function New-WzSnapshot {
@@ -56,10 +59,12 @@ function New-WzSnapshot {
 
     $volumes = @()
     try {
-        $info = Get-WzSystemInfo
-        $volumes = @($info.Volumes | ForEach-Object {
-            [pscustomobject]@{ letter = $_.Letter; freeBytes = [int64]$_.FreeBytes }
-        })
+        # Direkt aus Win32_LogicalDisk statt komplettem Get-WzSystemInfo — spart
+        # zehn unnötige WMI-Abfragen bei jeder Momentaufnahme.
+        $volumes = @(Get-CimInstance -Query 'SELECT DeviceID,FreeSpace FROM Win32_LogicalDisk WHERE DriveType=3' -ErrorAction Stop |
+            ForEach-Object {
+                [pscustomobject]@{ letter = $_.DeviceID; freeBytes = [int64]$_.FreeSpace }
+            })
     } catch { }
 
     return [pscustomobject]@{
@@ -89,7 +94,7 @@ function Save-WzSnapshot {
     }
 
     $snapshot = New-WzSnapshot
-    $path = Get-WzSnapshotPath
+    $path = Get-WzSnapshotPath -EnsureDir
     try {
         Save-WzJson -InputObject $snapshot -Path $path
         $result.Success = $true

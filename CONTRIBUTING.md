@@ -37,7 +37,7 @@ powershell -NoProfile -ExecutionPolicy Bypass -STA -File tools\Test-Pages.ps1
 ```
 
 Die weiteren Prüfwerkzeuge lohnen sich, wenn du in dem jeweiligen Bereich gearbeitet hast
-— die CI lässt sie ohnehin alle bei jedem Push auf main und jedem Pull Request laufen, auf einem englischen Windows:
+— beim Release über Tag (`.github\workflows\release.yml`) laufen alle nicht-interaktiven Prüfungen automatisch auf einem englischen Windows:
 
 | Werkzeug | Wofür |
 | --- | --- |
@@ -45,8 +45,8 @@ Die weiteren Prüfwerkzeuge lohnen sich, wenn du in dem jeweiligen Bereich gearb
 | `tools\Test-LanguageSwitch.ps1` | am Sprachwechsel oder an gemessenen Texten (Dashboard-Sicherheitskarte) gearbeitet |
 | `tools\Test-Parsers.ps1` | eine Windows-Ausgabe neu gedeutet (`sfc`, `DISM`, `winget`, Sicherheitscenter …) — Muster gegen die echten deutschen **und** englischen Wortlaute |
 | `tools\Test-Undo.ps1` | an Sicherung, Rücknahme, Energieplan oder Restesuche gearbeitet. Ändert als Administrator kurzzeitig den aktiven Energieplan und stellt ihn im `finally` wieder her |
-| `tools\Test-Report.ps1` | am Bericht oder Übergabeblatt gearbeitet — fremder Text muss Text bleiben |
-| `tools\Test-Modules.ps1` | an Setup, Windows Update, Toolbox, KI-Entfernung, Autostart, Belastungstest, Momentaufnahme oder Versionsprüfung gearbeitet — Validierung, Code-Deutung, Vergleich, ohne Systemeingriff |
+| `tools\Test-Report.ps1` | am HTML-Bericht gearbeitet — fremder Text muss Text bleiben |
+| `tools\Test-Modules.ps1` | an Toolbox, KI-Entfernung, Autostart, Belastungstest, Momentaufnahme, Befehlspalette oder Versionsprüfung gearbeitet — Validierung, Code-Deutung, Vergleich, ohne Systemeingriff |
 | `tools\Test-Office.ps1` | am Office-Vorrat oder der Bereitstellungskonfiguration gearbeitet |
 | `tools\Test-Layout.ps1` | an XAML-Seiten oder Karten gearbeitet — fährt jede Seite bei 1000×560 an und misst, ob ein Wort mitten durchbricht |
 | `tools\Test-Contrast.ps1` | Farben in `Theme.xaml` geändert |

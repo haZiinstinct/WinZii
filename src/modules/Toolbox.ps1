@@ -347,6 +347,7 @@ function Remove-WzBloatware {
 
     $script:WzAppxCache = $null
     $result.RecordFile = Save-WzRemovedAppsRecord -Packages $removed
+    $result | Add-Member -NotePropertyName 'RemovedNames' -NotePropertyValue @($removed | ForEach-Object { $_.DisplayName }) -Force
     return $result
 }
 
@@ -388,4 +389,117 @@ function Save-WzRemovedAppsRecord {
         Write-WzLog (Get-WzText 'tool.logRecordFailed' @{ grund = $_.Exception.Message.Split([char]10)[0] }) -Level Warn
         return ''
     }
+}
+
+function Sync-WzSystemTime {
+    <#
+    .SYNOPSIS
+        Startet den Zeitdienst und synchronisiert die Systemzeit automatisch
+        mit dem Zeitserver.
+    #>
+    [CmdletBinding()]
+    param()
+
+    $result = [pscustomobject]@{ Success = $false; Summary = ''; Source = ''; Time = $null }
+
+    if ($syncHash.DryRun) {
+        Write-WzLog (Get-WzText 'tool.logTimeTest') -Level Test
+        $result.Success = $true
+        $result.Summary = Get-WzText 'core.dryRunSummary'
+        return $result
+    }
+
+    Write-WzLog (Get-WzText 'tool.logTimeRunning') -Level Action
+
+    try {
+        Set-Service -Name 'W32Time' -StartupType Automatic -ErrorAction Stop
+        Start-Service -Name 'W32Time' -ErrorAction Stop
+    } catch {
+        Write-WzLog (Get-WzText 'tool.logTimeService' @{ grund = $_.Exception.Message.Split([char]10)[0] }) -Level Warn
+    }
+
+    $resync = Invoke-WzProcess -FilePath 'w32tm.exe' -Arguments '/resync /force' -TimeoutSeconds 60 -LogOutput
+    $result.Success = ($resync.ExitCode -eq 0)
+
+    $source = Invoke-WzProcess -FilePath 'w32tm.exe' -Arguments '/query /source' -TimeoutSeconds 20
+    if ($source.ExitCode -eq 0 -and $source.StdOut) { $result.Source = $source.StdOut.Trim() }
+
+    $result.Time = Get-Date
+    $result.Summary = if ($result.Success) {
+        Get-WzText 'tool.timeSynced' @{ zeit = $result.Time.ToString('G', (Get-WzLanguageCulture)); quelle = $result.Source }
+    } else {
+        Get-WzText 'tool.timeFailed' @{ code = $resync.ExitCode }
+    }
+
+    Write-WzLog $result.Summary -Level $(if ($result.Success) { 'Ok' } else { 'Warn' })
+    return $result
+}
+
+function Get-WzOemProductKey {
+    <#
+    .SYNOPSIS
+        Liest den im UEFI/BIOS hinterlegten Windows-Produktschlüssel (OA3),
+        falls das Gerät einen besitzt.
+    #>
+    [CmdletBinding()]
+    param()
+
+    try {
+        $service = Get-CimInstance -ClassName SoftwareLicensingService -ErrorAction Stop
+        if ($service.OA3xOriginalProductKey) { return $service.OA3xOriginalProductKey }
+    } catch { }
+    return ''
+}
+
+function Invoke-WzFirmwareActivation {
+    <#
+    .SYNOPSIS
+        Aktiviert Windows vollautomatisch mit dem in der Firmware (UEFI/BIOS)
+        hinterlegten Produktschlüssel — ohne manuelle Schlüsseleingabe.
+    #>
+    [CmdletBinding()]
+    param()
+
+    $result = [pscustomobject]@{ Success = $false; Activated = $false; Summary = '' }
+
+    $key = Get-WzOemProductKey
+    if (-not $key) {
+        $result.Summary = Get-WzText 'tool.firmwareNoKey'
+        Write-WzLog $result.Summary -Level Warn
+        return $result
+    }
+
+    if ($syncHash.DryRun) {
+        Write-WzLog (Get-WzText 'tool.logFirmwareTest') -Level Test
+        $result.Success = $true
+        $result.Summary = Get-WzText 'core.dryRunSummary'
+        return $result
+    }
+
+    $slmgr = Join-Path $env:SystemRoot 'System32\slmgr.vbs'
+    Write-WzLog (Get-WzText 'tool.logFirmwareInstalling') -Level Action
+    $install = Invoke-WzProcess -FilePath 'cscript.exe' `
+        -Arguments "//nologo `"$slmgr`" /ipk $key" -TimeoutSeconds 180
+    if ($install.ExitCode -ne 0) {
+        $code = if ($null -ne $install.ExitCode) { '0x{0:X8}' -f [int]$install.ExitCode } else { '?' }
+        $result.Summary = Get-WzText 'tool.firmwareInstallFailed' @{ code = $code }
+        Write-WzLog $result.Summary -Level Error
+        return $result
+    }
+
+    Write-WzLog (Get-WzText 'tool.logFirmwareActivating') -Level Action
+    $activate = Invoke-WzProcess -FilePath 'cscript.exe' `
+        -Arguments "//nologo `"$slmgr`" /ato" -TimeoutSeconds 300
+
+    $status = Get-WzActivationStatus
+    $result.Activated = (($activate.ExitCode -eq 0) -and $status.Ok)
+    $result.Success = $true
+    $result.Summary = if ($result.Activated) {
+        Get-WzText 'tool.firmwareActivated'
+    } else {
+        Get-WzText 'tool.firmwareNotActive' @{ status = $status.Text }
+    }
+
+    Write-WzLog $result.Summary -Level $(if ($result.Activated) { 'Ok' } else { 'Warn' })
+    return $result
 }

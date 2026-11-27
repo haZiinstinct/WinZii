@@ -198,7 +198,7 @@ function Invoke-WzTweaks {
 
     if ($CreateRestorePoint) {
         Write-WzLog (Get-WzText 'opt.logRestorePoint') -Level Action
-        [void](New-WzRestorePoint -Description "WinZii — vor $Scope")
+        [void](New-WzRestorePoint -Description (Get-WzText 'opt.restorePointBefore' @{ bereich = $Scope }))
     }
 
     $session = New-WzUndoSession -Scope $Scope
@@ -261,9 +261,14 @@ function Invoke-WzTweaks {
     }
 
     if (-not $syncHash.DryRun) {
+        if ($summary.Applied -gt 0) {
+            # Explorer und Windows-Shell sofort über geänderte Richtlinien und
+            # Oberflächeneinstellungen informieren, damit vieles ohne Neustart greift.
+            Publish-WzSettingChange
+        }
         # Wirft Save-WzJson (Stick zwischendurch abgezogen, voll), sind die
         # Eingriffe trotzdem geschehen. Ohne Zusammenfassung gäbe es weder
-        # Dialog noch Eintrag im Übergabeblatt (Audit 2026-10, H3).
+        # Dialog noch Eintrag im Protokoll (Audit 2026-10, H3).
         try {
             $summary.UndoFile = Complete-WzUndoSession -Session $session
         } catch {
@@ -299,17 +304,32 @@ function Invoke-WzRegistryAction {
     }
 
     Export-WzRegistryKey -Session $Session -Path $path
+    # Ermitteln, ob wir den Schlüssel (oder sogar einen Elternschlüssel wie bei
+    # CLSID\{...}\InprocServer32) erst neu anlegen — damit Undo alles sauber wegräumt.
+    $keyExisted = [bool](Test-Path -LiteralPath $path)
+    $createdParent = $path
+    if (-not $keyExisted) {
+        $probe = $path
+        while ($probe) {
+            $parent = Split-Path -Parent $probe
+            if (-not $parent -or (Test-Path -LiteralPath $parent)) {
+                $createdParent = $probe
+                break
+            }
+            $probe = $parent
+        }
+    }
+
     # Undo speichert den aufgelösten Pfad, damit das Zurücksetzen dieselbe
     # Stelle trifft wie das Setzen.
     $undoAction = $Action | Select-Object *
     $undoAction.path = $path
     Save-WzUndoState -Session $Session -ItemId $Tweak.id -ItemName $Tweak.name -Action $undoAction -Previous @{
-        existed   = $current.Exists
-        value     = $current.Value
-        valueType = if ($current.Exists) { $current.Type } else { $Action.valueType }
-        # Legt erst das Anwenden den Schlüssel an, räumt die Rücknahme ihn
-        # wieder weg, sofern er dann leer ist.
-        keyExisted = [bool](Test-Path -LiteralPath $path)
+        existed       = $current.Exists
+        value         = $current.Value
+        valueType     = if ($current.Exists) { $current.Type } else { $Action.valueType }
+        keyExisted    = $keyExisted
+        createdParent = $createdParent
     }
 
     if (-not (Test-Path -LiteralPath $path)) {
@@ -640,8 +660,8 @@ function Invoke-WzPowerPlanAction {
         $beideSeitenOk = $true
 
         $seiten = @(
-            @{ Schalter = '/setacvalueindex'; Wert = $setting.ac; Betrieb = 'Netz' },
-            @{ Schalter = '/setdcvalueindex'; Wert = $setting.dc; Betrieb = 'Akku' }
+            @{ Schalter = '/setacvalueindex'; Wert = $setting.ac; Betrieb = (Get-WzText 'opt.modeAc') },
+            @{ Schalter = '/setdcvalueindex'; Wert = $setting.dc; Betrieb = (Get-WzText 'opt.modeDc') }
         )
         foreach ($seite in $seiten) {
             $gesetzt = Invoke-WzProcess -FilePath 'powercfg.exe' `
@@ -843,12 +863,19 @@ function Get-WzRegistryValue {
     if (-not (Test-Path -LiteralPath $Path)) { return $result }
 
     try {
-        $item = Get-ItemProperty -LiteralPath $Path -Name $Name -ErrorAction Stop
-        $result.Exists = $true
-        $result.Value = $item.$Name
-
         $key = Get-Item -LiteralPath $Path -ErrorAction Stop
-        $kind = $key.GetValueKind($Name)
+        if ($Name -eq '(Default)') {
+            $val = $key.GetValue('', $null, 'DoNotExpandEnvironmentNames')
+            if ($null -eq $val) { return $result }
+            $result.Exists = $true
+            $result.Value = $val
+            $kind = $key.GetValueKind('')
+        } else {
+            $item = Get-ItemProperty -LiteralPath $Path -Name $Name -ErrorAction Stop
+            $result.Exists = $true
+            $result.Value = $item.$Name
+            $kind = $key.GetValueKind($Name)
+        }
         $result.Type = switch ($kind) {
             'DWord'        { 'DWord' }
             'QWord'        { 'QWord' }
@@ -862,6 +889,71 @@ function Get-WzRegistryValue {
         # Wert fehlt
     }
     return $result
+}
+
+function Publish-WzSettingChange {
+    <#
+    .SYNOPSIS
+        Informiert Windows-Shell und Explorer über geänderte Einstellungen,
+        damit Dateiendungen, Transparenz und Richtlinien sofort greifen.
+    #>
+    [CmdletBinding()]
+    param()
+
+    try {
+        if (-not ('WzNativeNotify' -as [type])) {
+            Add-Type -TypeDefinition @'
+using System;
+using System.Runtime.InteropServices;
+public static class WzNativeNotify {
+    [DllImport("user32.dll", SetLastError = true, CharSet = CharSet.Unicode)]
+    public static extern IntPtr SendMessageTimeoutW(
+        IntPtr hWnd, uint Msg, UIntPtr wParam, string lParam,
+        uint fuFlags, uint uTimeout, out UIntPtr lpdwResult);
+    [DllImport("shell32.dll")]
+    public static extern void SHChangeNotify(
+        uint wEventId, uint uFlags, IntPtr dwItem1, IntPtr dwItem2);
+}
+'@ -ErrorAction Stop
+        }
+        $broadcast = [IntPtr]0xFFFF
+        $out = [UIntPtr]::Zero
+        foreach ($area in @('Policy', 'Environment', 'ImmersiveColorSet', 'ShellState')) {
+            [void][WzNativeNotify]::SendMessageTimeoutW($broadcast, 0x001A, [UIntPtr]::Zero, $area, 0x0002, 400, [ref]$out)
+        }
+        [WzNativeNotify]::SHChangeNotify(0x08000000, 0, [IntPtr]::Zero, [IntPtr]::Zero)
+    } catch {
+        # Kein Abbruch, falls die Nachricht in einer Sandbox nicht durchkommt
+    }
+}
+
+function Restart-WzExplorer {
+    <#
+    .SYNOPSIS
+        Startet explorer.exe sauber neu, damit Taskleisten-, Startmenü- und
+        Kontextmenü-Änderungen sofort ohne PC-Neustart wirksam werden.
+    #>
+    [CmdletBinding()]
+    param()
+
+    if ($syncHash.DryRun) {
+        Write-WzLog (Get-WzText 'opt.logExplorerTest') -Level Test
+        return $true
+    }
+
+    try {
+        Write-WzLog (Get-WzText 'opt.logExplorerRestart') -Level Action
+        Stop-Process -Name 'explorer' -Force -ErrorAction SilentlyContinue
+        Start-Sleep -Milliseconds 600
+        if (-not (Get-Process -Name 'explorer' -ErrorAction SilentlyContinue)) {
+            Start-Process 'explorer.exe'
+        }
+        Write-WzLog (Get-WzText 'opt.logExplorerDone') -Level Ok
+        return $true
+    } catch {
+        Write-WzLog (Get-WzText 'opt.logExplorerFailed' @{ grund = $_.Exception.Message }) -Level Warn
+        return $false
+    }
 }
 
 function Get-WzServiceStartupType {

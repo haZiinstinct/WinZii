@@ -124,6 +124,13 @@
           "name": "UseNexusForGameBarEnabled",
           "valueType": "DWord",
           "value": 0
+        },
+        {
+          "type": "registry",
+          "path": "HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\GameDVR",
+          "name": "AppCaptureEnabled",
+          "valueType": "DWord",
+          "value": 0
         }
       ]
     },
@@ -171,118 +178,199 @@
           "name": "MinAnimate",
           "valueType": "String",
           "value": "0"
+        },
+        {
+          "type": "registry",
+          "path": "HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\Advanced",
+          "name": "TaskbarAnimations",
+          "valueType": "DWord",
+          "value": 0
+        },
+        {
+          "type": "registry",
+          "path": "HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\Advanced",
+          "name": "ListviewAlphaSelect",
+          "valueType": "DWord",
+          "value": 0
         }
       ]
     },
     {
-      "id": "perf-power-profile",
+      "id": "perf-bg-apps-off",
       "category": "performance",
       "level": "soft",
       "risk": "low",
-      "name": "Leistung am Netz, Ausdauer auf Akku",
-      "description": "Legt einen eigenen Energieplan an, der zwischen Netzbetrieb und Akku unterscheidet. Am Netzteil darf der Lüfter hochdrehen, statt den Takt zu senken, und der Turbo greift ohne Zurückhaltung. Auf Akku wird der Turbo nur genutzt, wo er sich lohnt, und die Kühlung senkt lieber den Takt, als laut zu werden. Der Spitzentakt am Netz steigt dadurch nicht — der ist ohnehin nicht gedeckelt; was sich ändert, sind Ansprechverhalten und Verhalten unter Dauerlast. Der Gewinn liegt vor allem auf der Akkuseite. Am Netzteil arbeitet das Gerät außerdem durch: kein Energiesparmodus, kein Ruhezustand, auch nicht bei zugeklapptem Deckel — nur der Bildschirm geht nach 30 Minuten aus. Auf Akku gilt: Bildschirm nach 10, Energiesparmodus nach 15 Minuten. Der Einschaltknopf schaltet immer nur den Bildschirm aus; ganz aus geht das Gerät über Start → Herunterfahren oder durch langes Drücken. Der bisherige Energieplan wird nicht angefasst und ist beim Zurücknehmen sofort wieder aktiv.",
-      "defaultChecked": false,
-      "appliesTo": "all",
-      "requiresReboot": false,
-      "actions": [
-        {
-          "type": "powerplan",
-          "planName": "WinZii — Netz voll, Akku sparsam",
-          "planDescription": "Von WinZii angelegt: volle Leistung am Netzteil, sparsam auf Akku.",
-          "baseScheme": "381b4222-f694-41f0-9685-ff5bb260df2e",
-          "settings": [
-            {
-              "subgroup": "SUB_PROCESSOR",
-              "setting": "PROCTHROTTLEMIN",
-              "ac": 5,
-              "dc": 5
-            },
-            {
-              "subgroup": "SUB_PROCESSOR",
-              "setting": "PROCTHROTTLEMAX",
-              "ac": 100,
-              "dc": 100
-            },
-            {
-              "subgroup": "SUB_PROCESSOR",
-              "setting": "SYSCOOLPOL",
-              "ac": 1,
-              "dc": 0,
-              "optional": true
-            },
-            {
-              "subgroup": "SUB_PROCESSOR",
-              "setting": "PERFBOOSTMODE",
-              "ac": 2,
-              "dc": 3,
-              "optional": true
-            },
-            {
-              "subgroup": "SUB_SLEEP",
-              "setting": "STANDBYIDLE",
-              "ac": 0,
-              "dc": 900
-            },
-            {
-              "subgroup": "SUB_SLEEP",
-              "setting": "HIBERNATEIDLE",
-              "ac": 0,
-              "dc": 10800
-            },
-            {
-              "subgroup": "SUB_SLEEP",
-              "setting": "HYBRIDSLEEP",
-              "ac": 0,
-              "dc": 0,
-              "optional": true
-            },
-            {
-              "subgroup": "SUB_VIDEO",
-              "setting": "VIDEOIDLE",
-              "ac": 1800,
-              "dc": 600
-            },
-            {
-              "subgroup": "SUB_BUTTONS",
-              "setting": "LIDACTION",
-              "ac": 0,
-              "dc": 1,
-              "optional": true
-            },
-            {
-              "subgroup": "SUB_BUTTONS",
-              "setting": "PBUTTONACTION",
-              "ac": 4,
-              "dc": 4
-            }
-          ]
-        }
-      ]
-    },
-    {
-      "id": "perf-update-manual",
-      "category": "performance",
-      "level": "soft",
-      "risk": "medium",
-      "name": "Windows Update nur von Hand installieren und neu starten",
-      "description": "Windows lädt Updates weiterhin herunter, installiert sie aber erst, wenn man es in den Einstellungen selbst anstößt. Einen Neustart erzwingt Windows nicht mehr, solange jemand angemeldet ist — laufende Arbeit bleibt über Nacht offen. Dafür bleiben Sicherheitsupdates liegen, bis sich jemand darum kümmert: Wer den Eintrag setzt, sollte regelmäßig unter Einstellungen → Windows Update nachsehen. In verwalteten Umgebungen (Intune, WSUS) kann die Firmenrichtlinie Vorrang haben.",
-      "defaultChecked": false,
+      "name": "Hintergrund-Apps (Store) abschalten",
+      "description": "Verhindert, dass vorinstallierte Store-Apps wie Wetter, Karten, Fotos oder Werbung dauerhaft unsichtbar im Hintergrund Speicher und Rechenzeit verbrauchen. Normale Desktop-Programme wie Browser oder Office sind davon nicht betroffen.",
+      "defaultChecked": true,
       "appliesTo": "all",
       "requiresReboot": true,
       "actions": [
         {
           "type": "registry",
-          "path": "HKLM:\\SOFTWARE\\Policies\\Microsoft\\Windows\\WindowsUpdate\\AU",
-          "name": "NoAutoRebootWithLoggedOnUsers",
+          "path": "HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\BackgroundAccessApplications",
+          "name": "GlobalUserDisabled",
           "valueType": "DWord",
           "value": 1
         },
         {
           "type": "registry",
-          "path": "HKLM:\\SOFTWARE\\Policies\\Microsoft\\Windows\\WindowsUpdate\\AU",
-          "name": "AUOptions",
+          "path": "HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\Search",
+          "name": "BackgroundAppGlobalToggle",
           "valueType": "DWord",
-          "value": 3
+          "value": 0
+        },
+        {
+          "type": "registry",
+          "path": "HKLM:\\SOFTWARE\\Policies\\Microsoft\\Windows\\AppPrivacy",
+          "name": "LetAppsRunInBackground",
+          "valueType": "DWord",
+          "value": 2
+        }
+      ]
+    },
+    {
+      "id": "perf-services-lean",
+      "category": "performance",
+      "level": "soft",
+      "risk": "low",
+      "name": "Unnötige Windows-Ballast-Dienste abschalten",
+      "description": "Beendet und deaktiviert Dienste, die auf normalen PCs nicht gebraucht werden: Fax, Offline-Karten (MapsBroker), Einzelhandelsdemo, Windows Media Player Netzwerkfreigabe und Remote-Registrierung. Drucker, WLAN, Audio, Store und Updates bleiben vollständig unberührt.",
+      "defaultChecked": true,
+      "appliesTo": "all",
+      "requiresReboot": false,
+      "actions": [
+        {
+          "type": "service",
+          "serviceName": "Fax",
+          "startupType": "Disabled",
+          "stop": true
+        },
+        {
+          "type": "service",
+          "serviceName": "MapsBroker",
+          "startupType": "Disabled",
+          "stop": true
+        },
+        {
+          "type": "service",
+          "serviceName": "RetailDemo",
+          "startupType": "Disabled",
+          "stop": true
+        },
+        {
+          "type": "service",
+          "serviceName": "WMPNetworkSvc",
+          "startupType": "Disabled",
+          "stop": true
+        },
+        {
+          "type": "service",
+          "serviceName": "RemoteRegistry",
+          "startupType": "Disabled",
+          "stop": true
+        }
+      ]
+    },
+    {
+      "id": "perf-explorer-clean",
+      "category": "performance",
+      "level": "soft",
+      "risk": "low",
+      "name": "Explorer auf »Dieser PC« öffnen und Taskleiste aufräumen",
+      "description": "Der Datei-Explorer öffnet direkt auf »Dieser PC« statt auf der trägen Start-Ansicht mit Cloud-Verlauf. Außerdem werden die überflüssigen Taskleisten-Schaltflächen für Aktive Anwendungen und Chat ausgeblendet.",
+      "defaultChecked": true,
+      "appliesTo": "all",
+      "requiresReboot": false,
+      "actions": [
+        {
+          "type": "registry",
+          "path": "HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\Advanced",
+          "name": "LaunchTo",
+          "valueType": "DWord",
+          "value": 1
+        },
+        {
+          "type": "registry",
+          "path": "HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\Advanced",
+          "name": "ShowTaskViewButton",
+          "valueType": "DWord",
+          "value": 0
+        },
+        {
+          "type": "registry",
+          "path": "HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\Advanced",
+          "name": "TaskbarMn",
+          "valueType": "DWord",
+          "value": 0
+        }
+      ]
+    },
+    {
+      "id": "perf-win11-contextmenu",
+      "category": "performance",
+      "level": "soft",
+      "risk": "low",
+      "name": "Klassisches Rechtsklick-Menü unter Windows 11",
+      "description": "Zeigt bei Rechtsklick auf Dateien und Ordner sofort das vollständige Menü ohne den Umweg über »Weitere Optionen anzeigen«. Greift sofort nach einem Explorer-Neustart oder dem nächsten Neustart.",
+      "defaultChecked": false,
+      "appliesTo": "win11",
+      "requiresReboot": false,
+      "actions": [
+        {
+          "type": "registry",
+          "path": "HKCU:\\Software\\Classes\\CLSID\\{86ca1aa0-34aa-4e8b-a509-50c905bae2a2}\\InprocServer32",
+          "name": "(Default)",
+          "valueType": "String",
+          "value": ""
+        }
+      ]
+    },
+    {
+      "id": "perf-win11-endtask",
+      "category": "performance",
+      "level": "soft",
+      "risk": "low",
+      "name": "»Task beenden« im Taskleisten-Rechtsklick aktivieren",
+      "description": "Ergänzt den Befehl »Task beenden« direkt im Kontextmenü der Taskleiste — hängende Programme lassen sich ohne Task-Manager sofort schließen.",
+      "defaultChecked": true,
+      "appliesTo": "win11",
+      "minBuild": 22621,
+      "requiresReboot": false,
+      "actions": [
+        {
+          "type": "registry",
+          "path": "HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\Advanced\\TaskbarDeveloperSettings",
+          "name": "TaskbarEndTask",
+          "valueType": "DWord",
+          "value": 1
+        }
+      ]
+    },
+    {
+      "id": "perf-hibernation-off",
+      "category": "performance",
+      "level": "soft",
+      "risk": "medium",
+      "name": "Ruhezustand abschalten und SSD-Platz freigeben",
+      "description": "Entfernt die Datei hiberfil.sys und gibt je nach Arbeitsspeicher sofort 6 bis 13 GB SSD-Speicher frei. Spart außerdem SSD-Schreibzyklen. Ideal für Desktop-PCs — auf Notebooks nur wählen, wenn der Ruhezustand nicht genutzt wird (Energiesparmodus funktioniert weiter).",
+      "defaultChecked": false,
+      "appliesTo": "all",
+      "requiresReboot": false,
+      "actions": [
+        {
+          "type": "command",
+          "exec": "powercfg.exe",
+          "args": "/hibernate off",
+          "state": {
+            "exec": "reg.exe",
+            "args": "query \"HKLM\\SYSTEM\\CurrentControlSet\\Control\\Power\" /v HibernateEnabled",
+            "pattern": "HibernateEnabled\\s+REG_DWORD\\s+0x0\\b"
+          },
+          "undo": {
+            "exec": "powercfg.exe",
+            "args": "/hibernate on"
+          }
         }
       ]
     },
@@ -411,6 +499,48 @@
           "taskPath": "\\Microsoft\\Windows\\Autochk\\",
           "taskName": "Proxy",
           "state": "Disabled"
+        },
+        {
+          "type": "scheduledTask",
+          "taskPath": "\\Microsoft\\Windows\\Application Experience\\",
+          "taskName": "StartupAppTask",
+          "state": "Disabled"
+        },
+        {
+          "type": "scheduledTask",
+          "taskPath": "\\Microsoft\\Windows\\Application Experience\\",
+          "taskName": "MareBackup",
+          "state": "Disabled"
+        },
+        {
+          "type": "scheduledTask",
+          "taskPath": "\\Microsoft\\Windows\\Application Experience\\",
+          "taskName": "PcaPatchDbTask",
+          "state": "Disabled"
+        },
+        {
+          "type": "scheduledTask",
+          "taskPath": "\\Microsoft\\Windows\\DiskDiagnostic\\",
+          "taskName": "Microsoft-Windows-DiskDiagnosticDataCollector",
+          "state": "Disabled"
+        },
+        {
+          "type": "scheduledTask",
+          "taskPath": "\\Microsoft\\Windows\\Feedback\\Siuf\\",
+          "taskName": "DmClient",
+          "state": "Disabled"
+        },
+        {
+          "type": "scheduledTask",
+          "taskPath": "\\Microsoft\\Windows\\Feedback\\Siuf\\",
+          "taskName": "DmClientOnScenarioDownload",
+          "state": "Disabled"
+        },
+        {
+          "type": "scheduledTask",
+          "taskPath": "\\Microsoft\\Windows\\PI\\",
+          "taskName": "Sqm-Tasks",
+          "state": "Disabled"
         }
       ]
     },
@@ -472,6 +602,155 @@
           "name": "Disabled",
           "valueType": "DWord",
           "value": 1
+        },
+        {
+          "type": "service",
+          "serviceName": "WerSvc",
+          "startupType": "Disabled",
+          "stop": true
+        },
+        {
+          "type": "scheduledTask",
+          "taskPath": "\\Microsoft\\Windows\\Windows Error Reporting\\",
+          "taskName": "QueueReporting",
+          "state": "Disabled"
+        }
+      ]
+    },
+    {
+      "id": "tele-delivery-opt",
+      "category": "telemetry",
+      "level": "soft",
+      "risk": "low",
+      "name": "P2P-Upload für Windows Updates abschalten",
+      "description": "Verhindert, dass Windows die Internetleitung und SSD nutzt, um Update-Pakete an fremde PCs im Internet weiterzuverteilen. Windows lädt eigene Updates weiterhin normal herunter.",
+      "defaultChecked": true,
+      "appliesTo": "all",
+      "requiresReboot": false,
+      "actions": [
+        {
+          "type": "registry",
+          "path": "HKLM:\\SOFTWARE\\Policies\\Microsoft\\Windows\\DeliveryOptimization",
+          "name": "DODownloadMode",
+          "valueType": "DWord",
+          "value": 0
+        },
+        {
+          "type": "registry",
+          "path": "HKLM:\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\DeliveryOptimization\\Config",
+          "name": "DODownloadMode",
+          "valueType": "DWord",
+          "value": 0
+        }
+      ]
+    },
+    {
+      "id": "tele-edge-bloat",
+      "category": "telemetry",
+      "level": "soft",
+      "risk": "low",
+      "name": "Microsoft Edge: Hintergrund-Boost, Telemetrie und Shopping abschalten",
+      "description": "Stoppt den unsichtbaren Edge-Hintergrundprozess beim Systemstart und nach dem Schließen des Browsers — spart sofort 150 bis 400 MB Arbeitsspeicher, auch wenn Firefox oder Chrome genutzt wird. Schaltet zudem Edge-Telemetrie, Shopping-Popups und Empfehlungen ab.",
+      "defaultChecked": true,
+      "appliesTo": "all",
+      "requiresReboot": false,
+      "actions": [
+        {
+          "type": "registry",
+          "path": "HKLM:\\SOFTWARE\\Policies\\Microsoft\\Edge",
+          "name": "StartupBoostEnabled",
+          "valueType": "DWord",
+          "value": 0
+        },
+        {
+          "type": "registry",
+          "path": "HKLM:\\SOFTWARE\\Policies\\Microsoft\\Edge",
+          "name": "BackgroundModeEnabled",
+          "valueType": "DWord",
+          "value": 0
+        },
+        {
+          "type": "registry",
+          "path": "HKLM:\\SOFTWARE\\Policies\\Microsoft\\Edge",
+          "name": "DiagnosticData",
+          "valueType": "DWord",
+          "value": 0
+        },
+        {
+          "type": "registry",
+          "path": "HKLM:\\SOFTWARE\\Policies\\Microsoft\\Edge",
+          "name": "PersonalizationReportingEnabled",
+          "valueType": "DWord",
+          "value": 0
+        },
+        {
+          "type": "registry",
+          "path": "HKLM:\\SOFTWARE\\Policies\\Microsoft\\Edge",
+          "name": "EdgeShoppingAssistantEnabled",
+          "valueType": "DWord",
+          "value": 0
+        },
+        {
+          "type": "registry",
+          "path": "HKLM:\\SOFTWARE\\Policies\\Microsoft\\Edge",
+          "name": "ShowRecommendationsEnabled",
+          "valueType": "DWord",
+          "value": 0
+        },
+        {
+          "type": "registry",
+          "path": "HKLM:\\SOFTWARE\\Policies\\Microsoft\\Edge",
+          "name": "HideFirstRunExperience",
+          "valueType": "DWord",
+          "value": 1
+        }
+      ]
+    },
+    {
+      "id": "tele-office-off",
+      "category": "telemetry",
+      "level": "soft",
+      "risk": "low",
+      "name": "Microsoft-Office-Telemetrie abschalten",
+      "description": "Unterbindet Diagnosedaten, Nutzungsprotokolle und Feedback-Meldungen von Microsoft Office und Microsoft 365.",
+      "defaultChecked": true,
+      "appliesTo": "all",
+      "requiresReboot": false,
+      "actions": [
+        {
+          "type": "registry",
+          "path": "HKCU:\\Software\\Policies\\Microsoft\\office\\16.0\\osm",
+          "name": "enablelogging",
+          "valueType": "DWord",
+          "value": 0
+        },
+        {
+          "type": "registry",
+          "path": "HKCU:\\Software\\Policies\\Microsoft\\office\\16.0\\osm",
+          "name": "enableupload",
+          "valueType": "DWord",
+          "value": 0
+        },
+        {
+          "type": "registry",
+          "path": "HKCU:\\Software\\Microsoft\\Office\\Common\\ClientTelemetry",
+          "name": "DisableTelemetry",
+          "valueType": "DWord",
+          "value": 1
+        },
+        {
+          "type": "registry",
+          "path": "HKCU:\\Software\\Microsoft\\Office\\16.0\\Common\\ClientTelemetry",
+          "name": "DisableTelemetry",
+          "valueType": "DWord",
+          "value": 1
+        },
+        {
+          "type": "registry",
+          "path": "HKCU:\\Software\\Microsoft\\Office\\16.0\\Common\\Feedback",
+          "name": "Enabled",
+          "valueType": "DWord",
+          "value": 0
         }
       ]
     },
@@ -670,6 +949,90 @@
           "name": "TailoredExperiencesWithDiagnosticDataEnabled",
           "valueType": "DWord",
           "value": 0
+        },
+        {
+          "type": "registry",
+          "path": "HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\ContentDeliveryManager",
+          "name": "SubscribedContent-338393Enabled",
+          "valueType": "DWord",
+          "value": 0
+        },
+        {
+          "type": "registry",
+          "path": "HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\ContentDeliveryManager",
+          "name": "SubscribedContent-353696Enabled",
+          "valueType": "DWord",
+          "value": 0
+        },
+        {
+          "type": "registry",
+          "path": "HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\ContentDeliveryManager",
+          "name": "SubscribedContent-310093Enabled",
+          "valueType": "DWord",
+          "value": 0
+        },
+        {
+          "type": "registry",
+          "path": "HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\ContentDeliveryManager",
+          "name": "SubscribedContent-338387Enabled",
+          "valueType": "DWord",
+          "value": 0
+        },
+        {
+          "type": "registry",
+          "path": "HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\ContentDeliveryManager",
+          "name": "OemPreInstalledAppsEnabled",
+          "valueType": "DWord",
+          "value": 0
+        },
+        {
+          "type": "registry",
+          "path": "HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\ContentDeliveryManager",
+          "name": "PreInstalledAppsEnabled",
+          "valueType": "DWord",
+          "value": 0
+        },
+        {
+          "type": "registry",
+          "path": "HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\ContentDeliveryManager",
+          "name": "PreInstalledAppsEverEnabled",
+          "valueType": "DWord",
+          "value": 0
+        },
+        {
+          "type": "registry",
+          "path": "HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\ContentDeliveryManager",
+          "name": "ContentDeliveryAllowed",
+          "valueType": "DWord",
+          "value": 0
+        },
+        {
+          "type": "registry",
+          "path": "HKLM:\\SOFTWARE\\Policies\\Microsoft\\Windows\\CloudContent",
+          "name": "DisableSoftLanding",
+          "valueType": "DWord",
+          "value": 1
+        },
+        {
+          "type": "registry",
+          "path": "HKLM:\\SOFTWARE\\Policies\\Microsoft\\Windows\\CloudContent",
+          "name": "DisableConsumerAccountStateContent",
+          "valueType": "DWord",
+          "value": 1
+        },
+        {
+          "type": "registry",
+          "path": "HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\UserProfileEngagement",
+          "name": "ScoobeSystemSettingEnabled",
+          "valueType": "DWord",
+          "value": 0
+        },
+        {
+          "type": "registry",
+          "path": "HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\Advanced",
+          "name": "ShowSyncProviderNotifications",
+          "valueType": "DWord",
+          "value": 0
         }
       ]
     },
@@ -716,6 +1079,13 @@
           "type": "registry",
           "path": "HKLM:\\SOFTWARE\\Policies\\Microsoft\\Windows\\Windows Search",
           "name": "ConnectedSearchUseWeb",
+          "valueType": "DWord",
+          "value": 0
+        },
+        {
+          "type": "registry",
+          "path": "HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\SearchSettings",
+          "name": "IsDynamicSearchBoxEnabled",
           "valueType": "DWord",
           "value": 0
         }
@@ -833,6 +1203,60 @@
           "name": "Start_TrackDocs",
           "valueType": "DWord",
           "value": 0
+        }
+      ]
+    },
+    {
+      "id": "priv-clipboard-cloud",
+      "category": "privacy",
+      "level": "soft",
+      "risk": "low",
+      "name": "Zwischenablage-Cloud-Sync und Gerätefreigabe abschalten",
+      "description": "Verhindert, dass kopierte Texte oder Kennwörter über das Microsoft-Konto in die Cloud synchronisiert werden. Der lokale Zwischenablageverlauf (Win+V) funktioniert weiterhin.",
+      "defaultChecked": true,
+      "appliesTo": "all",
+      "requiresReboot": false,
+      "actions": [
+        {
+          "type": "registry",
+          "path": "HKLM:\\SOFTWARE\\Policies\\Microsoft\\Windows\\System",
+          "name": "AllowCrossDeviceClipboard",
+          "valueType": "DWord",
+          "value": 0
+        },
+        {
+          "type": "registry",
+          "path": "HKLM:\\SOFTWARE\\Policies\\Microsoft\\Windows\\System",
+          "name": "EnableCdp",
+          "valueType": "DWord",
+          "value": 0
+        }
+      ]
+    },
+    {
+      "id": "priv-location-off",
+      "category": "privacy",
+      "level": "soft",
+      "risk": "medium",
+      "name": "Standortverfolgung systemweit abschalten",
+      "description": "Sperrt den Windows-Standortdienst für System und Apps. Automatische Zeitzonen- und Wettererkennung funktionieren danach nur noch über manuelle Auswahl.",
+      "defaultChecked": false,
+      "appliesTo": "all",
+      "requiresReboot": false,
+      "actions": [
+        {
+          "type": "registry",
+          "path": "HKLM:\\SOFTWARE\\Policies\\Microsoft\\Windows\\LocationAndSensors",
+          "name": "DisableLocation",
+          "valueType": "DWord",
+          "value": 1
+        },
+        {
+          "type": "registry",
+          "path": "HKLM:\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\CapabilityAccessManager\\ConsentStore\\location",
+          "name": "Value",
+          "valueType": "String",
+          "value": "Deny"
         }
       ]
     },
@@ -1353,6 +1777,13 @@
           "name": "DisableGenerativeFill",
           "valueType": "DWord",
           "value": 1
+        },
+        {
+          "type": "registry",
+          "path": "HKLM:\\SOFTWARE\\Policies\\Microsoft\\WindowsPaint",
+          "name": "DisableGenerativeErase",
+          "valueType": "DWord",
+          "value": 1
         }
       ]
     },
@@ -1392,6 +1823,20 @@
           "type": "registry",
           "path": "HKLM:\\SOFTWARE\\Policies\\Microsoft\\Edge",
           "name": "EdgeHistoryAISearchEnabled",
+          "valueType": "DWord",
+          "value": 0
+        },
+        {
+          "type": "registry",
+          "path": "HKLM:\\SOFTWARE\\Policies\\Microsoft\\Edge",
+          "name": "DiscoverPageContextEnabled",
+          "valueType": "DWord",
+          "value": 0
+        },
+        {
+          "type": "registry",
+          "path": "HKLM:\\SOFTWARE\\Policies\\Microsoft\\Edge",
+          "name": "CopilotCDPPageContext",
           "valueType": "DWord",
           "value": 0
         }

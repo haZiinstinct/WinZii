@@ -14,22 +14,21 @@
                 <StackPanel Orientation="Horizontal">
                     <TextBlock Name="AppsSelectionCount" Text="{DynamicResource L.apps.selectionCount}" Style="{DynamicResource WzValue}"
                                VerticalAlignment="Center" Foreground="{DynamicResource WzCyan}" />
-                    <TextBlock Name="AppsOfflineHint" Text="" Style="{DynamicResource WzLabel}"
-                               VerticalAlignment="Center" Margin="14,0,0,0" />
                 </StackPanel>
                 <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
                     <Button Name="AppsBtnRecommended" Style="{DynamicResource WzBtnChip}" Content="{DynamicResource L.apps.btnRecommended}" Margin="0,0,4,0" />
                     <Button Name="AppsBtnNone" Style="{DynamicResource WzBtnChip}" Content="{DynamicResource L.apps.btnNone}" />
                 </StackPanel>
             </Grid>
-            <WrapPanel Margin="0,16,0,0">
-                <Button Name="AppsBtnInstall" Style="{DynamicResource WzBtnPrimary}" Margin="0,0,10,0"
+            <WrapPanel Margin="0,14,0,0">
+                <Button Name="AppsBtnInstall" Style="{DynamicResource WzBtnPrimary}" Margin="0,0,10,8"
                         IsEnabled="False" Content="{DynamicResource L.apps.btnInstall}" />
-                <Button Name="AppsBtnDownload" Style="{DynamicResource WzBtnSecondary}" Margin="0,0,10,0"
-                        IsEnabled="False" Content="{DynamicResource L.apps.btnDownload}" />
-                <Button Name="AppsBtnWinget" Style="{DynamicResource WzBtnSecondary}"
+                <Button Name="AppsBtnWinget" Style="{DynamicResource WzBtnSecondary}" Margin="0,0,10,8"
                         Content="{DynamicResource L.apps.btnBootstrap}" Visibility="Collapsed" />
             </WrapPanel>
+            <TextBox Name="AppsSearch" Style="{DynamicResource WzTextBox}" Margin="0,8,0,0"
+                     ToolTip="{DynamicResource L.apps.searchTip}"
+                     AutomationProperties.Name="{DynamicResource L.apps.searchTip}" />
         </StackPanel>
     </Border>
 

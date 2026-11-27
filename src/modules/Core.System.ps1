@@ -152,9 +152,6 @@ function Get-WzSystemInfo {
         if ($board) { $info.BaseBoard = "$($board.Manufacturer) $($board.Product)".Trim() }
     } catch { }
 
-    # --- Akku -------------------------------------------------------------
-    $info.Battery = Get-WzBatteryHealth
-
     # --- Laufwerke --------------------------------------------------------
     $info.Volumes = @()
     try {
@@ -270,19 +267,43 @@ function Get-WzGraphicsInfo {
     try {
         $classPath = 'HKLM:\SYSTEM\CurrentControlSet\Control\Class\{4d36e968-e325-11ce-bfc1-08002be10318}'
         foreach ($key in (Get-ChildItem $classPath -ErrorAction SilentlyContinue)) {
-            $properties = Get-ItemProperty -LiteralPath $key.PSPath -ErrorAction SilentlyContinue
-            if ($null -eq $properties) { continue }
-            if (-not $properties.PSObject.Properties['DriverDesc']) { continue }
-            $size = $properties.PSObject.Properties['HardwareInformation.qwMemorySize']
-            if ($size -and $size.Value) { $memoryByName[[string]$properties.DriverDesc] = [int64]$size.Value }
+            try {
+                $properties = Get-ItemProperty -LiteralPath $key.PSPath -ErrorAction SilentlyContinue
+                if ($null -eq $properties) { continue }
+                if (-not $properties.PSObject.Properties['DriverDesc']) { continue }
+                $size = $properties.PSObject.Properties['HardwareInformation.qwMemorySize']
+                if (-not $size -or $null -eq $size.Value) { continue }
+                # Manche Grafiktreiber speichern qwMemorySize als REG_BINARY (8 Bytes)
+                # statt REG_QWORD — ein direkter [int64]-Cast warf sonst und brach
+                # die ganze Schleife für alle weiteren Karten ab.
+                $bytes = if ($size.Value -is [byte[]]) {
+                    if ($size.Value.Length -ge 8) { [BitConverter]::ToInt64($size.Value, 0) }
+                    elseif ($size.Value.Length -ge 4) { [int64][BitConverter]::ToUInt32($size.Value, 0) }
+                    else { [int64]0 }
+                } else {
+                    [int64]$size.Value
+                }
+                if ($bytes -gt 0) { $memoryByName[[string]$properties.DriverDesc] = $bytes }
+            } catch { }
         }
     } catch { }
 
     try {
         $controllers = Get-CimInstance -Query 'SELECT Name,DriverVersion,CurrentHorizontalResolution,CurrentVerticalResolution,CurrentRefreshRate FROM Win32_VideoController' -ErrorAction Stop
         foreach ($controller in $controllers) {
-            $resolution = if ($controller.CurrentHorizontalResolution) {
-                "$($controller.CurrentHorizontalResolution) × $($controller.CurrentVerticalResolution) bei $($controller.CurrentRefreshRate) Hz"
+            $resolution = if ($controller.CurrentHorizontalResolution -and $controller.CurrentVerticalResolution) {
+                if ($controller.CurrentRefreshRate -and [int]$controller.CurrentRefreshRate -gt 0) {
+                    Get-WzText 'core.gpuResolutionHz' @{
+                        breite = $controller.CurrentHorizontalResolution
+                        hoehe  = $controller.CurrentVerticalResolution
+                        hz     = $controller.CurrentRefreshRate
+                    }
+                } else {
+                    Get-WzText 'core.gpuResolution' @{
+                        breite = $controller.CurrentHorizontalResolution
+                        hoehe  = $controller.CurrentVerticalResolution
+                    }
+                }
             } else { '' }
             $result += [pscustomobject]@{
                 Name          = $controller.Name
@@ -358,149 +379,6 @@ function Get-WzUsableSerial {
     return $trimmed
 }
 
-function Get-WzBatteryHealth {
-    <#
-    .SYNOPSIS
-        Akkuverschleiß in Prozent — die eine Zahl, die zählt.
-    .DESCRIPTION
-        Verschleiß = 1 - (heutige volle Ladung / Auslegungskapazität). Der
-        powercfg-Bericht enthält dieselbe Angabe, aber vergraben in mehreren
-        Bildschirmseiten HTML.
-
-        Gefragt werden drei Quellen, weil keine für sich verlässlich ist:
-        BatteryStaticData steigt auf diesem MSI-Notebook mit einem
-        WMI-Providerfehler aus (»Allgemeiner Fehler«), Win32_Battery lässt
-        DesignCapacity dort leer, und BatteryFullChargedCapacity kennt die
-        Auslegung gar nicht. Bis 0.4.0 hing die ganze Erkennung allein an
-        BatteryStaticData: Ein Notebook mit gesundem Akku meldete »kein Akku
-        vorhanden«, und die Akkuzeile des Dashboards fiel ersatzlos weg.
-    #>
-    $result = [pscustomobject]@{
-        Present      = $false
-        WearPercent  = $null
-        DesignmWh    = 0
-        FullmWh      = 0
-        ChargePercent = $null
-        Verdict      = (Get-WzText 'core.batteryNone')
-    }
-
-    $static = @()
-    $full = @()
-    try { $static = @(Get-CimInstance -Namespace root\wmi -ClassName BatteryStaticData -ErrorAction Stop) } catch { }
-    try { $full = @(Get-CimInstance -Namespace root\wmi -ClassName BatteryFullChargedCapacity -ErrorAction Stop) } catch { }
-
-    $battery = $null
-    try {
-        $battery = Get-CimInstance -Query 'SELECT EstimatedChargeRemaining FROM Win32_Battery' -ErrorAction Stop |
-            Select-Object -First 1
-    } catch { }
-
-    # Kein Akku ist nur dann kein Akku, wenn ihn keine der drei Quellen kennt.
-    if ($static.Count -eq 0 -and $full.Count -eq 0 -and -not $battery) { return $result }
-
-    $result.Present = $true
-    if ($battery) { $result.ChargePercent = [int]$battery.EstimatedChargeRemaining }
-    if ($static.Count -gt 0) { $result.DesignmWh = [int]($static | Measure-Object -Property DesignedCapacity -Sum).Sum }
-    if ($full.Count -gt 0) { $result.FullmWh = [int]($full | Measure-Object -Property FullChargedCapacity -Sum).Sum }
-
-    # Fehlt eine der beiden Zahlen, steht sie im powercfg-Bericht.
-    if ($result.DesignmWh -le 0 -or $result.FullmWh -le 0) {
-        $report = Get-WzBatteryReportCapacities
-        if ($report) {
-            if ($result.DesignmWh -le 0) { $result.DesignmWh = $report.DesignmWh }
-            if ($result.FullmWh -le 0) { $result.FullmWh = $report.FullmWh }
-        }
-    }
-
-    if ($result.DesignmWh -gt 0 -and $result.FullmWh -gt 0) {
-        # Neue Akkus melden gern mehr als die Auslegungskapazität — ein
-        # negativer Verschleiß wäre Unsinn, also bei 0 abschneiden.
-        $result.WearPercent = [math]::Max(0, [math]::Round((1 - ($result.FullmWh / $result.DesignmWh)) * 100))
-        $result.Verdict = if ($result.WearPercent -lt 20) {
-            Get-WzText 'core.wearOk' @{ prozent = $result.WearPercent }
-        } elseif ($result.WearPercent -lt 40) {
-            Get-WzText 'core.wearWeak' @{ prozent = $result.WearPercent }
-        } else {
-            Get-WzText 'core.wearReplace' @{ prozent = $result.WearPercent }
-        }
-    } else {
-        $result.Verdict = Get-WzText 'core.wearUnknown'
-    }
-
-    return $result
-}
-
-function Get-WzBatteryReportCapacities {
-    <#
-    .SYNOPSIS
-        Auslegungs- und Ladekapazität aus dem powercfg-Akkubericht.
-    .NOTES
-        Ausweichweg für Geräte, deren WMI die Auslegungskapazität verschweigt.
-        Der Bericht kostet eine knappe Sekunde, wird aber vom Dashboard und vom
-        Übergabeblatt angefordert — deshalb einmal je Sitzung.
-    .OUTPUTS
-        PSCustomObject mit DesignmWh und FullmWh, oder $null
-    #>
-    if ($script:WzBatteryReportChecked) { return $script:WzBatteryReportCapacities }
-    $script:WzBatteryReportChecked = $true
-    $script:WzBatteryReportCapacities = $null
-
-    $file = Join-Path ([IO.Path]::GetTempPath()) "winzii-akku-$PID.html"
-    try {
-        $run = Invoke-WzProcess -FilePath 'powercfg.exe' `
-            -Arguments "/batteryreport /output `"$file`"" -TimeoutSeconds 30
-        if ($run.ExitCode -ne 0 -or -not (Test-Path -LiteralPath $file)) { return $null }
-
-        $html = [IO.File]::ReadAllText($file, [Text.Encoding]::UTF8)
-        $design = Read-WzBatteryReportValue -Html $html -Labels @(
-            'DESIGN CAPACITY', 'KONSTRUKTIONSKAPAZITÄT', 'ENTWURFSKAPAZITÄT')  # lang-ok: Suchbegriffe im powercfg-Bericht
-        $charged = Read-WzBatteryReportValue -Html $html -Labels @(
-            'FULL CHARGE CAPACITY', 'VOLLLADUNGSKAPAZITÄT')  # lang-ok: Suchbegriffe im powercfg-Bericht
-
-        if ($design -gt 0 -or $charged -gt 0) {
-            $script:WzBatteryReportCapacities = [pscustomobject]@{
-                DesignmWh = $design
-                FullmWh   = $charged
-            }
-        }
-    } catch {
-        Write-WzLog (Get-WzText 'core.logBatteryReport' @{ grund = $_.Exception.Message.Split([char]10)[0] }) -Level Info
-    } finally {
-        Remove-Item -LiteralPath $file -Force -ErrorAction SilentlyContinue
-    }
-
-    return $script:WzBatteryReportCapacities
-}
-
-function Read-WzBatteryReportValue {
-    <#
-    .SYNOPSIS
-        Eine Kapazitätsangabe aus dem HTML des Akkuberichts.
-    .NOTES
-        Die Beschriftung ist je nach Windows-Sprache deutsch oder englisch, die
-        Zahl je nach Kultur mit Punkt oder Komma gruppiert (»80.256 mWh«) —
-        deshalb bleibt vom Zellinhalt nur die Ziffernfolge übrig.
-
-        Der Anker <span class="label"> ist wichtig: Dieselben Wörter stehen
-        weiter unten noch einmal als Spaltenüberschriften der Verlaufstabelle,
-        dort aber ohne diese Auszeichnung.
-    #>
-    param(
-        [Parameter(Mandatory = $true)][string]$Html,
-        [Parameter(Mandatory = $true)][string[]]$Labels
-    )
-
-    foreach ($label in $Labels) {
-        $pattern = '<span class="label">\s*' + [regex]::Escape($label) + '\s*</span>\s*</td>\s*<td[^>]*>([^<]*)'
-        $match = [regex]::Match($Html, $pattern, [Text.RegularExpressions.RegexOptions]::IgnoreCase)
-        if (-not $match.Success) { continue }
-
-        $digits = $match.Groups[1].Value -replace '[^\d]', ''
-        if ($digits) { return [int]$digits }
-    }
-    return 0
-}
-
 function Get-WzSecurityInfo {
     <#
     .SYNOPSIS
@@ -511,18 +389,14 @@ function Get-WzSecurityInfo {
     param()
 
     $info = [ordered]@{}
-    # Text UND sprachneutraler Zustand: Ob Windows aktiviert ist, wurde vorher
-    # am deutschen Wort »aktiviert« erkannt. Sobald die Oberflaeche Englisch
-    # spricht, traf der Vergleich nie mehr — das Dashboard meldete auf einem
-    # aktivierten Rechner »Bitte pruefen«.
     $activation = Get-WzActivationStatus
     $info.Activation = $activation.Text
     $info.ActivationOk = $activation.Ok
-    # Wie bei der Aktivierung: Ob verschluesselt ist, wurde im Uebergabeblatt am
-    # deutschen Wort »nicht« erkannt. Auf Englisch traf das nie, und der Hinweis
-    # »dieses Notebook ist nicht verschluesselt« blieb aus.
-    $info.BitLocker = Get-WzBitLockerStatus
-    $info.BitLockerOn = Test-WzBitLockerActive
+    # Eine gemeinsame Abfrage statt zwei getrennter WMI-Aufrufe gegen
+    # microsoftvolumeencryption — spart auf verschlüsselten Geräten bis zu 5 s.
+    $bitlocker = Get-WzBitLockerInfo
+    $info.BitLocker = $bitlocker.Text
+    $info.BitLockerOn = $bitlocker.Active
 
     $info.SecureBoot = try {
         if (Confirm-SecureBootUEFI -ErrorAction Stop) { Get-WzText 'core.secureBootOn' } else { Get-WzText 'core.secureBootOff' }
@@ -603,17 +477,17 @@ function ConvertFrom-WzAvProductState {
     .SYNOPSIS
         Deutet den productState eines Virenscanners aus dem Sicherheitscenter.
     .NOTES
-        Das Feld ist ein Bitfeld ohne offizielle Beschreibung, aber seit
-        Windows 7 unverändert: Bit 12 sagt »eingeschaltet«, Bit 4 »Signaturen
-        veraltet«. Belegt an den Werten des Abnahmelaptops — 0x061100 für
-        Defender, 0x061000 für Malwarebytes, beide an und aktuell.
+        Das hohe Nibble des zweiten Bytes (0xF000) trägt den Zustand:
+        0x0000 = aus, 0x1000 = aktiv, 0x2000 = pausiert, 0x3000 = abgelaufen.
+        Nur Bit 0x1000 allein zu prüfen wertete abgelaufene Testfassungen
+        (0x3000) fälschlich als aktiv. Bit 0x10 meldet veraltete Signaturen.
     .OUTPUTS
         PSCustomObject mit Enabled und OutOfDate
     #>
     param([Parameter(Mandatory = $true)][int]$State)
 
     return [pscustomobject]@{
-        Enabled   = (($State -band 0x1000) -ne 0)
+        Enabled   = (($State -band 0xF000) -eq 0x1000)
         OutOfDate = (($State -band 0x10) -ne 0)
     }
 }
@@ -771,33 +645,37 @@ function Get-WzActivationStatus {
     }
 }
 
-function Get-WzBitLockerStatus {
+function Get-WzBitLockerInfo {
     <#
     .SYNOPSIS
-        BitLocker-Zustand als kurzer Text.
+        BitLocker-Zustand als Text und Wahrheitswert in einer einzigen Abfrage.
         Erst eine Registry-Schnellprüfung (15 ms): ist das Systemlaufwerk gar
         nicht verschlüsselt, wird der teure WMI-Namespace (5 s) übersprungen.
     #>
     $bootStatus = (Get-ItemProperty 'HKLM:\SYSTEM\CurrentControlSet\Control\BitLockerStatus' -ErrorAction SilentlyContinue).BootStatus
     $service = Get-Service BDESVC -ErrorAction SilentlyContinue
 
-    # Kein pauschales »Windows Home«: Home hat den Dienst ebenfalls, nur die
-    # Verwaltungsoberfläche fehlt dort.
-    if (-not $service) { return Get-WzText 'core.bdeNoService' }
+    if (-not $service) {
+        return [pscustomobject]@{ Text = (Get-WzText 'core.bdeNoService'); Active = $false }
+    }
     if ($bootStatus -eq 0 -and $service.Status -ne 'Running') {
-        # Laufwerksbuchstabe statt »Systemlaufwerk« — wie die WMI-Ausgabe unten
-        # (»C: an · D: aus«). Das lange Wort brach am Fenster-Mindestmaß mitten
-        # in der Dashboard-Karte um: »Systemlaufwer k«.
-        return Get-WzText 'core.bdeNotEncrypted' @{ laufwerk = $env:SystemDrive }
+        return [pscustomobject]@{
+            Text   = (Get-WzText 'core.bdeNotEncrypted' @{ laufwerk = $env:SystemDrive })
+            Active = $false
+        }
     }
 
     try {
-        $volumes = Get-CimInstance -Namespace 'root\cimv2\security\microsoftvolumeencryption' `
-            -Query 'SELECT DriveLetter,ProtectionStatus FROM Win32_EncryptableVolume' -ErrorAction Stop
-        if (-not $volumes) { return Get-WzText 'core.bdeNotSetup' }
+        $volumes = @(Get-CimInstance -Namespace 'root\cimv2\security\microsoftvolumeencryption' `
+            -Query 'SELECT DriveLetter,ProtectionStatus FROM Win32_EncryptableVolume' -ErrorAction Stop)
+        if ($volumes.Count -eq 0) {
+            return [pscustomobject]@{ Text = (Get-WzText 'core.bdeNotSetup'); Active = $false }
+        }
 
         $parts = @()
+        $active = $false
         foreach ($volume in $volumes) {
+            if ($volume.ProtectionStatus -eq 1) { $active = $true }
             if (-not $volume.DriveLetter) { continue }
             $state = switch ($volume.ProtectionStatus) {
                 0 { Get-WzText 'core.bdeOff' }
@@ -807,33 +685,19 @@ function Get-WzBitLockerStatus {
             }
             $parts += "$($volume.DriveLetter) $state"
         }
-        if ($parts.Count -eq 0) { return Get-WzText 'core.bdeNotSetup' }
-        return ($parts -join ' · ')
+        $text = if ($parts.Count -eq 0) { Get-WzText 'core.bdeNotSetup' } else { ($parts -join ' · ') }
+        return [pscustomobject]@{ Text = $text; Active = $active }
     } catch {
-        return Get-WzText 'core.bdeNotQueryable'
+        return [pscustomobject]@{ Text = (Get-WzText 'core.bdeNotQueryable'); Active = $false }
     }
 }
 
-function Test-WzBitLockerActive {
-    <#
-    .SYNOPSIS
-        Ist auf mindestens einem Laufwerk BitLocker eingeschaltet?
-    .DESCRIPTION
-        Sprachneutral, weil der Text aus Get-WzBitLockerStatus uebersetzt wird
-        und sich nicht vergleichen laesst. Fragt dieselbe WMI-Klasse ab.
-    #>
-    $bootStatus = (Get-ItemProperty 'HKLM:\SYSTEM\CurrentControlSet\Control\BitLockerStatus' -ErrorAction SilentlyContinue).BootStatus
-    $service = Get-Service BDESVC -ErrorAction SilentlyContinue
-    if (-not $service) { return $false }
-    if ($bootStatus -eq 0 -and $service.Status -ne 'Running') { return $false }
+function Get-WzBitLockerStatus {
+    return (Get-WzBitLockerInfo).Text
+}
 
-    try {
-        $volumes = Get-CimInstance -Namespace 'root\cimv2\security\microsoftvolumeencryption' `
-            -Query 'SELECT ProtectionStatus FROM Win32_EncryptableVolume' -ErrorAction Stop
-        return (@($volumes | Where-Object { $_.ProtectionStatus -eq 1 }).Count -gt 0)
-    } catch {
-        return $false
-    }
+function Test-WzBitLockerActive {
+    return (Get-WzBitLockerInfo).Active
 }
 
 function Get-WzTpmStatus {
@@ -958,6 +822,7 @@ function Invoke-WzAsInteractiveUser {
         } while ((Get-Date) -lt $deadline -and ($task.State -eq 'Running' -or $info.LastTaskResult -eq 267011))
 
         if ($task.State -eq 'Running' -or $info.LastTaskResult -eq 267011) {
+            Stop-ScheduledTask -TaskName $taskName -TaskPath $taskPath -ErrorAction SilentlyContinue
             $result.Error = Get-WzText 'core.userTaskTimeout' @{ sekunden = $TimeoutSeconds }
         } else {
             $result.Ran = $true

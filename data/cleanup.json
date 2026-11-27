@@ -167,6 +167,21 @@
       ]
     },
     {
+      "id": "brave-cache",
+      "group": "browser",
+      "name": "Brave Browser",
+      "description": "Zwischenspeicher von Brave. Anmeldungen, Lesezeichen und Passwörter bleiben erhalten.",
+      "method": "files",
+      "risk": "low",
+      "defaultChecked": true,
+      "blockingProcesses": ["brave"],
+      "paths": [
+        "%LOCALAPPDATA%\\BraveSoftware\\Brave-Browser\\User Data\\*\\Cache\\*",
+        "%LOCALAPPDATA%\\BraveSoftware\\Brave-Browser\\User Data\\*\\Code Cache\\*",
+        "%LOCALAPPDATA%\\BraveSoftware\\Brave-Browser\\User Data\\*\\GPUCache\\*"
+      ]
+    },
+    {
       "id": "component-store",
       "group": "deep",
       "name": "Komponentenspeicher aufräumen",

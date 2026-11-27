@@ -1,11 +1,12 @@
-﻿# Seite "Programme" — winget-Katalog mit Auswahl, Installation und
-# Vorablade-Funktion für den Einsatz ohne Internet.
+﻿# Seite "Programme" — winget-Katalog mit Auswahl, Sofortfilter,
+# Installation und Aktualisierung vorhandener Programme.
 
 function Initialize-WzAppsPage {
+    $syncHash.AppsWingetAvailable = $false
+    $syncHash.AppsCards = @()
     $syncHash.AppsRows = New-WzAppList
 
     $syncHash.AppsBtnInstall.Add_Click({ Start-WzAppInstall })
-    $syncHash.AppsBtnDownload.Add_Click({ Start-WzAppDownload })
     $syncHash.AppsBtnWinget.Add_Click({ Start-WzWingetBootstrap })
 
     $syncHash.AppsBtnRecommended.Add_Click({
@@ -18,6 +19,7 @@ function Initialize-WzAppsPage {
         foreach ($entry in $syncHash.AppsRows) { $entry.CheckBox.IsChecked = $false }
         Update-WzAppsSelection
     })
+    $syncHash.AppsSearch.Add_TextChanged({ Update-WzAppsFilter })
 
     $syncHash.AppsBtnUpgradeScan.Add_Click({ Start-WzUpgradeScan })
     $syncHash.AppsBtnUpgrade.Add_Click({ Start-WzAppUpgrade })
@@ -34,61 +36,47 @@ function Update-WzAppsPage {
     $syncHash.AppsChecked = $true
 
     Invoke-WzTask -Name (Get-WzText 'apps.taskCheckWinget') -Silent -ScriptBlock {
-        [pscustomobject]@{
-            Winget  = Test-WzWinget
-            Offline = Get-WzOfflineInstallerInfo
-        }
+        Test-WzWinget
     } -OnComplete {
-        param($info)
-        if (-not $info) { return }
-        Write-WzAppsStatus -Info $info
+        param($winget)
+        if (-not $winget) { return }
+        Write-WzAppsStatus -Winget $winget
     }
 }
 
 function Write-WzAppsStatus {
-    param([Parameter(Mandatory = $true)]$Info)
+    param([Parameter(Mandatory = $true)]$Winget)
 
     $notices = $syncHash.AppsNotices
     $notices.Items.Clear()
 
-    if ($Info.Winget.Available) {
-        Write-WzLog (Get-WzText 'apps.logWingetFound' @{ version = $Info.Winget.Version }) -Level Info
+    $syncHash.AppsWingetAvailable = [bool]$Winget.Available
+    if ($Winget.Available) {
+        Write-WzLog (Get-WzText 'apps.logWingetFound' @{ version = $Winget.Version }) -Level Info
         $syncHash.AppsBtnWinget.Visibility = [Windows.Visibility]::Collapsed
-        $syncHash.AppsBtnInstall.IsEnabled = $true
     } else {
         [void]$notices.Items.Add((New-WzNotice -Kind 'warn' `
             -Text (Get-WzText 'apps.noticeNoWinget')))
         $syncHash.AppsBtnWinget.Visibility = [Windows.Visibility]::Visible
-        $syncHash.AppsBtnInstall.IsEnabled = $false
         Write-WzLog (Get-WzText 'apps.logWingetMissing') -Level Warn
     }
 
-    if ($Info.Offline.Count -gt 0) {
-        $syncHash.AppsOfflineHint.Text =
-            Get-WzText 'apps.offlineHave' @{ anzahl = $Info.Offline.Count; groesse = (Format-WzBytes $Info.Offline.Bytes) }
-    } else {
-        $syncHash.AppsOfflineHint.Text = Get-WzText 'apps.offlineNone'
-    }
-
-    # Die Suche nach veralteten Programmen läuft NICHT von selbst, obwohl sie
-    # gerade dann am nützlichsten wäre. Zwei Gründe, beide schwerer als die
-    # Bequemlichkeit: Sie fragt winget, und das geht ins Netz — ungefragt, beim
-    # bloßen Öffnen einer Seite, tut WinZii das nirgends. Und sie dauert auf
-    # einem gewachsenen Gerät bis zu einer Minute, in der kein anderer Schritt
-    # anlaufen kann. Wer nur ein Programm installieren will, stünde davor.
-    $syncHash.AppsBtnUpgradeScan.IsEnabled = $Info.Winget.Available
+    $syncHash.AppsBtnUpgradeScan.IsEnabled = $Winget.Available
     $syncHash.AppsBtnUpgradeAll.IsEnabled = $false
-    $syncHash.AppsUpgradeTitle.Text = if ($Info.Winget.Available) {
+    $syncHash.AppsUpgradeTitle.Text = if ($Winget.Available) {
         Get-WzText 'apps.upgradeNotChecked'
     } else {
         Get-WzText 'apps.upgradeNoWinget'
     }
+
+    Update-WzAppsSelection
 }
 
 function New-WzAppList {
     $container = $syncHash.AppsCategories
     $container.Children.Clear()
     $rows = New-Object Collections.ArrayList
+    $cards = New-Object Collections.ArrayList
 
     foreach ($category in (Get-WzAppCategories)) {
         $apps = @(Get-WzApps -Category $category.id)
@@ -100,29 +88,58 @@ function New-WzAppList {
         $lead = New-Object Windows.Controls.TextBlock
         $lead.Text = $category.description
         $lead.Style = $syncHash.Window.FindResource('WzLabel')
-        # Ohne Umbruch lief der Satz rechts aus der Karte heraus und wurde
-        # abgeschnitten — auffällig erst bei den längeren Beschreibungen.
         $lead.TextWrapping = 'Wrap'
         $lead.Margin = New-Object Windows.Thickness(0, 0, 0, 12)
         [void]$stack.Children.Add($lead)
 
+        $cardRows = @()
         foreach ($app in $apps) {
             $row = New-WzCheckRow -Item $app -IsChecked ([bool]$app.defaultChecked)
             $row.CheckBox.Add_Click({ Update-WzAppsSelection })
             [void]$stack.Children.Add($row.Row)
-            [void]$rows.Add([pscustomobject]@{ App = $app; CheckBox = $row.CheckBox })
+            $entry = [pscustomobject]@{
+                App         = $app
+                CheckBox    = $row.CheckBox
+                Row         = $row.Row
+                SearchText  = "$($app.name) $($app.description) $($app.wingetId) $($category.name)".ToLowerInvariant()
+            }
+            [void]$rows.Add($entry)
+            $cardRows += $entry
         }
 
+        [void]$cards.Add([pscustomobject]@{ Card = $card.Card; Rows = $cardRows })
         [void]$container.Children.Add($card.Card)
     }
 
+    $syncHash.AppsCards = @($cards)
     return $rows
+}
+
+function Update-WzAppsFilter {
+    $query = if ($syncHash.AppsSearch) { $syncHash.AppsSearch.Text.Trim().ToLowerInvariant() } else { '' }
+    $tokens = if ($query) { @($query -split '\s+' | Where-Object { $_ }) } else { @() }
+
+    foreach ($cardInfo in @($syncHash.AppsCards)) {
+        $anyVisible = $false
+        foreach ($entry in $cardInfo.Rows) {
+            $match = $true
+            foreach ($token in $tokens) {
+                if ($entry.SearchText.IndexOf($token, [StringComparison]::Ordinal) -lt 0) {
+                    $match = $false
+                    break
+                }
+            }
+            $entry.Row.Visibility = if ($match) { [Windows.Visibility]::Visible } else { [Windows.Visibility]::Collapsed }
+            if ($match) { $anyVisible = $true }
+        }
+        $cardInfo.Card.Visibility = if ($anyVisible) { [Windows.Visibility]::Visible } else { [Windows.Visibility]::Collapsed }
+    }
 }
 
 function Update-WzAppsSelection {
     $count = @($syncHash.AppsRows | Where-Object { $_.CheckBox.IsChecked }).Count
     $syncHash.AppsSelectionCount.Text = Get-WzText 'apps.selectedCount' @{ anzahl = $count }
-    $syncHash.AppsBtnDownload.IsEnabled = ($count -gt 0)
+    $syncHash.AppsBtnInstall.IsEnabled = ($count -gt 0 -and ([bool]$syncHash.AppsWingetAvailable -or $syncHash.DryRun))
 }
 
 function Get-WzSelectedApps {
@@ -136,21 +153,11 @@ function Start-WzAppInstall {
         return
     }
 
-    # Vorher sagen, was aus dem Vorrat kommt und was aus dem Netz — das
-    # entscheidet darüber, ob der Vorgang auch ohne Verbindung durchläuft.
-    $fromVault = @($selected | Where-Object { Get-WzOfflineInstallerPath -App $_ })
     $message = Get-WzText 'apps.installMessage' @{ anzahl = $selected.Count }
-    if ($fromVault.Count -eq $selected.Count) {
-        $message = Get-WzText 'apps.installFromVault' @{ anzahl = $selected.Count }
-    } elseif ($fromVault.Count -gt 0) {
-        $message += Get-WzText 'apps.installMixed' @{ anzahl = $fromVault.Count }
-    }
     if ($syncHash.DryRun) { $message = Get-WzText 'apps.installDryRun' @{ rest = $message } }
 
     $answer = Show-WzConfirm -Title (Get-WzText 'apps.installTitle') -Message $message `
-        -Items @($selected | ForEach-Object {
-            if (Get-WzOfflineInstallerPath -App $_) { Get-WzText 'apps.itemFromVault' @{ name = $_.name } } else { $_.name }
-        }) `
+        -Items @($selected | ForEach-Object { $_.name }) `
         -ConfirmText $(if ($syncHash.DryRun) { Get-WzText 'apps.btnDryRun' } else { Get-WzText 'apps.btnInstallNow' })
     if (-not $answer.Confirmed) { return }
 
@@ -166,8 +173,6 @@ function Start-WzAppInstall {
         if ($summary.Failed -gt 0) { $lines += Get-WzText 'apps.lineFailed' @{ anzahl = $summary.Failed } }
         if ($summary.RebootRequired) { $lines += Get-WzText 'apps.lineReboot' }
 
-        # Nur festhalten, was wirklich angekommen ist — vorher wanderte die
-        # ganze Auswahl ins Übergabeblatt, auch die gescheiterten Programme.
         if ($summary.Installed -gt 0) {
             Add-WzAction -Area 'Programme' `
                 -Summary ((Get-WzText 'apps.actionInstalled' @{ anzahl = $summary.Installed }) + $(if ($summary.Failed -gt 0) { Get-WzText 'apps.actionFailedSuffix' @{ anzahl = $summary.Failed } })) `
@@ -179,40 +184,7 @@ function Start-WzAppInstall {
     }.GetNewClosure()
 }
 
-function Start-WzAppDownload {
-    $selected = Get-WzSelectedApps
-    if ($selected.Count -eq 0) { return }
-
-    $volume = Get-WzVolumeInfo
-    $answer = Show-WzConfirm -Title (Get-WzText 'apps.downloadTitle') `
-        -Message (Get-WzText 'apps.downloadMessage' @{ anzahl = $selected.Count; frei = (Format-WzBytes $volume.FreeBytes) }) `
-        -Items @($selected | ForEach-Object { $_.name }) -ConfirmText (Get-WzText 'apps.btnDownload2')
-    if (-not $answer.Confirmed) { return }
-
-    # Abbrechbar: ein reiner Download, das Modul beendet winget dann mit.
-    Invoke-WzTask -Name (Get-WzText 'apps.taskDownload') -Cancelable -ArgumentList (, $selected) -ScriptBlock {
-        param($apps)
-        Save-WzOfflineInstallers -Apps $apps
-    } -OnComplete {
-        param($summary)
-        if (-not $summary) { return }
-        $message = Get-WzText 'apps.downloadDone' @{ anzahl = $summary.Saved; groesse = (Format-WzBytes $summary.Bytes) }
-        if ($summary.Failed -gt 0) { $message += Get-WzText 'apps.downloadFailedSuffix' @{ anzahl = $summary.Failed } }
-        if ($summary.Saved -gt 0) {
-            Add-WzAction -Area 'Programme' `
-                -Summary (Get-WzText 'apps.actionDownloaded' @{ anzahl = $summary.Saved; groesse = (Format-WzBytes $summary.Bytes) })
-        }
-        Show-WzInfo -Title $(if ($summary.Failed -gt 0) { Get-WzText 'apps.downloadPartialTitle' } else { Get-WzText 'apps.downloadDoneTitle' }) `
-            -Message $message -Items @($summary.Details)
-        $syncHash.AppsChecked = $false
-        Update-WzAppsPage
-    }
-}
-
 function Start-WzWingetBootstrap {
-    # Ehrliche Mengenangabe: Liegen die Pakete schon auf dem Stick, geht es in
-    # Sekunden. Beim ersten Mal sind es rund 315 MB — das darf nicht als
-    # »drei Pakete« verharmlost werden, wenn jemand im Hotel-WLAN sitzt.
     $cached = Test-Path -LiteralPath (Join-Path (Join-Path (Get-WzOfflineDir) 'winget') 'AppInstaller.msixbundle')
     $sizeNote = if ($cached) {
         Get-WzText 'apps.bootstrapCached'
@@ -233,8 +205,6 @@ function Start-WzWingetBootstrap {
         $syncHash.AppsChecked = $false
         Update-WzAppsPage
         if ($syncHash.DryRun) {
-            # Im Testmodus liefert der Vorgang immer $false — das las sich bisher
-            # wie ein Fehlschlag, obwohl gar nichts versucht wurde.
             Show-WzInfo -Title (Get-WzText 'apps.dryRunDoneTitle') `
                 -Message (Get-WzText 'apps.dryRunDoneMessage')
             return
@@ -266,10 +236,6 @@ function Start-WzUpgradeScan {
 }
 
 function Write-WzUpgradeList {
-    <#
-    .SYNOPSIS
-        Füllt die Karte mit dem, was sich aktualisieren lässt.
-    #>
     param([Parameter(Mandatory = $true)]$Result)
 
     $apps = @($Result.Apps)
@@ -341,8 +307,6 @@ function Start-WzAppUpgrade {
                 aktualisiert = $summary.Updated; uebersprungen = $summary.Skipped; fehlgeschlagen = $summary.Failed }) `
             -Items @(@($summary.UpdatedNames) + @($summary.Details))
 
-        # Neu messen statt die Liste zu Fuß zu pflegen: Ein Programm, das eine
-        # zweite Aktualisierung nachzieht, stünde sonst als erledigt da.
         Start-WzUpgradeScan
     }
 }

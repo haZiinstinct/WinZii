@@ -311,30 +311,7 @@ if ($winget) {
     Write-Host "  wingetcodes $(@($winget.codes).Count) Codes, hex gegen code gerechnet" -ForegroundColor Gray
 }
 
-# --- updatecodes, oemtools ---------------------------------------------------
-# Beide wurden bisher nur auf gültiges JSON geprüft. Ein Code ohne führende
-# Nullen fand Get-WzUpdateText nie, denn verglichen wird als Zeichenkette
-# (Audit 2026-10, N).
-$updatecodes = Read-Catalog 'updatecodes'
-if ($updatecodes) {
-    $seenUpdate = @{}
-    foreach ($entry in $updatecodes.codes) {
-        $checked++
-        foreach ($field in @('code', 'outcome', 'text')) {
-            if (-not $entry.$field) { Add-Problem 'updatecodes' "$($entry.code) : Feld '$field' fehlt" }
-        }
-        if ($entry.code -cnotmatch '^0x[0-9A-F]{8}$') {
-            Add-Problem 'updatecodes' "'$($entry.code)' ist keine achtstellige Hexzahl in Großbuchstaben"
-        }
-        if ($entry.outcome -notin @('ok', 'skip', 'reboot', 'fail')) {
-            Add-Problem 'updatecodes' "$($entry.code) : unbekanntes outcome '$($entry.outcome)'"
-        }
-        if ($seenUpdate.ContainsKey([string]$entry.code)) { Add-Problem 'updatecodes' "$($entry.code) doppelt" }
-        $seenUpdate[[string]$entry.code] = $true
-    }
-    Write-Host "  updatecodes $(@($updatecodes.codes).Count) Codes" -ForegroundColor Gray
-}
-
+# --- oemtools ----------------------------------------------------------------
 $oemtools = Read-Catalog 'oemtools'
 if ($oemtools) {
     foreach ($tool in $oemtools.tools) {
@@ -395,7 +372,6 @@ $felder = @(
     @{ Katalog = 'office';      Liste = 'apps';       Key = 'id';         Felder = @('name') }
     @{ Katalog = 'tweaks';      Liste = 'categories'; Key = 'id';         Felder = @('name', 'description') }
     @{ Katalog = 'tweaks';      Liste = 'tweaks';     Key = 'id';         Felder = @('name', 'description') }
-    @{ Katalog = 'updatecodes'; Liste = 'codes';      Key = 'code';       Felder = @('text') }
     @{ Katalog = 'wingetcodes'; Liste = 'codes';      Key = 'code';       Felder = @('text') }
 )
 $einzelfelder = @(

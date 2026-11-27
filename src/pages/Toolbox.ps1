@@ -3,12 +3,22 @@
 
 function Initialize-WzToolboxPage {
     $syncHash.ToolBtnNetDiag.Add_Click({ Start-WzNetworkDiagnosis })
+    $syncHash.ToolBtnNetFix.Add_Click({
+        switch ([string]$syncHash.ToolBtnNetFix.Tag) {
+            'renew' { Start-WzNetworkRenew }
+            'dns'   { Start-WzDnsChange -Provider 'Cloudflare' }
+            'reset' { Start-WzNetworkReset }
+            'time'  { Start-WzTimeSync }
+        }
+    })
     $syncHash.ToolBtnScan.Add_Click({ Start-WzDefenderQuickScan })
     $syncHash.ToolBtnRenew.Add_Click({ Start-WzNetworkRenew })
     $syncHash.ToolBtnNetReset.Add_Click({ Start-WzNetworkReset })
     $syncHash.ToolBtnWuReset.Add_Click({ Start-WzUpdateReset })
     $syncHash.ToolBtnSpooler.Add_Click({ Start-WzSpoolerRepair })
     $syncHash.ToolBtnRestorePoint.Add_Click({ Start-WzRestorePoint })
+    $syncHash.ToolBtnTimeSync.Add_Click({ Start-WzTimeSync })
+    $syncHash.ToolBtnFirmwareActivate.Add_Click({ Start-WzFirmwareActivate })
     $syncHash.ToolBtnBloatScan.Add_Click({ Start-WzBloatwareScan })
     $syncHash.ToolBtnBloatRemove.Add_Click({ Start-WzBloatwareRemove })
 
@@ -39,6 +49,8 @@ function Start-WzNetworkDiagnosis {
     $syncHash.NetDiagTitle.Text = Get-WzText 'tool.checking'
     $syncHash.NetDiagSteps.Children.Clear()
     $syncHash.NetDiagVerdict.Items.Clear()
+    $syncHash.ToolBtnNetFix.Visibility = [Windows.Visibility]::Collapsed
+    $syncHash.ToolBtnNetFix.Tag = ''
 
     Invoke-WzTask -Name (Get-WzText 'tool.taskNetDiag') -ScriptBlock {
         Invoke-WzNetworkDiagnosis
@@ -81,6 +93,23 @@ function Write-WzNetworkDiagnosis {
     [void]$syncHash.NetDiagVerdict.Items.Add((New-WzNotice -Kind $verdictKind -Text $Diagnosis.Verdict))
     [void]$syncHash.NetDiagVerdict.Items.Add((New-WzNotice -Kind 'info' -Text $Diagnosis.Recommendation))
 
+    # 1-Klick-Reparaturknopf passend zum erkannten Fehlerbild
+    $fixLabel = switch ($Diagnosis.FixHint) {
+        'renew' { Get-WzText 'tool.fixBtnRenew' }
+        'dns'   { Get-WzText 'tool.fixBtnDns' }
+        'reset' { Get-WzText 'tool.fixBtnReset' }
+        'time'  { Get-WzText 'tool.fixBtnTime' }
+        default { '' }
+    }
+    if ($fixLabel) {
+        $syncHash.ToolBtnNetFix.Content = $fixLabel
+        $syncHash.ToolBtnNetFix.Tag = $Diagnosis.FixHint
+        $syncHash.ToolBtnNetFix.Visibility = [Windows.Visibility]::Visible
+    } else {
+        $syncHash.ToolBtnNetFix.Visibility = [Windows.Visibility]::Collapsed
+        $syncHash.ToolBtnNetFix.Tag = ''
+    }
+
     Write-WzLog $Diagnosis.Verdict -Level $(if ($Diagnosis.Ok) { 'Ok' } else { 'Warn' })
 }
 
@@ -108,7 +137,9 @@ function Start-WzNetworkRenew {
     } -OnComplete {
         param($result)
         if (-not $result) { return }
-        Add-WzAction -Area 'Reparatur' -Summary (Get-WzText 'tool.actionRenew')
+        if ($result.Done -gt 0) {
+            Add-WzAction -Area 'Reparatur' -Summary (Get-WzText 'tool.actionRenew')
+        }
         Show-WzInfo -Title (Get-WzText 'tool.renewTitle') `
             -Message (Get-WzText 'tool.renewMessage' @{ anzahl = $result.Done })
     }
@@ -126,8 +157,10 @@ function Start-WzNetworkReset {
     } -OnComplete {
         param($result)
         if (-not $result) { return }
-        Add-WzAction -Area 'Reparatur' -RebootRequired `
-            -Summary (Get-WzText 'tool.actionReset')
+        if ($result.Done -gt 0) {
+            Add-WzAction -Area 'Reparatur' -RebootRequired `
+                -Summary (Get-WzText 'tool.actionReset')
+        }
         Show-WzInfo -Title (Get-WzText 'tool.resetDoneTitle') `
             -Message (Get-WzText 'tool.resetDoneMessage' @{ anzahl = $result.Done })
     }
@@ -143,9 +176,6 @@ function Start-WzDnsChange {
         default      { Get-WzText 'tool.dnsRouter' }
     }
 
-    # Bewusst genau formuliert: »zurück auf Router« stellt auf DHCP um und ist
-    # nicht dasselbe wie ein von Hand eingetragener Server. Die bisherigen Werte
-    # landen deshalb vorher als Datei im Sicherungsordner.
     $answer = Show-WzConfirm -Title (Get-WzText 'tool.dnsDialogTitle' @{ anbieter = $Provider }) `
         -Message ("$description`n`n" + (Get-WzText 'tool.dnsMessage')) `
         -ConfirmText (Get-WzText 'tool.btnSwitch')
@@ -157,8 +187,10 @@ function Start-WzDnsChange {
     } -OnComplete {
         param($result)
         if (-not $result) { return }
-        Add-WzAction -Area 'Reparatur' -Summary (Get-WzText 'tool.actionDns' @{ anbieter = $Provider }) `
-            -Detail @($result.Adapters)
+        if ($result.Changed -gt 0) {
+            Add-WzAction -Area 'Reparatur' -Summary (Get-WzText 'tool.actionDns' @{ anbieter = $Provider }) `
+                -Detail @($result.Adapters)
+        }
         $message = Get-WzText 'tool.dnsChanged' @{ anzahl = $result.Changed }
         if ($result.BackupFile) { $message += Get-WzText 'tool.dnsBackupHint' }
         Show-WzInfo -Title (Get-WzText 'tool.dnsDoneTitle') -Message $message `
@@ -202,10 +234,43 @@ function Start-WzSpoolerRepair {
     } -OnComplete {
         param($result)
         if (-not $result) { return }
-        Add-WzAction -Area 'Reparatur' `
-            -Summary (Get-WzText 'tool.actionSpooler' @{ anzahl = $result.Removed })
+        if ($result.Removed -gt 0) {
+            Add-WzAction -Area 'Reparatur' `
+                -Summary (Get-WzText 'tool.actionSpooler' @{ anzahl = $result.Removed })
+        }
         Show-WzInfo -Title (Get-WzText 'tool.spoolerDoneTitle') `
             -Message (Get-WzText 'tool.spoolerDoneMessage' @{ anzahl = $result.Removed })
+    }
+}
+
+function Start-WzTimeSync {
+    Invoke-WzTask -Name (Get-WzText 'tool.taskTimeSync') -ScriptBlock {
+        Sync-WzSystemTime
+    } -OnComplete {
+        param($result)
+        if (-not $result) { return }
+        if ($result.Success) {
+            Add-WzAction -Area 'Reparatur' -Summary $result.Summary
+        }
+        Show-WzInfo -Title (Get-WzText 'tool.btnTimeSync') -Message $result.Summary
+    }
+}
+
+function Start-WzFirmwareActivate {
+    $answer = Show-WzConfirm -Title (Get-WzText 'tool.firmwareTitle') `
+        -Message (Get-WzText 'tool.firmwareMessage') `
+        -ConfirmText (Get-WzText 'tool.btnFirmwareGo')
+    if (-not $answer.Confirmed) { return }
+
+    Invoke-WzTask -Name (Get-WzText 'tool.firmwareTitle') -ScriptBlock {
+        Invoke-WzFirmwareActivation
+    } -OnComplete {
+        param($result)
+        if (-not $result) { return }
+        if ($result.Activated) {
+            Add-WzAction -Area 'Sicherheit' -Summary $result.Summary
+        }
+        Show-WzInfo -Title (Get-WzText 'tool.firmwareTitle') -Message $result.Summary
     }
 }
 
@@ -300,9 +365,12 @@ function Start-WzBloatwareRemove {
     } -OnComplete {
         param($result)
         if (-not $result) { return }
-        Add-WzAction -Area 'Vorinstallierte Apps' `
-            -Summary (Get-WzText 'tool.actionBloat' @{ anzahl = $result.Removed }) `
-            -Detail @($selected | ForEach-Object { $_.DisplayName })
+        if ($result.Removed -gt 0) {
+            $removedNames = if ($result.PSObject.Properties['RemovedNames']) { @($result.RemovedNames) } else { @() }
+            Add-WzAction -Area 'Vorinstallierte Apps' `
+                -Summary (Get-WzText 'tool.actionBloat' @{ anzahl = $result.Removed }) `
+                -Detail $removedNames
+        }
 
         $message = Get-WzText 'tool.bloatDoneMessage' @{ entfernt = $result.Removed; fehlgeschlagen = $result.Failed }
         if ($result.RecordFile) { $message += Get-WzText 'tool.bloatRecordHint' }

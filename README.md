@@ -9,9 +9,9 @@ Vom USB-Stick starten, aufräumen, optimieren, einrichten — ohne Installation,
 
 **Deutsch** · [English](README.en.md)
 
-<sub>A Windows maintenance toolkit for IT technicians. Fully bilingual German/English — interface, dialogs, log, reports and handover sheet.</sub>
+<sub>A Windows maintenance toolkit for IT technicians. Fully bilingual German/English — interface, dialogs, log and reports.</sub>
 
-![Version](https://img.shields.io/badge/Version-0.7.0-00d4ff?labelColor=0a0a0f&style=flat-square)
+![Version](https://img.shields.io/badge/Version-0.8.0-00d4ff?labelColor=0a0a0f&style=flat-square)
 ![Windows](https://img.shields.io/badge/Windows-10%20%7C%2011-00d4ff?labelColor=0a0a0f&style=flat-square)
 ![PowerShell](https://img.shields.io/badge/PowerShell-5.1-00d4ff?labelColor=0a0a0f&style=flat-square)
 ![Installation](https://img.shields.io/badge/Installation-keine-00d4ff?labelColor=0a0a0f&style=flat-square)
@@ -26,22 +26,20 @@ Vom USB-Stick starten, aufräumen, optimieren, einrichten — ohne Installation,
 
 | Bereich | Was es tut |
 | --- | --- |
-| **Dashboard** | Windows-Version, Hardware, Grafik, Bildschirme, BIOS, RAM-Steckplätze und Akkuverschleiß, dazu Aktivierung, BitLocker, Virenschutz, Datenträger und Netzwerk — alles auf einen Blick beim Aufsetzen des PCs. |
-| **Einrichten** | Was nach der Neuinstallation als Erstes ansteht: Rechnername, lokales Konto, Zeitzone und Zeitabgleich, Zahlenformat und Tastaturlayout, Windows-Aktivierung samt dem Schlüssel aus der Firmware, Netzwerkdrucker. Bisher der einzige Teil der Arbeit, für den man das Werkzeug verlassen musste. |
-| **Diagnose** | Wertet die Ereignisprotokolle aus und übersetzt sie in Klartext: was passiert ist, was es bedeutet, was zu tun ist. Dazu Bluescreen-Stoppcodes, Datenträgerzustand und die Werkzeuge sfc, DISM und chkdsk. Der **Belastungstest** lastet Rechenwerk, Speicher und Datenträger aus und findet, was im Leerlauf unsichtbar bleibt: eine Kühlung am Ende, an der der Takt einbricht. |
-| **Updates** | Zeigt, was Windows noch nachzuholen hat, und spielt es ein. Treiber stehen getrennt und sind nie vorausgewählt — Windows Update bietet dort gern ältere Herstellerstände an, die einen neueren Treiber überschreiben. Eingespielt wird eines nach dem anderen, damit im Protokoll steht, wo es hängt; neu gestartet wird nie von selbst. |
-| **Optimierung** | 49 Eingriffe für Geschwindigkeit, Telemetrie, Datenschutz und Sicherheit. Jeder mit Begründung, jeder einzeln zurücknehmbar. |
+| **Dashboard** | Windows-Version, Hardware, Grafik, Bildschirme, BIOS und RAM-Steckplätze, dazu Aktivierung, BitLocker, Virenschutz, Datenträger, Netzwerk und Momentaufnahme-Vergleich — alles auf einen Blick, inklusive Klick-Sprung zu zurückgedrehten Optimierungen. |
+| **Diagnose** | Wertet die Ereignisprotokolle aus und übersetzt sie in Klartext: was passiert ist, was es bedeutet, was zu tun ist. Dazu Bluescreen-Stoppcodes, Datenträgerzustand und die Werkzeuge sfc, DISM und chkdsk mit Live-Ausgabe in der Konsole. Der **Belastungstest** lastet Rechenwerk, Speicher und Datenträger aus und findet, was im Leerlauf unsichtbar bleibt: eine Kühlung am Ende, an der der Takt einbricht. |
+| **Optimierung** | 48 Eingriffe für Geschwindigkeit, Telemetrie, Datenschutz und Sicherheit (insgesamt 58 mit KI-Entfernung). Jeder mit Begründung, jeder einzeln zurücknehmbar — mit 1-Klick-Voreinstellungen (**Empfohlen**, **Maximal schlank**, **Nur Telemetrie**), Live-Suche, Filter für noch offene Punkte und direktem Explorer-Neustart. |
 | **KI-Entfernung** | Findet Copilot, Recall und Click to Do — sperrt sie per Richtlinie oder entfernt sie ganz. Die Sperren wirken auch vorbeugend gegen Funktionsupdates. |
-| **Bereinigung** | Zeigt erst, wo wie viel Platz liegt (Zwischenspeicher, Update-Reste, Browser-Caches, Windows.old), dann wird gezielt gelöscht. Persönliche Dateien sind ausgeschlossen. |
-| **Programme** | 60 Programme über winget, darunter eine Rubrik **Sicherheit** (Zweitmeinung, Aufräumen nach einem Befall, Schutz danach), mit Nachinstallation von winget selbst für LTSC-Systeme. Installationsdateien lassen sich auf den Stick laden — zum Installieren braucht winget trotzdem Netz. Dazu die andere Hälfte: Was **schon installiert, aber veraltet** ist, wird beim Öffnen mitgemessen und auf Wunsch aktualisiert. |
-| **Deinstallieren** | Installierte Programme suchen und entfernen, still wo möglich — und danach die Reste, die der Deinstallierer liegen lässt: Installationsordner, Startmenü-Einträge, eigene Registry-Schlüssel. Die Funde stehen mit Größe im Dialog, entfernt wird erst nach Bestätigung, Schlüssel vorher als `.reg` gesichert. |
+| **Bereinigung** | Zeigt erst, wo wie viel Platz liegt (Zwischenspeicher, Update-Reste, Browser-Caches inkl. Brave, Windows.old), dann wird gezielt gelöscht. Persönliche Dateien sind ausgeschlossen. |
+| **Programme** | 60 Programme über winget mit Live-Suche, darunter eine Rubrik **Sicherheit** (Zweitmeinung, Aufräumen nach einem Befall, Schutz danach), mit Nachinstallation von winget selbst für LTSC-Systeme. Dazu die andere Hälfte: Was **schon installiert, aber veraltet** ist, wird auf Klick gemessen und aktualisiert. |
+| **Deinstallieren** | Installierte Programme blitzschnell suchen, sortieren (Name, Größe, Datum) und still entfernen — und danach die Reste, die der Deinstallierer liegen lässt: Installationsordner, Startmenü-Einträge, eigene Registry-Schlüssel. Die Funde stehen mit Größe im Dialog, entfernt wird erst nach Bestätigung, Schlüssel vorher als `.reg` gesichert. |
 | **Office** | Microsoft 365, Office LTSC 2024 und 2021 über das offizielle Bereitstellungswerkzeug — auf Wunsch komplett offline vom Stick. Dazu LibreOffice. |
-| **Daten** | Beantwortet vor der Neuinstallation: Was muss gesichert werden? Profilgrößen je Konto, wann ein Konto zuletzt benutzt wurde, Outlook-Dateien, Browser-Profile, Drucker, Netzlaufwerke, Produktschlüssel. Warnt nicht nur vor OneDrive-Platzhaltern, die im Explorer wie Dateien aussehen und leer sind, sondern lädt sie auf Wunsch herunter und wartet auf den Abschluss. Exportiert Lesezeichen, WLAN-Zugänge, Geräteliste und BitLocker-Schlüssel — und kopiert die persönlichen Ordner mit robocopy auf eine externe Platte, ohne an der Quelle etwas zu löschen. |
+| **Daten** | Beantwortet vor der Neuinstallation: Was muss gesichert werden? Profilgrößen je Konto, wann ein Konto zuletzt benutzt wurde, Outlook-Dateien, Browser-Profile, Drucker, Netzlaufwerke, Produktschlüssel. Warnt nicht nur vor OneDrive-Platzhaltern, die im Explorer wie Dateien aussehen und leer sind, sondern lädt sie auf Wunsch herunter und wartet auf den Abschluss. Exportiert Lesezeichen, WLAN-Zugänge, Geräteliste und BitLocker-Schlüssel — und kopiert die persönlichen Ordner mit robocopy (`/MT:8`) auf eine externe Platte, ohne an der Quelle etwas zu löschen. |
 | **Zurückspielen** | Die andere Hälfte des Datenumzugs: WLAN-Netze, Lesezeichen, Drucker und Netzlaufwerke aus einer Sicherung wieder anlegen — auch aus der eines anderen Rechners. Zeigt vorher, was passt und was nicht: fehlende Druckertreiber, Browser-Profile, die es hier nicht gibt, und WLAN-Netze, die ohne Schlüssel gesichert wurden. |
 | **Treiber** | Geräte mit Fehlercode im Klartext statt als Nummer. Treiberbestand nach Alter sortiert — bei Bluescreens der schnellste Weg zum Verdächtigen. Treiber auf den Stick sichern und nach dem Neuaufsetzen in einem Rutsch zurückspielen. Und sie **beschaffen** — in Stufen: Windows Update, dann das stille Kommandozeilenwerkzeug von Dell, Lenovo oder HP, und für Geräte, die dann immer noch ohne Treiber dastehen, der Microsoft Update-Katalog über die Hardware-Kennung. |
-| **Autostart** | Zeigt alles, was beim Anmelden mitstartet, samt Herausgeber. Abschalten statt löschen, jederzeit umkehrbar. |
-| **Reparatur** | Misst erst, wo es klemmt (Netzwerkkarte, IP, Router, Namensauflösung, Internet), und benennt dann die passende Maßnahme. Dazu Windows-Update-Zwischenspeicher leeren, Druckwarteschlange befreien, Virenschnellprüfung, vorinstallierte Apps entfernen. |
-| **Protokoll** | Jeder Schritt wird mitgeschrieben. Zwei Ausgaben: das technische Protokoll und das **Übergabeblatt** — was gemacht wurde, wie viel Platz gewonnen wurde, wie der PC ausgestattet ist und was noch ansteht, in Kundensprache und mit Feldern für Techniker, Kunde und Auftragsnummer — **auch als PDF**. Dazu das Inventar als CSV und JSON für die eigene Kundendatei und ein Archiv mit allen Berichten des Geräts. |
+| **Autostart** | Zeigt alles, was beim Anmelden mitstartet, samt Herausgeber (auch für Verknüpfungen). Abschalten statt löschen, jederzeit umkehrbar. |
+| **Reparatur** | Misst erst, wo es klemmt (Netzwerkkarte, IP, Router, Namensauflösung, Internet), und bietet direkt die passende 1-Klick-Behebung an. Dazu automatischer Zeitabgleich, Windows-Aktivierung aus der UEFI-Firmware, Windows-Update-Zwischenspeicher leeren, Druckwarteschlange befreien, Virenschnellprüfung und vorinstallierte Apps (inkl. Teams/Xbox) entfernen. |
+| **Protokoll** | Jeder Schritt wird vollautomatisch mitgeschrieben — ohne Formulare oder manuelle Eingaben. Übersicht der Sitzung mit Kennzahlen, Sitzungsverlauf sowie Export als druckoptimierter HTML-Bericht oder schlichtes Textprotokoll. |
 
 ---
 
@@ -56,7 +54,7 @@ Das war alles. WinZii braucht keine Installation, keine Laufzeitumgebung und kei
 > **Windows meldet sich mit einem blauen Hinweis?**
 > Auf »Weitere Informationen« und dann »Trotzdem ausführen« klicken. Der Hinweis erscheint bei jeder Datei aus dem Internet, die nicht kostenpflichtig signiert wurde. Zu jedem Release gehört eine SHA256-Prüfsumme — damit lässt sich das Archiv vor dem Entpacken abgleichen:
 > ```powershell
-> Get-FileHash .\WinZii-0.7.0.zip -Algorithm SHA256
+> Get-FileHash .\WinZii-0.8.0.zip -Algorithm SHA256
 > ```
 
 **Voraussetzungen:** Windows 10 oder 11 mit Administratorrechten. PowerShell 5.1 und .NET Framework sind in Windows enthalten.
@@ -91,22 +89,18 @@ Ehrlich gesagt, damit niemand böse überrascht wird: WinZii wurde auf **einem**
 
 | Bereich | Stand |
 | --- | --- |
-| **Windows 10** | Die Versionsweiche greift (40 Einträge für beide Systeme, 8 nur für Windows 11, 1 nur für Windows 10), aber es lief dort nie ein vollständiger Durchlauf. |
-| **Nicht-deutsches Windows** | Seit 0.5.2 laufen alle Prüfwerkzeuge bei jedem Push auf main und jedem Pull Request auf einem **englischen** Windows-Server, und die Oberfläche wird dort in beiden Sprachen gestartet. Ungeprüft bleibt, was echte Windows-Werkzeuge zurückgeben: `sfc`, `DISM`, `chkdsk` und `manage-bde` antworten dort englisch, und WinZii wertet das aus. Dafür ist Punkt 13 der Abnahme da. |
-| **Akku** | Auf dem Notebook geprüft: Verschleiß wird gemessen und im Dashboard angezeigt. Bis 0.4.0 meldete dasselbe Gerät »kein Akku vorhanden«, weil die Erkennung an einer einzigen WMI-Klasse hing. |
+| **Windows 10** | Die Versionsweiche greift (47 Einträge für beide Systeme, 10 nur für Windows 11, 1 nur für Windows 10), aber es lief dort nie ein vollständiger Durchlauf. |
+| **Nicht-deutsches Windows** | Alle nicht-interaktiven Prüfwerkzeuge laufen beim Release-Workflow auf einem **englischen** Windows-Server; `Test-Parsers.ps1` deckt deutsche **und** englische Wortlaute ab. Ungeprüft bleibt, was echte Windows-Werkzeuge auf einem produktiven fremdsprachigen Rechner zurückgeben (`sfc`, `DISM`, `chkdsk`, `manage-bde`). Dafür ist Punkt 13 der Abnahme da. |
 | **WLAN** | Verbindungsprüfung, Internetzugang und seit 0.5.1 auch Downloads über WLAN geprüft, ohne Kabel im Gerät: 93 MB in 32 s, eine Installation über winget mitsamt Nachprüfung, und ein Fehlschlag lässt nichts Halbfertiges liegen. |
 | **BitLocker, OneDrive** | Der »nicht vorhanden«-Pfad ist geprüft und meldet sauber, auf dem Notebook zusätzlich gegen `manage-bde` gegengehalten. Ein verschlüsselter Datenträger und ein OneDrive mit Platzhaltern fehlen weiterhin. |
-| **Fremder Virenscanner** | Seit 0.5.3 liest die Sicherheitskarte zuerst das Sicherheitscenter und nennt jeden eingeschalteten Scanner beim Namen — geprüft auf dem Notebook mit Malwarebytes neben Defender. Der Fall Norton oder McAfee mit **passivem** Defender ist daraus abgeleitet, nicht gesehen: Dort stand bis 0.5.2 »Echtzeitschutz AUS« samt Warnung im Übergabeblatt, jetzt »Defender passiv« ohne Warnung. Ob der Scanner selbst WinZii anhält, weiß nur ein Gerät, auf dem er läuft. |
-| **Energieplan** | Anlegen, aktivieren, zweiter Durchlauf ohne Doppelkopie und Zurücknehmen sind auf dem Notebook durchgespielt. Was Netz und Akku unterscheidet, sind Kühlungsrichtlinie und Turbo-Verhalten — viele Hersteller blenden beide aus der Energieoberfläche aus. Setzen lassen sie sich trotzdem, nachsehen kann man sie dort dann aber nicht. Kann ein Gerät sie gar nicht setzen, sagt WinZii im Protokoll, dass der Plan nichts bewirkt. |
+| **Fremder Virenscanner** | Seit 0.5.3 liest die Sicherheitskarte zuerst das Sicherheitscenter und nennt jeden eingeschalteten Scanner beim Namen — geprüft auf dem Notebook mit Malwarebytes neben Defender. Der Fall Norton oder McAfee mit **passivem** Defender ist daraus abgeleitet, nicht gesehen: Dort steht »Defender passiv« ohne Fehlwarnung. Ob der Scanner selbst WinZii anhält, weiß nur ein Gerät, auf dem er läuft. |
 | **Office auf den Datenträger laden** | Der Abbruch beendet das Bereitstellungswerkzeug, **nicht** den Download: Geladen wird vom Click-to-Run-Dienst von Windows, und der macht im Hintergrund weiter. Im Abnahmelauf wuchs der Ordner nach dem Abbruch von 39 MB auf 2,5 GB. WinZii sagt das im Protokoll und nennt den Ordner zum Löschen; ein angefangener Vorrat gilt seit 0.4.1 zuverlässig als unvollständig. |
 | **FAT32-Datenträger** | Seit 0.5.3 auf einer virtuellen FAT32-Platte geprüft: WinZii startet davon, das Dashboard zeigt den Hinweisbalken, und der Office-Download wird abgelehnt, **bevor** die 4-GB-Grenze zuschlägt. Ein echter FAT32-Stick fehlt weiterhin. |
 | **Restesuche nach dem Deinstallieren** | Die Regeln und die ganze Kette — finden, sichern, entfernen — sind in `tools\Test-Undo.ps1` mit über hundert Prüfungen abgedeckt. Seit 0.5.1 ist sie auch gegen echte Deinstallierer gelaufen, auf einem Gerät mit 53 gewachsen installierten Programmen; der Lauf hat zwei Fehler gefunden, beide behoben (siehe [CHANGELOG](CHANGELOG.md)). Zwei Dinge gelten dauerhaft: **Gelöschte Ordner sind endgültig weg** — gesichert werden nur Registry-Schlüssel —, und die Suche ist absichtlich eng. Sie übersieht lieber einen Rest, als den Ordner eines anderen Programms anzufassen; seit 0.5.1 auch dann nicht, wenn der Hersteller selbst den Sammelordner der ganzen Familie als Installationsordner einträgt. |
 | **Werkzeuge der Gerätehersteller** | Ungeprüft. Der Entwicklungsrechner ist ein Eigenbau, das Abnahme-Notebook stammt von keinem der drei Hersteller mit stiller Kommandozeile. Geprüft ist nur, was sich ohne Gerät prüfen lässt: Die winget-Kennungen im Katalog sind gegen die Quelle abgeglichen, und der Weg über »nicht auffindbar« ist der, den WinZii hier nimmt, wenn ein Pfad nicht stimmt. Ob Dell Command, der Thin Installer oder der Image Assistant mit diesen Argumenten wirklich durchlaufen, weiß nur ein Gerät, auf dem sie laufen. |
 | **Update-Katalog** | Die brüchigste Stelle im ganzen Werkzeug, und das mit Absicht: Microsoft bietet für den Katalog keine Schnittstelle an, gelesen wird die Suchseite. Ändert sich ihr Aufbau, findet WinZii nichts mehr — leer ausgehen tut es dann sauber, aber es merkt es nicht. Die Suche selbst ist gelaufen, das Herunterladen und Einspielen eines Katalogtreibers nie: Auf keinem der beiden Geräte fehlt ein Treiber. |
 | **Belastungstest** | Auf dem Entwicklungsrechner gelaufen, einem Desktop mit fester Kühlung: Der Takt hielt 3801 von 3801 MHz, die Plattenmessung ergab 574 MB/s schreibend und 1809 lesend, und die ungepufferte Leseschleife liefert alle Bytes. Genau der Fall, für den er gebaut ist — ein gedrosseltes Notebook — fehlt damit. Und Temperaturen meldet dieses Gerät gar nicht; der Pfad »nicht messbar« ist geprüft, der andere nicht. |
-| **Windows aktivieren** | Der Schlüssel aus der Firmware wird gelesen — auf diesem Gerät ist keiner hinterlegt, geprüft ist also der leere Fall. Einen Schlüssel einzutragen und zu aktivieren ist ungeprüft: Dafür bräuchte es ein Gerät, dessen Aktivierung man aufs Spiel setzen darf. |
-| **Konten und Rechnername** | Ungeprüft an einem echten Kundengerät. Das Umbenennen und das Anlegen eines Kontos sind Eingriffe, die man auf dem Arbeitsrechner nicht nebenbei durchspielt. |
-| **PDF-Ausgabe** | Über den Edge geprüft, der auf diesem Gerät liegt: 37 KB mit heilen Umlauten. Auf einem LTSC-System ohne Edge greift der Weg »kein PDF, dafür das HTML« — abgeleitet, nicht gesehen. |
+| **Windows aktivieren** | Der Schlüssel aus der Firmware wird gelesen — auf diesem Gerät ist keiner hinterlegt, geprüft ist also der leere Fall. Einen Schlüssel aus der Firmware einzutragen und zu aktivieren ist ungeprüft: Dafür bräuchte es ein Gerät, dessen Aktivierung man aufs Spiel setzen darf. |
 | **Treibersicherung und Office** | Nur lesend geprüft, nie vollständig durchgeführt. |
 | **Drucker zurückspielen** | In der Sandbox vollständig durchlaufen: Treiber aus dem Treiberspeicher nachziehen, Netzwerkanschluss anlegen, Drucker einrichten, beim zweiten Lauf nichts doppeln. Ungeprüft bleibt ein Drucker an echter Hardware — USB-Anschlüsse entstehen erst mit dem Gerät und werden bewusst übersprungen. |
 | **WLAN zurückspielen** | Die Profildateien werden richtig gelesen und ein Fehlschlag sauber gemeldet. Ein Profil wirklich einzurichten konnte nie geprüft werden — weder der Entwicklungsrechner noch die Sandbox hat einen WLAN-Adapter. |
@@ -120,14 +114,14 @@ Rückmeldungen von anderen Systemen sind ausdrücklich willkommen — besonders 
 
 ## 🖼️ Oberfläche
 
-Dunkles Design im haZii-Stil, deutsch oder englisch, mit mitlaufender Konsole: Jede Aktion ist sichtbar, während sie läuft. Lange Vorgänge blockieren die Oberfläche nicht.
+Dunkles Design im haZii-Stil, deutsch oder englisch, mit mitlaufender, größenveränderbarer Live-Konsole: Jede Aktion ist sichtbar, während sie läuft. Lange Vorgänge blockieren die Oberfläche nicht.
 
 <img src="docs/screenshot-dashboard.png" alt="Dashboard von WinZii" width="100%">
 
-Sechzehn Seiten in fünf Gruppen, erreichbar auch über die Suche mit **Strg+K**:
+Vierzehn Seiten in fünf Gruppen, erreichbar auch über die Suche in der Kopfzeile (**Strg+K**):
 
 ```
-// SYSTEM        Dashboard · Einrichten · Diagnose · Updates
+// SYSTEM        Dashboard · Diagnose
 // OPTIMIEREN    Optimierung · KI-Entfernung · Bereinigung · Autostart
 // SOFTWARE      Programme · Deinstallieren · Office
 // ÜBERNEHMEN    Daten · Zurückspielen · Treiber
@@ -147,12 +141,12 @@ WinZii/
 │  ├─ modules/            Logik (Optimizer, Cleanup, Apps, Office, Diagnostics …)
 │  ├─ pages/              Bedienlogik je Seite
 │  ├─ xaml/               Oberfläche: Theme.xaml + eine Datei je Seite
-│  └─ templates/          Vorlage für die HTML-Berichte
+│  └─ templates/          Vorlage für den HTML-Bericht
 ├─ data/                  Kataloge als JSON — hier wird erweitert
 ├─ assets/fonts/          JetBrains Mono und Inter (SIL OFL 1.1, siehe unten)
 ├─ tools/                 Prüfwerkzeuge und Release-Bauskript
 ├─ docs/                  Banner und Bildschirmfoto für dieses README
-├─ offline/               Zwischenspeicher für Installationsdateien
+├─ offline/               Zwischenspeicher für Office-Pakete, Treiber und Daten
 ├─ logs/ backups/ reports/  Ergebnisse je Computer
 ```
 
@@ -194,7 +188,7 @@ Alle Inhalte stehen in `data/` als JSON. Für neue Einträge ist keine Zeile Cod
 }
 ```
 
-Aktionstypen: `registry`, `service`, `scheduledTask`, `feature`, `appx`, `capability`, `command`, `powerplan` (eigener Energieplan mit Netz- und Akkuwerten).
+Aktionstypen: `registry`, `service`, `scheduledTask`, `feature`, `appx`, `capability`, `command`, `powerplan`.
 
 **Ereignis deuten** (`data/eventmap.json`): Quelle, Kennung, Titel, Erklärung und Empfehlung eintragen — die Diagnose übernimmt den Rest.
 
@@ -210,25 +204,24 @@ powershell -NoProfile -ExecutionPolicy Bypass -File tools\Test-Catalogs.ps1
 
 | Werkzeug | Zweck |
 | --- | --- |
-| `tools\Test-Smoke.ps1` | Syntax, XAML, Kataloge und Encoding in einem Durchlauf |
+| `tools\Test-Smoke.ps1` | Syntax, XAML, Kataloge, Encoding und Log-Level in einem Durchlauf |
 | `tools\Test-Catalogs.ps1` | Kataloge auf Pflichtfelder und Konsistenz prüfen |
 | `tools\Test-Pages.ps1` | Jede Seite laden und auf Verdrahtungsfehler prüfen |
 | `tools\Test-Contrast.ps1` | Schrift- und Flächenkontraste gegen WCAG 2.1 rechnen |
 | `tools\Test-Dialogs.ps1` | Prüft, dass sich jeder Dialog auf allen drei Wegen schließen lässt (Escape, Klick daneben, Schließkreuz) |
 | `tools\Test-Process.ps1` | Rückgabewerte externer Programme, auch im Hintergrund-Runspace |
-| `tools\Test-Report.ps1` | Fremder Text im Bericht bleibt Text — Injektionsmuster in Karten und Tabellen |
-| `tools\Test-Modules.ps1` | Setup, Windows Update, Toolbox, KI-Entfernung, Autostart, Belastungstest, Momentaufnahme, Versionsprüfung — Logik ohne Systemeingriff |
+| `tools\Test-Report.ps1` | Fremder Text im HTML-Bericht bleibt Text — Injektionsmuster in Karten und Tabellen |
+| `tools\Test-Modules.ps1` | Toolbox, KI-Entfernung, Autostart, Belastungstest, Momentaufnahme, Befehlspalette, Versionsprüfung — Logik ohne Systemeingriff |
 | `tools\Test-Office.ps1` | Office-Vorrat und Bereitstellungskonfiguration |
 | `tools\Test-Layout.ps1` | Fährt jede Seite bei 1000×560 an und misst, ob ein Wort mitten durchbricht |
 | `tools\Test-Undo.ps1` | Sicherung und Rücknahme an einem eigenen Registry-Schlüssel durchspielen. **Ändert als Administrator kurzzeitig den aktiven Energieplan** (Abschnitt 7) und stellt ihn in jedem Fall wieder her; ohne Adminrechte wird der Abschnitt übersprungen |
 | `tools\Test-Language.ps1` | Sprachdateien auf gleiche Schlüssel, Platzhalter und Kulturen prüfen |
 | `tools\Test-LanguageSwitch.ps1` | Startet WinZii, schaltet im Betrieb um und prüft, ob auch die gemessenen Texte mitgehen |
-| `tools\Test-Parsers.ps1` | Deutungen von sfc-, pnputil- und winget-Ausgaben gegen deutsche **und** englische Wortlaute |
+| `tools\Test-Parsers.ps1` | Deutungen von sfc-, pnputil-, Sicherheitscenter- und winget-Ausgaben gegen deutsche **und** englische Wortlaute |
 | `tools\Invoke-Analyzer.ps1` | PSScriptAnalyzer mit Zielversion PowerShell 5.1 |
 | `tools\Repair-Encoding.ps1` | UTF-8 mit BOM erzwingen (Pflicht bei PowerShell 5.1 und Umlauten) |
 | `tools\New-Release.ps1` | Release-ZIP bauen und SHA256-Prüfsumme ausgeben; mit `-Release` vorher Versionsstellen und Arbeitsbaum prüfen |
 | `tools\New-Icon.ps1` | Programmsymbol `assets\winzii.ico` neu zeichnen |
-| `tools\Get-VaultSigners.ps1` | Aussteller der Installer im Vorrat auslesen und mit `signers` in `apps.json` vergleichen — nur auf einem eigenen Rechner direkt nach dem Vorabladen |
 | `tools\WinZii.wsb` | Windows Sandbox zum gefahrlosen Ausprobieren (schreibgeschützt) |
 | `tools\WinZii-Schreibend.wsb` | Dasselbe mit Schreibrecht — für Treibersicherung und Berichte. Bindet den ganzen Ordner ein, auch `backups\` mit Schlüsseln im Klartext |
 | `tools\Start-SandboxTest.ps1` | Selbsttest in der Sandbox: legt eine Kopie ohne `backups\`, `logs\` und `offline\` unter `sandbox-staging\` an und öffnet `Test-Sandbox.wsb`; Bericht und Abbild landen unter `sandbox-staging\sandbox-ergebnis\` |

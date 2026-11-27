@@ -130,7 +130,7 @@ function Invoke-WzFileMigration {
         # /XJ überspringt Verzweigungspunkte: In den Benutzerordnern liegen
         # Kompatibilitätsverweise, die sonst im Kreis führen.
         # /COPY:DAT ohne Berechtigungen — die passen auf einem anderen PC ohnehin nicht.
-        $arguments = '"{0}" "{1}" /E /COPY:DAT /DCOPY:DAT /XJ /R:1 /W:2 /NP /NFL /NDL /NJH /NJS' -f `
+        $arguments = '"{0}" "{1}" /E /COPY:DAT /DCOPY:DAT /XJ /MT:8 /R:1 /W:2 /NP /NFL /NDL /NJH /NJS' -f `
             $job.Source.TrimEnd('\'), $job.Destination.TrimEnd('\')
         # -KillOnCancel: robocopy ist wiederanlaufbar, ein abgebrochener Ordner
         # wird beim nächsten Lauf ergänzt. Ohne den Schalter lief es nach
@@ -698,14 +698,29 @@ function Get-WzBookmarkTargets {
         $entry.BrowserName = $browser.Name
         $rest = $leaf.Substring($match.Length + 1)
 
-        # Der Dateiname am Ende steht je Browserart fest, dazwischen der Profilname
-        $fileName = if ($browser.Kind -eq 'chromium') { 'Bookmarks' } else { 'places.sqlite' }
-        if ($rest -notlike "*-$fileName") {
+        # Der Dateiname am Ende steht je Browserart fest, dazwischen der Profilname.
+        # Firefox sichert neben places.sqlite auch automatische .jsonlz4-Sicherungen.
+        $subDir = ''
+        $fileName = ''
+        if ($browser.Kind -eq 'chromium') {
+            if ($rest -like '*-Bookmarks') {
+                $fileName = 'Bookmarks'
+                $entry.ProfileName = $rest.Substring(0, $rest.Length - $fileName.Length - 1)
+            }
+        } elseif ($rest -like '*-places.sqlite') {
+            $fileName = 'places.sqlite'
+            $entry.ProfileName = $rest.Substring(0, $rest.Length - $fileName.Length - 1)
+        } elseif ($rest -match '^(.+)-(bookmarks-.+\.jsonlz4)$') {
+            $entry.ProfileName = $Matches[1]
+            $fileName = $Matches[2]
+            $subDir = 'bookmarkbackups'
+        }
+
+        if (-not $fileName -or -not $entry.ProfileName) {
             $entry.Reason = Get-WzText 'rest.reasonWrongFile'
             $targets += $entry
             continue
         }
-        $entry.ProfileName = $rest.Substring(0, $rest.Length - $fileName.Length - 1)
 
         $profileDir = Join-Path $browser.Path $entry.ProfileName
         if (-not (Test-Path -LiteralPath $profileDir)) {
@@ -714,7 +729,8 @@ function Get-WzBookmarkTargets {
             continue
         }
 
-        $entry.Target = Join-Path $profileDir $fileName
+        $destDir = if ($subDir) { Join-Path $profileDir $subDir } else { $profileDir }
+        $entry.Target = Join-Path $destDir $fileName
         $targets += $entry
     }
 
